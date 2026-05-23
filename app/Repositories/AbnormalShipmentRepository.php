@@ -41,7 +41,11 @@ class AbnormalShipmentRepository implements AbnormalShipmentRepositoryInterface
      */
     public function detect(int $thresholdDays = 3): array
     {
-        $companyId = settings()->id;
+        $settings = settings();
+        if (!$settings) {
+            return ['created' => 0, 'updated' => 0, 'scanned' => 0];
+        }
+        $companyId = $settings->id;
         $cutoff    = Carbon::now()->subDays($thresholdDays);
 
         // Statuses considered "terminal" — never abnormal regardless of inactivity.
@@ -137,7 +141,11 @@ class AbnormalShipmentRepository implements AbnormalShipmentRepositoryInterface
 
     public function getThresholdDays(?int $companyId = null): int
     {
-        $companyId = $companyId ?? settings()->id;
+        if ($companyId === null) {
+            $settings = settings();
+            if (!$settings) return 3;
+            $companyId = $settings->id;
+        }
         $val = Config::where('company_id', $companyId)
             ->where('key', 'abnormal_threshold_days')
             ->value('value');

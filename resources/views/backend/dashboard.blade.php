@@ -23,6 +23,50 @@
             </div>
         </div>
         <!-- end pageheader  -->
+
+        {{-- ===== Follow-up Center widget (NDR + Abnormal at a glance) ===== --}}
+        @php
+            $fuOpenNdrs       = \App\Models\Backend\Ndr::companywise()->whereIn('status', ['open','in_progress'])->count();
+            $fuTodayNdrs      = \App\Models\Backend\Ndr::companywise()->whereDate('created_at', today())->count();
+            $fuCriticalAbn    = \App\Models\Backend\AbnormalShipment::companywise()->where('severity','critical')->whereIn('status',['open','investigating'])->count();
+            $fuOpenAbn        = \App\Models\Backend\AbnormalShipment::companywise()->whereIn('status',['open','investigating'])->count();
+            $fuShowFollowup   = ($fuOpenNdrs + $fuOpenAbn) > 0;
+        @endphp
+        @if ($fuShowFollowup)
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="card border-0" style="background: linear-gradient(120deg, #fef2f2 0%, #fff7ed 100%); border-left: 4px solid #dc2626 !important;">
+                        <div class="card-body py-3">
+                            <div class="d-flex align-items-center flex-wrap">
+                                <div class="mr-4 mb-2">
+                                    <h6 class="mb-1" style="color:#7f1d1d; letter-spacing:0.02em;">🛟 {{ __('Follow-up Center') }}</h6>
+                                    <small class="text-muted">{{ __('Open NDRs and abnormal shipments needing attention.') }}</small>
+                                </div>
+                                <div class="d-flex flex-wrap" style="gap:14px;">
+                                    <a href="{{ route('ndr.index') }}" class="text-decoration-none d-flex flex-column align-items-center px-3 py-2" style="background:#fff; border-radius:8px; min-width:110px; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+                                        <span style="font-size:22px; font-weight:800; color:#b91c1c;">{{ $fuOpenNdrs }}</span>
+                                        <span class="small text-muted">{{ __('Open NDRs') }}</span>
+                                    </a>
+                                    <a href="{{ route('ndr.index', ['date_from' => now()->toDateString(), 'date_to' => now()->toDateString()]) }}" class="text-decoration-none d-flex flex-column align-items-center px-3 py-2" style="background:#fff; border-radius:8px; min-width:110px; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+                                        <span style="font-size:22px; font-weight:800; color:#92400e;">{{ $fuTodayNdrs }}</span>
+                                        <span class="small text-muted">{{ __("Today's NDRs") }}</span>
+                                    </a>
+                                    <a href="{{ route('abnormal.index') }}" class="text-decoration-none d-flex flex-column align-items-center px-3 py-2" style="background:#fff; border-radius:8px; min-width:110px; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+                                        <span style="font-size:22px; font-weight:800; color:#9a3412;">{{ $fuOpenAbn }}</span>
+                                        <span class="small text-muted">{{ __('Open abnormal') }}</span>
+                                    </a>
+                                    <a href="{{ route('abnormal.index', ['severity' => 'critical']) }}" class="text-decoration-none d-flex flex-column align-items-center px-3 py-2" style="background:#1f2937; border-radius:8px; min-width:110px; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+                                        <span style="font-size:22px; font-weight:800; color:#fcd34d;">{{ $fuCriticalAbn }}</span>
+                                        <span class="small" style="color:#fcd34d;">{{ __('Critical') }}</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <div class="ecommerce-widget">
 
             <div class="row ">

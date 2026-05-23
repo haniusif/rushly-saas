@@ -392,7 +392,34 @@ class PermissionSeeder extends Seeder
                 'approve'  => 'wallet_request_approve',
                 'reject'   => 'wallet_request_reject'
             ],
- 
+
+            // NDR module
+            'ndr' => [
+                'manage'   => 'ndr_manage',
+                'read'     => 'ndr_read',
+                'create'   => 'ndr_create',
+                'resolve'  => 'ndr_resolve',
+            ],
+
+            // Abnormal Shipments module
+            'abnormal' => [
+                'manage'   => 'abnormal_manage',
+                'read'     => 'abnormal_read',
+                'assign'   => 'abnormal_assign',
+                'resolve'  => 'abnormal_resolve',
+                'settings' => 'abnormal_settings',
+            ],
+
+            // WMS module
+            'wms' => [
+                'manage'       => 'wms_manage',
+                'products'     => 'wms_products',
+                'receiving'    => 'wms_receiving',
+                'fulfillment'  => 'wms_fulfillment',
+                'adjustments'  => 'wms_adjustments',
+                'reports'      => 'wms_reports',
+            ],
+
         ];
  
         foreach ($attributes as $key => $value) {

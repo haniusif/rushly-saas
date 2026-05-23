@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Backend;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Models\Backend\Parcel;
 use App\Models\Backend\Parcels_3pl;
 use Illuminate\Support\Facades\Http;
@@ -382,123 +383,132 @@ public function apply(Request $request)
 
 
 
+/**
+ * Map of every status that can be bulk-applied → which repo method runs
+ * and which extra request fields it needs.
+ *
+ * Skipped intentionally:
+ *   10 DELIVER, 12 ASSIGN_MERCHANT, 13 RETURNED_MERCHANT, 24 RETURN_TO_COURIER
+ *   → no clean repo handler
+ *   32 PARTIAL_DELIVERED
+ *   → needs unique cash_collection per parcel; doesn't fit bulk
+ *   34 ASSIGN_TO_3PL
+ *   → handled by the separate `assign_3pl` action_type
+ */
+public function statusMap(): array
+{
+    return [
+        ParcelStatus::PENDING                            => ['method' => null,                                         'requires' => []],
+        ParcelStatus::PICKUP_ASSIGN                      => ['method' => 'pickupdatemanAssigned',                      'requires' => ['delivery_man_id']],
+        ParcelStatus::PICKUP_RE_SCHEDULE                 => ['method' => 'PickupReSchedule',                           'requires' => ['delivery_man_id','date']],
+        ParcelStatus::RECEIVED_BY_PICKUP_MAN             => ['method' => 'receivedBypickupman',                        'requires' => []],
+        ParcelStatus::RECEIVED_WAREHOUSE                 => ['method' => 'receivedWarehouse',                          'requires' => ['hub_id']],
+        ParcelStatus::TRANSFER_TO_HUB                    => ['method' => 'transfertohub',                              'requires' => ['hub_id']],
+        ParcelStatus::DELIVERY_MAN_ASSIGN                => ['method' => 'deliverymanAssign',                          'requires' => ['delivery_man_id']],
+        ParcelStatus::DELIVERY_RE_SCHEDULE               => ['method' => 'deliveryReschedule',                         'requires' => ['delivery_man_id','date']],
+        ParcelStatus::DELIVERED                          => ['method' => 'parcelDelivered',                            'requires' => []],
+        ParcelStatus::RETURN_WAREHOUSE                   => ['method' => 'returntoQourier',                            'requires' => []],
+        ParcelStatus::PICKUP_ASSIGN_CANCEL               => ['method' => 'pickupdatemanAssignedCancel',                'requires' => []],
+        ParcelStatus::RECEIVED_BY_PICKUP_MAN_CANCEL      => ['method' => 'receivedBypickupmanCancel',                  'requires' => []],
+        ParcelStatus::RECEIVED_WAREHOUSE_CANCEL          => ['method' => 'receivedWarehouseCancel',                    'requires' => []],
+        ParcelStatus::DELIVERY_MAN_ASSIGN_CANCEL         => ['method' => 'deliverymanAssignCancel',                    'requires' => []],
+        ParcelStatus::DELIVERY_RE_SCHEDULE_CANCEL        => ['method' => 'deliveryReScheduleCancel',                   'requires' => []],
+        ParcelStatus::RECEIVED_BY_HUB                    => ['method' => 'receivedByHub',                              'requires' => ['hub_id']],
+        ParcelStatus::TRANSFER_TO_HUB_CANCEL             => ['method' => 'transfertoHubCancel',                        'requires' => []],
+        ParcelStatus::RECEIVED_BY_HUB_CANCEL             => ['method' => 'receivedByHubCancel',                        'requires' => []],
+        ParcelStatus::DELIVERED_CANCEL                   => ['method' => 'parcelDeliveredCancel',                      'requires' => []],
+        ParcelStatus::PICKUP_RE_SCHEDULE_CANCEL          => ['method' => 'PickupReScheduleCancel',                     'requires' => []],
+        ParcelStatus::RETURN_TO_COURIER_CANCEL           => ['method' => 'returntoQourierCancel',                      'requires' => []],
+        ParcelStatus::RETURN_ASSIGN_TO_MERCHANT          => ['method' => 'returnAssignToMerchant',                     'requires' => ['delivery_man_id','date']],
+        ParcelStatus::RETURN_MERCHANT_RE_SCHEDULE        => ['method' => 'returnAssignToMerchantReschedule',           'requires' => ['delivery_man_id','date']],
+        ParcelStatus::RETURN_MERCHANT_RE_SCHEDULE_CANCEL => ['method' => 'returnAssignToMerchantRescheduleCancel',     'requires' => []],
+        ParcelStatus::RETURN_ASSIGN_TO_MERCHANT_CANCEL   => ['method' => 'returnAssignToMerchantCancel',               'requires' => []],
+        ParcelStatus::RETURN_RECEIVED_BY_MERCHANT        => ['method' => 'returnReceivedByMerchant',                   'requires' => []],
+        ParcelStatus::RETURN_RECEIVED_BY_MERCHANT_CANCEL => ['method' => 'returnReceivedByMerchantCancel',             'requires' => []],
+        ParcelStatus::PARTIAL_DELIVERED_CANCEL           => ['method' => 'parcelPartialDeliveredCancel',               'requires' => []],
+    ];
+}
+
 public function change_status($parcels, Request $request)
 {
     $status = (int) $request->input('status', 0);
 
-    // Decode if parcels is a JSON string
+    // Normalize incoming form-name → repo-expected name (no destructive merging)
+    if ($request->filled('driver_id') && !$request->filled('delivery_man_id')) {
+        $request->merge(['delivery_man_id' => $request->input('driver_id')]);
+    }
+    if ($request->filled('schedule_at') && !$request->filled('date')) {
+        $request->merge(['date' => $request->input('schedule_at')]);
+    }
+
+    // Decode JSON-string contract preserved from legacy callers
     if (is_string($parcels)) {
         $parcels = json_decode($parcels);
     }
-
-    // Validate it's iterable
     if (!is_iterable($parcels)) {
-        Toastr::error('Invalid parcels format');
+        Toastr::error(__('Invalid parcels format'));
         return back();
     }
 
-    // Map driver_id and schedule_at if provided
-    if ($request->filled('driver_id')) {
-        $request->merge(['delivery_man_id' => $request->input('driver_id')]);
+    $map = $this->statusMap();
+    if (!isset($map[$status])) {
+        Toastr::error(__('Unsupported status for bulk action'));
+        return back();
     }
-    if (!$request->filled('date') && $request->filled('schedule_at')) {
-        $request->merge(['date' => $request->input('schedule_at')]);
+
+    $spec     = $map[$status];
+    $method   = $spec['method'];
+    $requires = $spec['requires'];
+
+    // Pre-flight: required fields must be set ONCE, not per parcel
+    foreach ($requires as $field) {
+        if (!$request->filled($field)) {
+            Toastr::error(__(':field is required for this status', ['field' => $field]));
+            return back();
+        }
     }
 
     $success = [];
     $failed  = [];
 
+    // NOTE: tables in this DB are MyISAM (non-transactional). With
+    // enforce_gtid_consistency=ON, wrapping repo calls in DB::transaction()
+    // triggers MySQL error 1785 and silently rolls back. Per-parcel try/catch
+    // is the right scope here — each statement auto-commits in MyISAM.
     foreach ($parcels as $parcel) {
-        $parcel_id = $parcel->id;
+        $parcel_id = is_object($parcel) ? ($parcel->id ?? null) : ($parcel['id'] ?? null);
+        if (!$parcel_id) { continue; }
 
         try {
-            $ok = false;
-
-            switch ($status) {
-                case 2: // Pickup Assign
-                    if (!$request->filled('delivery_man_id')) {
-                        Toastr::error('Delivery man ID is required for pickup assign');
-                        return back();
-                    }
-                    $ok = $this->repo->pickupdatemanAssigned($parcel_id, $request);
-                    break;
-
-                case 3: // Pickup Re-Schedule
-                    if (!$request->filled('delivery_man_id') || !$request->filled('date')) {
-                        Toastr::error('Delivery man ID and date are required for reschedule');
-                        return back();
-                    }
-                    $ok = $this->repo->PickupReSchedule($parcel_id, $request);
-                    break;
-
-                case 5: // Received Warehouse
-                    if (!$request->filled('hub_id')) {
-                        Toastr::error('Hub ID is required for received warehouse');
-                        return back();
-                    }
-                    $ok = $this->repo->receivedWarehouse($parcel_id, $request);
-                    break;
-
-                case 6: // Transfer To Hub
-                    if (!$request->filled('hub_id')) {
-                        Toastr::error('Hub ID is required for transfer to hub');
-                        return back();
-                    }
-                    $ok = $this->repo->transfertohub($parcel_id, $request);
-                    break;
-
-                case 19: // Received By Hub
-                    if (!$request->filled('hub_id')) {
-                        Toastr::error('Hub ID is required for received by hub');
-                        return back();
-                    }
-                    $ok = $this->repo->receivedByHub($parcel_id, $request);
-                    break;
-
-                case 7: // Delivery Man Assign
-                    if (!$request->filled('delivery_man_id')) {
-                        Toastr::error('Delivery man ID is required for delivery assign');
-                        return back();
-                    }
-                    $ok = $this->repo->deliverymanAssign($parcel_id, $request);
-                    break;
-
-                case 11: // Return Warehouse
-                    $ok = $this->repo->returntoQourier($parcel_id, $request);
-                    break;
-
-                case 26: // Return Assign To Merchant
-                    if (!$request->filled('delivery_man_id') || !$request->filled('date')) {
-                        Toastr::error('Delivery man ID and date are required for return assign');
-                        return back();
-                    }
-                    $ok = $this->repo->returnAssignToMerchant($parcel_id, $request);
-                    break;
-
-                case 30: // Return Received By Merchant
-                    $ok = $this->repo->returnReceivedByMerchant($parcel_id, $request);
-                    break;
-                    
-                    
-                case 17: // DELIVERY_MAN_ASSIGN_CANCEL
-                    $ok = $this->repo->deliverymanAssignCancel($parcel_id, $request);
-                    break;
-
-                default:
-                    Toastr::error('No action implemented for this status');
-                    return back();
+            if ($method === null) {
+                // PENDING (or any future no-op-method status) → generic update
+                $ok = (bool) $this->repo->statusUpdate($parcel_id, $status);
+            } else {
+                $ok = (bool) $this->repo->{$method}($parcel_id, $request);
             }
-
-            $ok ? $success[] = $parcel_id : $failed[] = $parcel_id;
+            $ok ? ($success[] = $parcel_id) : ($failed[] = $parcel_id);
         } catch (\Throwable $e) {
+            Log::warning('bulk change_status failed', [
+                'parcel_id' => $parcel_id,
+                'status'    => $status,
+                'method'    => $method,
+                'error'     => $e->getMessage(),
+            ]);
             $failed[] = $parcel_id;
         }
     }
 
-    if (count($failed) === 0) {
-        Toastr::success('Status updated successfully for all parcels');
+    $okCount   = count($success);
+    $failCount = count($failed);
+
+    if ($failCount === 0) {
+        Toastr::success(__('Status updated for :n parcel(s).', ['n' => $okCount]));
+    } elseif ($okCount === 0) {
+        Toastr::error(__('All :n parcel(s) failed.', ['n' => $failCount]));
     } else {
-        Toastr::warning('Some parcels failed: ' . implode(', ', $failed));
+        Toastr::warning(__(':ok ok / :fail failed. Failed IDs: :ids', [
+            'ok' => $okCount, 'fail' => $failCount, 'ids' => implode(', ', $failed),
+        ]));
     }
 
     return back();
@@ -630,42 +640,60 @@ public function parcel_bulk_action(Request $request)
     $deliverymans = $this->deliveryman->all();
     $hubs         = $this->hub->all();
 
-    // ✅ الحالات المسموح بها للـ Admin (بالترتيب المنطقي من الالتقاط إلى التسليم ثم الإرجاع)
-    $allowedIds = [
+    // Single source of truth: every status the controller can apply,
+    // in workflow order (pickup → warehouse → delivery → return → cancels).
+    $orderedIds = [
         // Pickup & Inbound
+        ParcelStatus::PENDING,
         ParcelStatus::PICKUP_ASSIGN,
         ParcelStatus::PICKUP_RE_SCHEDULE,
+        ParcelStatus::RECEIVED_BY_PICKUP_MAN,
         ParcelStatus::RECEIVED_WAREHOUSE,
         ParcelStatus::TRANSFER_TO_HUB,
         ParcelStatus::RECEIVED_BY_HUB,
 
         // Last-mile
         ParcelStatus::DELIVERY_MAN_ASSIGN,
-        // ParcelStatus::DELIVERY_RE_SCHEDULE,
-        // ParcelStatus::DELIVER,              // Out for delivery //OFD
-        // ParcelStatus::PARTIAL_DELIVERED,
-        // ParcelStatus::DELIVERED,
-      
-         ParcelStatus::DELIVERY_MAN_ASSIGN_CANCEL,
-
-
+        ParcelStatus::DELIVERY_RE_SCHEDULE,
+        ParcelStatus::DELIVERED,
 
         // Return flow
-         ParcelStatus::RETURN_WAREHOUSE, // RTO
-        // ParcelStatus::RETURN_TO_COURIER, // 
-        ParcelStatus::RETURN_ASSIGN_TO_MERCHANT, // RTC
-        // ParcelStatus::RETURN_MERCHANT_RE_SCHEDULE,
+        ParcelStatus::RETURN_WAREHOUSE,
+        ParcelStatus::RETURN_ASSIGN_TO_MERCHANT,
+        ParcelStatus::RETURN_MERCHANT_RE_SCHEDULE,
         ParcelStatus::RETURN_RECEIVED_BY_MERCHANT,
+
+        // Cancels (grouped at the end so they don't crowd the common picks)
+        ParcelStatus::PICKUP_ASSIGN_CANCEL,
+        ParcelStatus::PICKUP_RE_SCHEDULE_CANCEL,
+        ParcelStatus::RECEIVED_BY_PICKUP_MAN_CANCEL,
+        ParcelStatus::RECEIVED_WAREHOUSE_CANCEL,
+        ParcelStatus::TRANSFER_TO_HUB_CANCEL,
+        ParcelStatus::RECEIVED_BY_HUB_CANCEL,
+        ParcelStatus::DELIVERY_MAN_ASSIGN_CANCEL,
+        ParcelStatus::DELIVERY_RE_SCHEDULE_CANCEL,
+        ParcelStatus::DELIVERED_CANCEL,
+        ParcelStatus::PARTIAL_DELIVERED_CANCEL,
+        ParcelStatus::RETURN_TO_COURIER_CANCEL,
+        ParcelStatus::RETURN_ASSIGN_TO_MERCHANT_CANCEL,
+        ParcelStatus::RETURN_MERCHANT_RE_SCHEDULE_CANCEL,
+        ParcelStatus::RETURN_RECEIVED_BY_MERCHANT_CANCEL,
     ];
 
-    // 🧩 نبني المصفوفة المتوقعة في الـ Blade: id, label, class
-    $statuses = array_map(function (int $id) {
-        return [
-            'id'    => $id,
-            'label' => ParcelStatusHelper::label($id),       // يدعم الترجمة + fallback
-            'class' => ParcelStatusHelper::badgeClass($id),  // badge bg-*
+    $map = $this->statusMap();
+
+    // Build the array the blade + JS expect.
+    // Only emit statuses that the controller actually knows how to handle.
+    $statuses = [];
+    foreach ($orderedIds as $id) {
+        if (!isset($map[$id])) { continue; }
+        $statuses[] = [
+            'id'       => $id,
+            'label'    => ParcelStatusHelper::label($id),
+            'class'    => ParcelStatusHelper::badgeClass($id),
+            'requires' => $map[$id]['requires'],
         ];
-    }, $allowedIds);
+    }
 
     return view('backend.parcel.parcel_bulk_action', compact(
         'merchants', 'request', 'deliverymans', 'statuses', 'hubs'

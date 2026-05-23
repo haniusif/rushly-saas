@@ -126,10 +126,10 @@
               {{-- Change status --}}
               <div class="form-group d-none" id="status_select">
                 <label class="d-block mb-2">{{ __('Select Status') }}</label>
-                <select name="status" class="form-control">
-                  <option value="">—</option>
+                <select name="status" id="statusSearchSelect" class="form-control" data-placeholder="{{ __('Search status…') }}">
+                  <option value=""></option>
                   @foreach ($statuses as $status)
-                    <option value="{{ $status['id'] }}">{{ $status['label'] }}</option>
+                    <option value="{{ $status['id'] }}" data-class="{{ $status['class'] }}">{{ $status['label'] }}</option>
                   @endforeach
                 </select>
               </div>
@@ -184,6 +184,12 @@
       <option value="{{ $m->id }}">{{ $m->business_name ?? $m->name ?? ('#'.$m->id) }}</option>
     @endforeach
   </select>
+</div>
+
+{{-- Note (optional, currently used by DELIVERED) --}}
+<div class="form-group d-none" id="note_group">
+  <label class="d-block mb-2">{{ __('Note') }} <small class="text-muted">({{ __('optional') }})</small></label>
+  <textarea name="note" class="form-control" rows="2" placeholder="{{ __('Applied to all selected shipments') }}"></textarea>
 </div>
 
 
@@ -449,37 +455,56 @@
   }
 
   // ===== Status-specific extra inputs mapping =====
-  // driver, date, hub, merchant, excludeCurrentHub (UI hint only; enforce in backend)
-  const STATUS_RULES = {
-    2:  { driver: true },                       // Pickup Assign
-    3:  { driver: true, date: true },           // Pickup Re-Schedule
-    5:  { hub: true },                          // Received Warehouse
-    6:  { hub: true, excludeCurrentHub: true }, // Transfer To Hub
-    7:  { driver: true },                       // Delivery Man Assign
-    11: { hub: true },                          // Return Warehouse
-    19: { hub: true },                          // Received By Hub
-    26: { merchant: true },                     // Return Assign To Merchant
-    30: { merchant: true },                     // Return Received By Merchant
+  // Server is the source of truth: $statuses[].requires drives this map.
+  // Each value is an array of field names (matching the form input `name=`).
+  // Recognized fields: delivery_man_id, hub_id, date, note
+  const STATUS_RULES = (function () {
+    const m = {};
+    @foreach ($statuses as $s)
+      m[{{ (int) $s['id'] }}] = @json($s['requires']);
+    @endforeach
+    return m;
+  })();
+
+  // Maps a backend field name → its UI wrapper + input element
+  const $noteWrap   = $('#note_group');
+  const $noteInput  = $noteWrap.find('textarea[name="note"]');
+  const FIELD_UI = {
+    delivery_man_id: { wrap: $driverWrap,   input: $driverInput   },
+    hub_id:          { wrap: $hubWrap,      input: $hubInput      },
+    date:            { wrap: $dateWrap,     input: $dateInput     },
+    note:            { wrap: $noteWrap,     input: $noteInput     },
   };
+
+  // Status IDs that should also show the merchant picker (kept for parity with the old UI).
+  // None at the moment — the controller doesn't read merchant_id for any status.
+  const STATUS_SHOWS_MERCHANT = new Set([]);
+  // Status IDs that should display the "Transfer To Hub excludes current" hint.
+  const STATUS_HUB_HINT = new Set([{{ \App\Enums\ParcelStatus::TRANSFER_TO_HUB }}]);
 
   function toggleStatusExtras(statusId) {
     const sid = Number(statusId) || 0;
-    const r = STATUS_RULES[sid] || {};
+    const reqs = STATUS_RULES[sid] || [];
+    const reqSet = new Set(reqs);
 
-    // show/hide groups
-    $driverWrap.toggleClass('d-none', !r.driver);
-    $dateWrap.toggleClass('d-none', !r.date);
-    $hubWrap.toggleClass('d-none', !r.hub);
-    $merchantWrap.toggleClass('d-none', !r.merchant);
+    // Show/hide every known field wrapper based on whether it's required.
+    Object.entries(FIELD_UI).forEach(([name, ui]) => {
+      // `note` is treated as opt-in: only show when explicitly required.
+      const show = reqSet.has(name);
+      ui.wrap.toggleClass('d-none', !show);
+      if (!show) ui.input.val('');
+    });
 
-    // hint for Transfer To Hub
-    $hubHint.toggleClass('d-none', !r.excludeCurrentHub);
+    // Special UI bits the controller doesn't drive directly.
+    $merchantWrap.toggleClass('d-none', !STATUS_SHOWS_MERCHANT.has(sid));
+    if (!STATUS_SHOWS_MERCHANT.has(sid)) $merchantInput.val('');
 
-    // clear non-used inputs to avoid stale values
-    if (!r.driver)   $driverInput.val('');
-    if (!r.date)     $dateInput.val('');
-    if (!r.hub)      $hubInput.val('');
-    if (!r.merchant) $merchantInput.val('');
+    $hubHint.toggleClass('d-none', !STATUS_HUB_HINT.has(sid));
+
+    // Surface `note` opt-in for DELIVERED even though it isn't in `requires`.
+    if (sid === {{ \App\Enums\ParcelStatus::DELIVERED }}) {
+      $noteWrap.removeClass('d-none');
+    }
   }
 
   // ===== Events =====
@@ -493,6 +518,8 @@
     if (type !== 'change_status') {
       toggleStatusExtras(0);
     } else {
+      // Lazy-init Select2 now that the wrapper is visible.
+      initStatusSelect2();
       // re-apply extras for current status
       toggleStatusExtras($statusSelect.val());
     }
@@ -614,11 +641,12 @@
     let summaryExtras = '';
     if (actionType === 'change_status') {
       const sid = Number($statusSelect.val());
-      const rules = STATUS_RULES[sid] || {};
+      const reqs = STATUS_RULES[sid] || [];
+      const reqSet = new Set(reqs);
 
-      const $statusOpt     = $statusSelect.find('option:selected');
-      const statusVal      = ($statusOpt.val() || '').toString().trim();
-      const statusText     = ($statusOpt.text() || '').trim();
+      const $statusOpt = $statusSelect.find('option:selected');
+      const statusVal  = ($statusOpt.val() || '').toString().trim();
+      const statusText = ($statusOpt.text() || '').trim();
 
       if (!statusVal) {
         await Swal.fire({
@@ -630,40 +658,49 @@
         return false;
       }
 
-      // Hard validations per rules
-      if (rules.driver && !$driverInput.val()) {
-        await Swal.fire({ icon: 'warning', title: '{{ __("Missing driver") }}', text: '{{ __("Please select a driver.") }}', confirmButtonText: '{{ __("OK") }}' });
-        return false;
-      }
-      if (rules.date && !$dateInput.val()) {
-        await Swal.fire({ icon: 'warning', title: '{{ __("Missing date/time") }}', text: '{{ __("Please select a date/time.") }}', confirmButtonText: '{{ __("OK") }}' });
-        return false;
-      }
-      if (rules.hub && !$hubInput.val()) {
-        await Swal.fire({ icon: 'warning', title: '{{ __("Missing hub") }}', text: '{{ __("Please select a hub.") }}', confirmButtonText: '{{ __("OK") }}' });
-        return false;
-      }
-      if (rules.merchant && !$merchantInput.val()) {
-        await Swal.fire({ icon: 'warning', title: '{{ __("Missing merchant") }}', text: '{{ __("Please select a merchant.") }}', confirmButtonText: '{{ __("OK") }}' });
-        return false;
+      // Hard validations: every required field must be filled
+      const labels = {
+        delivery_man_id: '{{ __("driver") }}',
+        hub_id:          '{{ __("hub") }}',
+        date:            '{{ __("date/time") }}',
+        note:            '{{ __("note") }}',
+      };
+      const inputsByName = {
+        delivery_man_id: $driverInput,
+        hub_id:          $hubInput,
+        date:            $dateInput,
+        note:            $noteInput,
+      };
+      for (const field of reqs) {
+        const $i = inputsByName[field];
+        if ($i && !($i.val() || '').toString().trim()) {
+          await Swal.fire({
+            icon: 'warning',
+            title: '{{ __("Missing field") }}',
+            text: `{{ __("Please fill") }}: ${labels[field] || field}`,
+            confirmButtonText: '{{ __("OK") }}'
+          });
+          return false;
+        }
       }
 
-      // Build extras summary (only include those required)
+      // Build extras summary
       summaryExtras += `<div><strong>{{ __("Status") }}:</strong> ${esc(statusText)}</div>`;
-      if (rules.driver) {
+      if (reqSet.has('delivery_man_id')) {
         const driverText = ($driverInput.find('option:selected').text() || '').trim();
         summaryExtras += `<div><strong>{{ __("Driver") }}:</strong> ${esc(driverText)}</div>`;
       }
-      if (rules.date) {
+      if (reqSet.has('date')) {
         summaryExtras += `<div><strong>{{ __("Schedule") }}:</strong> ${esc($dateInput.val())}</div>`;
       }
-      if (rules.hub) {
+      if (reqSet.has('hub_id')) {
         const hubText = ($hubInput.find('option:selected').text() || '').trim();
         summaryExtras += `<div><strong>{{ __("Hub") }}:</strong> ${esc(hubText)}</div>`;
       }
-      if (rules.merchant) {
-        const merchantText = ($merchantInput.find('option:selected').text() || '').trim();
-        summaryExtras += `<div><strong>{{ __("Merchant") }}:</strong> ${esc(merchantText)}</div>`;
+      // Note is opt-in for DELIVERED — show in summary if user typed anything
+      const noteVal = ($noteInput.val() || '').toString().trim();
+      if (noteVal) {
+        summaryExtras += `<div><strong>{{ __("Note") }}:</strong> ${esc(noteVal)}</div>`;
       }
     } else if (actionType === 'assign_3pl') {
       const $opt = $('select[name="company"] option:selected');
@@ -679,6 +716,38 @@
         return false;
       }
       summaryExtras += `<div><strong>{{ __("Company") }}:</strong> ${esc(companyText)}</div>`;
+    }
+
+    // ===== DELIVERED double-confirm =====
+    // Changing the status of an already-delivered parcel is unusual — make the
+    // admin acknowledge it explicitly, separate from the normal "Confirm bulk
+    // action?" step.
+    const DELIVERED_STATUS_ID = {{ \App\Enums\ParcelStatus::DELIVERED }};
+    const deliveredRows = (visibleRows || []).filter(r => Number(r.status) === DELIVERED_STATUS_ID);
+    if (deliveredRows.length > 0) {
+      const sampleIds = deliveredRows.slice(0, 5).map(r => esc(r.tracking_id || ('#' + r.id))).join(', ');
+      const moreNote  = deliveredRows.length > 5
+        ? ` <em>(+${deliveredRows.length - 5} {{ __("more") }})</em>`
+        : '';
+      const warn = await Swal.fire({
+        icon: 'warning',
+        title: '{{ __("Change status of delivered shipments?") }}',
+        html: `
+          <div class="text-left">
+            <p>${deliveredRows.length} {{ __("of the selected shipments are already <strong>Delivered</strong>.") }}</p>
+            <p class="mb-0 text-monospace small">${sampleIds}${moreNote}</p>
+            <hr>
+            <p class="mb-0">{{ __("Changing a delivered shipment's status is unusual and may invalidate accounting/COD records. Continue?") }}</p>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '{{ __("Yes, change them") }}',
+        cancelButtonText: '{{ __("Cancel") }}',
+        confirmButtonColor: '#d33',
+        reverseButtons: true,
+        focusCancel: true,
+      });
+      if (!warn.isConfirmed) return false;
     }
 
     const htmlSafe = `
@@ -718,8 +787,32 @@
   $companySelect.toggleClass('d-none', initType !== 'assign_3pl');
   toggleStatusExtras($statusSelect.val());
 
-  // (Optional) enable select2 if wanted
-  // $('select[name="status"], select[name="driver_id"], select[name="hub_id"], select[name="merchant_id"], select[name="company"]').select2({ width: '100%' });
+  // Searchable status picker (Select2 is loaded globally in backend footer).
+  // We DEFER init until the wrapper is visible — Select2 mis-sizes inside d-none parents.
+  function initStatusSelect2() {
+    if (!$.fn.select2) return;
+    const $sel = $('#statusSearchSelect');
+    if (!$sel.length || $sel.hasClass('select2-hidden-accessible')) return; // already init'd
+    const badgeBg = (cls) => {
+      const m = (cls || '').match(/bg-([a-z]+)/i);
+      return m ? `bg-${m[1]}` : 'bg-secondary';
+    };
+    const renderOpt = (state) => {
+      if (!state.id) return state.text;
+      const cls = $(state.element).data('class') || '';
+      return $(`<span><span class="badge ${badgeBg(cls)} mr-2">&nbsp;</span>${$('<div>').text(state.text).html()}</span>`);
+    };
+    $sel.select2({
+      width: '100%',
+      placeholder: $sel.data('placeholder') || '',
+      allowClear: true,
+      minimumResultsForSearch: 0,   // always show the search box
+      dropdownParent: $('body'),    // avoids clipping inside d-none parents
+      templateResult: renderOpt,
+      templateSelection: renderOpt,
+    });
+    // Keep our existing $statusSelect.on('change') wired — Select2 fires native 'change'.
+  }
 
 })(jQuery);
 </script>

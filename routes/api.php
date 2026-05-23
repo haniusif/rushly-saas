@@ -6,6 +6,12 @@ use App\Http\Controllers\Api\V10\DashboardController;
 use App\Http\Controllers\Api\V10\DeliveryManIncomeExpenseController;
 use App\Http\Controllers\Api\V10\DeliveryManParcelController;
 use App\Http\Controllers\Api\V10\FraudController;
+use App\Http\Controllers\Api\V10\NdrApiController;
+use App\Http\Controllers\Api\V10\Wms\WmsProductApiController;
+use App\Http\Controllers\Api\V10\Wms\WmsStockApiController;
+use App\Http\Controllers\Api\V10\Wms\WmsGrnApiController;
+use App\Http\Controllers\Api\V10\Wms\WmsFulfillmentApiController;
+use App\Http\Controllers\Api\V10\Wms\WmsAdjustmentApiController;
 use App\Http\Controllers\Api\V10\HubController;
 use App\Http\Controllers\Api\V10\NewsOfferController;
 use App\Http\Controllers\Api\V10\ParcelController;
@@ -133,6 +139,26 @@ Route::prefix('v10')->group(function() {
             Route::put('fraud/update/{id}',                             [FraudController::class,'update']);
             Route::delete('fraud/delete/{id}',                          [FraudController::class,'destroy']);
             Route::post('fraud/check',                                  [FraudController::class,'check']);
+
+            // NDR API (deliveryman mobile app)
+            Route::get('ndr',                                           [NdrApiController::class,'index']);
+            Route::get('ndr/stats',                                     [NdrApiController::class,'stats']);
+            Route::get('ndr/parcel/{parcelId}',                         [NdrApiController::class,'byParcel']);
+            Route::get('ndr/{id}',                                      [NdrApiController::class,'show']);
+            Route::post('ndr',                                          [NdrApiController::class,'store']);
+            Route::post('ndr/{id}/notify',                              [NdrApiController::class,'notifyCustomer']);
+
+            // WMS API (scanner / picker mobile apps)
+            Route::prefix('wms')->group(function () {
+                Route::get('/products/lookup',         [WmsProductApiController::class,    'lookup']);
+                Route::get('/stock/{productId}',       [WmsStockApiController::class,      'show']);
+                Route::post('/grn/{grn}/scan',         [WmsGrnApiController::class,        'scanItem']);
+                Route::post('/grn/{grn}/complete',     [WmsGrnApiController::class,        'complete']);
+                Route::get('/fulfillment/my-tasks',    [WmsFulfillmentApiController::class,'myTasks']);
+                Route::post('/fulfillment/{id}/pick',  [WmsFulfillmentApiController::class,'confirmPick']);
+                Route::post('/fulfillment/{id}/pack',  [WmsFulfillmentApiController::class,'confirmPack']);
+                Route::post('/adjustments',            [WmsAdjustmentApiController::class, 'store']);
+            });
 
             Route::get('news-offer/index',                              [NewsOfferController::class,'index']);
 

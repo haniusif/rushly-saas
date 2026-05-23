@@ -44,6 +44,18 @@ use App\Http\Controllers\Backend\DeliveryManController;
 use App\Http\Controllers\Backend\DesignationController;
 use App\Http\Controllers\Backend\DepartmentController;
 use App\Http\Controllers\Backend\FraudController;
+use App\Http\Controllers\Backend\NdrController;
+use App\Http\Controllers\Backend\AbnormalShipmentController;
+use App\Http\Controllers\Backend\Wms\WmsProductController;
+use App\Http\Controllers\Backend\Wms\WmsLocationController;
+use App\Http\Controllers\Backend\Wms\WmsStockController;
+use App\Http\Controllers\Backend\Wms\WmsGrnController;
+use App\Http\Controllers\Backend\Wms\WmsFulfillmentController;
+use App\Http\Controllers\Backend\Wms\WmsOutboundController;
+use App\Http\Controllers\Backend\Wms\WmsAdjustmentController;
+use App\Http\Controllers\Backend\Wms\WmsCycleCountController;
+use App\Http\Controllers\Backend\Wms\WmsDamageController;
+use App\Http\Controllers\Backend\Wms\WmsDashboardController;
 use App\Http\Controllers\Backend\AccountController;
 use App\Http\Controllers\Backend\AccountHeadsController;
 use App\Http\Controllers\Backend\AdminAamarpayController;
@@ -498,14 +510,10 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         
                         
 
-                        Route::get('/wms/', [WMSController::class, 'index'])->name('wms.dashboard')->middleware('hasPermission:merchant_read');
-                        Route::get('/wms/products', [WMSController::class, 'products'])->name('wms.products')->middleware('hasPermission:merchant_read');
-                        Route::get('/wms/inventory', [WMSController::class, 'inventory'])->name('wms.inventory')->middleware('hasPermission:merchant_read');
-                        Route::get('/wms/receiving', [WMSController::class, 'receiving'])->name('wms.receiving')->middleware('hasPermission:merchant_read');
-                        Route::get('/wms/shipping', [WMSController::class, 'shipping'])->name('wms.shipping')->middleware('hasPermission:merchant_read');
-                        Route::get('/wms/locations', [WMSController::class, 'locations'])->name('wms.locations')->middleware('hasPermission:merchant_read');
-                        Route::get('/wms/adjustments', [WMSController::class, 'adjustments'])->name('wms.adjustments')->middleware('hasPermission:merchant_read');
-                        Route::get('/wms/reports', [WMSController::class, 'reports'])->name('wms.reports')->middleware('hasPermission:merchant_read');
+                        // Legacy WMS stub routes removed in favour of the new module
+                        // (see the wms.* prefix group below). The old WMSController stub
+                        // is kept on disk so the named-view contract `view('backend.wms.dashboard')`
+                        // still resolves, but the URL is now served by the new controllers.
 
 
                         
@@ -586,6 +594,73 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::get('fraud/edit/{id}',      [FraudController::class, 'edit'])->name('fraud.edit')->middleware('hasPermission:fraud_update');
                         Route::put('fraud/update',         [FraudController::class, 'update'])->name('fraud.update')->middleware('hasPermission:fraud_update');
                         Route::delete('fraud/delete/{id}', [FraudController::class, 'destroy'])->name('fraud.delete')->middleware('hasPermission:fraud_delete');
+
+                        // NDR module (gated by ndr_manage)
+                        Route::prefix('ndr')->name('ndr.')->middleware('hasPermission:ndr_manage')->group(function () {
+                            Route::get('/',                     [NdrController::class, 'index'])->name('index');
+                            Route::get('/create/{parcel}',      [NdrController::class, 'create'])->name('create');
+                            Route::post('/',                    [NdrController::class, 'store'])->name('store');
+                            Route::get('/{ndr}',                [NdrController::class, 'show'])->name('show');
+                            Route::put('/{ndr}/action',         [NdrController::class, 'updateAction'])->name('action');
+                            Route::put('/{ndr}/resolve',        [NdrController::class, 'resolve'])->name('resolve');
+                        });
+
+                        // Abnormal Shipments module (gated by abnormal_manage)
+                        Route::prefix('abnormal')->name('abnormal.')->middleware('hasPermission:abnormal_manage')->group(function () {
+                            Route::get('/',                     [AbnormalShipmentController::class, 'index'])->name('index');
+                            Route::get('/settings',             [AbnormalShipmentController::class, 'settings'])->name('settings');
+                            Route::put('/settings',             [AbnormalShipmentController::class, 'updateSettings'])->name('settings.update');
+                            Route::get('/{abnormal}',           [AbnormalShipmentController::class, 'show'])->name('show');
+                            Route::put('/{abnormal}/assign',    [AbnormalShipmentController::class, 'assign'])->name('assign');
+                            Route::post('/{abnormal}/action',   [AbnormalShipmentController::class, 'takeAction'])->name('action');
+                            Route::put('/{abnormal}/resolve',   [AbnormalShipmentController::class, 'resolve'])->name('resolve');
+                        });
+
+                        // WMS module — Phase 2 (Products + Locations + Stock)
+                        Route::prefix('wms')->name('wms.')->middleware('hasPermission:wms_manage')->group(function () {
+                            // Dashboard (Phase 7)
+                            Route::get('/',           [WmsDashboardController::class, 'index'])->name('dashboard');
+                            Route::get('/dashboard',  [WmsDashboardController::class, 'index'])->name('dashboard.alias');
+
+                            // Products
+                            Route::get('products/{product}/barcode', [WmsProductController::class, 'barcode'])->name('products.barcode');
+                            Route::resource('products',  WmsProductController::class);
+
+                            // Locations (specific routes BEFORE the resource so /map isn't consumed by /{location})
+                            Route::get('locations/map',  [WmsLocationController::class, 'map'])->name('locations.map');
+                            Route::resource('locations', WmsLocationController::class);
+
+                            // Stock ledger
+                            Route::get('stock',        [WmsStockController::class, 'index'])->name('stock.index');
+                            Route::get('stock/export', [WmsStockController::class, 'export'])->name('stock.export');
+
+                            // GRN / Receiving (Phase 3)
+                            Route::put('grn/{grn}/complete', [WmsGrnController::class, 'complete'])->name('grn.complete');
+                            Route::resource('grn', WmsGrnController::class);
+
+                            // Fulfillment (Phase 4) — pick → pack → dispatch workflow
+                            Route::get('fulfillment',                [WmsFulfillmentController::class, 'index'])->name('fulfillment.index');
+                            Route::get('fulfillment/{id}',           [WmsFulfillmentController::class, 'show'])->name('fulfillment.show');
+                            Route::get('fulfillment/{id}/picking',   [WmsFulfillmentController::class, 'picking'])->name('fulfillment.picking');
+                            Route::put('fulfillment/{id}/pick',      [WmsFulfillmentController::class, 'confirmPick'])->name('fulfillment.pick');
+                            Route::put('fulfillment/{id}/pack',      [WmsFulfillmentController::class, 'confirmPack'])->name('fulfillment.pack');
+                            Route::put('fulfillment/{id}/dispatch',  [WmsFulfillmentController::class, 'dispatchOrder'])->name('fulfillment.dispatch');
+
+                            // Outbound (Phase 5) — manual stock-exit records
+                            Route::put('outbound/{outbound}/complete', [WmsOutboundController::class, 'complete'])->name('outbound.complete');
+                            Route::resource('outbound', WmsOutboundController::class)->only(['index','create','store','show']);
+
+                            // Adjustments (Phase 5) — dual-approval gate at ±20%
+                            Route::put('adjustments/{id}/approve', [WmsAdjustmentController::class, 'approve'])->name('adjustments.approve');
+                            Route::put('adjustments/{id}/reject',  [WmsAdjustmentController::class, 'reject'])->name('adjustments.reject');
+                            Route::resource('adjustments', WmsAdjustmentController::class)->only(['index','create','store','show']);
+
+                            // Cycle Count (Phase 6)
+                            Route::resource('cycle-counts', WmsCycleCountController::class);
+
+                            // Damage Reports (Phase 6)
+                            Route::resource('damage', WmsDamageController::class)->only(['index','create','store','show']);
+                        });
                         // To_do List route
                         Route::get('todo/todo_list',        [TodoController::class, 'index'])->name('todo.index')->middleware('hasPermission:todo_read');
                         Route::post('todo/todo_add',        [TodoController::class, 'store'])->name('todo.store')->middleware('hasPermission:todo_create');

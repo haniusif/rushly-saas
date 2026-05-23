@@ -37,5 +37,11 @@ interface ParcelStatus
     const PARTIAL_DELIVERED                 = 32;
     const PARTIAL_DELIVERED_CANCEL          = 33;
     const ASSIGN_TO_3PL                     = 34;
+    const NDR_CREATED                       = 35;
+    const ABNORMAL                          = 36;
+    const WMS_FULFILLMENT_PENDING           = 37;
+    const WMS_PICKING                       = 38;
+    const WMS_PACKING                       = 39;
+    const WMS_READY_TO_SHIP                 = 40;
 
 }

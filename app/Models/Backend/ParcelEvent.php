@@ -38,4 +38,32 @@ class ParcelEvent extends Model
     public function parcel(){
         return $this->belongsTo(Parcel::class,'parcel_id','id');
     }
+
+    /**
+     * Cross-module hook: a new event proves the parcel is no longer stalled,
+     * so any open AbnormalShipment for it should auto-resolve. We resolve the
+     * row directly (raw query) to avoid the companywise() scope needing tenant
+     * context inside the model boot — events fire from anywhere (HTTP, API,
+     * console commands).
+     */
+    protected static function booted(): void
+    {
+        static::created(function (ParcelEvent $event) {
+            try {
+                AbnormalShipment::where('parcel_id', $event->parcel_id)
+                    ->whereNotIn('status', ['resolved', 'closed_lost'])
+                    ->update([
+                        'status'          => 'resolved',
+                        'resolved_at'     => now(),
+                        'resolution_note' => 'Auto-resolved: new parcel event ('.$event->parcel_status.') recorded.',
+                    ]);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('AbnormalShipment auto-resolve failed', [
+                    'parcel_id' => $event->parcel_id,
+                    'event_id'  => $event->id,
+                    'error'     => $e->getMessage(),
+                ]);
+            }
+        });
+    }
 }

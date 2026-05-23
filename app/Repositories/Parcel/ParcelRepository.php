@@ -1438,48 +1438,28 @@ public function filter($request, $paginate = 10)
             $receivedWarehouse->save();
             $parcel                   = Parcel::find($id);
             $parcel->hub_id           = $request->hub_id;
-            //pickup charge
+            //pickup charge — only if the parcel actually has a pickup history with a known pickup man.
+            //(Retroactive admin status changes via bulk action may target parcels that never went
+            // through PICKUP_ASSIGN, e.g. a Delivered shipment being re-warehoused.)
             $pickupreschedule = ParcelEvent::where('parcel_id',$id)->where('parcel_status',ParcelStatus::PICKUP_RE_SCHEDULE)->first();
+            $pickupAssign     = $pickupreschedule
+                ? null
+                : ParcelEvent::where('parcel_id',$id)->where('parcel_status',ParcelStatus::PICKUP_ASSIGN)->first();
+            $pickupSource     = $pickupreschedule ?: $pickupAssign;
 
-            if($pickupreschedule){
+            if ($pickupSource && optional($pickupSource->pickupman)->id) {
                 $deliveryManStatement                       = new DeliverymanStatement();
                 $deliveryManStatement->company_id           = settings()->id;
                 $deliveryManStatement->parcel_id            = $id;
-                $deliveryManStatement->delivery_man_id      = $pickupreschedule->pickupman->id;
-                $deliveryManStatement->amount               = $pickupreschedule->pickupman->pickup_charge;
+                $deliveryManStatement->delivery_man_id      = $pickupSource->pickupman->id;
+                $deliveryManStatement->amount               = $pickupSource->pickupman->pickup_charge;
                 $deliveryManStatement->type                 = StatementType::INCOME;
                 $deliveryManStatement->date                 = date('Y-m-d H:i:s');
                 $deliveryManStatement->note                 = __('statementNote.received_warehouse_deliveryman_statement');
                 $deliveryManStatement->save();
                 //pickup man balance add
-                if($deliveryManStatement){
-                    $pickupman                     = DeliveryMan::find($pickupreschedule->pickupman->id);
-                    $pickupman->current_balance    = $pickupman->current_balance + $deliveryManStatement->amount;
-                    $pickupman->save();
-                }
-                $courierStatement                       = new CourierStatement();
-                $courierStatement->company_id           = settings()->id;
-                $courierStatement->parcel_id            = $id;
-                $courierStatement->delivery_man_id      = $deliveryManStatement->delivery_man_id;
-                $courierStatement->amount               = $deliveryManStatement->amount;
-                $courierStatement->type                 = StatementType::EXPENSE;
-                $courierStatement->date                 = date('Y-m-d H:i:s');
-                $courierStatement->note                 = __('statementNote.received_warehouse_courier_statement');
-                $courierStatement->save();
-            }else{
-                $pickupAssign=ParcelEvent::where('parcel_id',$id)->where('parcel_status',ParcelStatus::PICKUP_ASSIGN)->first();
-                $deliveryManStatement                       = new DeliverymanStatement();
-                $deliveryManStatement->company_id           = settings()->id;
-                $deliveryManStatement->parcel_id            = $id;
-                $deliveryManStatement->delivery_man_id      = $pickupAssign->pickupman->id;
-                $deliveryManStatement->amount               = $pickupAssign->pickupman->pickup_charge;
-                $deliveryManStatement->type                 = StatementType::INCOME;
-                $deliveryManStatement->date                 = date('Y-m-d H:i:s');
-                $deliveryManStatement->note                 = __('statementNote.received_warehouse_deliveryman_statement');
-                $deliveryManStatement->save();
-                //pickup man balance add
-                if($deliveryManStatement){
-                    $pickupman                     = DeliveryMan::find($pickupAssign->pickupman->id);
+                $pickupman                     = DeliveryMan::find($pickupSource->pickupman->id);
+                if ($pickupman) {
                     $pickupman->current_balance    = $pickupman->current_balance + $deliveryManStatement->amount;
                     $pickupman->save();
                 }

@@ -27,6 +27,41 @@
             </li>
         @endif
 
+        {{-- NDR — Non-Delivery Reports --}}
+        @if (hasPermission('ndr_manage'))
+            @php
+                $openNdrCount = \App\Models\Backend\Ndr::companywise()->whereIn('status', ['open','in_progress'])->count();
+            @endphp
+            <li class="nav-item">
+                <a class="nav-link {{ request()->is('admin/ndr*') ? 'active' : '' }}"
+                   href="{{ route('ndr.index') }}">
+                    <i class="fa fa-exclamation-triangle"></i>{{ __('NDR') }}
+                    @if ($openNdrCount > 0)
+                        <span class="badge badge-pill badge-danger ml-2">{{ $openNdrCount }}</span>
+                    @endif
+                </a>
+            </li>
+        @endif
+
+        {{-- Abnormal Shipments --}}
+        @if (hasPermission('abnormal_manage'))
+            @php
+                $criticalAbnCount = \App\Models\Backend\AbnormalShipment::companywise()
+                    ->where('severity', 'critical')
+                    ->whereIn('status', ['open', 'investigating'])
+                    ->count();
+            @endphp
+            <li class="nav-item">
+                <a class="nav-link {{ request()->is('admin/abnormal*') ? 'active' : '' }}"
+                   href="{{ route('abnormal.index') }}">
+                    <i class="fa fa-hourglass-half"></i>{{ __('Abnormal Shipments') }}
+                    @if ($criticalAbnCount > 0)
+                        <span class="badge badge-pill badge-dark ml-2" style="background:#1f2937; color:#fcd34d;">{{ $criticalAbnCount }}</span>
+                    @endif
+                </a>
+            </li>
+        @endif
+
 
         @if (hasPermission('merchant_read') == true)
           
@@ -42,58 +77,72 @@
        <ul class="nav flex-column">
 
     <li class="nav-item">
-        <a class="nav-link {{ request()->routeIs('wms.dashboard') ? 'active' : '' }}"
+        <a class="nav-link {{ request()->is('admin/wms') || request()->is('admin/wms/dashboard*') ? 'active' : '' }}"
            href="{{ route('wms.dashboard') }}">
             <i class="fas fa-tachometer-alt"></i> {{ __('Dashboard') }}
         </a>
     </li>
 
     <li class="nav-item">
-        <a class="nav-link {{ request()->routeIs('wms.products') ? 'active' : '' }}"
-           href="{{ route('wms.products') }}">
+        <a class="nav-link {{ request()->is('admin/wms/products*') ? 'active' : '' }}"
+           href="{{ route('wms.products.index') }}">
             <i class="fas fa-box"></i> {{ __('Products') }}
         </a>
     </li>
 
     <li class="nav-item">
-        <a class="nav-link {{ request()->routeIs('wms.inventory') ? 'active' : '' }}"
-           href="{{ route('wms.inventory') }}">
-            <i class="fas fa-clipboard-list"></i> {{ __('Inventory') }}
+        <a class="nav-link {{ request()->is('admin/wms/stock*') ? 'active' : '' }}"
+           href="{{ route('wms.stock.index') }}">
+            <i class="fas fa-clipboard-list"></i> {{ __('Stock') }}
         </a>
     </li>
 
     <li class="nav-item">
-        <a class="nav-link {{ request()->routeIs('wms.receiving') ? 'active' : '' }}"
-           href="{{ route('wms.receiving') }}">
-            <i class="fas fa-truck-loading"></i> {{ __('Inbound (Receiving)') }}
-        </a>
-    </li>
-
-    <li class="nav-item">
-        <a class="nav-link {{ request()->routeIs('wms.shipping') ? 'active' : '' }}"
-           href="{{ route('wms.shipping') }}">
-            <i class="fas fa-dolly"></i> {{ __('Outbound (Shipping)') }}
-        </a>
-    </li>
-
-    <li class="nav-item">
-        <a class="nav-link {{ request()->routeIs('wms.locations') ? 'active' : '' }}"
-           href="{{ route('wms.locations') }}">
+        <a class="nav-link {{ request()->is('admin/wms/locations*') ? 'active' : '' }}"
+           href="{{ route('wms.locations.index') }}">
             <i class="fas fa-map-marker-alt"></i> {{ __('Storage Locations') }}
         </a>
     </li>
 
     <li class="nav-item">
-        <a class="nav-link {{ request()->routeIs('wms.adjustments') ? 'active' : '' }}"
-           href="{{ route('wms.adjustments') }}">
-            <i class="fas fa-exchange-alt"></i> {{ __('Inventory Adjustments') }}
+        <a class="nav-link {{ request()->is('admin/wms/grn*') ? 'active' : '' }}"
+           href="{{ route('wms.grn.index') }}">
+            <i class="fas fa-truck-loading"></i> {{ __('Receiving (GRN)') }}
         </a>
     </li>
 
     <li class="nav-item">
-        <a class="nav-link {{ request()->routeIs('wms.reports') ? 'active' : '' }}"
-           href="{{ route('wms.reports') }}">
-            <i class="fas fa-chart-bar"></i> {{ __('Reports') }}
+        <a class="nav-link {{ request()->is('admin/wms/fulfillment*') ? 'active' : '' }}"
+           href="{{ route('wms.fulfillment.index') }}">
+            <i class="fas fa-dolly"></i> {{ __('Fulfillment') }}
+        </a>
+    </li>
+
+    <li class="nav-item">
+        <a class="nav-link {{ request()->is('admin/wms/outbound*') ? 'active' : '' }}"
+           href="{{ route('wms.outbound.index') }}">
+            <i class="fas fa-paper-plane"></i> {{ __('Outbound') }}
+        </a>
+    </li>
+
+    <li class="nav-item">
+        <a class="nav-link {{ request()->is('admin/wms/adjustments*') ? 'active' : '' }}"
+           href="{{ route('wms.adjustments.index') }}">
+            <i class="fas fa-exchange-alt"></i> {{ __('Adjustments') }}
+        </a>
+    </li>
+
+    <li class="nav-item">
+        <a class="nav-link {{ request()->is('admin/wms/cycle-counts*') ? 'active' : '' }}"
+           href="{{ route('wms.cycle-counts.index') }}">
+            <i class="fas fa-check-double"></i> {{ __('Cycle Counts') }}
+        </a>
+    </li>
+
+    <li class="nav-item">
+        <a class="nav-link {{ request()->is('admin/wms/damage*') ? 'active' : '' }}"
+           href="{{ route('wms.damage.index') }}">
+            <i class="fas fa-bug"></i> {{ __('Damage Reports') }}
         </a>
     </li>
 

@@ -19,6 +19,11 @@ class Kernel extends ConsoleKernel
         // $schedule->command('inspire')->hourly();
         $schedule->command('database:autobackup')->daily();
         $schedule->command('invoice:generate')->daily('13:00');
+        $schedule->command('shipments:detect-abnormal')->hourly();
+        $schedule->command('wms:sla-check')->everyThirtyMinutes();
+        $schedule->command('wms:min-stock-check')->dailyAt('07:00');
+        $schedule->command('wms:expiry-alert')->dailyAt('08:00');
+        $schedule->command('wms:auto-fulfillment')->everyFifteenMinutes();
     }
 
     /**

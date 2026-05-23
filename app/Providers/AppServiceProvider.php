@@ -111,7 +111,20 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(WalletInterface::class,     WalletRepository::class);
         $this->app->bind(PlanInterface::class,       PlanRepository::class);
         $this->app->bind(CompanyInterface::class,    CompanyRepository::class);
-      
+
+        // NDR + Abnormal modules (flat-root repos per spec)
+        $this->app->bind(\App\Repositories\NdrRepositoryInterface::class,                \App\Repositories\NdrRepository::class);
+        $this->app->bind(\App\Repositories\AbnormalShipmentRepositoryInterface::class,   \App\Repositories\AbnormalShipmentRepository::class);
+
+        // WMS module
+        $this->app->bind(\App\Repositories\Wms\WmsProductRepositoryInterface::class,     \App\Repositories\Wms\WmsProductRepository::class);
+        $this->app->bind(\App\Repositories\Wms\WmsLocationRepositoryInterface::class,    \App\Repositories\Wms\WmsLocationRepository::class);
+        $this->app->bind(\App\Repositories\Wms\WmsStockRepositoryInterface::class,       \App\Repositories\Wms\WmsStockRepository::class);
+        $this->app->bind(\App\Repositories\Wms\WmsGrnRepositoryInterface::class,         \App\Repositories\Wms\WmsGrnRepository::class);
+        $this->app->bind(\App\Repositories\Wms\WmsFulfillmentRepositoryInterface::class, \App\Repositories\Wms\WmsFulfillmentRepository::class);
+        $this->app->bind(\App\Repositories\Wms\WmsOutboundRepositoryInterface::class,    \App\Repositories\Wms\WmsOutboundRepository::class);
+        $this->app->bind(\App\Repositories\Wms\WmsAdjustmentRepositoryInterface::class,  \App\Repositories\Wms\WmsAdjustmentRepository::class);
+        $this->app->bind(\App\Repositories\Wms\WmsCycleCountRepositoryInterface::class,  \App\Repositories\Wms\WmsCycleCountRepository::class);
     }
 
     /**

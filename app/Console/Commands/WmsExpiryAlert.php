@@ -30,6 +30,11 @@ class WmsExpiryAlert extends Command
             try {
                 tenancy()->initialize($tenant);
 
+                if (!settings()) {
+                    $this->line(sprintf('tenant=%s skipped (no settings)', $tenant->getTenantKey()));
+                    continue;
+                }
+
                 $expiring = WmsStock::companywise()
                     ->whereNotNull('expiry_date')
                     ->whereDate('expiry_date', '<=', $cutoff->toDateString())

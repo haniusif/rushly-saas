@@ -39,6 +39,11 @@ class DetectAbnormalShipments extends Command
             try {
                 tenancy()->initialize($tenant);
 
+                if (!settings()) {
+                    $this->line(sprintf('tenant=%s skipped (no settings)', $tenant->getTenantKey()));
+                    continue;
+                }
+
                 $threshold = $override ?? $repo->getThresholdDays();
                 $result    = $repo->detect($threshold);
 

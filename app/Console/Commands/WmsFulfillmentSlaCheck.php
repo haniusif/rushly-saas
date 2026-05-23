@@ -24,6 +24,11 @@ class WmsFulfillmentSlaCheck extends Command
             try {
                 tenancy()->initialize($tenant);
 
+                if (!settings()) {
+                    $this->line(sprintf('tenant=%s skipped (no settings)', $tenant->getTenantKey()));
+                    continue;
+                }
+
                 $breached = $repo->breachedSla();
                 $totalBreached += $breached->count();
 

@@ -24,6 +24,11 @@ class WmsMinStockCheck extends Command
             try {
                 tenancy()->initialize($tenant);
 
+                if (!settings()) {
+                    $this->line(sprintf('tenant=%s skipped (no settings)', $tenant->getTenantKey()));
+                    continue;
+                }
+
                 $low = $productRepo->lowStock();
                 $totalLow += $low->count();
 

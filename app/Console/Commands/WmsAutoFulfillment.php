@@ -48,6 +48,11 @@ class WmsAutoFulfillment extends Command
             try {
                 tenancy()->initialize($tenant);
 
+                if (!settings()) {
+                    $this->line(sprintf('tenant=%s skipped (no settings)', $tenant->getTenantKey()));
+                    continue;
+                }
+
                 // Which merchants are "WMS-managed"? Any with at least one active product.
                 $wmsManagedMerchantIds = WmsProduct::companywise()
                     ->where('is_active', true)

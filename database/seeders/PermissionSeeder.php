@@ -191,6 +191,10 @@ class PermissionSeeder extends Seeder
                 'read'  => 'general_settings_read',
                 'update' => 'general_settings_update',
             ],
+            'integrations'      => [
+                'read'   => 'integrations_read',
+                'update' => 'integrations_update',
+            ],
             'notification_settings'   => [
                 'read'  => 'notification_settings_read',
                 'update' => 'notification_settings_update',
@@ -444,6 +448,11 @@ class PermissionSeeder extends Seeder
             'general_settings'      => [
                 'read'  => 'general_settings_read',
                 'update' => 'general_settings_update',
+            ],
+
+            'integrations'      => [
+                'read'   => 'integrations_read',
+                'update' => 'integrations_update',
             ],
 
             'database_backup'       => [

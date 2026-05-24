@@ -180,6 +180,7 @@ return [
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
         App\Providers\TenancyServiceProvider::class, // multi-tenancy  service provider multiple domain manage
+        App\Providers\IntegrationConfigServiceProvider::class, // overlays DB integration_settings onto config('services.<platform>.*')
     ])->toArray(),
 
     /*

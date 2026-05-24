@@ -59,5 +59,25 @@ return [
     'timeout' => 30
 ],
 
+    'salla' => [
+        'app_url'         => env('RUSHLY_SALLA_APP_URL'),
+        'writeback_token' => env('RUSHLY_SALLA_WRITEBACK_TOKEN'),
+        'api_base'        => env('SALLA_API_BASE', 'https://api.salla.dev/admin/v2'),
+    ],
+
+    'zid' => [
+        'app_url'         => env('RUSHLY_ZID_APP_URL'),
+        'writeback_token' => env('RUSHLY_ZID_WRITEBACK_TOKEN'),
+        'api_base'        => env('ZID_API_BASE', 'https://api.zid.sa/v1'),
+    ],
+
+    // WooCommerce is a WordPress plugin, not a hosted bridge — each merchant
+    // runs their own WP. app_url / writeback_token only act as fallbacks for
+    // single-tenant deployments; the real values live on the link row.
+    'woocommerce' => [
+        'app_url'         => env('RUSHLY_WOOCOMMERCE_APP_URL'),
+        'writeback_token' => env('RUSHLY_WOOCOMMERCE_WRITEBACK_TOKEN'),
+        'api_base'        => null,
+    ],
 
 ];

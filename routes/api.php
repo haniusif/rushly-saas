@@ -32,6 +32,9 @@ use App\Http\Controllers\Api\V10\ReportController;
 use App\Http\Controllers\InstallerController;
 use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\DeliveryPandaController;
+use App\Http\Controllers\Api\V10\External\SallaParcelController;
+use App\Http\Controllers\Api\V10\External\WooCommerceParcelController;
+use App\Http\Controllers\Api\V10\External\ZidParcelController;
 
 
 
@@ -64,6 +67,18 @@ Route::prefix('delivery')->group(function () {
 
         Route::get('/olivery/webhook',  [WebhookController::class, 'webhook']);
         Route::post('/olivery/webhook',  [WebhookController::class, 'webhook']);
+
+Route::prefix('v10/external/salla')->middleware(['CheckApiKey'])->group(function () {
+    Route::post('/parcel', [SallaParcelController::class, 'store']);
+});
+
+Route::prefix('v10/external/zid')->middleware(['CheckApiKey'])->group(function () {
+    Route::post('/parcel', [ZidParcelController::class, 'store']);
+});
+
+Route::prefix('v10/external/woocommerce')->middleware(['CheckApiKey'])->group(function () {
+    Route::post('/parcel', [WooCommerceParcelController::class, 'store']);
+});
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();

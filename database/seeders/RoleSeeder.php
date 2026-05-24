@@ -253,6 +253,9 @@ class RoleSeeder extends Seeder
                     'general_settings_read',
                     'general_settings_update',
 
+                    'integrations_read',
+                    'integrations_update',
+
                     'notification_settings_read',
                     'notification_settings_update',
 
@@ -407,6 +410,8 @@ class RoleSeeder extends Seeder
                     'sms_send_settings_read',
 
                     'general_settings_read',
+
+                    'integrations_read',
 
                     'notification_settings_read',
 

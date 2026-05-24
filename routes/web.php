@@ -73,6 +73,7 @@ use App\Http\Controllers\MerchantPaymentAccountController;
 use App\Http\Controllers\Backend\TodoController;
 use App\Http\Controllers\Backend\SupportController;
 use App\Http\Controllers\Backend\GeneralSettingsController;
+use App\Http\Controllers\Backend\IntegrationsController;
 use App\Http\Controllers\Backend\AssetcategoryController;
 use App\Http\Controllers\Backend\NewsOfferController;
 use App\Http\Controllers\Backend\SalaryController;
@@ -694,6 +695,11 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         // General settings
                         Route::get('general-settings/index',        [GeneralSettingsController::class, 'index'])->name('general-settings.index')->middleware('hasPermission:general_settings_read');
                         Route::put('general-settings/update',       [GeneralSettingsController::class, 'update'])->name('general-settings.update')->middleware('hasPermission:general_settings_update');
+
+                        // E-commerce integrations (Salla / Zid / Shopify)
+                        Route::get('integrations',                  [IntegrationsController::class, 'index'])->name('integrations.index')->middleware('hasPermission:integrations_read');
+                        Route::get('integrations/{platform}/edit',  [IntegrationsController::class, 'edit'])->name('integrations.edit')->middleware('hasPermission:integrations_update');
+                        Route::put('integrations/{platform}',       [IntegrationsController::class, 'update'])->name('integrations.update')->middleware('hasPermission:integrations_update');
                         //currency settings
                         Route::get('currency',                      [CurrencyController::class, 'index'])->name('currency.index')->middleware('hasPermission:currency_read');
                         Route::get('currency/create',               [CurrencyController::class, 'create'])->name('currency.create')->middleware('hasPermission:currency_create');

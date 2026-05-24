@@ -665,13 +665,14 @@
                 hasPermission('delivery_charge_read') == true ||
                 hasPermission('delivery_type_read') == true ||
                 hasPermission('liquid_fragile_read') == true ||
+                hasPermission('integrations_read') == true ||
                 hasPermission('packaging_read') == true)
             <!---for setting--->
             <li class="nav-item">
-                <a class="nav-link {{ request()->is('admin/database-backup*', 'admin/delivery-category*', 'admin/delivery-category*', 'admin/delivery-charge*', 'admin/packaging*', 'admin/delivery-type*', 'admin/liquid-fragile*', 'admin/sms-settings*', 'admin/sms-send-settings*', 'admin/general-settings*', 'admin/notification-settings*', 'admin/googlemap-settings*', 'admin/asset-category*', 'admin/social-login-setting*', 'admin/pay-out/setup*', 'admin/settings/pay-out/setup*', 'admin/settings/invoice-generate-menually*', 'admin/currency*') ? 'active' : '' }} "
+                <a class="nav-link {{ request()->is('admin/database-backup*', 'admin/delivery-category*', 'admin/delivery-category*', 'admin/delivery-charge*', 'admin/packaging*', 'admin/delivery-type*', 'admin/liquid-fragile*', 'admin/sms-settings*', 'admin/sms-send-settings*', 'admin/general-settings*', 'admin/notification-settings*', 'admin/googlemap-settings*', 'admin/asset-category*', 'admin/social-login-setting*', 'admin/pay-out/setup*', 'admin/settings/pay-out/setup*', 'admin/settings/invoice-generate-menually*', 'admin/currency*', 'admin/integrations*') ? 'active' : '' }} "
                     href="#" data-toggle="collapse" aria-expanded="false" data-target="#submenu-0"
                     aria-controls="submenu-0"><i class="fa fa-cogs"></i> {{ __('menus.settings') }}</a>
-                <div class="{{ request()->is('admin/database-backup*', 'admin/delivery-category*', 'admin/delivery-charge*', 'admin/packaging*', 'admin/delivery-type*', 'admin/liquid-fragile*', 'admin/sms-settings*', 'admin/sms-send-settings*', 'admin/general-settings*', 'admin/notification-settings*', 'admin/googlemap-settings*', 'admin/asset-category*', 'admin/social-login-setting*', 'admin/pay-out/setup*', 'admin/settings/pay-out/setup*', 'admin/settings/invoice-generate-menually*', 'admin/currency*') ? '' : 'collapse' }} submenu"
+                <div class="{{ request()->is('admin/database-backup*', 'admin/delivery-category*', 'admin/delivery-charge*', 'admin/packaging*', 'admin/delivery-type*', 'admin/liquid-fragile*', 'admin/sms-settings*', 'admin/sms-send-settings*', 'admin/general-settings*', 'admin/notification-settings*', 'admin/googlemap-settings*', 'admin/asset-category*', 'admin/social-login-setting*', 'admin/pay-out/setup*', 'admin/settings/pay-out/setup*', 'admin/settings/invoice-generate-menually*', 'admin/currency*', 'admin/integrations*') ? '' : 'collapse' }} submenu"
                     id="submenu-0" class="collapse submenu">
                     <ul class="nav flex-column">
 
@@ -679,6 +680,13 @@
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->is('admin/general-settings*') ? 'active' : '' }}"
                                     href="{{ route('general-settings.index') }}">{{ __('menus.general_settings') }}</a>
+                            </li>
+                        @endif
+
+                        @if (hasPermission('integrations_read') == true)
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->is('admin/integrations*') ? 'active' : '' }}"
+                                    href="{{ route('integrations.index') }}">Integrations</a>
                             </li>
                         @endif
 

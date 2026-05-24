@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\Backend\Parcel;
+use App\Observers\ParcelSallaObserver;
+use App\Observers\ParcelWooCommerceObserver;
+use App\Observers\ParcelZidObserver;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -27,7 +31,9 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        //
+        Parcel::observe(ParcelSallaObserver::class);
+        Parcel::observe(ParcelZidObserver::class);
+        Parcel::observe(ParcelWooCommerceObserver::class);
     }
 
     /**

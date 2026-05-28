@@ -39,6 +39,12 @@ stockmate.rushly-logistic.com/
 driver.feerilogis.com/
 mijet.rushly-logistic.com/
 
+# Storefront bridges (separate apps, tracked in their own repos)
+rushly-salla/
+rushly-zid/
+rushly-shopify/
+rushly-woocommerce/
+
 # System / server
 cgi-bin/
 

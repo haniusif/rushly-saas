@@ -222,6 +222,12 @@ class ParcelController extends Controller
     public function logs($id)
     {
         $parcel         = $this->repo->get($id);
+
+        if (! $parcel) {
+            Toastr::error(__('Parcel not found.'));
+            return redirect()->back();
+        }
+
         $parcelevents   = $this->repo->parcelEvents($id);
         return view('backend.parcel.logs', compact('parcel','parcelevents'));
     }
@@ -318,9 +324,29 @@ class ParcelController extends Controller
         
         
         $parcelevents   = ParcelEvent::where('parcel_id',$id)->orderBy('created_at','desc')->get();
-        
-         
+
+
         return view('backend.parcel.details',compact('parcel','parcelevents' , 'data' , 'deliveryman' ));
+    }
+
+    // Tracking offcanvas — AJAX partial loaded from the parcel index page
+    public function trackingOffcanvas($id)
+    {
+        $parcel = $this->repo->details($id);
+
+        if (! $parcel) {
+            return response(__('Parcel not found.'), 404);
+        }
+
+        $parcel->loadMissing(['images', 'merchant.user', 'merchantShop', 'hub', 'city', 'area', 'deliveryCategory']);
+
+        $parcelevents = ParcelEvent::where('parcel_id', $id)
+            ->with(['hub', 'deliveryMan.user', 'pickupman.user', 'user'])
+            ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        return view('backend.parcel.partials.tracking_offcanvas', compact('parcel', 'parcelevents'));
     }
     
     
@@ -454,9 +480,23 @@ class ParcelController extends Controller
     // Parcel update
     public function statusUpdate($id, $status_id)
     {
-        $this->repo->statusUpdate($id, $status_id);
+        if (! $this->repo->statusUpdate($id, $status_id)) {
+            Toastr::error(__('Cannot update — shipment is cancelled.'), __('message.error'));
+            return redirect()->back();
+        }
         Toastr::success(__('parcel.update_msg'),__('message.success'));
         return redirect()->route('parcel.index');
+    }
+
+    public function cancelShipment(Request $request, $id)
+    {
+        $reason = trim((string) $request->input('reason'));
+        if (! $this->repo->cancelShipment($id, $reason ?: null)) {
+            Toastr::error(__('Cannot cancel — only newly created shipments can be cancelled. Once pickup has been assigned, use the return flow instead.'), __('message.error'));
+            return redirect()->back();
+        }
+        Toastr::success(__('Shipment cancelled. No further updates or actions can be taken on it.'), __('message.success'));
+        return redirect()->route('parcel.details', $id);
     }
 
     /**
@@ -1891,6 +1931,12 @@ public function exportShipments(Request $request)
     public function deliveredInfo($id)
     {
         $parcel         = $this->repo->get($id);
+
+        if (! $parcel) {
+            Toastr::error(__('Parcel not found.'));
+            return redirect()->back();
+        }
+
         $parcelevents   = $this->repo->parcelEvents($id);
         return view('backend.parcel.parcel-delivered-info', compact('parcel','parcelevents'));
     }

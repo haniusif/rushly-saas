@@ -88,17 +88,23 @@ class WooCommerceService
      * a custom "rushly_*" status namespace so it doesn't clobber existing
      * shop conventions.
      */
-    private function mapStatus(?string $rushlyStatus): ?string
+    private function mapStatus($rushlyStatus): ?string
     {
-        return match ($rushlyStatus) {
-            ParcelStatus::PENDING->value ?? null               => null,
-            'pickup_assign', 'pickup_re_schedule'              => 'rushly-picked-up',
-            'received_warehouse', 'transfer_to_hub'            => 'rushly-in-transit',
-            'delivery_man_assign'                              => 'rushly-out-for-delivery',
-            'delivered', 'partial_delivered'                   => 'completed',
-            'return_to_courier', 'return_assign_to_merchant'   => 'rushly-returned',
-            'cancel'                                           => 'cancelled',
-            default                                            => null,
+        $status = (int) $rushlyStatus;
+        return match ($status) {
+            ParcelStatus::PICKUP_ASSIGN,
+            ParcelStatus::PICKUP_RE_SCHEDULE                => 'rushly-picked-up',
+            ParcelStatus::RECEIVED_WAREHOUSE,
+            ParcelStatus::TRANSFER_TO_HUB                   => 'rushly-in-transit',
+            ParcelStatus::DELIVERY_MAN_ASSIGN,
+            ParcelStatus::DELIVER                           => 'rushly-out-for-delivery',
+            ParcelStatus::DELIVERED,
+            ParcelStatus::PARTIAL_DELIVERED                 => 'completed',
+            ParcelStatus::RETURN_TO_COURIER,
+            ParcelStatus::RETURN_ASSIGN_TO_MERCHANT,
+            ParcelStatus::RETURN_RECEIVED_BY_MERCHANT       => 'rushly-returned',
+            ParcelStatus::CANCELLED                         => 'cancelled',
+            default                                         => null,
         };
     }
 }

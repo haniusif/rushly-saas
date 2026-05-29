@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Backend;
 use App\Enums\NdrAction;
 use App\Enums\NdrFailureReason;
 use App\Enums\NdrStatus;
+use App\Exports\NdrExport;
 use App\Http\Controllers\Controller;
 use App\Models\Backend\Ndr;
 use App\Models\Backend\Parcel;
@@ -14,6 +15,7 @@ use App\Repositories\NdrRepositoryInterface;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Facades\Excel;
 
 class NdrController extends Controller
 {
@@ -39,6 +41,12 @@ class NdrController extends Controller
         $deliverymans   = $this->deliveryman->all();
 
         return view('backend.ndr.index', compact('ndrs', 'stats', 'failureReasons', 'deliverymans'));
+    }
+
+    public function export(Request $request)
+    {
+        $filename = 'ndr-'.now()->format('Ymd-His').'.xlsx';
+        return Excel::download(new NdrExport($request), $filename);
     }
 
     public function show(int $id)

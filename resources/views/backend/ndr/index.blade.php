@@ -102,7 +102,11 @@
                         <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control form-control-sm mr-2 mb-1" />
                         <input type="date" name="date_to"   value="{{ request('date_to') }}"   class="form-control form-control-sm mr-2 mb-1" />
                         <button type="submit" class="btn btn-sm btn-primary mr-2 mb-1">{{ __('Filter') }}</button>
-                        <a href="{{ route('ndr.index') }}" class="btn btn-sm btn-light mb-1">{{ __('Clear') }}</a>
+                        <a href="{{ route('ndr.index') }}" class="btn btn-sm btn-light mr-2 mb-1">{{ __('Clear') }}</a>
+                        <a href="{{ route('ndr.export', request()->only(['status','failure_reason','deliveryman_id','date_from','date_to'])) }}"
+                           class="btn btn-sm btn-success mb-1">
+                            <i class="fa fa-file-excel-o"></i> {{ __('Export to Excel') }}
+                        </a>
                     </form>
                 </div>
             </div>

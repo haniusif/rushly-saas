@@ -360,8 +360,8 @@
         <button title="{{ $parcel->lastParcel3pl->current_status ?? "" }}"
             type="button"
             class="btn btn-outline-danger btn-sm mt-2 js-open-parcel"
-            data-toggle="modal"
-            data-target="#parcelDetailsModal"
+            data-bs-toggle="offcanvas"
+            data-bs-target="#parcelTrackingOffcanvas"
             data-parcel-id="{{ $parcel->id }}"
         >
             {{ __('Assigned to 3PL') }}:
@@ -382,8 +382,8 @@
         <button
             type="button"
             class="btn btn-outline-info btn-sm mt-2 js-open-parcel"
-            data-toggle="modal"
-            data-target="#parcelDetailsModal"
+            data-bs-toggle="offcanvas"
+            data-bs-target="#parcelTrackingOffcanvas"
             data-parcel-id="{{ $parcel->id }}"
         >
             {{ $parcel->tracking_id }}
@@ -563,34 +563,19 @@
                             </table>
                             
                             
-{{-- Modal --}}
-<div class="modal fade" id="parcelDetailsModal" tabindex="-1" role="dialog" aria-labelledby="parcelDetailsLabel" aria-hidden="true"  >
-  <div class="modal-dialog modal-lg" role="document">
-    <div class="modal-content">
-
-      <div class="modal-header">
-        <h5 class="modal-title" id="parcelDetailsLabel">{{ __('Parcel Details') }}</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="{{ __('Close') }}">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-
-      <div class="modal-body p-0">
-        <div id="parcel-details-loader" class="p-4">
-          <div class="text-center">
-            <div class="spinner-border" role="status"></div>
-            <div class="mt-2">{{ __('Loading...') }}</div>
-          </div>
-        </div>
-        <div id="parcel-details-content" class="d-none"></div>
-        <div id="parcel-details-error" class="alert alert-danger m-3 d-none"></div>
-      </div>
-
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ __('Close') }}</button>
-      </div>
-
+{{-- Tracking offcanvas --}}
+<div class="offcanvas offcanvas-end pkg-track-offcanvas" tabindex="-1" id="parcelTrackingOffcanvas" aria-labelledby="parcelTrackingOffcanvasLabel">
+  <div class="offcanvas-header pkg-track-offcanvas__head">
+    <h5 class="offcanvas-title" id="parcelTrackingOffcanvasLabel">{{ __('Package history and tracking') }}</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="{{ __('Close') }}"></button>
+  </div>
+  <div class="offcanvas-body p-0">
+    <div id="parcel-track-loader" class="p-5 text-center">
+      <div class="spinner-border text-primary" role="status"></div>
+      <div class="mt-2">{{ __('Loading...') }}</div>
     </div>
+    <div id="parcel-track-content"></div>
+    <div id="parcel-track-error" class="alert alert-danger m-3 d-none"></div>
   </div>
 </div>
 
@@ -652,6 +637,114 @@
         #selectAssignType .select2-container .select2-selection--single {
             height: 32px !important;
         }
+
+        /* ===== Tracking offcanvas (uses system theme colors) ===== */
+        .pkg-track-offcanvas {
+            width: min(1080px, 96vw) !important;
+            --pkg-primary: {{ settings()->primary_color ?: '#007bff' }};
+        }
+        .pkg-track-offcanvas__head { background: #f8f9fa; border-bottom: 1px solid #e9ecef; }
+        .pkg-track-offcanvas .offcanvas-title { font-weight: 700; }
+
+        .pkg-track { font-size: 14px; color: #2b3445; --pkg-primary: {{ settings()->primary_color ?: '#007bff' }}; }
+        .pkg-track .row { margin: 0; }
+
+        /* action toolbar */
+        .pkg-actions {
+            display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px;
+            padding: 14px 20px; background: #fff; border-bottom: 1px solid #e9ecef;
+        }
+        .pkg-actions__dd { position: relative; display: inline-block; }
+        .pkg-actions__btn {
+            display: inline-flex; align-items: center; gap: 6px; font-weight: 600;
+            border: 1px solid #d8dee6; background: #fff; color: #2b3445;
+        }
+        .pkg-actions__btn:hover { background: #f1f3f7; color: #2b3445; }
+        .pkg-actions__btn--print { background: #e23b3b; border-color: #e23b3b; color: #fff; }
+        .pkg-actions__btn--print:hover { background: #c92f2f; border-color: #c92f2f; color: #fff; }
+        .pkg-ofc-statusmenu { display: none; position: absolute; top: 100%; right: 0; left: auto; z-index: 1080; min-width: 200px; }
+        .pkg-ofc-statusmenu.show { display: block; }
+        .pkg-ofc-statusmenu .dropdown-item { cursor: pointer; white-space: normal; }
+        .pkg-track__left { background: #fff; padding: 24px 20px; border-right: 1px solid #e9ecef; }
+        .pkg-track__right { background: #f8f9fa; padding: 24px 20px; }
+
+        /* parties (sender / recipient / attachment) */
+        .pkg-party { position: relative; display: flex; gap: 14px; padding-bottom: 26px; }
+        .pkg-party::before {
+            content: ""; position: absolute; left: 17px; top: 36px; bottom: -6px;
+            width: 2px; background: #dee2e6;
+        }
+        .pkg-party--last::before { display: none; }
+        .pkg-party__icon {
+            flex: 0 0 36px; width: 36px; height: 36px; border-radius: 50%;
+            background: var(--pkg-primary); color: #fff; display: flex; align-items: center;
+            justify-content: center; z-index: 1;
+        }
+        .pkg-party__body { flex: 1 1 auto; min-width: 0; }
+        .pkg-party__title {
+            background: #eef1f5; color: #1f2d3d; font-weight: 700; border-radius: 8px;
+            padding: 8px 14px; margin-bottom: 10px; border-left: 3px solid var(--pkg-primary);
+        }
+        .pkg-party__name { font-weight: 700; margin-bottom: 4px; }
+        .pkg-party__addr { color: #5a6675; line-height: 1.5; margin-bottom: 8px; word-break: break-word; }
+        .pkg-party__phone {
+            display: inline-flex; align-items: center; gap: 8px; background: #eef1f5;
+            border-radius: 30px; padding: 6px 6px 6px 14px; font-weight: 600;
+        }
+        .pkg-wa {
+            width: 30px; height: 30px; border-radius: 50%; background: #25d366; color: #fff;
+            display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
+        }
+        .pkg-wa:hover { color: #fff; opacity: .9; }
+
+        /* attachment gallery */
+        .pkg-gallery { display: flex; flex-wrap: wrap; gap: 10px; }
+        .pkg-gallery__item { display: block; width: 130px; text-align: center; text-decoration: none; color: #5a6675; }
+        .pkg-gallery__item img {
+            width: 130px; height: 150px; object-fit: cover; border-radius: 10px; border: 1px solid #e2e2e2;
+        }
+        .pkg-gallery__cap { display: block; font-size: 11px; margin-top: 4px; }
+        .pkg-empty { color: #98a2b3; font-style: italic; }
+
+        /* detail card */
+        .pkg-detail { background: #fff; border: 1px solid #e9ecef; border-radius: 12px; padding: 18px 20px; margin-bottom: 26px; }
+        .pkg-detail__head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+        .pkg-detail__box {
+            width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--pkg-primary);
+            display: flex; align-items: center; justify-content: center; color: var(--pkg-primary); font-size: 22px;
+        }
+        .pkg-detail__barcode { flex: 1 1 auto; text-align: right; }
+        .pkg-detail__barcode img { max-width: 100%; height: auto; }
+        .pkg-detail__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; }
+        .pkg-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px dashed #eee; }
+        .pkg-row span { color: #7a8699; }
+        .pkg-row strong { text-align: right; word-break: break-word; }
+        .pkg-row--wide { grid-column: 1 / -1; }
+        .pkg-detail__status { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+        .pkg-detail__status > span:first-child { font-weight: 700; }
+        .pkg-status-badge { padding: 7px 18px; font-size: 13px; }
+
+        /* timeline */
+        .pkg-timeline { position: relative; padding-left: 4px; }
+        .pkg-tl__date { font-weight: 700; color: #1f2d3d; margin: 14px 0 8px; }
+        .pkg-tl__item { display: grid; grid-template-columns: 130px 24px 1fr; gap: 10px; align-items: start; }
+        .pkg-tl__meta { text-align: right; font-size: 12px; color: #5a6675; padding-top: 2px; }
+        .pkg-tl__actor { font-weight: 700; color: #2b3445; }
+        .pkg-tl__hub { text-transform: uppercase; font-size: 11px; }
+        .pkg-tl__time { font-size: 11px; color: #98a2b3; }
+        .pkg-tl__line { position: relative; display: flex; justify-content: center; }
+        .pkg-tl__line::before { content: ""; position: absolute; top: 0; bottom: -18px; width: 2px; background: var(--pkg-primary); opacity: .35; }
+        .pkg-tl__item:last-child .pkg-tl__line::before { bottom: 50%; }
+        .pkg-tl__dot { width: 14px; height: 14px; border-radius: 50%; margin-top: 4px; z-index: 1; border: 3px solid #f8f9fa; }
+        .pkg-tl__content { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; padding-bottom: 18px; }
+        .pkg-tl__bubble { flex: 1 1 auto; min-width: 160px; background: var(--pkg-primary); color: #fff; border-radius: 8px; padding: 10px 14px; font-weight: 600; }
+        .pkg-tl__note { font-weight: 400; font-size: 12px; margin-top: 4px; opacity: .9; }
+        .pkg-gallery__img--contain { object-fit: contain !important; background: #fff; }
+
+        @media (max-width: 575.98px) {
+            .pkg-detail__grid { grid-template-columns: 1fr; }
+            .pkg-tl__item { grid-template-columns: 90px 20px 1fr; }
+        }
     </style>
 @endpush
 <!-- js  -->
@@ -676,30 +769,76 @@
  
 <script>
 (function () {
-  var content = $('#parcel-details-content');
-  var loader = $('#parcel-details-loader');
-  var errorBox = $('#parcel-details-error');
+  var content = $('#parcel-track-content');
+  var loader = $('#parcel-track-loader');
+  var errorBox = $('#parcel-track-error');
+  var trackUrl = "{{ route('parcel.tracking_offcanvas', ['id' => 'PARCEL_ID_PLACEHOLDER']) }}";
 
   $(document).on('click', '.js-open-parcel', function () {
     var parcelId = $(this).data('parcel-id');
 
-    content.addClass('d-none').html('');
+    content.html('');
     errorBox.addClass('d-none').text('');
     loader.removeClass('d-none');
 
     $.ajax({
-      url: "{{ route('admin.parcels.details', ['parcel' => 'PARCEL_ID_PLACEHOLDER']) }}".replace('PARCEL_ID_PLACEHOLDER', parcelId),
+      url: trackUrl.replace('PARCEL_ID_PLACEHOLDER', parcelId),
       method: 'GET',
       dataType: 'html',
       success: function (html) {
         loader.addClass('d-none');
-        content.removeClass('d-none').html(html);
+        content.html(html);
+        // Neutralize the injected status items' own modal triggers — they are
+        // re-driven through the already-bound original row items (see below).
+        content.find('.pkg-ofc-statusmenu .dropdown-item').each(function () {
+          this.removeAttribute('data-toggle');
+          this.removeAttribute('data-target');
+          this.removeAttribute('data-bs-toggle');
+          this.removeAttribute('data-bs-target');
+        });
       },
       error: function () {
         loader.addClass('d-none');
         errorBox.removeClass('d-none').text("{{ __('Failed to load parcel details.') }}");
       }
     });
+  });
+
+  function hidePkgOfc() {
+    var el = document.getElementById('parcelTrackingOffcanvas');
+    if (el && window.bootstrap && bootstrap.Offcanvas) {
+      (bootstrap.Offcanvas.getInstance(el) || new bootstrap.Offcanvas(el)).hide();
+    }
+  }
+
+  // Find the equivalent already-bound action element in the parcel table (its
+  // jQuery handlers + modal data-api are wired on page load) and click it.
+  function fireOriginal(parcel, matchClass) {
+    var $orig = $('[data-parcel="' + parcel + '"]').filter(function () {
+      return (matchClass ? this.getAttribute('class') === matchClass
+                         : $(this).hasClass('parcel-id-delivery-man'))
+             && $(this).closest('#parcel-track-content').length === 0;
+    }).first();
+    if ($orig.length) { hidePkgOfc(); $orig[0].click(); }
+  }
+
+  // Manual dropdown toggle (avoids BS4/BS5 data-api ambiguity inside the offcanvas)
+  $(document).on('click', '#parcel-track-content .pkg-ofc-statusbtn', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    $(this).siblings('.pkg-ofc-statusmenu').toggleClass('show');
+  });
+  $(document).on('click', function () {
+    $('#parcel-track-content .pkg-ofc-statusmenu.show').removeClass('show');
+  });
+
+  $(document).on('click', '#parcel-track-content .pkg-ofc-statusmenu .dropdown-item', function (e) {
+    e.preventDefault();
+    fireOriginal(this.getAttribute('data-parcel'), this.getAttribute('class'));
+  });
+
+  $(document).on('click', '#parcel-track-content .pkg-ofc-postpone', function (e) {
+    e.preventDefault();
+    fireOriginal(this.getAttribute('data-parcel'), null);
   });
 })();
 </script>

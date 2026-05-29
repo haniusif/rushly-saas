@@ -43,5 +43,6 @@ interface ParcelStatus
     const WMS_PICKING                       = 38;
     const WMS_PACKING                       = 39;
     const WMS_READY_TO_SHIP                 = 40;
+    const CANCELLED                         = 41;
 
 }

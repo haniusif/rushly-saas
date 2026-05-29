@@ -1018,6 +1018,14 @@ if (!function_exists('getParcelStatusLabel')) {
             ParcelStatus::RETURN_RECEIVED_BY_MERCHANT_CANCEL=> 'Merchant Receive Return Canceled',
             ParcelStatus::PARTIAL_DELIVERED                 => 'Partially Delivered',
             ParcelStatus::PARTIAL_DELIVERED_CANCEL          => 'Partial Delivery Canceled',
+            ParcelStatus::ASSIGN_TO_3PL                     => 'Assigned to 3PL',
+            ParcelStatus::NDR_CREATED                       => 'NDR Created',
+            ParcelStatus::ABNORMAL                          => 'Abnormal Shipment',
+            ParcelStatus::WMS_FULFILLMENT_PENDING           => 'WMS Fulfillment Pending',
+            ParcelStatus::WMS_PICKING                       => 'WMS Picking',
+            ParcelStatus::WMS_PACKING                       => 'WMS Packing',
+            ParcelStatus::WMS_READY_TO_SHIP                 => 'WMS Ready to Ship',
+            ParcelStatus::CANCELLED                         => 'Shipment Cancelled',
         ];
 
         return $statuses[$status] ?? 'Unknown';

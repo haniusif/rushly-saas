@@ -12,9 +12,11 @@ return new class extends Migration {
             $table->unsignedBigInteger('company_id')->nullable()->index();
             $table->unsignedBigInteger('merchant_id')->nullable()->index();
             $table->unsignedBigInteger('parcel_id')->nullable()->index();
-            $table->string('zid_store_id')->index();    // Zid IDs are strings.
-            $table->string('zid_order_id')->index();
-            $table->string('zid_shipment_id')->nullable()->index();
+            // Zid IDs are strings — keep them short so the composite unique
+            // index below stays under MySQL's 1000-byte key limit.
+            $table->string('zid_store_id', 64)->index();
+            $table->string('zid_order_id', 64)->index();
+            $table->string('zid_shipment_id', 64)->nullable()->index();
             $table->string('zid_awb_number')->nullable();
             $table->string('last_pushed_status')->nullable();
             $table->timestamp('last_pushed_at')->nullable();

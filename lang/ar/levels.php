@@ -339,5 +339,9 @@ return [
     'blog_details'            =>'تفاصيل المدونة',
     'latest_blogs'            =>'أحدث المدونات',
     'map_link'                =>'رابط الخريطة',
-    'enter_map_link'          =>'أدخل رابط الخريطة' 
+    'enter_map_link'          =>'أدخل رابط الخريطة',
+    'attachment'              =>'المرفق',
+    'booking_date'            =>'تاريخ الحجز',
+    'city'                    =>'المدينة',
+    'area'                    =>'المنطقة'
 ];

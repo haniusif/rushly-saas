@@ -485,10 +485,19 @@ public function filter($request, $paginate = 10)
 
     public function statusUpdate($id, $status_id) {
         $parcel = Parcel::find($id);
+        if (! $parcel || $parcel->isCancelled()) {
+            return false;
+        }
         $parcel->status = $status_id;
-        $parcel->save();
+        return (bool) $parcel->save();
+    }
 
-        return true;
+    public function cancelShipment($id, ?string $reason = null) {
+        $parcel = Parcel::find($id);
+        if (! $parcel) {
+            return false;
+        }
+        return $parcel->cancelShipment($reason);
     }
 
     public function deliveryCharges(){

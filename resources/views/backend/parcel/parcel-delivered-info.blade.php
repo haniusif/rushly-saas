@@ -24,52 +24,46 @@
     <section class="mt-5 pt-5">
         <div class="row">
             <div class="col-xl-8 ">
+                @php
+                    $proofEvents = $parcelevents->whereIn('parcel_status', [
+                        \App\Enums\ParcelStatus::DELIVERED,
+                        \App\Enums\ParcelStatus::PARTIAL_DELIVERED,
+                    ]);
+                @endphp
                 <section class="cd-timeline js-cd-timeline">
                     <div class="cd-timeline__container">
-                        @foreach ($parcelevents as $log)
-                            @switch($log->parcel_status)
-                                @case(\App\Enums\ParcelStatus::DELIVERED)
-                                    <div class="cd-timeline__block js-cd-block">
-                                        <!-- cd-timeline__img -->
-                                        <div class="active cd-timeline__content js-cd-content">
-                                            <strong>{{__('parcelLogs.'.@$log->parcel_status)}}</strong><br>
-                                            <span>{{__('levels.note')}}: {{@$log->note}}</span><br/>
-                                            <div >
-                                                <strong>{!! @dateFormat($log->created_at) !!}</strong><br>
-                                                <small>{!! @date('h:i a', strtotime($log->created_at)) !!}</small>
-                                            </div>
-                                            <div class="row mt-2">
-                                                <div class="col-md-6">
-                                                    <strong class="mb-2">Delivered Photo</strong>
-                                                    <img src="{{ static_asset(@$log->delivered_image) }}" style="width: 100%;height: 300px;" alt="delivered_image" class="img-responsive mt-2" >
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <strong class="mb-2">Signature</strong>
-                                                    <img src="{{static_asset(@$log->signature_image)}}" style="width: 100%;height: 150px;"  alt="signature_image" class="img-responsive mt-2" >
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <!-- cd-timeline__content -->
+                        @forelse ($proofEvents as $log)
+                            <div class="active cd-timeline__block js-cd-block">
+                                <!-- cd-timeline__img -->
+                                <div class="active cd-timeline__content js-cd-content">
+                                    <strong>{{__('parcelLogs.'.@$log->parcel_status)}}</strong><br>
+                                    <span>{{__('levels.note')}}: {{@$log->note}}</span><br/>
+                                    <div >
+                                        <strong>{!! @dateFormat($log->created_at) !!}</strong><br>
+                                        <small>{!! @date('h:i a', strtotime($log->created_at)) !!}</small>
                                     </div>
-                                @break
-                                @case(\App\Enums\ParcelStatus::PARTIAL_DELIVERED)
-                                    <div class="active cd-timeline__block js-cd-block">
-                                        <!-- cd-timeline__img -->
-                                        <div class="cd-timeline__content js-cd-content">
-                                            <strong>{{__('parcelLogs.'.@$log->parcel_status)}}</strong><br>
-                                            <span>{{__('levels.note')}}: {{@$log->note}}</span><br/>
-                                            <div >
-                                                <strong>{!! @dateFormat($log->created_at) !!}</strong><br>
-                                                <small>{!! @date('h:i a', strtotime($log->created_at)) !!}</small>
-                                            </div>
+                                    @if($log->parcel_status == \App\Enums\ParcelStatus::DELIVERED && ($log->delivered_image || $log->signature_image))
+                                        <div class="row mt-2">
+                                            @if($log->delivered_image)
+                                                <div class="col-md-6">
+                                                    <strong class="mb-2">{{ __('Delivered Photo') }}</strong>
+                                                    <img src="{{ static_asset($log->delivered_image) }}" style="width: 100%;height: 300px;object-fit:cover;" alt="delivered_image" class="img-responsive mt-2" >
+                                                </div>
+                                            @endif
+                                            @if($log->signature_image)
+                                                <div class="col-md-6">
+                                                    <strong class="mb-2">{{ __('Signature') }}</strong>
+                                                    <img src="{{ static_asset($log->signature_image) }}" style="width: 100%;height: 150px;object-fit:contain;"  alt="signature_image" class="img-responsive mt-2" >
+                                                </div>
+                                            @endif
                                         </div>
-                                        <!-- cd-timeline__content -->
-                                    </div>
-                                @break
-                                @default
-                                    <div class="cd-timeline__block js-cd-block"></div>
-                            @endswitch
-                        @endforeach
+                                    @endif
+                                </div>
+                                <!-- cd-timeline__content -->
+                            </div>
+                        @empty
+                            <div class="alert alert-info">{{ __('No proof of delivery available for this shipment yet.') }}</div>
+                        @endforelse
 
                     </div>
                 </section>

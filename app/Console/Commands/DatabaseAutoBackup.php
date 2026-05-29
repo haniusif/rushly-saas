@@ -33,57 +33,58 @@ class DatabaseAutoBackup extends Command
         $mysqlUserName      = env('DB_USERNAME');
         $mysqlPassword      = env('DB_PASSWORD');
         $DbName             = env('DB_DATABASE');
- 
 
-        $tables = array();
+        $connect = new \PDO(
+            "mysql:host=$mysqlHostName;dbname=$DbName;charset=utf8",
+            "$mysqlUserName",
+            "$mysqlPassword",
+            array(\PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'")
+        );
+        // Stream rows from the server one at a time instead of buffering the
+        // whole result set into PHP memory (the cause of the OOM fatals).
+        $connect->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
 
-        $connect = new \PDO("mysql:host=$mysqlHostName;dbname=$DbName;charset=utf8", "$mysqlUserName", "$mysqlPassword",array(\PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
-        $get_all_table_query = "SHOW TABLES";
-        $statement = $connect->prepare($get_all_table_query);
-        $statement->execute();
-        $result = $statement->fetchAll();
+        $statement = $connect->query("SHOW TABLES");
+        $tables = $statement->fetchAll(\PDO::FETCH_COLUMN);
+        $statement->closeCursor();
 
-        foreach ($result as $row) {
-            $tables[] = $row[0];
-        }
-
-        $output = '';
-        foreach($tables as $table)
-        {
-            $show_table_query = "SHOW CREATE TABLE " . $table . "";
-            $statement = $connect->prepare($show_table_query);
-            $statement->execute();
-            $show_table_result = $statement->fetchAll();
-
-            foreach($show_table_result as $show_table_row)
-            {
-                $output .= "\n\n" . $show_table_row["Create Table"] . ";\n\n";
-            }
-            $select_query = "SELECT * FROM " . $table . "";
-            $statement = $connect->prepare($select_query);
-            $statement->execute();
-            $total_row = $statement->rowCount();
-
-            for($count=0; $count<$total_row; $count++)
-            {
-                $single_result = $statement->fetch(\PDO::FETCH_ASSOC);
-                $table_column_array = array_keys($single_result);
-                $table_value_array = array_values($single_result);
-                $output .= "\nINSERT INTO $table (";
-                $output .= "" . implode(", ", $table_column_array) . ") VALUES (";
-                $output .= "'" . implode("','", $table_value_array) . "');\n";
-            }
-        }
         $file_name = 'database_backup_on_' . date('y-m-d-his') . '.sql';
-     
-        //send to mail pdf file
-        Mail::send('backend.merchant.invoice.invoice_mail_pdf',[], function ($message) use ($output,$file_name) {
-            $message->to(settings()->email, settings()->name)
-                    ->subject('Database Backup - '.date('Y-m-d h:i:s'))
-                    ->from(settings()->email,settings()->name)
-                    ->attachData($output, $file_name);
-        });
-        //end send to mail pdf file
+        $backup_dir = storage_path('app/backups');
+        if (!is_dir($backup_dir)) {
+            mkdir($backup_dir, 0755, true);
+        }
+        $file_path = $backup_dir . '/' . $file_name;
+        $handle = fopen($file_path, 'w');
 
+        foreach ($tables as $table) {
+            $createStatement = $connect->query("SHOW CREATE TABLE `$table`");
+            $create = $createStatement->fetch(\PDO::FETCH_ASSOC);
+            $createStatement->closeCursor();
+            fwrite($handle, "\n\n" . $create["Create Table"] . ";\n\n");
+
+            $rows = $connect->query("SELECT * FROM `$table`");
+            while ($row = $rows->fetch(\PDO::FETCH_ASSOC)) {
+                $columns = array_keys($row);
+                $values = array_map(function ($value) use ($connect) {
+                    return is_null($value) ? 'NULL' : $connect->quote($value);
+                }, array_values($row));
+
+                fwrite(
+                    $handle,
+                    "\nINSERT INTO `$table` (" . implode(", ", $columns) . ") VALUES (" . implode(", ", $values) . ");\n"
+                );
+            }
+            $rows->closeCursor();
+        }
+        fclose($handle);
+
+        Mail::send('backend.merchant.invoice.invoice_mail_pdf', [], function ($message) use ($file_path, $file_name) {
+            $message->to(settings()->email, settings()->name)
+                    ->subject('Database Backup - ' . date('Y-m-d h:i:s'))
+                    ->from(settings()->email, settings()->name)
+                    ->attach($file_path, ['as' => $file_name, 'mime' => 'application/sql']);
+        });
+
+        @unlink($file_path);
     }
 }

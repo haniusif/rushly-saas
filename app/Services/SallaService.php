@@ -73,17 +73,29 @@ class SallaService
         ]);
     }
 
-    private function mapStatus(?string $rushlyStatus): ?string
+    /**
+     * Canonical Salla statuses (Update Shipment endpoint, 2025-01-20):
+     *   created, in_progress, in_transit, received_at_final_hub, to_be_reattempted,
+     *   reattempted, unable_to_deliver, delivering, delivered, partially_delivered,
+     *   shipped, cancelled, lost, damaged, return_to_origin, return_in_progress
+     */
+    private function mapStatus($rushlyStatus): ?string
     {
-        return match ($rushlyStatus) {
-            ParcelStatus::PENDING->value ?? null               => null,
-            'pickup_assign', 'pickup_re_schedule'              => 'picked_up',
-            'received_warehouse', 'transfer_to_hub'            => 'in_transit',
-            'delivery_man_assign'                              => 'out_for_delivery',
-            'delivered', 'partial_delivered'                   => 'delivered',
-            'return_to_courier', 'return_assign_to_merchant'   => 'returned',
-            'cancel'                                           => 'cancelled',
-            default                                            => null,
+        $status = (int) $rushlyStatus;
+        return match ($status) {
+            ParcelStatus::PICKUP_ASSIGN,
+            ParcelStatus::PICKUP_RE_SCHEDULE                => 'in_progress',
+            ParcelStatus::RECEIVED_WAREHOUSE,
+            ParcelStatus::TRANSFER_TO_HUB                   => 'in_transit',
+            ParcelStatus::DELIVERY_MAN_ASSIGN,
+            ParcelStatus::DELIVER                           => 'delivering',
+            ParcelStatus::DELIVERED                         => 'delivered',
+            ParcelStatus::PARTIAL_DELIVERED                 => 'partially_delivered',
+            ParcelStatus::RETURN_TO_COURIER                 => 'return_in_progress',
+            ParcelStatus::RETURN_ASSIGN_TO_MERCHANT,
+            ParcelStatus::RETURN_RECEIVED_BY_MERCHANT       => 'return_to_origin',
+            ParcelStatus::CANCELLED                         => 'cancelled',
+            default                                         => null,
         };
     }
 }

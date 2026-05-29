@@ -73,19 +73,27 @@ class ZidService
         ]);
     }
 
-    private function mapStatus(?string $rushlyStatus): ?string
+    /**
+     * Canonical Zid order statuses (POST /managers/store/orders/{id}/change-order-status):
+     *   new, preparing, ready, indelivery, delivered, cancelled
+     *
+     * Returns must use the reverse-waybill endpoint, not order status — so we
+     * return null for return states and let the caller handle them separately.
+     */
+    private function mapStatus($rushlyStatus): ?string
     {
-        // Zid's accepted shipment statuses (per docs.zid.sa): "new", "in_progress",
-        // "shipped", "out_for_delivery", "delivered", "returned", "cancelled".
-        return match ($rushlyStatus) {
-            ParcelStatus::PENDING->value ?? null               => null,
-            'pickup_assign', 'pickup_re_schedule'              => 'in_progress',
-            'received_warehouse', 'transfer_to_hub'            => 'shipped',
-            'delivery_man_assign'                              => 'out_for_delivery',
-            'delivered', 'partial_delivered'                   => 'delivered',
-            'return_to_courier', 'return_assign_to_merchant'   => 'returned',
-            'cancel'                                           => 'cancelled',
-            default                                            => null,
+        $status = (int) $rushlyStatus;
+        return match ($status) {
+            ParcelStatus::PICKUP_ASSIGN,
+            ParcelStatus::PICKUP_RE_SCHEDULE                => 'preparing',
+            ParcelStatus::RECEIVED_WAREHOUSE,
+            ParcelStatus::TRANSFER_TO_HUB,
+            ParcelStatus::DELIVERY_MAN_ASSIGN,
+            ParcelStatus::DELIVER                           => 'indelivery',
+            ParcelStatus::DELIVERED,
+            ParcelStatus::PARTIAL_DELIVERED                 => 'delivered',
+            ParcelStatus::CANCELLED                         => 'cancelled',
+            default                                         => null,
         };
     }
 }

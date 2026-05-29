@@ -36,6 +36,7 @@ return array (
     ParcelStatus::RETURN_WAREHOUSE                       => 'Return Warehouse',
     ParcelStatus::ASSIGN_MERCHANT                        => 'Assign client',
     ParcelStatus::RETURNED_MERCHANT                      => 'RTC',
+    ParcelStatus::CANCELLED                              => 'Cancelled',
 
  
 );

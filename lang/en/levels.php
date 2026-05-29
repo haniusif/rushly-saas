@@ -394,6 +394,10 @@ return [
     'domain' =>'Domain',
     'more_modules'  => 'More modules',
     'wallet_activation' => 'Wallet Activation',
-    'twilio_from'=>'TWILIO FROM'
+    'twilio_from'=>'TWILIO FROM',
+    'attachment'   => 'Attachment',
+    'booking_date' => 'Booking Date',
+    'city'         => 'City',
+    'area'         => 'Area'
 
 ];

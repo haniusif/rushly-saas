@@ -12,6 +12,7 @@ interface ParcelInterface {
     public function parcelTracking($request);
     public function details($id);
     public function statusUpdate($id, $status_id);
+    public function cancelShipment($id, ?string $reason = null);
     public function store($request);
     public function duplicateStore($request);
     public function update($id, $request);

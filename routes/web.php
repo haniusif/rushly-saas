@@ -415,7 +415,8 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
     
                         Route::get('parcel/index',                          [ParcelController::class, 'index'])->name('parcel.index')->middleware('hasPermission:parcel_read');
                         Route::get('parcel/details/{id}',                   [ParcelController::class, 'details'])->name('parcel.details')->middleware('hasPermission:parcel_read');
-                        
+                        Route::get('parcel/tracking-offcanvas/{id}',        [ParcelController::class, 'trackingOffcanvas'])->name('parcel.tracking_offcanvas')->middleware('hasPermission:parcel_read');
+
                         Route::post('parcel/inline-update/',                   [ParcelController::class, 'inlineupdate'])->name('parcel.inline.update')->middleware('hasPermission:parcel_read');
                         
                         Route::post('parcel/details/{id}/3pl',               [ParcelController::class, 'ThirdPartyLogistics'])->name('parcel.3pl_details')->middleware('hasPermission:parcel_read');
@@ -430,6 +431,7 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::get('parcel/edit/{id}',                      [ParcelController::class, 'edit'])->name('parcel.edit')->middleware('hasPermission:parcel_update');
                         Route::put('parcel/update/{id}',                    [ParcelController::class, 'update'])->name('parcel.update')->middleware('hasPermission:parcel_update');
                         Route::get('parcel/status-update/{id}/{status_id}', [ParcelController::class, 'statusUpdate'])->name('parcel.status-update')->middleware('hasPermission:parcel_status_update');
+                        Route::post('parcel/cancel-shipment/{id}',            [ParcelController::class, 'cancelShipment'])->name('parcel.cancel-shipment')->middleware('hasPermission:parcel_status_update');
                         Route::delete('parcel/delete/{id}',                 [ParcelController::class, 'destroy'])->name('parcel.delete')->middleware('hasPermission:parcel_delete');
                         Route::get('parcel/print/{id}',                     [ParcelController::class, 'parcelPrint'])->name('parcel.print')->middleware('hasPermission:parcel_read');
                         Route::get('parcel/print/{id}/label',               [ParcelController::class, 'parcelPrintLabel'])->name('parcel.print-label')->middleware('hasPermission:parcel_read');
@@ -599,6 +601,7 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         // NDR module (gated by ndr_manage)
                         Route::prefix('ndr')->name('ndr.')->middleware('hasPermission:ndr_manage')->group(function () {
                             Route::get('/',                     [NdrController::class, 'index'])->name('index');
+                            Route::get('/export',               [NdrController::class, 'export'])->name('export');
                             Route::get('/create/{parcel}',      [NdrController::class, 'create'])->name('create');
                             Route::post('/',                    [NdrController::class, 'store'])->name('store');
                             Route::get('/{ndr}',                [NdrController::class, 'show'])->name('show');

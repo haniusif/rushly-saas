@@ -41,16 +41,50 @@ class Parcel extends Model
     protected static function booted()
 {
     static::updating(function ($parcel) {
+        // Once a shipment is CANCELLED, no further updates of any kind are
+        // allowed. Returning false aborts the save. Callers should check
+        // isCancelled() before attempting any change.
+        if ((int) $parcel->getOriginal('status') === ParcelStatus::CANCELLED) {
+            return false;
+        }
+
         // Check if status is being updated AND the new status is different
         if ($parcel->isDirty('status') && $parcel->status == ParcelStatus::DELIVERY_MAN_ASSIGN) {
-            
+
             $parcel->number_of_attempts = $parcel->number_of_attempts + 1;
-            
+
         }
-        
-       
+
+
     });
 }
+
+    public function isCancelled(): bool
+    {
+        return (int) $this->status === ParcelStatus::CANCELLED;
+    }
+
+    /**
+     * A shipment can only be cancelled while still in the "Created" state.
+     * Once it's been picked up, assigned to a courier, etc., cancellation
+     * requires going through the normal return/refund flow instead.
+     */
+    public function isCancellable(): bool
+    {
+        return (int) $this->status === ParcelStatus::PENDING;
+    }
+
+    public function cancelShipment(?string $reason = null): bool
+    {
+        if (! $this->isCancellable()) {
+            return false;
+        }
+        $this->status = ParcelStatus::CANCELLED;
+        if ($reason !== null && $reason !== '') {
+            $this->note = trim((string) $this->note.' | Cancelled: '.$reason);
+        }
+        return (bool) $this->save();
+    }
 
 
     /**
@@ -175,6 +209,7 @@ public function lastPickupMan()
 
     public function getParcelStatusAttribute()
     {
+        $status = '<span class="badge badge-pill badge-secondary">'.trans("parcelStatus." . $this->status).'</span>';
 
         if($this->status == ParcelStatus::PENDING){
             
@@ -234,6 +269,8 @@ public function lastPickupMan()
 
     public function getStatusParcelAttribute($status_id)
     {
+        $status = '<span class="badge badge-pill badge-secondary">'.trans("parcelStatus." . $status_id).'</span>';
+
         if($status_id == ParcelStatus::PENDING){
             $status = '<span class="badge badge-pill badge-danger">'.trans("parcelStatus." . $status_id).'</span>';
         }
@@ -292,6 +329,8 @@ public function lastPickupMan()
 
     public function getDeliveryTypeNameAttribute()
     {
+        $delivery_type_id = trans("deliveryType." . $this->delivery_type_id);
+
         if($this->delivery_type_id == DeliveryType::SAMEDAY){
             $delivery_type_id = trans("deliveryType." . $this->delivery_type_id);
         }

@@ -36,6 +36,7 @@ return array (
     ParcelStatus::RETURN_WAREHOUSE                       => 'مستودع العودة',
     ParcelStatus::ASSIGN_MERCHANT                        => 'عيّن التاجر',
     ParcelStatus::RETURNED_MERCHANT                      => 'التاجر العائد',
+    ParcelStatus::CANCELLED                              => 'ملغى',
 
 
 );

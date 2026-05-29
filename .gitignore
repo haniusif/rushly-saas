@@ -59,3 +59,10 @@ cgi-bin/
 
 # Optional
 firebase-messaging-sw.js
+
+# Local scratch / runtime logs
+error_log
+temp/
+
+# Claude Code local config
+.claude/

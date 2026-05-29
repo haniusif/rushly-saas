@@ -16,8 +16,9 @@ return new class extends Migration {
             // WP doesn't have a central "store id" — each merchant owns their
             // own WordPress install. We identify a store by its site URL.
             // WooCommerce order IDs are bigint per-site, so the unique key is
-            // (site_url, wc_order_id).
-            $table->string('site_url', 255)->index();
+            // (site_url, wc_order_id). Keep site_url <=191 chars so the
+            // composite unique stays under MySQL's 1000-byte key limit.
+            $table->string('site_url', 191)->index();
             $table->unsignedBigInteger('wc_order_id')->index();
 
             // Per-store bearer used when rushly-saas POSTs back to the WP REST

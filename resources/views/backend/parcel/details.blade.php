@@ -65,10 +65,51 @@
                 </div>
             </div>
             <div class="d-flex justify-content-end mb-5">
-             <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#addNdrModal">
+        @if ($parcel->isCancelled())
+            <span class="badge badge-dark p-2" style="font-size:14px;">
+                <i class="fas fa-ban"></i> {{ __('Shipment Cancelled') }}
+            </span>
+        @else
+             <button type="button" class="btn btn-danger mr-2" data-toggle="modal" data-target="#addNdrModal">
           <i class="fas fa-plus"></i> {{ __('Add NDR') }}
         </button>
+            @if ($parcel->isCancellable())
+             <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#cancelShipmentModal">
+          <i class="fas fa-ban"></i> {{ __('Cancel Shipment') }}
+        </button>
+            @endif
+        @endif
         </div>
+
+        @if ($parcel->isCancellable())
+        <div class="modal fade" id="cancelShipmentModal" tabindex="-1" role="dialog" aria-hidden="true">
+          <div class="modal-dialog" role="document">
+            <form method="POST" action="{{ route('parcel.cancel-shipment', $parcel->id) }}">
+              @csrf
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">{{ __('Cancel Shipment') }}</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                  <p class="text-danger mb-2">
+                    <strong>{{ __('This is permanent.') }}</strong>
+                    {{ __('No further status updates or actions will be allowed on this parcel.') }}
+                  </p>
+                  <div class="form-group">
+                    <label for="cancel_reason">{{ __('Reason (optional)') }}</label>
+                    <textarea name="reason" id="cancel_reason" rows="3" class="form-control" placeholder="{{ __('e.g. Customer requested cancellation') }}"></textarea>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-light" data-dismiss="modal">{{ __('Back') }}</button>
+                  <button type="submit" class="btn btn-dark"><i class="fas fa-ban"></i> {{ __('Cancel Shipment') }}</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+        @endif
 <div class="d-flex justify-content-end d-none">
   
   <form action="{{ route('parcel.3pl_details', $parcel->id) }}" method="POST" class="d-inline-block">

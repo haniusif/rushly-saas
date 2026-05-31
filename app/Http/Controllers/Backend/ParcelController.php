@@ -75,18 +75,18 @@ class ParcelController extends Controller
     }
     public function index(Request $request)
     {
-      
-       
+
+
         if ($request->has('per_page')) {
         session(['per_page' => $request->per_page]);
         }
         $paginate = session('per_page', 10);
-    
+
 
         $parcels        = $this->repo->all($paginate);
-        
-        
-        
+
+
+
 
         $deliverymans   = $this->deliveryman->all();
         $hubs           = $this->hub->all();
@@ -95,16 +95,16 @@ class ParcelController extends Controller
 
     public function filter(Request $request)
     {
-        
+
            if ($request->has('per_page')) {
         session(['per_page' => $request->per_page]);
         }
         $paginate = session('per_page', 10);
-        
-     
-          
-    
-    
+
+
+
+
+
 
         if($this->repo->filter($request , $paginate)){
             $parcels      = $this->repo->filter($request);
@@ -126,23 +126,23 @@ class ParcelController extends Controller
      */
     public function create()
     {
-        
+
         $merchants          = $this->merchant->all();
         $deliveryCategories = $this->repo->deliveryCategories();
         $deliveryCharges    = $this->repo->deliveryCharges();
         $packagings         = $this->repo->packaging();
-        $deliveryTypes      = $this->repo->deliveryTypes(); 
-        $cities      = $this->repo->cities(); 
-        
-         
+        $deliveryTypes      = $this->repo->deliveryTypes();
+        $cities      = $this->repo->cities();
+
+
         return view('backend.parcel.create',compact('merchants','deliveryCategories','deliveryCharges','deliveryTypes','packagings' ,'cities'));
     }
-    
-    
- 
 
-    
-    
+
+
+
+
+
 
     /**
      * Store a newly created resource in storage.
@@ -154,13 +154,13 @@ class ParcelController extends Controller
     {
 
 
-        $parcel_count = Parcel::companywise()->count(); 
-        if(!settings()->subscription): 
+        $parcel_count = Parcel::companywise()->count();
+        if(!settings()->subscription):
             Toastr::error('Something went wrong!', 'Error');
             return redirect()->route('subscription.index');
         elseif(settings()->subscription && settings()->subscription->parcel_count <= $parcel_count ):
             Toastr::error('You have limited parcel manage. Please upgrade your package.', 'Error');
-            return redirect()->back(); 
+            return redirect()->back();
         endif;
 
 
@@ -174,7 +174,7 @@ class ParcelController extends Controller
             endif;
         endif;
         // end wallet use checking
-  
+
         if($this->repo->store($request)){
             Toastr::success(__('parcel.added_msg'),__('message.success'));
             return redirect()->route('parcel.index');
@@ -189,14 +189,14 @@ class ParcelController extends Controller
     {
 
         $parcel_count = Parcel::companywise()->count();
-        if(!settings()->subscription): 
+        if(!settings()->subscription):
             Toastr::error('Something went wrong!', 'Error');
             return redirect()->back();
         elseif(settings()->subscription && settings()->subscription->parcel_count <= $parcel_count ):
             Toastr::error('You have limited parcel manage. Please upgrade your package.', 'Error');
-            return redirect()->back(); 
+            return redirect()->back();
         endif;
-         
+
         if($this->repo->duplicateStore($request)){
             Toastr::success(__('parcel.added_msg'),__('message.success'));
             return redirect()->route('parcel.index');
@@ -245,58 +245,58 @@ class ParcelController extends Controller
         $deliveryTypes           = $this->repo->deliveryTypes();
         return view('backend.parcel.duplicate',compact('parcel','merchant','shops','deliveryCategories','deliveryTypes','deliveryCategoryCharges','deliveryCharges','packagings'));
     }
-    
-    
-    
-    
+
+
+
+
        public function inlineupdate(Request $request)
     {
-         
+
         $id = $request->id;
         $cash_collection = $request->cash_collection;
-         
-         
+
+
         if($this->repo->updateCOD($id, $cash_collection)){
 
               $details =   $this->repo->details($id);
-              
+
               return $details;
         }
-        
-       
-        
+
+
+
         return null;
-     
-     
+
+
     }
 
     // Parcel details
     public function details($id)
     {
         $parcel         = $this->repo->details($id);
-        
-         
-        
+
+
+
     // If parcel not found, redirect or abort safely
     if (!$parcel) {
         Toastr::error(__('Parcel not found.'));
         return redirect()->back();
-       
+
     }
         $deliveryman    = $this->deliveryman->all();
         $data = [];
         if($parcel->lastParcel3pl){
-          $lastParcel3pl = $parcel->lastParcel3pl;  
-          
+          $lastParcel3pl = $parcel->lastParcel3pl;
+
           $parcel_3pl_name =  $lastParcel3pl->parcel_3pl_name;
           $awb_number =  $lastParcel3pl->awb_number;
           if($parcel_3pl_name == 'panda'){
-              
-             
+
+
           $response = $this->deliveryPanda->getListTracking([$awb_number]);
-          
- 
-                
+
+
+
          if (
         isset($response['success']) && $response['success'] == 1 &&
         isset($response['TrackResponse']) && is_array($response['TrackResponse'])
@@ -321,8 +321,8 @@ class ParcelController extends Controller
         }}
           }
         }
-        
-        
+
+
         $parcelevents   = ParcelEvent::where('parcel_id',$id)->orderBy('created_at','desc')->get();
 
 
@@ -348,11 +348,11 @@ class ParcelController extends Controller
 
         return view('backend.parcel.partials.tracking_offcanvas', compact('parcel', 'parcelevents'));
     }
-    
-    
+
+
      public function addNdr(Request $request, $id)
     {
-        
+
         // التحقق من صحة البيانات
         $request->validate([
             'rejection_reason_id' => 'required|exists:rejection_reasons,id',
@@ -379,24 +379,24 @@ class ParcelController extends Controller
             'deliveryman_id' => $request->deliveryman_id,
             'created_by_type' => 'user',
             'created_by' => auth()->id(),
-            
+
         ]);
 
         return redirect()->back()->with('success', __('NDR added successfully.'));
     }
-    
-    
+
+
     public function ThirdPartyLogistics($id, Request $request)
 {
     $company = $request->company;
     $parcel = $this->repo->details($id);
-    
- 
+
+
     if ($company == 'panda') {
 
           $data = [
             "AwbNumber" => $parcel->tracking_id ?? $parcel->id,
-            
+
             "FromCompany" => "Rushly",
             "FromAddress" => "Dubai",
             "FromCity" => "Dubai",
@@ -406,7 +406,7 @@ class ParcelController extends Controller
             "FromContactno" => "-",
             "FromMobileno" => "-",
 
-    
+
             "ToCompany" => $parcel->customer_name ?? '-',
             "ToAddress" => $parcel->customer_address ?? 'Unknown',
             "ToCity" => strtoupper($parcel->city->en_name ?? 'Dubai'),
@@ -415,9 +415,9 @@ class ParcelController extends Controller
             "ToCperson" => $parcel->customer_name ?? '-',
             "ToContactno" => $parcel->customer_phone ?? '',
             "ToMobileno" => $parcel->customer_phone ?? '',
-            
+
             "ReferenceNumber" => $parcel->reference_number ?? 'REF-' . $parcel->id,
-            "Weight" => number_format((float) $parcel->weight, 2, '.', ''),  
+            "Weight" => number_format((float) $parcel->weight, 2, '.', ''),
             "Pieces" => $parcel->number_of_boxes ?? 1,
             "PackageType" => "Domestic Parcel",
             "CurrencyCode" => "AED",
@@ -428,11 +428,11 @@ class ParcelController extends Controller
         ];
 
         $response = $this->deliveryPanda->createCustomerToCustomer($data);
-        
- 
+
+
        return $response;
-      
-  
+
+
 
         return response()->json(json_decode($response, true));
     }
@@ -440,7 +440,7 @@ class ParcelController extends Controller
     return response()->json(['error' => '3PL company not supported or not selected.'], 400);
 }
 
-    
+
 
 
 
@@ -462,11 +462,11 @@ class ParcelController extends Controller
 
         $packagings              = $this->repo->packaging();
         $deliveryTypes      = $this->repo->deliveryTypes();
-        
-        
-        $cities      = $this->repo->cities(); 
-        
-    
+
+
+        $cities      = $this->repo->cities();
+
+
          $areas = Area::where('city_id', $parcel->city_id)
                  ->where('is_active', 1)
                  ->orderBy('sorting')
@@ -530,12 +530,12 @@ class ParcelController extends Controller
         Toastr::success(__('parcel.delete_msg'),__('message.success'));
         return back();
     }
-    
-    
-  
-    
+
+
+
+
     public function parcelExport(Request $request){
-      
+
         try {
             if($request->type && $request->type == 'csv'):
                 return Excel::download(new MerchantParcelExport($this->repo->parcelExport($request)),'Parcels Export-csv-file-'.Carbon::now()->format('d-m-Y His').'.csv',\Maatwebsite\Excel\Excel::CSV, [
@@ -549,14 +549,14 @@ class ParcelController extends Controller
             return redirect()->back();
         }
     }
-    
+
 
     public function parcelImportExport()
     {
-     
+
         $deliveryCategories = $this->repo->deliveryCategories();
-        
- 
+
+
         return view('backend.parcel.import',compact('deliveryCategories'));
     }
 
@@ -586,9 +586,9 @@ class ParcelController extends Controller
 
     public function getImportMerchant(Request $request){
         $search   = $request->search;
-        
-       
-                    
+
+
+
         $response = array();
         if($request->searchQuery == 'true'){
             if($search == ''){
@@ -609,7 +609,7 @@ class ParcelController extends Controller
     }
 
     public function getMerchant(Request $request){
-    
+
         $search   = $request->search;
         $response = array();
         if($request->searchQuery == 'true'){
@@ -674,11 +674,11 @@ class ParcelController extends Controller
                     'sub_city' => $merchant->cod_charges['sub_city'],
                     'outside_city' => $merchant->cod_charges['outside_city']
             ];
-            
-            
-            
-            
-            
+
+
+
+
+
             return response()->json($merchant);
         endif;
         return '';
@@ -717,7 +717,7 @@ class ParcelController extends Controller
 
     public function deliveryCharge(Request $request)
     {
-       
+
        // merchant_id=16&category_id=1&weight=5&delivery_type_id=2
         if (request()->ajax()) {
 
@@ -1021,7 +1021,7 @@ class ParcelController extends Controller
 
     public function search(Request $data)
     {
-     
+
         return $this->repo->search($data);
     }
 
@@ -1085,7 +1085,7 @@ class ParcelController extends Controller
             $deliveryman= $this->deliveryman->get($request->delivery_man_id);
             $parcels    = $this->repo->bulkParcels($request->parcel_ids_);
             $bulk_type  = ParcelStatus::DELIVERY_MAN_ASSIGN;
-            $report_name = __("Runsheet"); 
+            $report_name = __("Runsheet");
             return view('backend.parcel.bulk_print',compact('parcels','deliveryman','bulk_type' , 'report_name'));
 
         }else{
@@ -1099,8 +1099,8 @@ class ParcelController extends Controller
         try {
 
             $deliveryman  = $this->deliveryman->get($request->delivery_man_id);
-            
-           
+
+
             $parcels      = $this->repo->bulkParcels($request->parcels);
             $bulk_type    = ParcelStatus::DELIVERY_MAN_ASSIGN;
             $report_name = __("Runsheet");
@@ -1522,18 +1522,18 @@ class ParcelController extends Controller
     {
 
         $parcel = $this->repo->get($id);
-       
+
         $merchant = $this->merchant->get($parcel->merchant_id);
         $shops = $this->shop->all($parcel->merchant_id);
         return view('backend.parcel.print',compact('parcel','merchant','shops'));
     }
 
- 
-    
+
+
     public function parcelPrintLabel($id)
 {
     $parcel = $this->repo->get($id);
-  
+
     // Wrap single parcel in a collection or array
     return $this->printMultipleParcelLabels(collect([$parcel]));
 }
@@ -1549,11 +1549,11 @@ class ParcelController extends Controller
             return redirect()->back();
         endif;
         $parcels = $this->repo->parcelMultiplePrintLabel($request);
-        
+
         return $this->printMultipleParcelLabels($parcels);
-        
-         
-        
+
+
+
         return view('backend.parcel.multiple-print-label',compact('parcels'));
     }
 
@@ -1576,8 +1576,8 @@ public function printMultipleParcelLabels($parcels)
     $mpdf->autoPageBreak    = false;
 
     foreach ($parcels as $parcel) {
-      
-        // cash_collection	
+
+        // cash_collection
         $merchant = $parcel->merchant;
         $merchant_shop = $parcel->merchantShop;
 
@@ -1588,18 +1588,18 @@ public function printMultipleParcelLabels($parcels)
         $sender_addressLine1 = $parcel->pickup_address ?? "-";
         $sender_addressLine2 = $merchant_shop->address ?? "-";
         $sender_country = "UAE";
-        $sender_city = $parcel->city->en_name ?? "-"; 
-        $sender_neighbourhood = $parcel->area->en_name ?? "-"; 
+        $sender_city = $parcel->city->en_name ?? "-";
+        $sender_neighbourhood = $parcel->area->en_name ?? "-";
         $sender_phone = $parcel->pickup_phone ?? "-";
 
         $receiver_name = $parcel->customer_name ?? "-";
         $receiver_addressLine1 = $parcel->customer_address ?? "-";
         $receiver_addressLine2 = "-";
         $receiver_country = "UAE";
-        $receiver_city = $parcel->city->en_name ?? "-"; 
-        $receiver_city_code = $parcel->city->city_code ?? "-"; 
-        $receiver_state = $parcel->area->en_name ?? "-"; 
-        $receiver_neighbourhood = $parcel->area->en_name ?? "-"; 
+        $receiver_city = $parcel->city->en_name ?? "-";
+        $receiver_city_code = $parcel->city->city_code ?? "-";
+        $receiver_state = $parcel->area->en_name ?? "-";
+        $receiver_neighbourhood = $parcel->area->en_name ?? "-";
         $receiver_phone = $parcel->customer_phone ?? "-";
 
         $codAmount = $parcel->cash_collection ?? 0;
@@ -1611,12 +1611,12 @@ public function printMultipleParcelLabels($parcels)
             : "شحنة - فئة: " . ($parcel->delivery_category->title ?? "-") . " - الوزن: " . ($parcel->weight ?? "0") . " كجم";
 
         $number_of_boxes = $parcel->number_of_boxes ?? 1;
-        
+
         $watermarkText = $isCod ? 'COD' : 'CC';
         $mpdf->SetWatermarkText($watermarkText);
         $mpdf->showWatermarkText = true;
 
- 
+
 
         // Loop based on number of boxes
         for ($x = 1; $x <= $number_of_boxes; $x++) {
@@ -1639,12 +1639,12 @@ public function printMultipleParcelLabels($parcels)
             $data['isCod'] = $isCod;
             $data['codAmount'] = $codAmount;
             $data['awb'] = (string) $parcel->id;
-            $data['feeriAwb'] = (string) $parcel->id;
+            $data['ruhslyAwb'] = (string) $parcel->id;
             $data['date'] = $dropoff_time;
             $data['description'] = $description;
             $data['orderNumber'] = $order_reference;
             $data['reference_number'] = $reference_number;
-            
+
 
             $html = view('awb_label', compact('data'))->render();
 
@@ -1823,7 +1823,7 @@ public function printMultipleParcelLabels($parcels)
 
     public function ParcelSearchs(Request $request)
     {
-       
+
 
 
         if($this->repo->parcelSearchs($request)){
@@ -1852,7 +1852,7 @@ public function exportShipments(Request $request)
     return Excel::download(new ShipmentExport($request, $this->repo), $filename);
 }
 
-    
+
 
 
 
@@ -1896,18 +1896,18 @@ public function exportShipments(Request $request)
         //         $mapParcels[$key]['url'] = route('parcel.logs',$parcelEvent->parcel->id);
         //     }
         // }
-        
+
         // $parcelsLocations = $mapParcelslocations;
 
 
-        //parcel location 
+        //parcel location
             $mapParcels = [];
             $mapParcelslocations = [];
             $parcels = Parcel::where('status',[ParcelStatus::DELIVERY_MAN_ASSIGN,ParcelStatus::DELIVERY_RE_SCHEDULE])->get();
             if(!blank($parcels)) {
                 foreach($parcels as $key => $parcel) {
                     $mapParcelslocations[] = ['location'=> $parcel->customer_address];
-    
+
                     $mapParcels[$key]['lat'] = $parcel->customer_lat;
                     $mapParcels[$key]['long'] = $parcel->customer_long;
                     $mapParcels[$key]['customer_name'] = $parcel->customer_name;
@@ -1940,8 +1940,8 @@ public function exportShipments(Request $request)
         $parcelevents   = $this->repo->parcelEvents($id);
         return view('backend.parcel.parcel-delivered-info', compact('parcel','parcelevents'));
     }
-    
-    
+
+
     public function getAreasByCity(Request $request)
 {
     $areas = Area::where('city_id', $request->city_id)

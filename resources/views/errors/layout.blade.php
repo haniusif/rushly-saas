@@ -6,16 +6,16 @@
 <head>
     <!-- Required meta tags -->
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <!-- Bootstrap CSS -->
 
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css">
     <link href="{{static_asset('backend')}}/vendor/fonts/circular-std/style.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{static_asset('backend')}}/libs/css/style.css"> 
+    <link rel="stylesheet" href="{{static_asset('backend')}}/libs/css/style.css">
     <link rel="stylesheet" href="{{static_asset('backend')}}/vendor/fonts/fontawesome/css/fontawesome-all.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"   />
     <title>@yield('title')</title>
-</head> 
+</head>
 <body class="bg-light">
    <!-- ============================================================== -->
     <!-- main wrapper -->
@@ -78,7 +78,7 @@
             <div class="container-fluid">
                 <div class="row">
                     <div class=" col-12">
-                            Copyright © {{ date('Y') }} Concept. All rights reserved. Development by <a href="https://feerilogis.com">Feerilogis</a>.
+                            Copyright © {{ date('Y') }} Concept. All rights reserved. Development by <a href="https://rushlyexpress.com">rushlyexpress</a>.
                     </div>
 
                 </div>

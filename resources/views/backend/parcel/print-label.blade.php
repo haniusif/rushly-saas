@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" style="margin:0; padding:0;">
 <head>
-    
+
     <meta charset="UTF-8">
     <title>AWB Label</title>
     <style>
@@ -61,7 +61,7 @@
                 <tr>
                     <!-- Left: Logo -->
                     <td style="text-align: left; width: 33%;">
-                        <img src="{{ asset('assets/img/logos/feeri-logo.png') }}" alt="Rushly Logo" width="100">
+                        <img src="{{ asset('assets/img/logos/ruhsly-logo.png') }}" alt="Rushly Logo" width="100">
                     </td>
 
                     <!-- Center: COD and Page Info -->
@@ -77,7 +77,7 @@
 
                     <!-- Right: QR Code -->
                     <td style="text-align: right; width: 33%;">
-                        <img src="data:image/png;base64,{{ DNS2D::getBarcodePNG($data['feeriAwb'], 'QRCODE') }}" alt="QR Code" width="60" height="60">
+                        <img src="data:image/png;base64,{{ DNS2D::getBarcodePNG($data['ruhslyAwb'], 'QRCODE') }}" alt="QR Code" width="60" height="60">
                     </td>
                 </tr>
             </table>
@@ -113,7 +113,7 @@
             <div>Date: {{ $data['date'] }}</div>
             <div>Description: {{ $data['description'] }}</div>
             <div>AWB #: {{ $data['awb'] }}</div>
-            <div>FEERI #: {{ $data['feeriAwb'] }}</div>
+            <div>ruhsly #: {{ $data['ruhslyAwb'] }}</div>
 
             @if($data['isCod'] && $data['codAmount'] > 0)
                 <div class="bold">Grand Total: {{ $data['codAmount'] }} SAR</div>
@@ -164,16 +164,16 @@
             .label-section {
                 width: unset;
                 height: unset;
-            } 
+            }
             @page {
                 size: 7.5cm 3.5cm;
                 margin: 5px !important;
-            } 
+            }
             body {
                 zoom: 100%;
-            } 
+            }
         }
-       
+
     </style>
 </head>
 
@@ -181,7 +181,7 @@
     <div class="label-size" style="margin-bottom: 5px">
         <span style="color:red">Label size: 7.5cm X 3.5cm</span>
     </div>
-    <div class="label-section"> 
+    <div class="label-section">
         <table width="100%" border="0" cellpadding="0" cellspacing="0" class="main-table">
             <tbody>
                 <tr>
@@ -205,7 +205,7 @@
                                     <td  style="line-height:1.2;width:50%; border-right: 1px solid;border-top:#000000  1px solid;border-bottom:#000000 1px solid; padding:2px;padding-left:0px">
                                         <div><b>{{ __('Customer :') }}</b> {{ $parcel->customer_name }} ,
                                             {{ $parcel->customer_phone }}, {{ $parcel->customer_address }}</div>
-                                    </td>   
+                                    </td>
                                     <td  style="line-height:1.2;width:50%;border-top:#000000  1px solid;border-bottom:#000000 1px solid;padding:2px">
                                         <div  >
                                             <b>Hub</b> :  <span>{{ optional($parcel->hub)->name }}</span><br>
@@ -225,11 +225,10 @@
                     </td>
                 </tr>
             </tbody>
-        </table> 
+        </table>
     </div>
-    
+
 </body>
 
 </html>
 
-  

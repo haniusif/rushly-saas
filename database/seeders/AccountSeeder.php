@@ -22,7 +22,7 @@ class AccountSeeder extends Seeder
         $account->account_holder_name  = "User";
         $account->account_no           = 123654789;
         $account->bank                 = 1;
-        $account->branch_name          = "Dhaka";
+        $account->branch_name          = "Riyadh";
         $account->balance              = 00;
         $account->opening_balance      = 00;
         $account->save();

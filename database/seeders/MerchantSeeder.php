@@ -24,9 +24,9 @@ class MerchantSeeder extends Seeder
         $merchantUser                  = new User();
         $merchantUser->company_id      = 2;
         $merchantUser->name            = "Merchant";
-        $merchantUser->mobile          = "01912938003";
-        $merchantUser->email           = "merchant@wemaxdevs.com";
-        $merchantUser->address         = "Mirpur-2,Dhaka";
+        $merchantUser->mobile          = "966535097129";
+        $merchantUser->email           = "merchant@rushlyexpress.com";
+        $merchantUser->address         = "Riyadh";
         $merchantUser->password        = Hash::make('12345678');
         $merchantUser->user_type       = UserType::MERCHANT;
         $merchantUser->hub_id          = 4;
@@ -36,7 +36,7 @@ class MerchantSeeder extends Seeder
 
         $merchant                      = new Merchant();
         $merchant->user_id             = $merchantUser->id;
-        $merchant->business_name       = "WemaxDevs";
+        $merchant->business_name       = "Rushly";
         $merchant->company_id          = 2;
         $merchant->merchant_unique_id  = 2024;
         $merchant->current_balance     = 00;
@@ -49,7 +49,7 @@ class MerchantSeeder extends Seeder
         );
         $merchant->nid_id              = 4;
         $merchant->trade_license       = 5;
-        $merchant->address             = "Dhaka";
+        $merchant->address             = "Riyadh";
         $merchant->save();
 
         $deliveryCharges =  DeliveryCharge::with('category')->orderBy('position')->get();

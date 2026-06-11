@@ -131,15 +131,15 @@ class CompanyFrontendDataSeeder extends Seeder
         //Start FAQ
         $faker = Faker::create();
         $questions = [
-            'What is wecourier Delivery?',
+            'What is Rushly Delivery?',
             'How do I contact you?',
             'How can a merchant track their parcel delivery?',
-            'How do I send a product/ courier via wecourier Delivery?',
+            'How do I send a product/ courier via Rushly Delivery?',
             'I want to hold a parcel for more than 3 days before home delivery. Is it possible?',
             'Can you do product exchange from customers?',
             'Can you deliver to addresses inside Cantonment or other restricted areas?',
             'I do not have a Facebook page, can I register as a merchant?',
-            'What kind of products does wecourier deliver?',
+            'What kind of products does Rushly deliver?',
         ];
         foreach ($questions as $key => $question) {
             $faq                = new Faq();

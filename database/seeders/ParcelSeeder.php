@@ -28,9 +28,9 @@ class ParcelSeeder extends Seeder
             $parcel->merchant_id            = 1;
             $parcel->merchant_shop_id       = 1;
             $parcel->pickup_address         = $faker->unique()->address;
-            $parcel->pickup_phone           = "01478523698";
+            $parcel->pickup_phone           = "966535097129";
             $parcel->customer_name          = $faker->name;
-            $parcel->customer_phone         = "01478523655";
+            $parcel->customer_phone         = "966535097129";
             $parcel->customer_address       = $faker->unique()->address;
             $parcel->invoice_no             = rand(100000,999999);
             $parcel->category_id            = 1;

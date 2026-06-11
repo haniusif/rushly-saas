@@ -25,12 +25,12 @@ class GeneralSettingsSeeder extends Seeder
         $user->save(); 
 
         $row               = new GeneralSettings();
-        $row->name         = "We Courier";
-        $row->phone        = "20022002";
-        $row->email        = "info@wecourier.com";
-        $row->address      = "Mirpur 10, Dhaka, Bangladesh";
+        $row->name         = "Rushly";
+        $row->phone        = "966535097129";
+        $row->email        = "info@rushlyexpress.com";
+        $row->address      = "Riyadh";
         $row->currency     = "$";
-        $row->copyright    = "Copyright © All rights reserved. Development by WemaxDevs.";
+        $row->copyright    = "Copyright © All rights reserved. Development by Rushly.";
         $row->logo         = 8;
         $row->favicon      = 9;
         $row->par_track_prefix     = 'we';
@@ -45,9 +45,9 @@ class GeneralSettingsSeeder extends Seeder
  
         $row               = new GeneralSettings();
         $row->name         = "Company";
-        $row->phone        = "20022002";
+        $row->phone        = "966535097129";
         $row->email        = "info@company.com";
-        $row->address      = "Mirpur 10, Dhaka, Bangladesh";
+        $row->address      = "Riyadh";
         $row->currency     = "$";
         $row->copyright    = "Copyright © All rights reserved. Development by Company Name.";
         $row->logo         = 8;

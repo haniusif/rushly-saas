@@ -31,15 +31,15 @@ class UserSeeder extends Seeder
 
         $user                        = new User();
         $user->name                  = "Admin";
-        $user->email                 = "admin@wemaxdevs.com";
+        $user->email                 = "admin@rushlyexpress.com";
         $user->password              = Hash::make('12345678');
-        $user->mobile                = "01912938002";
+        $user->mobile                = "966535097129";
         $user->nid_number            = "12345678912";
         $user->user_type             = UserType::SUPER_ADMIN;
         $user->image_id              = 1;
         $user->joining_date          = "2022-01-01";
         $user->salary                =  7000;
-        $user->address               = "Mirpur-10, Dhaka-1216";
+        $user->address               = "Riyadh";
         $user->role_id               = 1;
         $user->permissions           = (new RoleSeeder)->superadminPermission();
         $user->save();
@@ -48,15 +48,15 @@ class UserSeeder extends Seeder
         $user->name                  = "Company";
         $user->company_owner         = BooleanStatus::YES;
         $user->company_id            = 2;
-        $user->email                 = "company@wemaxdevs.com";
+        $user->email                 = "company@rushlyexpress.com";
         $user->password              = Hash::make('12345678');
-        $user->mobile                = "01912938002";
+        $user->mobile                = "966535097129";
         $user->nid_number            = "12345678912";
         $user->user_type             = UserType::ADMIN;
         $user->image_id              = 1;
         $user->joining_date          = "2022-01-01";
         $user->salary                =  7000;
-        $user->address               = "Mirpur-10, Dhaka-1216";
+        $user->address               = "Riyadh";
         $user->role_id               = 2;
         $user->permissions           = $this->AdminPermissions();
         $user->save();
@@ -83,9 +83,9 @@ class UserSeeder extends Seeder
         $user                        = new User();
         $user->name                  = "Branch";
         $user->company_id            = 2;
-        $user->email                 = "branch@wemaxdevs.com";
+        $user->email                 = "branch@rushlyexpress.com";
         $user->password              = Hash::make('12345678');
-        $user->mobile                = "01478523690";
+        $user->mobile                = "966535097129";
         $user->nid_number            = "12345678910";
         $user->designation_id        = 2;
         $user->department_id         = 2;
@@ -94,7 +94,7 @@ class UserSeeder extends Seeder
         $user->image_id              = 6;
         $user->salary                =  9000;
         $user->joining_date          = "2022-04-20";
-        $user->address               = "Mirpur-10, Dhaka-1216";
+        $user->address               = "Riyadh";
         $user->role_id               = 2;
         $user->permissions           = $this->userPermissions();
         $user->save();

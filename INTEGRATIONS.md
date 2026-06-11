@@ -6,15 +6,20 @@ How external systems talk to Rushly. Sister document to `ARCHITECTURE.md` (which
 
 ## 1. What's an "integration" here?
 
-Anything outside the Laravel monolith that calls `/api/v10/*` or receives webhooks from us. Three live integrations today:
+Anything outside the Laravel monolith that calls `/api/v10/*` or receives webhooks from us. Today:
 
 | Integration | Repo | Direction | Status |
 |---|---|---|---|
+| **Salla** (storefront bridge) | `haniusif/rushly-salla` *(local: `rushly-salla/`)* | Bidirectional (Salla webhooks + Rushly REST + rushly-saas writeback) | Live; tunnel up at `https://salla.rushly-logistic.com`; awaiting first install |
+| **Zid** (storefront bridge) | `rushly-zid/` | Bidirectional (no SDK, hand-rolled OAuth, Basic-Auth webhooks) | Scaffolded; needs Partner credentials |
+| **Shopify "Rushly Express"** | `haniusif/rushly-shopify-app` | Bidirectional (Rushly REST + Shopify webhooks + GraphQL) | Demo-mode bridge live, real wiring deferred |
+| **WordPress / WooCommerce** | `rushly-woocommerce/` | Bidirectional (WP plugin — no hosted bridge, no OAuth) | Live (ships as a WP plugin installed in the merchant's WP) |
 | **Driver mobile app** (Flutter) | `haniusif/rushly-driver` | Bidirectional (REST + FCM push) | Production |
-| **Rushly Express** (Shopify embedded app) | `haniusif/rushly-shopify-app` | Bidirectional (Rushly REST + Shopify webhooks + Shopify GraphQL) | Production-ready bridge, hosting deferred |
-| **External cron** (Vercel/EasyCron/curl-loop) | n/a | Inbound HTTP only | Triggers `syncRushlyShipments` per shop |
+| **External cron** (Vercel / EasyCron / curl-loop) | n/a | Inbound HTTP only | Triggers `syncRushlyShipments` per Shopify shop |
 
 Everything goes through one of two auth gates: **static apiKey header** and/or **Sanctum bearer token**. See §3.
+
+The four storefront bridges follow a single shared pattern documented in the workspace-level [`../INTEGRATIONS.md`](../INTEGRATIONS.md): per-platform link table (`salla_orders` / `zid_orders` / `woocommerce_orders` / future `shopify_orders`), `<Platform>Service` for status writeback, `Parcel<Platform>Observer` registered in `EventServiceProvider`, and a controller under `app/Http/Controllers/Api/V10/External/` mounted at `/api/v10/external/<platform>/parcel`. Super-admins manage all four from `/admin/integrations`.
 
 ---
 
@@ -25,6 +30,7 @@ Two versioned API namespaces live under `routes/api.php`:
 | Prefix | Purpose | Auth | Consumers |
 |---|---|---|---|
 | `/api/v10/*` | Public REST surface for partners | `apiKey` header + Sanctum (most routes) | Driver app, Shopify bridge, future partners |
+| `/api/v10/external/<platform>/*` | Storefront-bridge surface — one sub-namespace per platform | `apiKey` header (no Sanctum: bridges authenticate via their own per-merchant tokens) | Salla / Zid / WooCommerce / future bridges |
 | `/api/sync-rushly` | Per-shop cron entry (Shopify side calls it) | `X-Cron-Key` or `X-Shop-Key` | External scheduler |
 
 Within `/api/v10/*` the major resource groups:
@@ -38,6 +44,9 @@ general-settings         — Tenant branding/config probe (used by Shopify "Test
 notification/*           — Push token registration + history
 ndr/*                    — Non-delivery report submission (driver-side)
 wms/*                    — Warehouse Management endpoints (per-merchant)
+external/salla/parcel       — Salla bridge → create parcel from Salla order
+external/zid/parcel         — Zid bridge → create parcel from Zid order
+external/woocommerce/parcel — WooCommerce plugin → create parcel from WC order
 ```
 
 Versioning: there's no `/api/v11/*` planned. New endpoints land inside `v10` for the foreseeable future.

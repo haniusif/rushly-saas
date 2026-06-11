@@ -105,7 +105,7 @@ app/
 └── Traits/                  # ApiReturnFormatTrait, PaymentTrait (bKash), TrackingTrait
 
 config/                      # Standard Laravel + tenancy.php
-database/migrations/         # 84 migrations → ~108 tables
+database/migrations/         # 90 migrations → ~112 tables
 public/                      # Pre-compiled css/js + uploads + installer assets
 resources/views/             # Blade (admin/, backend/, frontend/, auth/, installer/, errors/)
 routes/                      # 7 route files (below)
@@ -113,7 +113,7 @@ routes/                      # 7 route files (below)
 
 ---
 
-## 5. Database (108 tables, 84 migrations, 83 Eloquent models)
+## 5. Database (~112 tables, 90 migrations, 87 Eloquent models)
 
 Grouped by domain. Each row is `Model → table`. Models in `app/Models/Backend/` unless noted.
 
@@ -202,6 +202,17 @@ Grouped by domain. Each row is `Model → table`. Models in `app/Models/Backend/
 | `Addon` | `addons` | Premium module flags |
 | `Upload` | `uploads` | File metadata (original + 3 variants) |
 | `GoogleMapSetting` | `google_map_settings` | |
+| `IntegrationSetting` | `integration_settings` | Per-platform storefront-bridge config (Salla/Zid/Shopify/WooCommerce) |
+
+### Storefront integrations (link tables)
+
+| Model | Table | Notes |
+|---|---|---|
+| `SallaOrderLink` | `salla_orders` | parcel ↔ Salla `(salla_merchant_id, salla_order_id)` |
+| `ZidOrderLink` | `zid_orders` | parcel ↔ Zid `(zid_store_id, zid_order_id)` (Zid IDs are strings) |
+| `WooCommerceOrderLink` | `woocommerce_orders` | parcel ↔ WC `(site_url, wc_order_id)` — carries per-site writeback bearer |
+
+> See `INTEGRATIONS.md` and the workspace-level `../INTEGRATIONS.md` for the full storefront-bridge contract.
 
 ### HR / Org
 
@@ -306,7 +317,10 @@ Admin-side: `AdminSslCommerzController`, `AdminBkashController`, `AdminSkrillCon
 Merchant-side: `SslCommerzPaymentController`, `BkashController`, `SkrillController`, `AamarpayController`.
 
 ### Backend — Operations & Settings
-`ReportsController`, `TotalSummeryReportController`, `ActiveLogController`, `TodoController`, `SupportController`, `FraudController`, `NewsOfferController`, `AssetController`, `AssetcategoryController`, `PackagingController`, `CurrencyController`, `GeneralSettingsController`, `SmsSettingsController`, `SmsSendSettingsController`, `NotificationSettingsController`, `GoogleMapSettingsController`, `PushNotificationController`, `SocialLoginController`, `WebNotificationController`, `DatabaseBackupController`, `AddonController`.
+`ReportsController`, `TotalSummeryReportController`, `ActiveLogController`, `TodoController`, `SupportController`, `FraudController`, `NewsOfferController`, `AssetController`, `AssetcategoryController`, `PackagingController`, `CurrencyController`, `GeneralSettingsController`, `SmsSettingsController`, `SmsSendSettingsController`, `NotificationSettingsController`, `GoogleMapSettingsController`, `PushNotificationController`, `SocialLoginController`, `WebNotificationController`, `DatabaseBackupController`, `AddonController`, `IntegrationsController` (super-admin Integrations page at `/admin/integrations`).
+
+### Api / V10 / External
+`SallaParcelController`, `ZidParcelController`, `WooCommerceParcelController` — one per storefront bridge, all mounted at `/api/v10/external/<platform>/parcel`. Each accepts the bridge's normalised order payload, idempotently creates a `Parcel`, and writes a row in the matching link table.
 
 ### Backend / MerchantPanel/ (`Backend/MerchantPanel/`)
 Self-service surface for merchants on the tenant app:
@@ -411,7 +425,8 @@ Repositories are bound interface → implementation in `AppServiceProvider` (100
 
 | | |
 |---|---|
-| **Services** (`app/Services/`) | `DeliveryPandaService` — 3PL booking/tracking integration |
+| **Services** (`app/Services/`) | `DeliveryPandaService` — 3PL booking/tracking · `SallaService` / `ZidService` / `WooCommerceService` — push parcel status writeback to the matching bridge or WP plugin · `FollowupNotificationDispatcher` — outbound FCM dispatcher |
+| **Observers** (`app/Observers/`) | `ParcelSallaObserver` / `ParcelZidObserver` / `ParcelWooCommerceObserver` — fire on `Parcel.status` changes and delegate to their service |
 | **Library** (`app/Library/`) | `SslCommerz/` — Bangladesh payment-gateway adapter (`AbstractSslCommerz`, `SslCommerzNotification`, `SslCommerzInterface`) |
 | **Traits** (`app/Traits/`) | `ApiReturnFormatTrait` (standard JSON envelope); `PaymentTrait` (bKash token gen); `TrackingTrait` (parcel tracking-ID generator) |
 | **Support** (`app/Support/`) | `ParcelStatusHelper` — central state-machine helper for the 34-state parcel lifecycle (i18n keys, badge classes, cancel/return detection) |
@@ -447,8 +462,9 @@ Autoloaded via `composer.json` `files`. ~60 helper functions grouped:
 | `RouteServiceProvider` | Route namespacing + model binding |
 | `AuthServiceProvider` | Gates/policies |
 | `ViewServiceProvider` | View composers / global view data |
-| `EventServiceProvider` | Event-listener wiring |
+| `EventServiceProvider` | Event-listener wiring; registers parcel observers for Salla / Zid / WooCommerce |
 | `BroadcastServiceProvider` | Channel auth |
+| `IntegrationConfigServiceProvider` | Overlays `integration_settings` rows onto `config('services.<platform>.*')` at boot so existing code reads DB-managed values transparently |
 
 ---
 
@@ -583,6 +599,7 @@ PATH="/opt/homebrew/opt/php@8.3/bin:$PATH" php artisan cache:clear
 | Wire a new background job on tenant create/delete | `TenancyServiceProvider` event map |
 | Add a permission-gated screen | Add permission key to seeder, attach `->middleware('hasPermission:my_key')` on the route, expose UI in `RoleController` edit screen |
 | Customize the marketing site | `app/Http/Controllers/Backend/FrontWeb/` (admin CRUD) + `Frontend/FrontendController` (rendering) + Blade views in `resources/views/frontend/` |
+| Add a new storefront integration | Mirror Salla/Zid/WooCommerce: migration for `<platform>_orders` + `<Platform>OrderLink` model + `<Platform>Service` (writeback) + `Parcel<Platform>Observer` (registered in `EventServiceProvider`) + `External/<Platform>ParcelController` + route under `/api/v10/external/<platform>/` + entry in `IntegrationsController::PLATFORMS`. See `../INTEGRATIONS.md` §8 for the full checklist. |
 
 ---
 

@@ -21,7 +21,7 @@ class PaymentAccountSeeder extends Seeder
         $payment->bank_name      = 'NRB Commercial Bank Ltd.';
         $payment->holder_name    = 'Marchant';
         $payment->account_no     = 123456;
-        $payment->branch_name    = 'Dhaka branch';
+        $payment->branch_name    = 'Riyadh branch';
         $payment->routing_no     = 123456;
         $payment->status         = 1;
 

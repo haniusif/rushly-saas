@@ -23,9 +23,9 @@ class DeliveryManSeeder extends Seeder
         $deliveryUser                           = new User();
         $deliveryUser->name                     = "Delivery Man";
         $deliveryUser->company_id               = 2;
-        $deliveryUser->mobile                   = "01912938004";
-        $deliveryUser->email                    = "deliveryman@wemaxit.com";
-        $deliveryUser->address                  = "Mirpur-2,Dhaka";
+        $deliveryUser->mobile                   = "966535097129";
+        $deliveryUser->email                    = "deliveryman@rushlyexpress.com";
+        $deliveryUser->address                  = "Riyadh";
         $deliveryUser->hub_id                   = 1;
         $deliveryUser->password                 = Hash::make('12345678');
         $deliveryUser->user_type                = UserType::DELIVERYMAN;

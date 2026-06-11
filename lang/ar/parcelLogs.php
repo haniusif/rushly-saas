@@ -3,32 +3,31 @@
 use App\Enums\ParcelStatus;
 
 return [
-    ParcelStatus::PICKUP_ASSIGN => 'تم تعيين الالتقاط',
-    ParcelStatus::PICKUP_RE_SCHEDULE => 'إعادة جدولة استلام الطرود
-    ',
-    ParcelStatus::RECEIVED_BY_PICKUP_MAN => 'تلقى الطرود مندوب بيك أب',
-    ParcelStatus::RECEIVED_WAREHOUSE => 'تم استلام الطرد إلى المستودع',
-    ParcelStatus::TRANSFER_TO_HUB        => 'نقل الطرود إلى المحور',
-    ParcelStatus::RECEIVED_BY_HUB        => 'تم الاستلام بواسطة Hub',
-    ParcelStatus::DELIVERY_MAN_ASSIGN => 'تعيين مندوب التسليم',
-    ParcelStatus::DELIVERY_RE_SCHEDULE => 'تمت إعادة جدولة التوصيل',
+    ParcelStatus::PICKUP_ASSIGN               => 'تم تعيين مندوب الاستلام',
+    ParcelStatus::PICKUP_RE_SCHEDULE          => 'تمت إعادة جدولة استلام الشحنة',
+    ParcelStatus::RECEIVED_BY_PICKUP_MAN      => 'تم استلام الشحنة بواسطة مندوب الاستلام',
+    ParcelStatus::RECEIVED_WAREHOUSE          => 'تم استلام الشحنة في المستودع',
+    ParcelStatus::TRANSFER_TO_HUB             => 'تم نقل الشحنة إلى المركز',
+    ParcelStatus::RECEIVED_BY_HUB             => 'تم استلام الشحنة في المركز',
+    ParcelStatus::DELIVERY_MAN_ASSIGN         => 'تم تعيين مندوب التوصيل',
+    ParcelStatus::DELIVERY_RE_SCHEDULE        => 'تمت إعادة جدولة التسليم',
 
-    ParcelStatus::DELIVER => 'ايصال',
-    ParcelStatus::RETURN_TO_COURIER => 'العودة إلى البريد السريع',
-    ParcelStatus::RETURN_ASSIGN_TO_MERCHANT => 'العودة إلى التاجر',
-    ParcelStatus::RETURN_MERCHANT_RE_SCHEDULE => 'إرجاع التخصيص إلى التاجر إعادة الجدولة',
+    ParcelStatus::DELIVER                     => 'التسليم',
+    ParcelStatus::RETURN_TO_COURIER           => 'إرجاع إلى الشركة',
+    ParcelStatus::RETURN_ASSIGN_TO_MERCHANT   => 'إرجاع إلى التاجر',
+    ParcelStatus::RETURN_MERCHANT_RE_SCHEDULE => 'تمت إعادة جدولة الإرجاع إلى التاجر',
 
-    ParcelStatus::DELIVERED => 'تم التوصيل',
-    ParcelStatus::PARTIAL_DELIVERED => 'تم التسليم الجزئي',
-    ParcelStatus::RETURN_WAREHOUSE => 'مستودع العودة',
-    ParcelStatus::ASSIGN_MERCHANT => 'عيّن التاجر',
-    ParcelStatus::RETURNED_MERCHANT => 'التاجر العائد',
-    ParcelStatus::RETURN_RECEIVED_BY_MERCHANT => 'استلم الإرجاع من قبل التاجر',
+    ParcelStatus::DELIVERED                   => 'تم التسليم',
+    ParcelStatus::PARTIAL_DELIVERED           => 'تم التسليم الجزئي',
+    ParcelStatus::RETURN_WAREHOUSE            => 'مستودع المرتجعات',
+    ParcelStatus::ASSIGN_MERCHANT             => 'تعيين التاجر',
+    ParcelStatus::RETURNED_MERCHANT           => 'تم الإرجاع إلى التاجر',
+    ParcelStatus::RETURN_RECEIVED_BY_MERCHANT => 'تم استلام المرتجع بواسطة التاجر',
 
-    'hub_name'                      => 'اسم المركز',
-    'hub_phone'                      => 'هاتف المحور',
-    'delivery_man'                  => 'مندوب التوصيل',
-    'delivery_man_phone'            => 'هاتف مندوب التوصيل'
+    'hub_name'                => 'اسم المركز',
+    'hub_phone'               => 'هاتف المركز',
+    'delivery_man'            => 'مندوب التوصيل',
+    'delivery_man_phone'      => 'هاتف مندوب التوصيل'
 
 
 ];

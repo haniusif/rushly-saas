@@ -1,140 +1,113 @@
-<footer class="container-fluid bg-primary">
-    <div class="container text-center">
-        <div class="py-5 ">
-            <div class="row my-5">
-                <div class="col-lg-3 col-sm-6 ">
-                    <div class="footer-logo text-left ">
-                        <a href="index.html" class="d-inline-block"> 
-                            <img class="logo" src="{{ settings()->light_logo_image }}" width="200"  alt="Logo">
-                        </a>
-                        <p class="text-white mt-3">{!! section(\App\Enums\SectionType::ABOUT,'about_us') !!}</p>
-                    </div>
+{{-- Footer --}}
+<footer class="bg-accent text-gray-300 relative overflow-hidden">
+  <div aria-hidden="true" class="pointer-events-none absolute -top-32 -end-32 w-[28rem] h-[28rem] rounded-full bg-primary/15 blur-3xl"></div>
 
-                    <div >
-                        <h4 class="title text-white text-start  me-5">{{ __('levels.download_app') }}</h4>
-                        <div class="d-flex justify-content-start align-items-center app-download mt-4">
-                            <div class="me-4">
-                               
-                               <a href="{{ section(\App\Enums\SectionType::APP_LINK,'playstore_link') }}" title="{{ __('levels.play_store') }}">
-                                    <i class="{{ section(\App\Enums\SectionType::APP_LINK,'playstore_icon') }}"></i>
-                                </a> 
-                            </div>
-                            <div class="">
-                               <a href="{{ section(\App\Enums\SectionType::APP_LINK,'ios_link') }}" title="{{ __('levels.ios_store') }}">
-                                    <i class="{{ section(\App\Enums\SectionType::APP_LINK,'ios_icon') }}"></i>
-                                </a> 
-                            </div>
-                        </div>
-                    </div>
- 
-                </div>
-                @if (tenant())         
-                    <div class="col-lg-3 col-sm-6 ">
-                        <h4 class="title text-white text-start">{{ __('levels.available_services') }}</h4>
-                        <ul class="footer-list list-unstyled mt-3"> 
-                            @foreach ($take_services as $footer_service)
-                                <li class="list-ite"><a href="#">{{ $footer_service->title }}</a></li> 
-                            @endforeach
-                        </ul>
-                    </div>
-                @else
-                    <div class="col-lg-3 col-sm-6 ">
-                        <h4 class="title text-white text-start">{{ __('levels.pricing') }}</h4>
-                        <ul class="footer-list list-unstyled mt-3"> 
-                            @foreach ($plans as $key => $plan)
-                                <li class="list-ite"><a href="#">{{ $plan->name }}</a></li> 
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-                <div class="col-lg-3 col-sm-6 ">
-                    <h4 class="title text-white text-start ">{{ __('levels.about') }}</h4>
-                    <ul class="footer-list list-unstyled mt-3">
-                        <li class="list-ite"><a href="{{ route('get.faq.index') }}">{{ __('levels.faq') }} </a></li>
-                        <li class="list-ite"><a href="{{ route('aboutus.index')}}">{{ __('levels.about_us') }}</a></li> 
-                        <li class="list-ite"><a href="{{ route('contact.send.page')}}">{{ __('levels.contact_us') }}</a></li> 
-                        <li class="list-ite"><a href="{{ route('privacy.policy.index') }}">{{ __('levels.privacy_policy') }}</a></li>
-                        <li class="list-ite"><a href="{{ route('termsof.condition.index') }}">{{ __('levels.terms_of_use') }}</a></li>
-                    </ul>
-                </div>
-                <div class="col-lg-3 col-sm-6 ">
-                    <h4 class="title text-white text-start">{{ section(\App\Enums\SectionType::SUBSCRIBE,'subscribe_title') }}</h4>
-                    <p class="text-white mt-3 text-start">{{ section(\App\Enums\SectionType::SUBSCRIBE,'subscribe_description') }}</p>
- 
-                    <form action="{{ route('subscribe.store') }}" method="post">
-                        @csrf
-                        <div class="input-group mb-3 subscribe-form">
-                            <input type="text" class="form-control" placeholder="{{ __('placeholder.enter_email') }}" name="email" value="{{ old('email') }}" required>
-                            <div class="input-group-append">
-                                <button type="submit" class="input-group-text btn bg-white text-primary"  ><i class="fa fa-paper-plane"></i></button>
-                            </div> 
-                        </div>
-                        @error('email')
-                            <p class="text-white text-start">{{ $message }}</p>
-                        @enderror
-                    </form> 
-                    
-                    <h4 class="title text-white text-start">{{ __('levels.social') }}</h4>
-                    <div class="social-media mb-3 ">
-                        <div class="row">
-                            @foreach ($social_links as $social) 
-                                <div class="col-2 mt-3 text-start">
-                                    <a href="{{ @$social->link }}" class="d-inline-block" title="{{ $social->name }}">
-                                        <i class="icon  {{ $social->icon }}"></i>
-                                    </a>
-                                </div> 
-                            @endforeach  
-                        </div>
-                    </div>
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10">
 
-                </div>
-            </div> 
-        </div> 
+      {{-- Brand + about + app links --}}
+      <div class="lg:col-span-4">
+        <a href="{{ url('/') }}" class="inline-block">
+          <img src="{{ @settings()->light_logo_image }}" alt="{{ @settings()->name }}" class="h-10 w-auto" />
+        </a>
+        <p class="mt-5 text-sm text-gray-400 leading-relaxed max-w-sm">
+          {!! \Str::limit(strip_tags(section(\App\Enums\SectionType::ABOUT, 'about_us') ?? ''), 200) !!}
+        </p>
 
-        <ul class="d-flex flex-wrap list-unstyled m-0 language-list justify-content-center pb-2 pe-0">
-            <li >
-                <a class="dropdown-item" href="{{ route('setlocalization','en') }}">
-                    <i class="flag-icon flag-icon-us"></i> {{ __('levels.english') }}
-                </a>
-            </li>
-            <li >
-                <a class="dropdown-item" href="{{ route('setlocalization','bn') }}">
-                    <i class="flag-icon flag-icon-bd"></i> {{ __('levels.bangla') }}
-                </a>
-            </li>
-            <li >
-                <a class="dropdown-item" href="{{ route('setlocalization','in') }}">
-                    <i class="flag-icon flag-icon-in"></i> {{ __('levels.hindi') }}
-                </a>
-            </li> 
-            <li >
-                <a class="dropdown-item" href="{{ route('setlocalization','ar') }}">
-                    <i class="flag-icon flag-icon-sa"></i> {{ __('levels.arabic') }}
-                </a>
-            </li>
-            <li >
-                <a class="dropdown-item" href="{{ route('setlocalization','fr') }}">
-                    <i class="flag-icon flag-icon-fr"></i> {{ __('levels.franch') }}
-                </a>
-            </li>
-            <li >
-                <a class="dropdown-item" href="{{ route('setlocalization','es') }}">
-                    <i class="flag-icon flag-icon-es"></i> {{ __('levels.spanish') }}
-                </a>
-            </li>
-            <li >
-                <a class="dropdown-item" href="{{ route('setlocalization','zh') }}">
-                    <i class="flag-icon flag-icon-cn"></i> {{ __('levels.chinese') }}
-                </a>
-            </li> 
-        </ul>
-    
-    </div>
-</footer>
-<footer class="container-fluid bg-primary border-top p-0">
-    <div class="container text-center">
-        <div class="py-2   ">
-            <p class="text-white py-3 mb-0">  {{@settings()->copyright}}</p>
+        <div class="mt-8">
+          <h4 class="text-sm font-semibold text-white uppercase tracking-wider">{{ __('levels.download_app') }}</h4>
+          <div class="mt-4 flex items-center gap-3">
+            @if(section(\App\Enums\SectionType::APP_LINK,'playstore_link'))
+              <a href="{{ section(\App\Enums\SectionType::APP_LINK,'playstore_link') }}"
+                 class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/30 transition-all"
+                 title="{{ __('levels.play_store') }}">
+                <i class="{{ section(\App\Enums\SectionType::APP_LINK,'playstore_icon') }} text-2xl text-white"></i>
+              </a>
+            @endif
+            @if(section(\App\Enums\SectionType::APP_LINK,'ios_link'))
+              <a href="{{ section(\App\Enums\SectionType::APP_LINK,'ios_link') }}"
+                 class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/30 transition-all"
+                 title="{{ __('levels.ios_store') }}">
+                <i class="{{ section(\App\Enums\SectionType::APP_LINK,'ios_icon') }} text-2xl text-white"></i>
+              </a>
+            @endif
+          </div>
         </div>
+      </div>
+
+      {{-- Services --}}
+      @if (tenant())
+        <div class="lg:col-span-2">
+          <h4 class="text-sm font-semibold text-white uppercase tracking-wider">{{ __('levels.available_services') }}</h4>
+          <ul class="mt-4 space-y-2.5">
+            @foreach ($take_services ?? [] as $footer_service)
+              <li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">{{ $footer_service->title }}</a></li>
+            @endforeach
+          </ul>
+        </div>
+      @endif
+
+      {{-- About / Help --}}
+      <div class="{{ tenant() ? 'lg:col-span-2' : 'lg:col-span-4' }}">
+        <h4 class="text-sm font-semibold text-white uppercase tracking-wider">{{ __('levels.about') }}</h4>
+        <ul class="mt-4 space-y-2.5">
+          <li><a href="{{ route('aboutus.index') }}"          class="text-sm text-gray-400 hover:text-white transition-colors">{{ __('levels.about_us') }}</a></li>
+          <li><a href="{{ route('get.faq.index') }}"          class="text-sm text-gray-400 hover:text-white transition-colors">{{ __('levels.faq') }}</a></li>
+          <li><a href="{{ route('contact.send.page') }}"      class="text-sm text-gray-400 hover:text-white transition-colors">{{ __('levels.contact_us') }}</a></li>
+          <li><a href="{{ route('privacy.policy.index') }}"   class="text-sm text-gray-400 hover:text-white transition-colors">{{ __('levels.privacy_policy') }}</a></li>
+          <li><a href="{{ route('termsof.condition.index') }}" class="text-sm text-gray-400 hover:text-white transition-colors">{{ __('levels.terms_of_use') }}</a></li>
+        </ul>
+      </div>
+
+      {{-- Newsletter + Social --}}
+      <div class="lg:col-span-4">
+        <h4 class="text-sm font-semibold text-white uppercase tracking-wider">
+          {{ section(\App\Enums\SectionType::SUBSCRIBE,'subscribe_title') ?: __('levels.subscribe') }}
+        </h4>
+        <p class="mt-3 text-sm text-gray-400 leading-relaxed">
+          {{ section(\App\Enums\SectionType::SUBSCRIBE,'subscribe_description') }}
+        </p>
+        <form action="{{ route('subscribe.store') }}" method="post" class="mt-5">
+          @csrf
+          <div class="flex items-stretch bg-white/5 border border-white/10 rounded-xl focus-within:border-primary transition-colors overflow-hidden">
+            <input type="email" name="email" required value="{{ old('email') }}"
+                   placeholder="{{ __('placeholder.enter_email') }}"
+                   class="flex-1 min-w-0 px-4 py-3 bg-transparent text-white placeholder:text-gray-500 focus:outline-none text-sm" />
+            <button type="submit" class="btn-primary text-white px-5 font-semibold text-sm">
+              <i class="fa fa-paper-plane"></i>
+            </button>
+          </div>
+          @error('email')
+            <p class="mt-2 text-xs text-red-400">{{ $message }}</p>
+          @enderror
+        </form>
+
+        <h4 class="mt-8 text-sm font-semibold text-white uppercase tracking-wider">{{ __('levels.social') }}</h4>
+        <div class="mt-4 flex flex-wrap items-center gap-2">
+          @foreach ($social_links ?? [] as $social)
+            <a href="{{ @$social->link }}" title="{{ $social->name }}"
+               class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:text-white hover:bg-primary/20 hover:border-primary/40 transition-all">
+              <i class="{{ $social->icon }}"></i>
+            </a>
+          @endforeach
+        </div>
+      </div>
     </div>
+
+    {{-- Bottom bar --}}
+    <div class="mt-14 pt-8 border-t border-white/10 flex flex-col lg:flex-row items-center justify-between gap-6">
+      <p class="text-sm text-gray-400">{{ @settings()->copyright }}</p>
+
+      {{-- Locale switcher --}}
+      <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+        @php $current = app()->getLocale(); @endphp
+        @foreach (['en'=>__('levels.english'),'ar'=>__('levels.arabic'),'bn'=>__('levels.bangla'),'in'=>__('levels.hindi'),'fr'=>__('levels.franch'),'es'=>__('levels.spanish'),'zh'=>__('levels.chinese')] as $code => $label)
+          <a href="{{ route('setlocalization', $code) }}"
+             class="text-xs font-medium uppercase tracking-wider {{ $current === $code ? 'text-white' : 'text-gray-500 hover:text-white' }} transition-colors">
+            {{ $label }}
+          </a>
+        @endforeach
+      </div>
+    </div>
+  </div>
 </footer>

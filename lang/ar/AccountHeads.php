@@ -3,13 +3,13 @@
 use App\Enums\AccountHeads;
 
 return [
-        AccountHeads::INCOME   => 'دخل',
-        AccountHeads::EXPENSE  => 'مصروف',
-        'title'                => 'رؤساء الحساب',
-        'account_head'         => 'رئيس الحساب',
-        'added_msg'            => 'تمت إضافة رؤوس الحسابات بنجاح.',
-        'updated_msg'          => 'تم تحديث رؤساء الحسابات بنجاح.',
-        'deleted_msg'          => 'تم حذف رؤوس الحسابات بنجاح.',
-        'error_msg'            => 'هناك خطأ ما.'
+        AccountHeads::INCOME   => 'إيرادات',
+        AccountHeads::EXPENSE  => 'مصروفات',
+        'title'                => 'بنود الحساب',
+        'account_head'         => 'بند الحساب',
+        'added_msg'            => 'تمت إضافة بنود الحساب بنجاح.',
+        'updated_msg'          => 'تم تحديث بنود الحساب بنجاح.',
+        'deleted_msg'          => 'تم حذف بنود الحساب بنجاح.',
+        'error_msg'            => 'حدث خطأ ما.'
 
 ];

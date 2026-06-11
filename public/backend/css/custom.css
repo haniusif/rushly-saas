@@ -96,7 +96,7 @@
 /* custome full site background and color change */
 
 :root{
-    --warningcolor:#7e0095;
+    --warningcolor:#c52d34;
 }
 .btn-primary{
     color: white!important;
@@ -166,7 +166,7 @@
 
 
 .dropdown-menu .dropdown-item:hover{
-    background-color: #7e0095!important;
+    background-color: #c52d34!important;
     color:white!important;
 }
 .btn-primary.ml-0{
@@ -195,7 +195,7 @@
   }
 
   .merchant-panel.header-summery .card .text-primary{
-      color:#7e0095!important;
+      color:#c52d34!important;
     }
   .merchant-panel.header-summery .card .card-body{
         padding-left: 15px!important;
@@ -335,7 +335,7 @@
     }
 
     .swal2-confirm.swal2-styled{
-        background: #7e0095 !important;
+        background: #c52d34 !important;
     }
 
 
@@ -382,7 +382,7 @@
 .hub-view .card:hover .total-card-body .text-center .box-content .text-muted,
 .hub-view .card:hover .total-card-body .text-center .icon .box-content .metric-value h1.mb-1
 {
-    color: #7e0095!important;
+    color: #c52d34!important;
 }
 
 
@@ -393,7 +393,7 @@
 
 .bootstrap-datetimepicker-widget table td.active, .bootstrap-datetimepicker-widget table td.active:hover
 {
-    background-color: #7e0095!important;
+    background-color: #c52d34!important;
 }
 
 .bootstrap-datetimepicker-widget table td.day {
@@ -424,7 +424,7 @@
 
 .select2-container--default .select2-results__option--selected
 {
-    background-color: #7e0095!important;
+    background-color: #c52d34!important;
     color: white!important;
 }
 
@@ -453,7 +453,7 @@ input[type="file"]{
 }
 
 .nav-left-sidebar .navbar-nav .nav-link:hover,.nav-left-sidebar .navbar-nav .nav-link.active{
-    background-color: #6a027c12!important;
+    background-color: #a8262c12!important;
 }
 
 .pickup-req-btn-merchant{

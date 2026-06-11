@@ -61,7 +61,7 @@
                 <tr>
                     <!-- Left: Logo -->
                     <td style="text-align: left; width: 33%;">
-                        <img src="{{ asset('assets/img/logos/feeri-logo.png') }}" alt="Rushly Logo" width="100">
+                        <img src="{{ asset('assets/img/logos/rushly-logo.png') }}" alt="Rushly Logo" width="100">
                     </td>
 
                     <!-- Center: COD and Page Info -->
@@ -77,7 +77,7 @@
 
                     <!-- Right: QR Code -->
                     <td style="text-align: right; width: 33%;">
-                        <img src="data:image/png;base64,{{ DNS2D::getBarcodePNG($data['feeriAwb'], 'QRCODE') }}" alt="QR Code" width="60" height="60">
+                        <img src="data:image/png;base64,{{ DNS2D::getBarcodePNG($data['rushlyAwb'], 'QRCODE') }}" alt="QR Code" width="60" height="60">
                     </td>
                 </tr>
             </table>
@@ -113,7 +113,7 @@
             <div>Date: {{ $data['date'] }}</div>
             <div>Description: {{ $data['description'] }}</div>
             <div>AWB #: {{ $data['awb'] }}</div>
-            <div>FEERI #: {{ $data['feeriAwb'] }}</div>
+            <div>RUSHLY #: {{ $data['rushlyAwb'] }}</div>
 
             @if($data['isCod'] && $data['codAmount'] > 0)
                 <div class="bold">Grand Total: {{ $data['codAmount'] }} SAR</div>

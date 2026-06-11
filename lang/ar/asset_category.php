@@ -3,18 +3,18 @@ use App\Enums\TodoStatus;
 return [
 
   'dashboard'            => 'لوحة التحكم',
-  'title_name'                 => 'فئة الأصول',
+  'title_name'           => 'فئة الأصول',
 
-  'assetc_add'            => 'فئة الأصول إضافة',
-  'assetc_edit'           => 'تحديث فئة الأصول',
-  'assetc_delete'         => 'فئة الأصل حذف',
-  'assetc_list'           => 'قائمة فئة الأصول',
-  'title'                => 'عنوان',
-  'action'               => 'عمل',
+  'assetc_add'           => 'إضافة فئة أصول',
+  'assetc_edit'          => 'تعديل فئة الأصول',
+  'assetc_delete'        => 'حذف فئة الأصول',
+  'assetc_list'          => 'قائمة فئات الأصول',
+  'title'                => 'العنوان',
+  'action'               => 'الإجراء',
   'delete'               => 'حذف',
-   'sl'                  => 'مسلسل',
-  'added_msg'            => 'تم إدخال الأصل بنجاح!',
-  'error_msg'            => 'عذرًا! هناك شئ غير صحيح',
-  'note'                 => 'ملحوظة',
+   'sl'                  => 'م',
+  'added_msg'            => 'تمت إضافة فئة الأصول بنجاح!',
+  'error_msg'            => 'عذراً! حدث خطأ ما',
+  'note'                 => 'الملاحظة',
 
 ];

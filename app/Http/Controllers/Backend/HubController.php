@@ -7,9 +7,11 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Http\Requests\Hub\StoreHubRequest;
 use App\Http\Requests\Hub\UpdateHubRequest;
+use App\Models\Backend\Hub;
 use App\Models\Backend\Parcel;
 use App\Repositories\Hub\HubInterface;
 use Brian2694\Toastr\Facades\Toastr;
+use Illuminate\Support\Facades\Validator;
 class HubController extends Controller
 {
     protected $repo;
@@ -69,6 +71,39 @@ class HubController extends Controller
         return back();
     }
 
+
+    public function quickStore(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name'    => ['required','string','max:191','unique:hubs,name'],
+            'phone'   => ['required','string','max:20'],
+            'address' => ['required','string','max:191'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'ok'     => false,
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $hub = new Hub();
+            $hub->company_id = settings()->id;
+            $hub->name       = $request->input('name');
+            $hub->phone      = $request->input('phone');
+            $hub->address    = $request->input('address');
+            $hub->status     = 1;
+            $hub->save();
+
+            return response()->json([
+                'ok'  => true,
+                'hub' => ['id' => $hub->id, 'name' => $hub->name],
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['ok' => false, 'message' => __('hub.error_msg')], 500);
+        }
+    }
 
     public function view(Request $request,$id){
 

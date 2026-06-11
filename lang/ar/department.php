@@ -1,11 +1,11 @@
 <?php
 
 return array (
-  'title'               => 'قسم',
-  'create_department'   => 'إنشاء قسم',
-  'edit_department'     => 'تحرير القسم',
+  'title'               => 'القسم',
+  'create_department'   => 'إضافة قسم',
+  'edit_department'     => 'تعديل القسم',
   'added_msg'           => 'تمت إضافة القسم بنجاح.',
-  'update_msg'          => 'تحديث القسم بنجاح.',
+  'update_msg'          => 'تم تحديث القسم بنجاح.',
   'delete_msg'          => 'تم حذف القسم بنجاح.',
-  'error_msg'           => 'هناك خطأ ما.',
+  'error_msg'           => 'حدث خطأ ما.',
 );

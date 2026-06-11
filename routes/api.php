@@ -32,6 +32,7 @@ use App\Http\Controllers\Api\V10\ReportController;
 use App\Http\Controllers\InstallerController;
 use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\DeliveryPandaController;
+use App\Http\Controllers\Webhooks\ZajelWebhookController;
 use App\Http\Controllers\Api\V10\External\SallaParcelController;
 use App\Http\Controllers\Api\V10\External\WooCommerceParcelController;
 use App\Http\Controllers\Api\V10\External\ZidParcelController;
@@ -41,6 +42,10 @@ use App\Http\Controllers\Api\V10\External\ZidParcelController;
 
 Route::get('/panda/schudule_tracking', [DeliveryPandaController::class, 'schudule_tracking']);
 Route::get('/panda/schudule_tracking_temp', [DeliveryPandaController::class, 'schudule_tracking_temp']);
+
+// Zajel posts status events here. Auth is the shared secret in X-AUTH-API-KEY,
+// validated inside the controller (config('services.zajel.webhook_secret')).
+Route::post('/zajel/webhook', [ZajelWebhookController::class, 'handle']);
 
 
 Route::prefix('delivery')->group(function () {

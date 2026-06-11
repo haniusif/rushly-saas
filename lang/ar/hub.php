@@ -1,17 +1,17 @@
 <?php
 
 return array (
-  'title'           => 'فرع',
-  'create_hub'      => 'إنشاء فرع',
-  'edit_hub'        => 'تحرير الفرع',
-  'added_msg'       => 'تمت إضافة فرع بنجاح.',
-  'update_msg'      => 'تم تحديث فرع بنجاح.',
-  'delete_msg'      => 'تم حذف فرع بنجاح.',
-  'error_msg'       => 'هناك خطأ ما.',
-  'from_hub'        => 'من فرع',
-  'to_hub'          => 'إلى فرع',
+  'title'           => 'المركز',
+  'create_hub'      => 'إضافة مركز',
+  'edit_hub'        => 'تعديل المركز',
+  'added_msg'       => 'تمت إضافة المركز بنجاح.',
+  'update_msg'      => 'تم تحديث المركز بنجاح.',
+  'delete_msg'      => 'تم حذف المركز بنجاح.',
+  'error_msg'       => 'حدث خطأ ما.',
+  'from_hub'        => 'من المركز',
+  'to_hub'          => 'إلى المركز',
 
-  'cash_received_from_delivery_man'   => 'استلام النقد من مندوب التوصيل',
-  'is_processed '    =>  'جاري العمل'
+  'cash_received_from_delivery_man'   => 'النقد المُستلم من مندوب التوصيل',
+  'is_processed '    =>  'قيد المعالجة'
 
 );

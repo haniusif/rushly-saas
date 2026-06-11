@@ -2,16 +2,16 @@
 
 
 return array (
-  'title'                    => 'صياغات',
-  'error_msg'                => 'هناك خطأ ما.',
-  'income'                   => 'دخل',
-  'expense'                  => 'مصروف',
-  'parcel'                   => 'قطعة',
-  'to_account'               => 'لحساب',
-  'amount'                   => 'مقدار',
-  'receipt'                  => 'إيصال',
-  'note'                     => 'ملحوظة',
-  'date'                     => 'تاريخ',
-  'details'                  => 'تفاصيل',
+  'title'                    => 'الكشوف',
+  'error_msg'                => 'حدث خطأ ما.',
+  'income'                   => 'الإيرادات',
+  'expense'                  => 'المصروفات',
+  'parcel'                   => 'الشحنة',
+  'to_account'               => 'إلى حساب',
+  'amount'                   => 'المبلغ',
+  'receipt'                  => 'الإيصال',
+  'note'                     => 'الملاحظة',
+  'date'                     => 'التاريخ',
+  'details'                  => 'التفاصيل',
 
 );

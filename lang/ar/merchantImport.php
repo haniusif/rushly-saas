@@ -1,11 +1,10 @@
 <?php
 return[
-    'note' => 'يرجى التحقق من ذلك قبل استيراد ملفك.',
-    '01'   => 'يجب أن يكون نوع الملف الذي تم تحميله .xlsx',
-    '02'   => 'أدخل المعرف (shop_id = ID) بجوار اسم المحل.',
-    '03'   => 'يجب أن يحتوي الملف على pickup_address ، pickup_phone ،
-    cash_collection، sale_price، customer_name، invoice_no، customer_phone، customer_address.',
-    '04'   => 'فئة',
-    '05'   => 'نوع التسليم',
-    '06'   => 'cash_collection = 0.00 و sale_price = 0.00 يجب أن تكون رقمية.',
+    'note' => 'يرجى التحقق من النقاط التالية قبل استيراد الملف.',
+    '01'   => 'يجب أن يكون نوع الملف المرفوع .xlsx',
+    '02'   => 'أدخل المعرّف (shop_id = ID) بجوار اسم المتجر.',
+    '03'   => 'يجب أن يحتوي الملف على الأعمدة: pickup_address، pickup_phone، cash_collection، sale_price، customer_name، invoice_no، customer_phone، customer_address.',
+    '04'   => 'الفئة',
+    '05'   => 'نوع التوصيل',
+    '06'   => 'يجب أن تكون قيم cash_collection و sale_price رقمية (مثال: 0.00).',
 ];

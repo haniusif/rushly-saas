@@ -120,7 +120,13 @@
                   <label class="btn btn-outline-primary flex-fill" id="radioChangeStatus">
                     <input type="radio" name="action_type" value="change_status" autocomplete="off"> {{ __('Change Status') }}
                   </label>
+                  <label class="btn btn-outline-danger flex-fill d-none" id="radioCancel">
+                    <input type="radio" name="action_type" value="cancel" autocomplete="off"> {{ __('Cancel Shipments') }}
+                  </label>
                 </div>
+                <small class="form-text text-muted" id="cancelHint" style="display:none;">
+                  {{ __('Only newly created shipments will be cancelled; any already past pickup are skipped.') }}
+                </small>
               </div>
 
               {{-- Change status --}}
@@ -137,10 +143,30 @@
               {{-- Assign 3PL --}}
               <div class="form-group d-none" id="company_select">
                 <label class="d-block mb-2">{{ __('Select 3PL Company') }}</label>
-                <select name="company" class="custom-select">
+                <select name="company" id="company_3pl" class="custom-select">
                   <option value="">{{ __('Select 3PL Company') }}</option>
                   <option value="panda">Panda</option>
+                  <option value="zajel">Zajel</option>
+                  <option value="aramex">Aramex</option>
+                  <option value="jet">J&T (Jet)</option>
+                  <option value="logestechs">Logestechs</option>
                 </select>
+              </div>
+
+              {{-- Logestechs target company_id + customer credentials — only shown when Logestechs is picked --}}
+              <div class="form-group d-none" id="logestechs_company_id_wrap">
+                <label class="d-block mb-2">{{ __('Logestechs Company ID') }} <span class="text-danger">*</span></label>
+                <input type="text" name="logestechs_company_id" class="form-control" maxlength="64" placeholder="{{ __('Account/company id on the Logestechs side') }}">
+                <small class="form-text text-muted">{{ __('Routes the batch to a specific Logestechs account. Picked per submission.') }}</small>
+              </div>
+              <div class="form-group d-none" id="logestechs_email_wrap">
+                <label class="d-block mb-2">{{ __('Logestechs Account Email') }} <span class="text-danger">*</span></label>
+                <input type="email" name="logestechs_email" class="form-control" maxlength="120" autocomplete="off" placeholder="customer@example.com">
+              </div>
+              <div class="form-group d-none" id="logestechs_password_wrap">
+                <label class="d-block mb-2">{{ __('Logestechs Account Password') }} <span class="text-danger">*</span></label>
+                <input type="password" name="logestechs_password" class="form-control" maxlength="120" autocomplete="off">
+                <small class="form-text text-muted">{{ __('Sent in the createShipment body (Logestechs validates the customer account per call).') }}</small>
               </div>
               
               
@@ -386,9 +412,29 @@
     const ids = (rows || []).map(r => r.id).filter(Boolean);
     $checkedIds.val(ids.join(','));
   }
+  // Show the "Cancel Shipments" action only when EVERY selected/visible row is
+  // in the Created (PENDING) state — cancellation is not allowed past pickup.
+  function refreshCancelOption() {
+    const PENDING = {{ \App\Enums\ParcelStatus::PENDING }};
+    const rows = visibleRows || [];
+    const allCreated = rows.length > 0 && rows.every(r => Number(r.status) === PENDING);
+    const $wrap = $('#radioCancel');
+    $wrap.toggleClass('d-none', !allCreated);
+    if (!allCreated) {
+      const $input = $wrap.find('input[name="action_type"]');
+      if ($input.is(':checked')) {
+        $input.prop('checked', false);
+        $wrap.removeClass('active');
+        $noteWrap.addClass('d-none');
+        $('#cancelHint').hide();
+      }
+    }
+  }
+
   function setVisibleRows(rows) {
     visibleRows = rows.slice();
     updateCheckedIdsFrom(visibleRows);
+    refreshCancelOption();
   }
 
   // ===== Renderers =====
@@ -523,6 +569,10 @@
       // re-apply extras for current status
       toggleStatusExtras($statusSelect.val());
     }
+
+    // Cancel: show optional reason note + the "created only" hint
+    $noteWrap.toggleClass('d-none', type !== 'cancel');
+    $('#cancelHint').toggle(type === 'cancel');
   });
 
   // Status change -> show/hide extras for that status
@@ -635,6 +685,8 @@
 
     let actionLabel = (actionType === 'change_status')
       ? '{{ __("Change Status") }}'
+      : (actionType === 'cancel')
+      ? '{{ __("Cancel Shipments") }}'
       : '{{ __("Assign to 3PL") }}';
 
     // Validate extras if change_status
@@ -716,6 +768,47 @@
         return false;
       }
       summaryExtras += `<div><strong>{{ __("Company") }}:</strong> ${esc(companyText)}</div>`;
+
+      // Logestechs requires per-submission company_id + customer email + password.
+      if (companyVal === 'logestechs') {
+        const lcid = ($('input[name="logestechs_company_id"]').val() || '').toString().trim();
+        const lem  = ($('input[name="logestechs_email"]').val() || '').toString().trim();
+        const lpw  = ($('input[name="logestechs_password"]').val() || '').toString();
+        if (!lcid || !lem || !lpw) {
+          await Swal.fire({
+            icon: 'warning',
+            title: '{{ __("Missing Logestechs credentials") }}',
+            text: '{{ __("Enter the target Logestechs Company ID, account email, and password.") }}',
+            confirmButtonText: '{{ __("OK") }}'
+          });
+          return false;
+        }
+        summaryExtras += `<div><strong>{{ __("Logestechs Company ID") }}:</strong> ${esc(lcid)}</div>`;
+        summaryExtras += `<div><strong>{{ __("Logestechs Account") }}:</strong> ${esc(lem)}</div>`;
+      }
+    } else if (actionType === 'cancel') {
+      const PENDING_STATUS_ID = {{ \App\Enums\ParcelStatus::PENDING }};
+      const cancelable    = (visibleRows || []).filter(r => Number(r.status) === PENDING_STATUS_ID);
+      const notCancelable = (Array.isArray(visibleRows) ? visibleRows.length : 0) - cancelable.length;
+
+      if (cancelable.length === 0) {
+        await Swal.fire({
+          icon: 'warning',
+          title: '{{ __("Nothing to cancel") }}',
+          text: '{{ __("Only newly created shipments can be cancelled. None of the selected shipments are in the Created state.") }}',
+          confirmButtonText: '{{ __("OK") }}'
+        });
+        return false;
+      }
+
+      summaryExtras += `<div><strong>{{ __("Will cancel (Created)") }}:</strong> ${cancelable.length}</div>`;
+      if (notCancelable > 0) {
+        summaryExtras += `<div class="text-muted"><small>${notCancelable} {{ __("will be skipped (not in Created state)") }}</small></div>`;
+      }
+      const noteVal = ($noteInput.val() || '').toString().trim();
+      if (noteVal) {
+        summaryExtras += `<div><strong>{{ __("Reason") }}:</strong> ${esc(noteVal)}</div>`;
+      }
     }
 
     // ===== DELIVERED double-confirm =====
@@ -778,6 +871,18 @@
       $('#bulkActionForm')[0].submit();
     }
     return true;
+  });
+
+  // Toggle the Logestechs inputs (company_id + email + password) alongside the 3PL company dropdown.
+  $(document).on('change', 'select[name="company"]', function () {
+    const show = $(this).val() === 'logestechs';
+    $('#logestechs_company_id_wrap, #logestechs_email_wrap, #logestechs_password_wrap').toggleClass('d-none', !show);
+  });
+  // Hide them whenever we leave the assign_3pl action.
+  $(document).on('change', 'input[name="action_type"]', function () {
+    if ($(this).val() !== 'assign_3pl') {
+      $('#logestechs_company_id_wrap, #logestechs_email_wrap, #logestechs_password_wrap').addClass('d-none');
+    }
   });
 
   // ===== INIT =====

@@ -15,6 +15,7 @@ class Parcels_3pl extends Model
     protected $fillable = [
         'parcel_id',
         'parcel_3pl_name',
+        'target_company_id',   // Logestechs (and similar) — caller-picked routing id
         'awb_number',
         'awb_pdf',
         'response',

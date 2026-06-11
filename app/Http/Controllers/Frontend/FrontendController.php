@@ -140,18 +140,21 @@ public function updateLocation($id , Request $request)
         
     }
     
-    public function index(){ 
-       
+    public function index(){
+        if (!settings()->show_landing_page) {
+            return redirect()->route('login');
+        }
+
         $data = [];
-        $data['services']     = $this->serviceRepo->getAll(); 
+        $data['services']     = $this->serviceRepo->getAll();
         $data['whycouriers']  = $this->whycourierRepo->getAll();
-        $data['plans']        = $this->planRepo->getActive(); 
-        $data['pricing']      = $this->deliveryChargeRepo->getAllCharge(); 
-        $data['partners']     = $this->partnerRepo->getAll(); 
-        $data['blogs']        = $this->blogRepo->getActive(3); 
+        $data['plans']        = $this->planRepo->getActive();
+        $data['pricing']      = $this->deliveryChargeRepo->getAllCharge();
+        $data['partners']     = $this->partnerRepo->getAll();
+        $data['blogs']        = $this->blogRepo->getActive(3);
         $allModules           = $this->roleRepo->adminPermissionsModules();
-        $data['allmodules']   = array_slice( $allModules->toArray(), 0, 10);   
-       
+        $data['allmodules']   = array_slice( $allModules->toArray(), 0, 10);
+
         return view('frontend.home',$data);
     }
 

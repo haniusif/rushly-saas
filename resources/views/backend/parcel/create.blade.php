@@ -135,10 +135,10 @@
                                         data-url="{{ route('parcel.deliveryCategory.deliveryWeight') }}">
                                         <option value=""> {{ __('menus.select') }} {{ __('levels.category') }}
                                         </option>
-                                        @foreach ($deliveryCharges as $deliverycharge)
-                                            <option value="{{ $deliveryCategories[$deliverycharge]->id }}"
-                                                {{ old('category_id') == $deliveryCategories[$deliverycharge]->id ? 'selected' : '' }}>
-                                                {{ $deliveryCategories[$deliverycharge]->title }}</option>
+                                        @foreach ($deliveryCategories as $category)
+                                            <option value="{{ $category->id }}"
+                                                {{ old('category_id') == $category->id ? 'selected' : '' }}>
+                                                {{ $category->title }}</option>
                                         @endforeach
                                     </select>
                                     @error('category_id')

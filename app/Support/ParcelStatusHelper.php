@@ -70,6 +70,71 @@ class ParcelStatusHelper
     ];
 
     /**
+     * Per-status custom hex color. Drives the CSS emitted by ::styleBlock(),
+     * which overrides the base Bootstrap bg-* via the `parcel-status-N`
+     * selector that ::badgeClass() now adds to every status badge.
+     *
+     * Edit a value here to change a status color everywhere — admin tables,
+     * tracking offcanvas timeline, bulk-action chips, etc.
+     *
+     * @var array<int,string>
+     */
+    protected static array $colorMap = [
+        // Forward flow
+        ParcelStatus::PENDING                            => '#6c757d', // gray (created, idle)
+        ParcelStatus::PICKUP_ASSIGN                      => '#0ea5e9', // sky
+        ParcelStatus::PICKUP_RE_SCHEDULE                 => '#0284c7', // sky dark
+        ParcelStatus::RECEIVED_BY_PICKUP_MAN             => '#0891b2', // cyan
+        ParcelStatus::RECEIVED_WAREHOUSE                 => '#3b82f6', // blue
+        ParcelStatus::TRANSFER_TO_HUB                    => '#6366f1', // indigo
+        ParcelStatus::RECEIVED_BY_HUB                    => '#2563eb', // blue dark
+        ParcelStatus::DELIVERY_MAN_ASSIGN                => '#f97316', // orange (out for delivery)
+        ParcelStatus::DELIVERY_RE_SCHEDULE               => '#d97706', // amber
+        ParcelStatus::DELIVERED                          => '#16a34a', // green (terminal success)
+        ParcelStatus::DELIVER                            => '#22c55e', // green
+        ParcelStatus::PARTIAL_DELIVERED                  => '#a16207', // gold
+
+        // Return / reverse flow
+        ParcelStatus::RETURN_WAREHOUSE                   => '#ca8a04', // yellow dark
+        ParcelStatus::ASSIGN_MERCHANT                    => '#0891b2', // cyan
+        ParcelStatus::RETURNED_MERCHANT                  => '#b45309', // amber dark
+        ParcelStatus::RETURN_TO_COURIER                  => '#d97706', // amber
+        ParcelStatus::RETURN_ASSIGN_TO_MERCHANT          => '#b45309', // amber dark
+        ParcelStatus::RETURN_MERCHANT_RE_SCHEDULE        => '#ca8a04', // yellow dark
+        ParcelStatus::RETURN_RECEIVED_BY_MERCHANT        => '#15803d', // green dark (return resolved)
+
+        // 3PL
+        ParcelStatus::ASSIGN_TO_3PL                      => '#7c3aed', // violet
+
+        // WMS
+        ParcelStatus::WMS_FULFILLMENT_PENDING            => '#14b8a6', // teal
+        ParcelStatus::WMS_PICKING                        => '#0d9488', // teal dark
+        ParcelStatus::WMS_PACKING                        => '#0f766e', // teal darker
+        ParcelStatus::WMS_READY_TO_SHIP                  => '#0e7490', // cyan dark
+
+        // Alerts / terminal
+        ParcelStatus::NDR_CREATED                        => '#ef4444', // red
+        ParcelStatus::ABNORMAL                           => '#991b1b', // red dark
+        ParcelStatus::CANCELLED                          => '#dc3545', // red (terminal cancel)
+        ParcelStatus::DELIVERED_CANCEL                   => '#7f1d1d', // red dark (delivery reverted)
+
+        // Generic cancellations (group to slate — same family, easy to scan)
+        ParcelStatus::PICKUP_ASSIGN_CANCEL               => '#475569',
+        ParcelStatus::PICKUP_RE_SCHEDULE_CANCEL          => '#475569',
+        ParcelStatus::RECEIVED_BY_PICKUP_MAN_CANCEL      => '#475569',
+        ParcelStatus::RECEIVED_WAREHOUSE_CANCEL          => '#475569',
+        ParcelStatus::TRANSFER_TO_HUB_CANCEL             => '#475569',
+        ParcelStatus::RECEIVED_BY_HUB_CANCEL             => '#475569',
+        ParcelStatus::DELIVERY_MAN_ASSIGN_CANCEL         => '#475569',
+        ParcelStatus::DELIVERY_RE_SCHEDULE_CANCEL        => '#475569',
+        ParcelStatus::RETURN_TO_COURIER_CANCEL           => '#475569',
+        ParcelStatus::RETURN_ASSIGN_TO_MERCHANT_CANCEL   => '#475569',
+        ParcelStatus::RETURN_MERCHANT_RE_SCHEDULE_CANCEL => '#475569',
+        ParcelStatus::RETURN_RECEIVED_BY_MERCHANT_CANCEL => '#475569',
+        ParcelStatus::PARTIAL_DELIVERED_CANCEL           => '#475569',
+    ];
+
+    /**
      * Initialize caches from ParcelStatus interface once.
      */
     protected static function boot(): void
@@ -135,13 +200,42 @@ class ParcelStatusHelper
     }
 
     /**
-     * Get Bootstrap badge class for status value (e.g. "badge bg-success").
+     * Get Bootstrap badge class for status value (e.g. "badge bg-success parcel-status-9").
+     * The `parcel-status-N` class is targeted by ::styleBlock() to apply the custom
+     * per-status color, overriding the base bg-* tone.
      */
     public static function badgeClass(int $value): string
     {
         self::boot();
         $suffix = self::$badgeMap[$value] ?? 'secondary';
-        return 'badge bg-' . $suffix;
+        return 'badge bg-' . $suffix . ' parcel-status-' . $value;
+    }
+
+    /**
+     * Custom hex color for a status value (with sensible fallback).
+     * Use ::styleBlock() to render the CSS for all statuses at once.
+     */
+    public static function color(int $value): string
+    {
+        return self::$colorMap[$value] ?? '#6c757d';
+    }
+
+    /**
+     * Emit a <style> block with one rule per status, overriding the base
+     * Bootstrap bg-* via the `parcel-status-N` selector. Include this once
+     * in the admin layout head so every status badge picks up the colors
+     * without touching each render site.
+     */
+    public static function styleBlock(): string
+    {
+        $rules = '';
+        foreach (self::$colorMap as $id => $hex) {
+            $rules .= sprintf(
+                '.badge.parcel-status-%d{background-color:%s!important;border-color:%s!important;color:#fff!important;}',
+                $id, $hex, $hex
+            );
+        }
+        return '<style id="parcel-status-colors">' . $rules . '</style>';
     }
 
     /**

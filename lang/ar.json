@@ -48,8 +48,16 @@
     "Support": "الدعم",
     "Hub": "المركز",
     "hub": "المركز",
-    "Deliveryman": "السائق",
-    "Parcel": "الطرد",
+    "Deliveryman": "مندوب التوصيل",
+    "Parcel": "الشحنة",
     "Location": "الموقع",
-    "Delete": "حذف"
+    "Delete": "حذف",
+    "Follow-up Center": "مركز المتابعة",
+    "Open NDRs and abnormal shipments needing attention.": "بلاغات تعذُّر التسليم والشحنات المخالفة المفتوحة التي تحتاج إلى متابعة.",
+    "Open NDRs": "بلاغات تعذُّر التسليم المفتوحة",
+    "Today's NDRs": "بلاغات اليوم",
+    "Open abnormal": "شحنات مخالفة مفتوحة",
+    "Critical": "حرجة",
+    "Active Shipments Amount": "إجمالي مبالغ الشحنات النشطة",
+    "Operations overview": "نظرة عامة على العمليات"
 }

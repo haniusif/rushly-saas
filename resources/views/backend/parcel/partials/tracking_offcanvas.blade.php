@@ -193,7 +193,7 @@
 
                 <div class="pkg-detail__status">
                     <span>{{ __('levels.status') }}</span>
-                    <span class="badge badge-pill badge-{{ $statusColor($parcel->status) }} pkg-status-badge">{{ __('parcelStatus.' . $parcel->status) }}</span>
+                    <span class="{{ \App\Support\ParcelStatusHelper::badgeClass((int) $parcel->status) }} badge-pill pkg-status-badge">{{ __('parcelStatus.' . $parcel->status) }}</span>
                 </div>
             </div>
 
@@ -210,6 +210,12 @@
                             ?? null;
                         $hubName = optional($event->hub)->name;
                         $color   = $event->cancel_parcel_id ? 'danger' : $statusColor($event->parcel_status);
+                        $evtClass = $event->cancel_parcel_id
+                            ? 'badge bg-danger'
+                            : \App\Support\ParcelStatusHelper::badgeClass((int) $event->parcel_status);
+                        $evtHex   = $event->cancel_parcel_id
+                            ? '#dc3545'
+                            : \App\Support\ParcelStatusHelper::color((int) $event->parcel_status);
                     @endphp
 
                     @if($eventDate && $eventDate !== $lastDate)
@@ -223,13 +229,13 @@
                             @if($hubName)<div class="pkg-tl__hub">{{ $hubName }}</div>@endif
                             <div class="pkg-tl__time">{{ $event->created_at ? \Carbon\Carbon::parse($event->created_at)->format('h:i:s A') : '' }}</div>
                         </div>
-                        <div class="pkg-tl__line"><span class="pkg-tl__dot bg-{{ $color }}"></span></div>
+                        <div class="pkg-tl__line"><span class="pkg-tl__dot" style="background-color: {{ $evtHex }};"></span></div>
                         <div class="pkg-tl__content">
                             <div class="pkg-tl__bubble">
                                 {{ __('parcelStatus.' . $event->parcel_status) }}
                                 @if($event->note)<div class="pkg-tl__note">{{ $event->note }}</div>@endif
                             </div>
-                            <span class="badge badge-pill badge-{{ $color }}">{{ __('parcelStatus.' . $event->parcel_status) }}</span>
+                            <span class="{{ $evtClass }} badge-pill">{{ __('parcelStatus.' . $event->parcel_status) }}</span>
                         </div>
                     </div>
                 @endforeach

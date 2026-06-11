@@ -38,6 +38,7 @@ class GeneralSettingsRepository implements GeneralSettingsInterface{
         $row->copyright    = $request->copyright;
         $row->par_track_prefix     = Str::upper($request->par_track_prefix);
         $row->invoice_prefix       = Str::upper($request->invoice_prefix);
+        $row->show_landing_page    = $request->boolean('show_landing_page');
         if($request->primary_color):
             $row->primary_color        = $request->primary_color;
         endif;

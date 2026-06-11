@@ -3,8 +3,8 @@
 use App\Enums\StatementType;
 
 return [
-    StatementType::INCOME => 'دخل',
-    StatementType::EXPENSE => 'مصروف',
+    StatementType::INCOME => 'إيرادات',
+    StatementType::EXPENSE => 'مصروفات',
 
 
 ];

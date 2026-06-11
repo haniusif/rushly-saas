@@ -1,18 +1,18 @@
 <?php
 
 return [
-    'pickup_requested_succesfully' => 'تم طلب الالتقاط بنجاح',
+    'pickup_requested_succesfully' => 'تم إرسال طلب الاستلام بنجاح',
     'regular'             => 'عادي',
-    'express'             => 'يعبر',
-    'pickup_request'      => 'طلب الاستلام',
-    'cod_amount'          => 'مبلغ سمك القد',
-    'invoice'             => 'فاتورة',
-    'weight'              => 'وزن',
-    'exchange_parcel'     =>  'طرد الصرف',
-    'delivery'            => 'توصيل',
+    'express'             => 'سريع',
+    'pickup_request'      => 'طلب استلام',
+    'cod_amount'          => 'مبلغ الدفع عند الاستلام',
+    'invoice'             => 'الفاتورة',
+    'weight'              => 'الوزن',
+    'exchange_parcel'     => 'شحنة استبدال',
+    'delivery'            => 'التوصيل',
     'optional'            => 'اختياري',
     'pickup_address'      => 'عنوان الاستلام',
-    'close'               => 'قريب',
-    'send_request'        => 'ارسل طلب'
+    'close'               => 'إغلاق',
+    'send_request'        => 'إرسال الطلب'
 
 ];

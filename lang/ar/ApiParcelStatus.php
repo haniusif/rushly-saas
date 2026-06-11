@@ -3,7 +3,7 @@
 use App\Enums\ParcelStatus;
 
 return [
-    ParcelStatus::RETURN_TO_COURIER                      => 'العودة إلى البريد السريع',
+    ParcelStatus::RETURN_TO_COURIER                      => 'إرجاع إلى الشركة',
     ParcelStatus::PARTIAL_DELIVERED                      => 'تم التسليم الجزئي',
-    ParcelStatus::DELIVERED                              => 'تم التوصيل'
+    ParcelStatus::DELIVERED                              => 'تم التسليم'
 ];

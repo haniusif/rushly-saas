@@ -12,6 +12,9 @@ use Carbon\Carbon;
 use App\Repositories\Hub\HubInterface;
 use App\Repositories\Parcel\ParcelInterface;
 use App\Enums\ParcelStatus;
+use App\Exports\BulkDriverRunsheetExport;
+use App\Exports\DriverRunsheetExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 
 
@@ -40,11 +43,66 @@ public function print_runsheet(Request $request, $driver_id)
     $format = $request->format ?? 'excel';
 
     $data = $this->repo->shipments_by_driver($date, $driver_id);
-    $assignedShipments = $data->assignedShipments ?? [];
+    $assignedShipments = optional($data)->assignedShipments ?? collect();
+    $driverName = optional(optional($data)->user)->name ?: ('#' . $driver_id);
 
-    return view('backend.tms.print_runsheet', compact('assignedShipments', 'driver_id', 'date', 'format'));
+    if ($format === 'excel') {
+        $safeName = preg_replace('/[\/\\\\:*?"<>|#]+/', '', $driverName);    // strip filesystem-illegal chars
+        $safeName = preg_replace('/\s+/', '-', trim($safeName));            // collapse spaces to hyphens
+        $fileName = 'runsheet-driver-' . $safeName . '-' . $date->format('Y-m-d') . '.xlsx';
+        return Excel::download(new DriverRunsheetExport($assignedShipments), $fileName);
+    }
+
+    return view('backend.tms.print_runsheet', compact('assignedShipments', 'driver_id', 'driverName', 'date', 'format'));
 }
 
+
+public function print_runsheet_bulk(Request $request)
+{
+    $driverIds = collect($request->input('driver_ids', []))
+        ->filter(fn($id) => is_numeric($id))
+        ->map(fn($id) => (int) $id)
+        ->unique()
+        ->values();
+
+    if ($driverIds->isEmpty()) {
+        abort(400, 'No drivers selected.');
+    }
+
+    $date = is_array($request->date)
+        ? Carbon::today()
+        : Carbon::parse($request->date ?? Carbon::today());
+
+    $format = $request->format ?? 'excel';
+
+    $drivers = $driverIds
+        ->map(fn($id) => $this->repo->shipments_by_driver($date, $id))
+        ->filter()
+        ->values();
+
+    if ($drivers->isEmpty()) {
+        abort(404, 'No matching drivers found.');
+    }
+
+    if ($format === 'excel') {
+        $payload = $drivers->map(fn($dm) => [
+            'name'      => optional($dm->user)->name ?: ('Driver-' . $dm->id),
+            'shipments' => $dm->assignedShipments ?? collect(),
+        ])->all();
+
+        $fileName = 'runsheets-bulk-' . $date->format('Y-m-d') . '.xlsx';
+        return Excel::download(new BulkDriverRunsheetExport($payload), $fileName);
+    }
+
+    // HTML / PDF — drivers iterated in the view
+    $driverSheets = $drivers->map(fn($dm) => [
+        'driver_id'  => $dm->id,
+        'driverName' => optional($dm->user)->name ?: ('#' . $dm->id),
+        'shipments'  => $dm->assignedShipments ?? collect(),
+    ])->values();
+
+    return view('backend.tms.print_runsheet_bulk', compact('driverSheets', 'date', 'format'));
+}
 
 
 public function tms(Request $request)

@@ -1,11 +1,11 @@
 <?php
 
 return array (
-  'title'               => 'التعبئة والتغليف',
-  'create_packaging'    => 'إنشاء تغليف',
-  'edit_packaging'      => 'تحرير التغليف',
-  'added_msg'           => 'تمت إضافة العبوة بنجاح.',
-  'update_msg'          => 'تم تحديث العبوة بنجاح.',
+  'title'               => 'التغليف',
+  'create_packaging'    => 'إضافة تغليف',
+  'edit_packaging'      => 'تعديل التغليف',
+  'added_msg'           => 'تمت إضافة التغليف بنجاح.',
+  'update_msg'          => 'تم تحديث التغليف بنجاح.',
   'delete_msg'          => 'تم حذف التغليف بنجاح.',
-  'error_msg'           => 'هناك خطأ ما.',
+  'error_msg'           => 'حدث خطأ ما.',
 );

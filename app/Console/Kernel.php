@@ -24,6 +24,8 @@ class Kernel extends ConsoleKernel
         $schedule->command('wms:min-stock-check')->dailyAt('07:00');
         $schedule->command('wms:expiry-alert')->dailyAt('08:00');
         $schedule->command('wms:auto-fulfillment')->everyFifteenMinutes();
+        $schedule->command('aramex:sync-tracking')->everyFifteenMinutes()->withoutOverlapping();
+        $schedule->command('jet:sync-tracking')->everyFifteenMinutes()->withoutOverlapping();
     }
 
     /**

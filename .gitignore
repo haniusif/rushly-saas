@@ -38,6 +38,16 @@ salla.rushly-logistic.com/
 stockmate.rushly-logistic.com/
 driver.feerilogis.com/
 mijet.rushly-logistic.com/
+dot-express.rushly-logistic.com/
+
+# Per-tenant storage
+storage/tenant*/
+
+# Editor / build scratch
+*.tmp
+*.tmp.*
+*.bak
+*.bak-*
 
 # Storefront bridges (separate apps, tracked in their own repos)
 rushly-salla/

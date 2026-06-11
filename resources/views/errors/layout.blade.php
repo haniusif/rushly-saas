@@ -78,7 +78,7 @@
             <div class="container-fluid">
                 <div class="row">
                     <div class=" col-12">
-                            Copyright © {{ date('Y') }} Concept. All rights reserved. Development by <a href="https://feerilogis.com">Feerilogis</a>.
+                            Copyright © {{ date('Y') }} Concept. All rights reserved. Development by <a href="https://rushly-logistic.com">Rushly Logistic</a>.
                     </div>
 
                 </div>

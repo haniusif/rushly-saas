@@ -49,7 +49,7 @@
 
   <p>
     <strong>Date:</strong> {{ $date instanceof \Carbon\Carbon ? $date->format('Y-m-d') : $date }}<br>
-    <strong>Driver ID:</strong> {{ $driver_id }}
+    <strong>Driver:</strong> {{ $driverName }}
   </p>
 
   <div class="table-responsive">
@@ -62,8 +62,7 @@
           <th>Customer</th>
           <th>Address</th>
           <th>COD</th>
-        
-        
+          <th>Notes</th>
         </tr>
       </thead>
       <tbody>
@@ -90,26 +89,17 @@
             <td>{{ $parcel->customer_name ?? '-' }}</td>
             <td style="text-align:left;">{{ $parcel->customer_address ?? '-' }}</td>
             <td>{{ number_format($parcel->cash_collection ?? 0, 2) }}</td>
-      
+            <td></td>
           </tr>
         @empty
           <tr>
-            <td colspan="15" class="text-center text-muted">No shipments found for this driver.</td>
+            <td colspan="7" class="text-center text-muted">No shipments found for this driver.</td>
           </tr>
         @endforelse
       </tbody>
     </table>
   </div>
 
-  @php
-    $totalCash = $assignedShipments->sum(fn($s) => $s->parcel->cash_collection ?? 0);
-
-
-  @endphp
-
-  <div class="table-summary">
-    <div>Total Cash Collection: {{ number_format($totalCash, 2) }}</div>
-  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/js/all.min.js"></script>

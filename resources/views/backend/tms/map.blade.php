@@ -12,21 +12,36 @@
     body {
       background: #f8f9fa;
       font-family: 'Cairo', sans-serif;
+      /* full remaining viewport height for the map/side panels (navbar + top cards offset) */
+      --tms-panel-h: calc(100vh - 200px);
+    }
+    @media (max-width: 768px) {
+      body { --tms-panel-h: 70vh; }
     }
 
     .status-card { color: #fff; border-radius: 10px; padding: 12px; text-align: center; }
-    .side-status { background: #fff; border-radius: 10px; padding: 12px; font-size: 14px; height: 600px; }
+    .side-status { background: #fff; border-radius: 10px; padding: 12px; font-size: 14px; height: var(--tms-panel-h); overflow-y: auto; }
     .side-status div { border-bottom: 1px solid #eee; padding: 7px 0; }
     .side-status span { float: right; color: #e53935; font-weight: bold; }
-    #map { width: 100%; height: 600px; border-radius: 10px; }
+    #map { width: 100%; height: var(--tms-panel-h); border-radius: 10px; }
 
-    .drivers-card { background: #fff; border-radius: 10px; overflow: hidden; height: 600px; display: flex; flex-direction: column; }
+    .drivers-card { background: #fff; border-radius: 10px; overflow: hidden; height: var(--tms-panel-h); display: flex; flex-direction: column; }
     .drivers-list { flex: 1; overflow-y: auto; transition: all 0.3s ease; }
     .driver-item { border-bottom: 1px solid #eee; padding: 10px; display: flex; justify-content: space-between; align-items: center; transition: opacity 0.3s ease; }
     .driver-info { display: flex; align-items: center; }
     .driver-info i { font-size: 28px; color: #ff9800; margin-right: 10px; }
     .driver-info small { color: #777; }
     .map-toolbar { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 5; background: #fff; padding: 8px 10px; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+
+    /* Bulk selection */
+    .bulk-action-bar { display: none; align-items: center; justify-content: space-between; gap: 10px; background: #eff6ff; border: 1px solid #bfdbfe; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; }
+    .bulk-action-bar.is-active { display: flex; }
+    .bulk-action-bar .bulk-count { font-weight: 700; color: #1d4ed8; }
+    .driver-item .driver-check { margin-right: 8px; flex: 0 0 auto; }
+    .driver-item .driver-info { flex: 1; min-width: 0; }
+    .driver-item.is-selected { background: #f0f9ff; }
+    .select-all-row { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f8f9fa; border-bottom: 1px solid #eee; font-size: 13px; }
+    .select-all-row label { margin: 0; cursor: pointer; font-weight: 600; color: #475569; }
   </style>
 </head>
 <body>
@@ -137,12 +152,32 @@
           <input type="text" id="driverSearch" class="form-control form-control-sm" placeholder="Search driver...">
         </div>
 
+        <!-- Bulk action bar -->
+        <div class="px-2 pt-2">
+          <div id="bulkActionBar" class="bulk-action-bar">
+            <span class="bulk-count"><span id="bulkCount">0</span> selected</span>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="bulkClearBtn">Clear</button>
+              <button type="button" class="btn btn-sm btn-primary" id="bulkPrintBtn">
+                <i class="fa-solid fa-print me-1"></i> Print selected
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Tabs Content -->
         <div class="tab-content drivers-list" id="driverTabsContent">
           <!-- With Shipments -->
  <div class="tab-pane fade show active" id="packages" role="tabpanel" aria-labelledby="packages-tab">
+  @if(count($with_shipments) > 0)
+    <div class="select-all-row">
+      <input type="checkbox" id="selectAllDrivers" class="form-check-input m-0">
+      <label for="selectAllDrivers">Select all</label>
+    </div>
+  @endif
   @forelse($with_shipments as $driver)
-    <div class="driver-item">
+    <div class="driver-item" data-driver-id="{{ $driver['driver_id'] }}" data-driver-name="{{ $driver['name'] }}">
+      <input type="checkbox" class="form-check-input driver-check" value="{{ $driver['driver_id'] }}">
       <div class="driver-info">
         <i class="fa-solid fa-user-tie"></i>
         <div>
@@ -157,9 +192,9 @@
 
       <div class="driver-right text-end">
         <!-- Print Button -->
-        <button 
-          value="{{ $driver['driver_id'] }}" 
-          data-name="{{ $driver['name'] }}" 
+        <button
+          value="{{ $driver['driver_id'] }}"
+          data-name="{{ $driver['name'] }}"
           class="btn btn-outline-primary btn-sm btn-print-driver">
           Print
         </button>
@@ -238,11 +273,18 @@
       <div class="modal-body">
         <form id="printForm">
           <input type="hidden" id="selectedDriverId">
+          <input type="hidden" id="selectedDriverIds">
 
-          <!-- 👇 Driver Name -->
-          <p class="fw-bold mb-2">
+          <!-- 👇 Driver Name (single) -->
+          <p class="fw-bold mb-2" id="singleDriverInfo">
             Driver: <span id="selectedDriverName" class="text-primary"></span>
           </p>
+
+          <!-- 👇 Bulk Info -->
+          <div class="alert alert-info py-2 mb-2" id="bulkDriverInfo" style="display:none;">
+            <strong>Bulk print</strong> · <span id="bulkDriverCount">0</span> drivers selected
+            <ul class="mb-0 mt-2 small" id="bulkDriverList" style="max-height:120px; overflow-y:auto; padding-inline-start:18px;"></ul>
+          </div>
 
           <hr>
 
@@ -258,7 +300,7 @@
           <div class="form-check mb-3">
             <input class="form-check-input" type="radio" name="printFormat" id="printPDF" value="pdf">
             <label class="form-check-label" for="printPDF">
-              <i class="fa-solid fa-file-pdf text-danger me-2"></i> PDF File
+              <i class="fa-solid fa-file-pdf text-danger me-2"></i> PDF / Print
             </label>
           </div>
 
@@ -428,34 +470,130 @@
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     const printModal = new bootstrap.Modal(document.getElementById('printModal'));
-    const selectedDriverIdInput = document.getElementById('selectedDriverId');
+    const selectedDriverIdInput  = document.getElementById('selectedDriverId');
+    const selectedDriverIdsInput = document.getElementById('selectedDriverIds');
     const selectedDriverNameSpan = document.getElementById('selectedDriverName');
+    const singleInfo = document.getElementById('singleDriverInfo');
+    const bulkInfo   = document.getElementById('bulkDriverInfo');
+    const bulkCountEl = document.getElementById('bulkDriverCount');
+    const bulkListEl  = document.getElementById('bulkDriverList');
+    const modalLabel  = document.getElementById('printModalLabel');
 
-    // Open modal on Print button click
+    function openSingleMode(driverId, driverName) {
+      selectedDriverIdInput.value  = driverId;
+      selectedDriverIdsInput.value = '';
+      selectedDriverNameSpan.textContent = driverName || 'Unknown Driver';
+      singleInfo.style.display = '';
+      bulkInfo.style.display = 'none';
+      modalLabel.innerHTML = '<i class="fa-solid fa-print me-2"></i> Print Driver Report';
+      printModal.show();
+    }
+
+    function openBulkMode(drivers) {
+      selectedDriverIdInput.value  = '';
+      selectedDriverIdsInput.value = drivers.map(d => d.id).join(',');
+      singleInfo.style.display = 'none';
+      bulkInfo.style.display = '';
+      bulkCountEl.textContent = drivers.length;
+      bulkListEl.innerHTML = drivers.map(d => `<li>${d.name}</li>`).join('');
+      modalLabel.innerHTML = '<i class="fa-solid fa-print me-2"></i> Print Selected Drivers';
+      printModal.show();
+    }
+
+    // Per-driver Print button
     document.querySelectorAll('.btn-print-driver').forEach(btn => {
       btn.addEventListener('click', function() {
-        const driverId = this.value;
-        const driverName = this.dataset.name || 'Unknown Driver';
-
-        selectedDriverIdInput.value = driverId;
-        selectedDriverNameSpan.textContent = driverName;
-
-        printModal.show();
+        openSingleMode(this.value, this.dataset.name);
       });
     });
 
-    // Handle Apply (form submit)
+    // ===== Bulk selection wiring =====
+    const bulkBar      = document.getElementById('bulkActionBar');
+    const bulkCountTop = document.getElementById('bulkCount');
+    const bulkClearBtn = document.getElementById('bulkClearBtn');
+    const bulkPrintBtn = document.getElementById('bulkPrintBtn');
+    const selectAll    = document.getElementById('selectAllDrivers');
+
+    function getCheckedDrivers() {
+      return Array.from(document.querySelectorAll('#packages .driver-check:checked')).map(cb => {
+        const row = cb.closest('.driver-item');
+        return { id: cb.value, name: row?.dataset.driverName || ('Driver #' + cb.value) };
+      });
+    }
+
+    function refreshBulkBar() {
+      const drivers = getCheckedDrivers();
+      bulkCountTop.textContent = drivers.length;
+      bulkBar.classList.toggle('is-active', drivers.length > 0);
+      // Sync "select all" indeterminate / checked state
+      if (selectAll) {
+        const allBoxes = document.querySelectorAll('#packages .driver-check');
+        if (drivers.length === 0) {
+          selectAll.checked = false; selectAll.indeterminate = false;
+        } else if (drivers.length === allBoxes.length) {
+          selectAll.checked = true; selectAll.indeterminate = false;
+        } else {
+          selectAll.checked = false; selectAll.indeterminate = true;
+        }
+      }
+      // Toggle row highlight
+      document.querySelectorAll('#packages .driver-item').forEach(row => {
+        const cb = row.querySelector('.driver-check');
+        row.classList.toggle('is-selected', cb && cb.checked);
+      });
+    }
+
+    document.querySelectorAll('#packages .driver-check').forEach(cb => {
+      cb.addEventListener('change', refreshBulkBar);
+    });
+
+    if (selectAll) {
+      selectAll.addEventListener('change', function() {
+        // Only consider currently visible rows (so search filter respects)
+        document.querySelectorAll('#packages .driver-item').forEach(row => {
+          if (row.style.display === 'none') return;
+          const cb = row.querySelector('.driver-check');
+          if (cb) cb.checked = this.checked;
+        });
+        refreshBulkBar();
+      });
+    }
+
+    bulkClearBtn?.addEventListener('click', () => {
+      document.querySelectorAll('#packages .driver-check').forEach(cb => cb.checked = false);
+      refreshBulkBar();
+    });
+
+    bulkPrintBtn?.addEventListener('click', () => {
+      const drivers = getCheckedDrivers();
+      if (!drivers.length) return;
+      openBulkMode(drivers);
+    });
+
+    // ===== Form submit (single or bulk) =====
     document.getElementById('printForm').addEventListener('submit', function(e) {
       e.preventDefault();
 
-      const driverId = selectedDriverIdInput.value;
       const format = document.querySelector('input[name="printFormat"]:checked').value;
-      const reportdate = document.querySelector('input[name="date"]').value;
+      const reportdate = document.querySelector('input[name="date"]')?.value
+        || '{{ request("date", \Carbon\Carbon::today()->format("Y-m-d")) }}';
 
-      // Redirect to export route
-      const url = `/admin/tms/driver/${driverId}/export?format=${format}&date=${reportdate}`;
-      window.location.href = url;
-
+      const ids = selectedDriverIdsInput.value;
+      let url;
+      if (ids) {
+        // Bulk
+        const qs = ids.split(',').filter(Boolean).map(id => `driver_ids[]=${encodeURIComponent(id)}`).join('&');
+        url = `{{ route('tms.runsheet.bulk') }}?${qs}&format=${format}&date=${encodeURIComponent(reportdate)}`;
+      } else {
+        // Single (preserve existing behaviour)
+        url = `/admin/tms/driver/${selectedDriverIdInput.value}/export?format=${format}&date=${encodeURIComponent(reportdate)}`;
+      }
+      // PDF/HTML opens in a new tab so the existing page stays put; Excel downloads in-place.
+      if (format === 'pdf') {
+        window.open(url, '_blank');
+      } else {
+        window.location.href = url;
+      }
       printModal.hide();
     });
   });

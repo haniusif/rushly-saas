@@ -1,11 +1,11 @@
 <?php
 
 return array (
-  'title'           => 'دور',
-  'create_role'     => 'إنشاء دور',
-  'edit_role'       => 'تحرير الدور',
+  'title'           => 'الدور',
+  'create_role'     => 'إضافة دور',
+  'edit_role'       => 'تعديل الدور',
   'added_msg'       => 'تمت إضافة الدور بنجاح.',
   'update_msg'      => 'تم تحديث الدور بنجاح.',
   'delete_msg'      => 'تم حذف الدور بنجاح.',
-  'error_msg'       => 'هناك خطأ ما.',
+  'error_msg'       => 'حدث خطأ ما.',
 );

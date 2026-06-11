@@ -1,86 +1,77 @@
-<section id="pricing" class="container-fluid   py-3 pb-0 d-none"> 
-    <div class="container  pb-5">
-        <div class="row  mb-3">
-            <div class="col-lg-8 m-auto">
-                <h3 class="display-6 title text-center mb-5"><span class="section-title">{{ settings()->name }} {{ __('levels.pricing') }}</span></h3>
-            </div>
-        </div>
-        <div class="row py-2 align-items-center">  
-            <div class="col-12 " aria-label="breadcrumb"> 
-                <ul class="nav nav-pills pricing justify-content-center mb-5 breadcrumb" id="pills-tab" role="tablist" >
-                    <li class="nav-item breadcrumb-item" role="presentation">
-                      <button class="nav-link  active" id="pills-home-tab" data-bs-toggle="pill" data-bs-target="#pills-home" type="button" role="tab" aria-controls="pills-home" aria-selected="true">{{ __('levels.same_day') }}</button>
-                    </li>
-                    <li class="nav-item breadcrumb-item" role="presentation">
-                      <button class="nav-link " id="pills-profile-tab" data-bs-toggle="pill" data-bs-target="#pills-profile" type="button" role="tab" aria-controls="pills-profile" aria-selected="false">{{ __('levels.next_day') }}</button>
-                    </li>
-                    <li class="nav-item breadcrumb-item" role="presentation">
-                      <button class="nav-link " id="pills-contact-tab" data-bs-toggle="pill" data-bs-target="#pills-contact" type="button" role="tab" aria-controls="pills-contact" aria-selected="false">{{ __('levels.sub_city') }}</button>
-                    </li>
-                    <li class="nav-item breadcrumb-item" role="presentation">
-                      <button class="nav-link " id="pills-disabled-tab" data-bs-toggle="pill" data-bs-target="#pills-disabled" type="button" role="tab" aria-controls="pills-disabled" aria-selected="false" >{{ __('levels.outside_city') }}</button>
-                    </li>
-                  </ul>
-                  <div class="tab-content charge-content" id="pills-tabContent">
-                    <div class="tab-pane  show active" id="pills-home" role="tabpanel" aria-labelledby="pills-home-tab" tabindex="0">
-                        <div class="row justify-content-center">
-                            @foreach ($pricing as $samedayPrice)      
-                                <div class="col-sm-4 col-lg-2 charge-col ">
-                                    <div class="text-center charge-item">
-                                        <div class="row align-items-center"> 
-                                            <p class="mb-0">{{ __('levels.up_to') }} {{ $samedayPrice->weight }} ( {{ @$samedayPrice->category->title }} )</p> 
-                                            <h3 class="font-weight-bold ">{{ settings()->currency }} {{ $samedayPrice->same_day }}</h3> 
-                                        </div>
-                                    </div>
-                                </div>    
-                            @endforeach
-
-                        </div>
-                    </div>
-                    <div class="tab-pane " id="pills-profile" role="tabpanel" aria-labelledby="pills-profile-tab" tabindex="0">
-                        <div class="row justify-content-center">
-                            @foreach ($pricing as $nextdayPrice)      
-                                <div class="col-sm-4 col-lg-2 charge-col">
-                                    <div class="text-center charge-item">
-                                        <div class="row align-items-center"> 
-                                            <p class="mb-0">{{ __('levels.up_to') }} {{ $nextdayPrice->weight }} ( {{ @$nextdayPrice->category->title }} )</p> 
-                                            <h3 class="font-weight-bold ">{{ settings()->currency }} {{ $nextdayPrice->next_day }}</h3> 
-                                        </div>
-                                    </div>
-                                </div>    
-                            @endforeach
-                        </div>
-                    </div>
-                    <div class="tab-pane " id="pills-contact" role="tabpanel" aria-labelledby="pills-contact-tab" tabindex="0">
-                        <div class="row justify-content-center">
-                            @foreach ($pricing as $subcityPrice)      
-                                <div class="col-sm-4 col-lg-2 charge-col ">
-                                    <div class="text-center charge-item">
-                                        <div class="row align-items-center"> 
-                                            <p class="mb-0">{{ __('levels.up_to') }} {{ $subcityPrice->weight }} ( {{ @$subcityPrice->category->title }} )</p> 
-                                            <h3 class="font-weight-bold ">{{ settings()->currency }} {{ $subcityPrice->sub_city }}</h3> 
-                                        </div>
-                                    </div>
-                                </div>    
-                            @endforeach
-                        </div>
-                    </div>
-                    <div class="tab-pane " id="pills-disabled" role="tabpanel" aria-labelledby="pills-disabled-tab" tabindex="0">
-                        <div class="row justify-content-center">
-                            @foreach ($pricing as $outsidecityPrice)      
-                                <div class="col-sm-4 col-lg-2 charge-col ">
-                                    <div class="text-center charge-item">
-                                        <div class="row align-items-center"> 
-                                            <p class="mb-0">{{ __('levels.up_to') }} {{ $outsidecityPrice->weight }} ( {{ @$outsidecityPrice->category->title }} )</p> 
-                                            <h3 class="font-weight-bold ">{{ settings()->currency }} {{ $outsidecityPrice->outside_city }}</h3> 
-                                        </div>
-                                    </div>
-                                </div>    
-                            @endforeach
-                        </div>
-                    </div>
-                  </div>
-            </div>  
-        </div>
+{{-- Pricing --}}
+<section id="pricing" class="py-20 lg:py-28 bg-surface">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-2xl mx-auto text-center reveal">
+      <span class="inline-block text-xs font-semibold uppercase tracking-wider text-primary">{{ __('levels.pricing') }}</span>
+      <h2 class="mt-3 text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-accent">
+        {{ @settings()->name }} {{ __('levels.pricing') }}
+      </h2>
     </div>
+
+    @php
+      $tabs = [
+        ['key' => 'same_day',     'label' => __('levels.same_day'),     'field' => 'same_day'],
+        ['key' => 'next_day',     'label' => __('levels.next_day'),     'field' => 'next_day'],
+        ['key' => 'sub_city',     'label' => __('levels.sub_city'),     'field' => 'sub_city'],
+        ['key' => 'outside_city', 'label' => __('levels.outside_city'), 'field' => 'outside_city'],
+      ];
+    @endphp
+
+    {{-- Tabs --}}
+    <div class="mt-10 flex justify-center reveal">
+      <div class="inline-flex flex-wrap items-center gap-1 p-1 bg-white border border-gray-200 rounded-2xl shadow-sm">
+        @foreach ($tabs as $i => $tab)
+          <button type="button"
+                  data-pricing-tab="{{ $tab['key'] }}"
+                  class="pricing-tab px-4 sm:px-5 py-2.5 rounded-xl text-sm font-semibold transition-all
+                         {{ $i === 0 ? 'gradient-primary text-white shadow-md' : 'text-gray-600 hover:text-primary' }}">
+            {{ $tab['label'] }}
+          </button>
+        @endforeach
+      </div>
+    </div>
+
+    {{-- Panels --}}
+    <div class="mt-10">
+      @foreach ($tabs as $i => $tab)
+        <div data-pricing-panel="{{ $tab['key'] }}" class="pricing-panel @if($i !== 0) hidden @endif">
+          @if(count($pricing))
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 lg:gap-5">
+              @foreach ($pricing as $price)
+                <div class="reveal bg-white border border-gray-100 rounded-2xl p-5 text-center hover:border-primary/30 hover:shadow-lg transition-all">
+                  <p class="text-xs uppercase tracking-wider text-gray-500 font-semibold">
+                    {{ __('levels.up_to') }} {{ $price->weight }}
+                  </p>
+                  @if(!empty($price->category->title))
+                    <p class="mt-1 text-xs text-gray-400">{{ $price->category->title }}</p>
+                  @endif
+                  <div class="mt-3 text-2xl font-extrabold gradient-text">
+                    {{ @settings()->currency }} {{ $price->{$tab['field']} }}
+                  </div>
+                </div>
+              @endforeach
+            </div>
+          @else
+            <p class="text-center text-gray-500">{{ __('levels.pricing') }}</p>
+          @endif
+        </div>
+      @endforeach
+    </div>
+  </div>
 </section>
+
+<script>
+  document.querySelectorAll('.pricing-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.getAttribute('data-pricing-tab');
+      document.querySelectorAll('.pricing-tab').forEach(b => {
+        b.classList.remove('gradient-primary', 'text-white', 'shadow-md');
+        b.classList.add('text-gray-600', 'hover:text-primary');
+      });
+      btn.classList.remove('text-gray-600', 'hover:text-primary');
+      btn.classList.add('gradient-primary', 'text-white', 'shadow-md');
+      document.querySelectorAll('.pricing-panel').forEach(p => p.classList.add('hidden'));
+      document.querySelector(`[data-pricing-panel="${key}"]`).classList.remove('hidden');
+    });
+  });
+</script>

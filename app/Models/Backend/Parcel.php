@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\Backend\Deliverycategory;
 use App\Models\Backend\Packaging;
 use App\Enums\ParcelStatus;
+use App\Support\ParcelStatusHelper;
 use App\Enums\DeliveryType;
 use App\Models\Backend\Merchantpanel\Invoice;
 use DNS1D;
@@ -24,6 +25,14 @@ class Parcel extends Model
  
      
     use HasFactory, LogsActivity;
+
+    /**
+     * Transient cancel reason — set by ::cancelShipment() before save so the
+     * `updated` model hook can include it as the ParcelEvent log note. Not a
+     * DB column; resets per model instance.
+     */
+    public ?string $cancellationReason = null;
+
     protected $fillable = [
         'company_id' , 'merchant_id', 'merchant_shop_id', 'pickup_address', 'pickup_phone', 'customer_name', 'customer_phone', 'awb_label' ,
         'customer_address', 'invoice_no', 'category_id', 'weight', 'delivery_type_id', 'pickup_date', 'delivery_date', 'packaging_id','cash_collection','first_hub_id','hub_id',
@@ -57,6 +66,30 @@ class Parcel extends Model
 
 
     });
+
+    // Universal cancellation logger: whenever ANY path flips status to
+    // CANCELLED (single-parcel cancel button, bulk cancel, direct status
+    // update, API, etc.), record a ParcelEvent so it shows in the timeline.
+    // Best-effort: a logging failure must not undo the cancel — the row
+    // status update has already committed by the time `updated` fires.
+    static::updated(function ($parcel) {
+        if (! $parcel->wasChanged('status') || (int) $parcel->status !== ParcelStatus::CANCELLED) {
+            return;
+        }
+        try {
+            $event                = new ParcelEvent();
+            $event->parcel_id     = $parcel->id;
+            $event->parcel_status = ParcelStatus::CANCELLED;
+            $event->note          = $parcel->cancellationReason;
+            $event->created_by    = Auth::id();
+            $event->save();
+        } catch (\Throwable $e) {
+            logger()->warning('Cancelled shipment event-log failed', [
+                'parcel_id' => $parcel->id,
+                'error'     => $e->getMessage(),
+            ]);
+        }
+    });
 }
 
     public function isCancelled(): bool
@@ -83,6 +116,9 @@ class Parcel extends Model
         if ($reason !== null && $reason !== '') {
             $this->note = trim((string) $this->note.' | Cancelled: '.$reason);
         }
+        // Hand the reason to the `updated` hook in booted() so it gets stored
+        // as the note on the ParcelEvent timeline entry.
+        $this->cancellationReason = $reason ?: null;
         return (bool) $this->save();
     }
 
@@ -207,124 +243,48 @@ public function lastPickupMan()
 
 
 
-    public function getParcelStatusAttribute()
+    /**
+     * Status badge for $parcel->parcel_status — delegates to ParcelStatusHelper
+     * so every status uses its custom color from the helper's $colorMap.
+     * Adds a small hub-transfer chip for TRANSFER_TO_HUB.
+     */
+    public function getParcelStatusAttribute(): string
     {
-        $status = '<span class="badge badge-pill badge-secondary">'.trans("parcelStatus." . $this->status).'</span>';
+        $html = $this->renderStatusBadge((int) $this->status);
 
-        if($this->status == ParcelStatus::PENDING){
-            
-            $status = '<span class="badge badge-pill badge-danger">Created</span>';
+        if ((int) $this->status === ParcelStatus::TRANSFER_TO_HUB && $this->hub && $this->transferhub) {
+            $html .= '<br><span class="badge badge-pill badge-danger mt-1">'
+                . e($this->hub->name) . ' To ' . e($this->transferhub->name) . '</span>';
         }
-        elseif($this->status == ParcelStatus::PICKUP_ASSIGN) {
-            $status = '<span class="badge badge-pill badge-primary">'.trans("parcelStatus." . $this->status).'</span>';
-        }
-        elseif($this->status == ParcelStatus::RECEIVED_WAREHOUSE) {
-            $status = '<span class="badge badge-pill badge-info">'.trans("parcelStatus." . $this->status).'</span>';
-        }
-        elseif($this->status == ParcelStatus::DELIVERY_MAN_ASSIGN) {
-            $status = '<span class="badge badge-pill badge-warning">OFD</span>';
-        }
-        elseif($this->status == ParcelStatus::DELIVERY_RE_SCHEDULE) {
-            $status = '<span class="badge badge-pill badge-info">'.trans("parcelStatus." . $this->status).'</span>';
-        }
-        elseif($this->status == ParcelStatus::RETURN_TO_COURIER) {
-            $status = '<span class="badge badge-pill badge-danger">'.trans("parcelStatus." . $this->status).'</span>';
-        }
-        elseif($this->status == ParcelStatus::RETURN_ASSIGN_TO_MERCHANT) {
-            $status = '<span class="badge badge-pill badge-dark">'.trans("parcelStatus." . $this->status).'</span>';
-        } elseif($this->status == ParcelStatus::RETURN_MERCHANT_RE_SCHEDULE) {
-            $status = '<span class="badge badge-pill badge-dark">'.trans("parcelStatus." . $this->status).'</span>';
-        }
-        elseif($this->status == ParcelStatus::RETURN_RECEIVED_BY_MERCHANT) {
-            $status = '<span class="badge badge-pill badge-success">'.trans("parcelStatus." . $this->status).'</span>';
-        }
-        elseif($this->status == ParcelStatus::DELIVER) {
-            $status = '<span class="badge badge-pill badge-success">'.trans("parcelStatus." . $this->status).'</span>';
-        }
-        elseif($this->status == ParcelStatus::DELIVERED) {
-            $status = '<span class="badge badge-pill badge-success">'.trans("parcelStatus." . $this->status).'</span>';
-        }
-        elseif($this->status == ParcelStatus::PARTIAL_DELIVERED) {
-            $status = '<span class="badge badge-pill badge-success">'.trans("parcelStatus." . $this->status).'</span>';
-        }
-        elseif($this->status == ParcelStatus::RETURN_WAREHOUSE) {
-            $status = '<span class="badge badge-pill badge-info">RTO</span>';
-        }
-        elseif($this->status == ParcelStatus::ASSIGN_MERCHANT) {
-            $status = '<span class="badge badge-pill badge-secondary">'.trans("parcelStatus." . $this->status).'</span>';
-        }
-        elseif($this->status == ParcelStatus::RETURNED_MERCHANT) {
-            $status = '<span class="badge badge-pill badge-dark">RTC</span>';
-        }elseif($this->status == ParcelStatus::PICKUP_RE_SCHEDULE){
-            $status = '<span class="badge badge-pill badge-dark">'.trans("parcelStatus." . $this->status).'</span>';
-        }elseif($this->status == ParcelStatus::RECEIVED_BY_PICKUP_MAN){
-            $status = '<span class="badge badge-pill badge-success">'.trans("parcelStatus." . $this->status).'</span>';
-        }elseif($this->status == ParcelStatus::TRANSFER_TO_HUB){
-            $status = '<span class="badge badge-pill badge-info">'.trans("parcelStatus." . $this->status).'</span>'.'<br><span class="badge badge-pill badge-danger mt-1">'.$this->hub->name.' To '.$this->transferhub->name.'</span>';
-        }elseif($this->status == ParcelStatus::RECEIVED_BY_HUB){
-            $status = '<span class="badge badge-pill badge-info">'.trans("parcelStatus." . $this->status).'</span>';
-        }
-        return $status;
+        return $html;
     }
 
-    public function getStatusParcelAttribute($status_id)
+    /**
+     * Status badge for an arbitrary status id (used by views that need to render
+     * a status they didn't load via $parcel->parcel_status).
+     */
+    public function getStatusParcelAttribute($status_id): string
     {
-        $status = '<span class="badge badge-pill badge-secondary">'.trans("parcelStatus." . $status_id).'</span>';
+        return $this->renderStatusBadge((int) $status_id);
+    }
 
-        if($status_id == ParcelStatus::PENDING){
-            $status = '<span class="badge badge-pill badge-danger">'.trans("parcelStatus." . $status_id).'</span>';
-        }
-        elseif($status_id == ParcelStatus::PICKUP_ASSIGN) {
-            $status = '<span class="badge badge-pill badge-primary">'.trans("parcelStatus." .$status_id).'</span>';
-        }
-        elseif($status_id == ParcelStatus::RECEIVED_WAREHOUSE) {
-            $status = '<span class="badge badge-pill badge-info">'.trans("parcelStatus." . $status_id).'</span>';
-        }
-        elseif($status_id == ParcelStatus::DELIVERY_MAN_ASSIGN) {
-            $status = '<span class="badge badge-pill badge-warning">'.trans("parcelStatus." . $status_id).'</span>';
-        }
-        elseif($status_id == ParcelStatus::DELIVERY_RE_SCHEDULE) {
-            $status = '<span class="badge badge-pill badge-info">'.trans("parcelStatus." . $status_id).'</span>';
-        }
-        elseif($status_id == ParcelStatus::RETURN_TO_COURIER) {
-            $status = '<span class="badge badge-pill badge-info">'.trans("parcelStatus." . $status_id).'</span>';
-        }
-        elseif($status_id == ParcelStatus::RETURN_ASSIGN_TO_MERCHANT) {
-            $status = '<span class="badge badge-pill badge-dark">'.trans("parcelStatus." . $status_id).'</span>';
-        } elseif($status_id == ParcelStatus::RETURN_MERCHANT_RE_SCHEDULE) {
-            $status = '<span class="badge badge-pill badge-dark">'.trans("parcelStatus." . $status_id).'</span>';
-        }
-        elseif($status_id == ParcelStatus::RETURN_RECEIVED_BY_MERCHANT) {
-            $status = '<span class="badge badge-pill badge-success">'.trans("parcelStatus." . $status_id).'</span>';
-        }
-        elseif($status_id == ParcelStatus::DELIVER) {
-            $status = '<span class="badge badge-pill badge-success">'.trans("parcelStatus." . $status_id).'</span>';
-        }
-        elseif($status_id == ParcelStatus::DELIVERED) {
-            $status = '<span class="badge badge-pill badge-success">'.trans("parcelStatus." . $status_id).'</span>';
-        }
-        elseif($status_id == ParcelStatus::PARTIAL_DELIVERED) {
-            $status = '<span class="badge badge-pill badge-success">'.trans("parcelStatus." . $status_id).'</span>';
-        }
-        elseif($status_id == ParcelStatus::RETURN_WAREHOUSE) {
-            $status = '<span class="badge badge-pill badge-info">'.trans("parcelStatus." . $status_id).'</span>';
-        }
-        elseif($status_id == ParcelStatus::ASSIGN_MERCHANT) {
-            $status = '<span class="badge badge-pill badge-secondary">'.trans("parcelStatus." . $status_id).'</span>';
-        }
-        elseif($status_id == ParcelStatus::RETURNED_MERCHANT) {
-            $status = '<span class="badge badge-pill badge-dark">'.trans("parcelStatus." . $status_id).'</span>';
-        }elseif($status_id == ParcelStatus::PICKUP_RE_SCHEDULE){
-            $status = '<span class="badge badge-pill badge-dark">'.trans("parcelStatus." . $status_id).'</span>';
-        }elseif($status_id == ParcelStatus::RECEIVED_BY_PICKUP_MAN){
-            $status = '<span class="badge badge-pill badge-success">'.trans("parcelStatus." . $status_id).'</span>';
-        }elseif($status_id == ParcelStatus::TRANSFER_TO_HUB){
-            $status = '<span class="badge badge-pill badge-info">'.trans("parcelStatus." . $status_id).'</span>';
+    /**
+     * Single render path. The custom per-status color comes from the CSS rules
+     * emitted by ParcelStatusHelper::styleBlock() and targeted by the
+     * `parcel-status-N` class returned by ::badgeClass().
+     */
+    protected function renderStatusBadge(int $statusId): string
+    {
+        $label = match ($statusId) {
+            ParcelStatus::PENDING             => 'Created',
+            ParcelStatus::DELIVERY_MAN_ASSIGN => 'OFD',
+            ParcelStatus::RETURN_WAREHOUSE    => 'RTO',
+            ParcelStatus::RETURNED_MERCHANT   => 'RTC',
+            default                           => trans('parcelStatus.' . $statusId),
+        };
 
-        }elseif($status_id == ParcelStatus::RECEIVED_BY_HUB){
-            $status = '<span class="badge badge-pill badge-info">'.trans("parcelStatus." . $status_id).'</span>';
-        }
-        return $status;
+        return '<span class="' . ParcelStatusHelper::badgeClass($statusId) . ' badge-pill">'
+            . e($label) . '</span>';
     }
 
     public function getDeliveryTypeNameAttribute()

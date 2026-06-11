@@ -32,6 +32,8 @@
         font-family: 'Cairo';
     }
      </style>
+    {{-- Per-status custom badge colors (see app/Support/ParcelStatusHelper.php $colorMap) --}}
+    {!! \App\Support\ParcelStatusHelper::styleBlock() !!}
     <title>@yield('title')</title>
 </head>
 <body >

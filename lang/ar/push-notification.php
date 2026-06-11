@@ -1,11 +1,11 @@
 <?php
 
 return array (
-  'title'                       => 'دفع الإخطار',
-  'create_push_notification'    => 'إنشاء إعلام دفع',
-  'edit_push_notification'      => 'تحرير إعلام دفع',
-  'added_msg'                   => 'تمت إضافة إعلام الدفع بنجاح.',
-  'update_msg'                  => 'دفع إعلام التحديث بنجاح.',
-  'delete_msg'                  => 'تم حذف إعلام الدفع بنجاح.',
-  'error_msg'                   => 'هناك خطأ ما.',
+  'title'                       => 'الإشعارات الفورية',
+  'create_push_notification'    => 'إضافة إشعار فوري',
+  'edit_push_notification'      => 'تعديل الإشعار الفوري',
+  'added_msg'                   => 'تمت إضافة الإشعار الفوري بنجاح.',
+  'update_msg'                  => 'تم تحديث الإشعار الفوري بنجاح.',
+  'delete_msg'                  => 'تم حذف الإشعار الفوري بنجاح.',
+  'error_msg'                   => 'حدث خطأ ما.',
 );

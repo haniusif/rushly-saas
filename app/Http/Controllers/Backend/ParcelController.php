@@ -36,6 +36,10 @@ use Brian2694\Toastr\Facades\Toastr;
 use Maatwebsite\Excel\Facades\Excel;
 use \Mpdf\Mpdf;
 use App\Services\DeliveryPandaService;
+use App\Services\ZajelService;
+use App\Services\AramexService;
+use App\Services\JetService;
+use App\Services\LogestechsService;
 use Carbon\Carbon;
 use App\Models\Backend\Parcels_3pl;
 use App\Models\Backend\RejectedParcel;
@@ -56,6 +60,10 @@ class ParcelController extends Controller
     protected $repo;
     protected $shop;
    protected $deliveryPanda;
+   protected ZajelService $zajel;
+   protected AramexService $aramex;
+   protected JetService $jet;
+   protected LogestechsService $logestechs;
 
     public function __construct(
         ParcelInterface $repo,
@@ -63,7 +71,11 @@ class ParcelController extends Controller
         ShopsInterface $shop,
         DeliveryManInterface $deliveryman,
         HubInterface $hub,
-        DeliveryPandaService $deliveryPanda
+        DeliveryPandaService $deliveryPanda,
+        ZajelService $zajel,
+        AramexService $aramex,
+        JetService $jet,
+        LogestechsService $logestechs
         )
     {
         $this->merchant     = $merchant;
@@ -72,6 +84,10 @@ class ParcelController extends Controller
         $this->deliveryman  = $deliveryman;
         $this->hub          = $hub;
         $this->deliveryPanda = $deliveryPanda;
+        $this->zajel         = $zajel;
+        $this->aramex        = $aramex;
+        $this->jet           = $jet;
+        $this->logestechs    = $logestechs;
     }
     public function index(Request $request)
     {
@@ -435,6 +451,162 @@ class ParcelController extends Controller
   
 
         return response()->json(json_decode($response, true));
+    }
+
+    if ($company === 'zajel') {
+        if (! $this->zajel->isConfigured()) {
+            return response()->json(['error' => 'Zajel is not configured (missing ZAJEL_API_KEY / ZAJEL_CUSTOMER_CODE).'], 400);
+        }
+
+        $payload  = $this->zajel->buildShipmentPayload($parcel);
+        $response = $this->zajel->createShipment($payload);
+
+        if (! empty($response['_error']) || empty($response['success'])) {
+            \App\Models\Backend\Parcels_3pl::create([
+                'parcel_id'       => $parcel->id,
+                'parcel_3pl_name' => 'zajel',
+                'awb_number'      => null,
+                'awb_pdf'         => null,
+                'response'        => $response,
+            ]);
+            return response()->json([
+                'error'   => 'Zajel rejected the shipment.',
+                'details' => $response,
+            ], 422);
+        }
+
+        $awb       = $response['referenceNumber'] ?? null;
+        $labelInfo = $awb ? $this->zajel->getShipmentLabel((string) $awb) : null;
+        $awbPdf    = is_array($labelInfo) && empty($labelInfo['_error'])
+            ? ($labelInfo['url'] ?? $labelInfo['label_url'] ?? null)
+            : null;
+
+        \App\Models\Backend\Parcels_3pl::create([
+            'parcel_id'       => $parcel->id,
+            'parcel_3pl_name' => 'zajel',
+            'awb_number'      => $awb,
+            'awb_pdf'         => $awbPdf,
+            'response'        => $response,
+        ]);
+
+        return response()->json($response);
+    }
+
+    if ($company === 'aramex') {
+        if (! $this->aramex->isConfigured()) {
+            return response()->json(['error' => 'Aramex is not configured (missing ARAMEX_USERNAME / ARAMEX_ACCOUNT_NUMBER).'], 400);
+        }
+
+        $shipment = $this->aramex->buildShipmentPayload($parcel);
+        $response = $this->aramex->createShipments([$shipment]);
+
+        $awb     = null;
+        $labelUrl = null;
+        $hasErr  = ! empty($response['_error']) || ! empty($response['HasErrors']);
+
+        if (! $hasErr) {
+            // Aramex returns Shipments.ProcessedShipment (single object OR array)
+            $processed = $response['Shipments']['ProcessedShipment'] ?? null;
+            if ($processed && isset($processed[0])) {
+                $processed = $processed[0];
+            }
+            if ($processed) {
+                $hasErr   = ! empty($processed['HasErrors']);
+                $awb      = $processed['ID'] ?? null;
+                $labelUrl = $processed['ShipmentLabel']['LabelURL'] ?? null;
+            } else {
+                $hasErr = true;
+            }
+        }
+
+        \App\Models\Backend\Parcels_3pl::create([
+            'parcel_id'       => $parcel->id,
+            'parcel_3pl_name' => 'aramex',
+            'awb_number'      => $hasErr ? null : $awb,
+            'awb_pdf'         => $hasErr ? null : $labelUrl,
+            'response'        => $response,
+        ]);
+
+        if ($hasErr) {
+            return response()->json([
+                'error'   => 'Aramex rejected the shipment.',
+                'details' => $response,
+            ], 422);
+        }
+        return response()->json($response);
+    }
+
+    if ($company === 'logestechs') {
+        if (! $this->logestechs->isConfigured()) {
+            return response()->json(['error' => 'Logestechs is not configured (missing LOGESTECHS_BASE_URL).'], 400);
+        }
+        $targetCompanyId = trim((string) $request->input('logestechs_company_id'));
+        $lEmail          = trim((string) $request->input('logestechs_email'));
+        $lPassword       = (string) $request->input('logestechs_password');
+        if ($targetCompanyId === '' || $lEmail === '' || $lPassword === '') {
+            return response()->json(['error' => 'logestechs_company_id, logestechs_email, and logestechs_password are required.'], 422);
+        }
+
+        // Resolve destination village via Logestechs' lookup so cityId / regionId
+        // are populated correctly. Fall back to the parcel's local area/city name.
+        $villageQuery = (string) (optional($parcel->area)->en_name ?: optional($parcel->city)->en_name ?: '');
+        $village      = $villageQuery !== '' ? $this->logestechs->resolveVillage($targetCompanyId, $villageQuery) : null;
+
+        $payload  = $this->logestechs->buildCreatePayload($parcel, $lEmail, $lPassword, null, $village);
+        $response = $this->logestechs->createShipment($payload, $targetCompanyId);
+
+        // Logestechs returns { id, barcode, barcodeImage, ... } on success.
+        // The user-facing AWB is `barcode`; `id` is their internal package id.
+        $hasErr = ! empty($response['_error']);
+        $awb    = $response['barcode']      ?? null;
+        $label  = $response['barcodeImage'] ?? null;
+
+        \App\Models\Backend\Parcels_3pl::create([
+            'parcel_id'         => $parcel->id,
+            'parcel_3pl_name'   => 'logestechs',
+            'target_company_id' => $targetCompanyId,
+            'awb_number'        => $hasErr ? null : $awb,
+            'awb_pdf'           => $hasErr ? null : $label,
+            'response'          => $response,
+        ]);
+
+        if ($hasErr) {
+            return response()->json(['error' => 'Logestechs rejected the shipment.', 'details' => $response], 422);
+        }
+        return response()->json($response);
+    }
+
+    if ($company === 'jet') {
+        if (! $this->jet->isConfigured()) {
+            return response()->json(['error' => 'Jet is not configured (missing JET_USERNAME / JET_API_KEY / JET_SECRET_KEY / JET_ORDER_URL).'], 400);
+        }
+
+        $orderPayload = $this->jet->buildOrderPayload($parcel);
+        $response     = $this->jet->createOrder($orderPayload);
+
+        $detail = $response['detail'] ?? null;
+        if ($detail && isset($detail[0])) $detail = $detail[0];
+
+        $statusOk = ! empty($response['success']) && is_array($detail)
+                    && (($detail['status'] ?? '') === 'Sukses')
+                    && ! empty($detail['awb_no']);
+
+        \App\Models\Backend\Parcels_3pl::create([
+            'parcel_id'       => $parcel->id,
+            'parcel_3pl_name' => 'jet',
+            'awb_number'      => $statusOk ? ($detail['awb_no'] ?? null) : null,
+            'awb_pdf'         => null,
+            'response'        => $response,
+        ]);
+
+        if (! $statusOk) {
+            return response()->json([
+                'error'   => 'Jet rejected the order.',
+                'reason'  => $detail['reason'] ?? ($response['desc'] ?? ($response['message'] ?? 'unknown')),
+                'details' => $response,
+            ], 422);
+        }
+        return response()->json($response);
     }
 
     return response()->json(['error' => '3PL company not supported or not selected.'], 400);
@@ -1639,7 +1811,7 @@ public function printMultipleParcelLabels($parcels)
             $data['isCod'] = $isCod;
             $data['codAmount'] = $codAmount;
             $data['awb'] = (string) $parcel->id;
-            $data['feeriAwb'] = (string) $parcel->id;
+            $data['rushlyAwb'] = (string) $parcel->id;
             $data['date'] = $dropoff_time;
             $data['description'] = $description;
             $data['orderNumber'] = $order_reference;

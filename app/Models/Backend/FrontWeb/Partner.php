@@ -18,8 +18,9 @@ class Partner extends Model
 
     public function getImageAttribute()
     {
-        if (!empty($this->upload->original['original']) && File::exists(public_path($this->upload->original['original']))) {
-            return static_asset($this->upload->original['original']);
+        $path = optional($this->upload)->original;
+        if (!empty($path) && File::exists(public_path($path))) {
+            return static_asset($path);
         }
         return static_asset('images/default/blank-image.jpg');
     }

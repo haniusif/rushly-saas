@@ -128,5 +128,85 @@
             </div>
         @endforeach
     </div>
+
+    {{-- 3PL (courier) integrations --}}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <p class="h3 mb-1">3PL (Courier) Integrations</p>
+                    <p class="text-muted mb-0">
+                        Outbound courier handover. Credentials live in <code>.env</code> and apply across all tenants —
+                        see <code>3PL.md</code> in the repo root for the current state and known issues.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        @foreach ($threePLs as $tpl)
+            <div class="col-12 col-md-6 col-xl-4 d-flex">
+                <div class="card flex-fill" style="border:1px solid #eef0f3;">
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="mr-3" style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:#f7f7fb;border-radius:12px;">
+                                <span style="font-weight:700;font-size:22px;color:#333;">
+                                    {{ strtoupper(substr($tpl['name'], 0, 1)) }}
+                                </span>
+                            </div>
+                            <div>
+                                <h4 class="mb-0">{{ $tpl['name'] }}</h4>
+                                <small class="text-muted">{{ $tpl['host'] }}</small>
+                            </div>
+                            <div class="ml-auto">
+                                @if ($tpl['key_set'])
+                                    <span class="badge badge-success" style="font-size:12px;">Connected</span>
+                                @else
+                                    <span class="badge badge-warning" style="font-size:12px;">Needs config</span>
+                                @endif
+                            </div>
+                        </div>
+
+                        <dl class="row mb-2" style="font-size:13px;">
+                            <dt class="col-5 text-muted">API base</dt>
+                            <dd class="col-7">
+                                <code style="font-size:12px;">{{ $tpl['base_url'] ?: '—' }}</code>
+                            </dd>
+
+                            <dt class="col-5 text-muted">API key</dt>
+                            <dd class="col-7">
+                                @if ($tpl['key_set'])
+                                    <code style="font-size:12px;">••••{{ $tpl['key_tail'] }}</code>
+                                @else
+                                    <span class="text-danger">not set</span>
+                                @endif
+                            </dd>
+
+                            <dt class="col-5 text-muted">Parcels assigned</dt>
+                            <dd class="col-7"><strong>{{ number_format($tpl['parcels']) }}</strong></dd>
+
+                            @foreach ($tpl['extras'] ?? [] as $label => $value)
+                                @if ($value !== null && $value !== '')
+                                    <dt class="col-5 text-muted">{{ $label }}</dt>
+                                    <dd class="col-7"><code style="font-size:12px;word-break:break-all;">{{ $value }}</code></dd>
+                                @endif
+                            @endforeach
+
+                            <dt class="col-5 text-muted">Config source</dt>
+                            <dd class="col-7"><code style="font-size:12px;">.env</code> / <code style="font-size:12px;">config/services.php</code></dd>
+                        </dl>
+
+                        <div class="mt-auto pt-2">
+                            <small class="text-muted">
+                                <i class="fa fa-info-circle"></i>
+                                3PL credentials are global (not per-tenant). Edit <code>.env</code> on the server to change.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endforeach
+    </div>
 </div>
 @endsection

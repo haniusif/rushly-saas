@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Backend\City;
 use App\Models\Backend\Deliverycategory;
 use App\Models\Backend\IntegrationSetting;
+use App\Models\Backend\Parcels_3pl;
 use App\Models\Backend\SallaOrderLink;
 use App\Models\Backend\WooCommerceOrderLink;
 use App\Models\Backend\ZidOrderLink;
@@ -36,7 +37,130 @@ class IntegrationsController extends Controller
             'woocommerce' => Schema::hasTable('woocommerce_orders') ? WooCommerceOrderLink::count() : 0,
         ];
 
-        return view('backend.integrations.index', compact('integrations', 'parcelCounts'));
+        // 3PL (courier) integrations — config-based, no per-tenant settings row.
+        // Parcel counts are tenant-scoped via the `parcels` relation.
+        $pandaKey  = (string) config('services.deliverypanda.key');
+        $zajelKey  = (string) config('services.zajel.key');
+        $zajelCC   = (string) config('services.zajel.customer_code');
+        $aramexUser = (string) config('services.aramex.username');
+        $aramexAcct = (string) config('services.aramex.account_number');
+        $jetUser    = (string) config('services.jet.username');
+        $jetKey     = (string) config('services.jet.api_key');
+        $jetSecret  = (string) config('services.jet.secret_key');
+        $jetOrder   = (string) config('services.jet.order_url');
+        $imileKey   = (string) config('services.imile.api_key');
+        $imileBase  = (string) config('services.imile.base_url');
+        $logesBase  = (string) config('services.logestechs.base_url');
+        $logesKey   = (string) config('services.logestechs.api_key');
+        $threePLs = [
+            [
+                'key'      => 'panda',
+                'name'     => 'DeliveryPanda',
+                'host'     => 'deliverypanda.me',
+                'base_url' => (string) config('services.deliverypanda.base_url'),
+                'key_set'  => $pandaKey !== '',
+                'key_tail' => $pandaKey !== '' ? substr($pandaKey, -4) : null,
+                'extras'   => [],
+                'parcels'  => Schema::hasTable('parcels_3pl')
+                    ? Parcels_3pl::where('parcel_3pl_name', 'panda')
+                        ->whereHas('parcel', fn ($q) => $q->where('company_id', settings()->id))
+                        ->count()
+                    : 0,
+            ],
+            [
+                'key'      => 'zajel',
+                'name'     => 'Zajel',
+                'host'     => 'zajel.com',
+                'base_url' => (string) config('services.zajel.base_url'),
+                'key_set'  => $zajelKey !== '' && $zajelCC !== '',
+                'key_tail' => $zajelKey !== '' ? substr($zajelKey, -4) : null,
+                'extras'   => [
+                    'Customer code' => $zajelCC !== '' ? $zajelCC : null,
+                    'Service type'  => (string) config('services.zajel.service_type_id'),
+                    'Webhook URL'   => url('/api/zajel/webhook'),
+                ],
+                'parcels'  => Schema::hasTable('parcels_3pl')
+                    ? Parcels_3pl::where('parcel_3pl_name', 'zajel')
+                        ->whereHas('parcel', fn ($q) => $q->where('company_id', settings()->id))
+                        ->count()
+                    : 0,
+            ],
+            [
+                'key'      => 'aramex',
+                'name'     => 'Aramex',
+                'host'     => 'aramex.com',
+                'base_url' => (string) config('services.aramex.wsdl'),
+                'key_set'  => $aramexUser !== '' && $aramexAcct !== '',
+                'key_tail' => $aramexUser !== '' ? substr($aramexUser, -4) : null,
+                'extras'   => [
+                    'Account #'      => $aramexAcct !== '' ? $aramexAcct : null,
+                    'Account entity' => (string) config('services.aramex.account_entity'),
+                    'Country'        => (string) config('services.aramex.account_country_code'),
+                    'Product'        => (string) config('services.aramex.product_group') . ' / ' . (string) config('services.aramex.product_type'),
+                ],
+                'parcels'  => Schema::hasTable('parcels_3pl')
+                    ? Parcels_3pl::where('parcel_3pl_name', 'aramex')
+                        ->whereHas('parcel', fn ($q) => $q->where('company_id', settings()->id))
+                        ->count()
+                    : 0,
+            ],
+            [
+                'key'      => 'jet',
+                'name'     => 'J&T (Jet)',
+                'host'     => 'jet.co.id',
+                'base_url' => $jetOrder !== '' ? $jetOrder : '—',
+                'key_set'  => $jetUser !== '' && $jetKey !== '' && $jetSecret !== '' && $jetOrder !== '',
+                'key_tail' => $jetKey !== '' ? substr($jetKey, -4) : null,
+                'extras'   => [
+                    'Username'       => $jetUser !== '' ? $jetUser : null,
+                    'eccompanyid'    => (string) config('services.jet.eccompanyid'),
+                    'Default origin' => (string) config('services.jet.default_origin_code'),
+                    'Service / Type' => (string) config('services.jet.service_type') . ' (servicetype) / EZ (' . (string) config('services.jet.express_type') . ')',
+                ],
+                'parcels'  => Schema::hasTable('parcels_3pl')
+                    ? Parcels_3pl::where('parcel_3pl_name', 'jet')
+                        ->whereHas('parcel', fn ($q) => $q->where('company_id', settings()->id))
+                        ->count()
+                    : 0,
+            ],
+            [
+                'key'      => 'logestechs',
+                'name'     => 'Logestechs',
+                'host'     => 'logestechs.com',
+                'base_url' => $logesBase !== '' ? $logesBase : '— (STUB — Postman docs pending)',
+                'key_set'  => $logesBase !== '' && $logesKey !== '',
+                'key_tail' => $logesKey !== '' ? substr($logesKey, -4) : null,
+                'extras'   => [
+                    'Status'           => 'STUB — service code present, endpoints/payload await Postman docs',
+                    'Target company id'=> 'Per-shipment (chosen at assign time)',
+                ],
+                'parcels'  => Schema::hasTable('parcels_3pl')
+                    ? Parcels_3pl::where('parcel_3pl_name', 'logestechs')
+                        ->whereHas('parcel', fn ($q) => $q->where('company_id', settings()->id))
+                        ->count()
+                    : 0,
+            ],
+            [
+                'key'      => 'imile',
+                'name'     => 'iMile',
+                'host'     => 'imile.com',
+                'base_url' => $imileBase !== '' ? $imileBase : '— (planned, NDA docs pending)',
+                'key_set'  => false, // stub — no service yet, never "connected"
+                'key_tail' => $imileKey !== '' ? substr($imileKey, -4) : null,
+                'extras'   => [
+                    'Status'        => 'Planned — paste iMile API docs to build',
+                    'Customer code' => (string) config('services.imile.customer_code'),
+                    'Country'       => (string) config('services.imile.country'),
+                ],
+                'parcels'  => Schema::hasTable('parcels_3pl')
+                    ? Parcels_3pl::where('parcel_3pl_name', 'imile')
+                        ->whereHas('parcel', fn ($q) => $q->where('company_id', settings()->id))
+                        ->count()
+                    : 0,
+            ],
+        ];
+
+        return view('backend.integrations.index', compact('integrations', 'parcelCounts', 'threePLs'));
     }
 
     public function edit(string $platform)

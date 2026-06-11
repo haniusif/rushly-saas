@@ -2,15 +2,14 @@
 return [
     'title'             => 'السجلات',
     'log_name'          => 'اسم السجل',
-    'event'             => 'حدث',
+    'event'             => 'الحدث',
     'subject_type'      => 'نوع الموضوع',
-    'view'              =>  'رأي',
-    'description'       =>  'وصف',
+    'view'              => 'عرض',
+    'description'       => 'الوصف',
 
     'log_details'       => 'تفاصيل السجل',
-    'title'             =>  'عنوان',
-    'properties'        =>  'الخصائص',
-    'new'               =>  'جديد',
-    'old'               =>  'قديم',
+    'properties'        => 'الخصائص',
+    'new'               => 'الجديد',
+    'old'               => 'القديم',
 
 ];

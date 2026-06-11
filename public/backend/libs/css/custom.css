@@ -288,7 +288,7 @@ label.icon {
 .card.total-card-color h5.text-muted,
 .card.total-card-color h1
 {
-    color:#7e0095!important;
+    color:#c52d34!important;
 }
 .card.total-card-color.color-yellow{
     background-color: #ffff004d!important;
@@ -333,7 +333,7 @@ label.icon {
 
 
 .header-summery .card{
-    /* background-color:#7e0095!important; */
+    /* background-color:#c52d34!important; */
     /* border-top: none!important; */
 }
 
@@ -355,7 +355,7 @@ label.icon {
 }
 
 .header-summery .card:hover{
-    background-color: #7e0095!important;
+    background-color: #c52d34!important;
     cursor:pointer;
 }
 
@@ -445,27 +445,27 @@ label.icon {
 }
 
 .btn-primary:hover{
-    background-color: #6a027c!important;
+    background-color: #a8262c!important;
 }
 
 
 .fc-button-primary.fc-prev-button,.fc-button-primary.fc-next-button{
     background: transparent!important;
-    color: #7e0095!important;
-    border-color: #7e0095!important;
+    color: #c52d34!important;
+    border-color: #c52d34!important;
     opacity: 1!important;
 }
 
 .fc-button-primary.fc-prev-button:hover,.fc-button-primary.fc-next-button:hover{
-    background: #7e0095!important;
+    background: #c52d34!important;
     color: white!important;
-    border-color: #7e0095!important;
+    border-color: #c52d34!important;
     opacity: 1!important;
 }
 
 
 .fc-today-button{
-    background-color: #7e0095!important;
+    background-color: #c52d34!important;
     opacity: 1!important;
     border:none!important;
 }
@@ -487,20 +487,20 @@ table tr td{
 
 
 .merchant-view .list-group-item.active,.merchant-view .list-group-item:hover{
-    background-color: #7e0095!important;
+    background-color: #c52d34!important;
     color: White!important;
     border:none!important;
 }
 
 
 .daterangepicker .ranges li.active,.daterangepicker .ranges li:hover{
-    background-color: #7e0095!important;
+    background-color: #c52d34!important;
     color:white!important;
 }
 
 .datepicker-panel>ul>li
 {
-    background-color: #7e0095!important;
+    background-color: #c52d34!important;
     color:white!important;
 }
 .datepicker-panel>ul>li:hover
@@ -519,7 +519,7 @@ table tr td{
 }
 
 select.form-control option:hover {
-    background-color: #7e0095!important;
+    background-color: #c52d34!important;
     color: white!important;
 }
 
@@ -562,13 +562,13 @@ select.form-control option:hover {
 
     .navbar-nav .dropdown-item:hover {
         color: white!important;
-        background: #7e0095!important;
+        background: #c52d34!important;
         width: 250px!important;
     }
 
     .navbar-nav .dropdown-item:focus {
         color: white!important;
-        background: #7e0095!important;
+        background: #c52d34!important;
     }
 
     .navbar-nav a.dropdown-item i{
@@ -731,8 +731,8 @@ html[dir="rtl"] .col-xl-12.col-lg-12.col-md-12.col-sm-12.col-12.text-right
 
 
 input[type='checkbox']:checked {
-    background-color: #7e0095!important;
-    border-color: #7e0095!important;
+    background-color: #c52d34!important;
+    border-color: #c52d34!important;
 }
 input[type='checkbox']:focus {
     outline: none!important;
@@ -751,7 +751,7 @@ input[type='checkbox']
 }
 
 .date_range_picker:focus{
-    border-color:#7e0095!important;
+    border-color:#c52d34!important;
 }
 .date_range_picker:focus-visible{
     outline: none!important;
@@ -763,7 +763,7 @@ input[type='checkbox']
 
 .table-responsive table td.text-primary
 {
-    color: #7e0095!important;
+    color: #c52d34!important;
 }
 
 input.form-control
@@ -826,8 +826,8 @@ button.btn ,label.btn,a.btn{
 
 .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable
 {
-    background-color: #7e0095!important;
-    border: #7e0095!important;
+    background-color: #c52d34!important;
+    border: #c52d34!important;
 }
 
 

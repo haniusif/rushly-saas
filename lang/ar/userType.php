@@ -3,10 +3,10 @@
 use App\Enums\UserType;
 
 return [
-    UserType::ADMIN          => 'مسؤل',
+    UserType::ADMIN          => 'مسؤول',
     UserType::MERCHANT       => 'تاجر',
     UserType::DELIVERYMAN    => 'مندوب التوصيل',
-    UserType::INCHARGE       => 'مسؤول عن',
-    UserType::HUB            => 'المركز رئيسي',
+    UserType::INCHARGE       => 'مسؤول المركز',
+    UserType::HUB            => 'المركز',
 
 ];

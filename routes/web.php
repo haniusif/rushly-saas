@@ -246,6 +246,7 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::get('hubs/filter',                                       [HubController::class, 'filter'])->name('hubs.filter')->middleware('hasPermission:hub_read');
                         Route::get('hubs/create',                                       [HubController::class, 'create'])->name('hubs.create')->middleware('hasPermission:hub_create');
                         Route::post('hubs/store',                                       [HubController::class, 'store'])->name('hubs.store')->middleware('hasPermission:hub_create');
+                        Route::post('hubs/quick-store',                                 [HubController::class, 'quickStore'])->name('hubs.quick-store')->middleware('hasPermission:hub_create');
                         Route::get('hubs/edit/{id}',                                    [HubController::class, 'edit'])->name('hubs.edit')->middleware('hasPermission:hub_update');
                         Route::put('hubs/update',                                       [HubController::class, 'update'])->name('hubs.update')->middleware('hasPermission:hub_update');
                         Route::delete('hub/delete/{id}',                                [HubController::class, 'destroy'])->name('hub.delete')->middleware('hasPermission:hub_delete');
@@ -509,6 +510,7 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         // Deliveryman
                         Route::get('tms',                [TMSController::class, 'tms'])->name('tms')->middleware('hasPermission:delivery_man_read');
                         Route::get('tms/driver/{driver_id}/export',                [TMSController::class, 'print_runsheet'])->name('tms.runsheet')->middleware('hasPermission:delivery_man_read');
+                        Route::get('tms/runsheet/bulk',                            [TMSController::class, 'print_runsheet_bulk'])->name('tms.runsheet.bulk')->middleware('hasPermission:delivery_man_read');
                         
                         
                         

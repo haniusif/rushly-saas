@@ -177,8 +177,8 @@
                                         @foreach ($subscriptions as $subscription)
                                             <tr> 
                                                 <td>{{ ++$i }}</td>
-                                                <td>{{ $subscription->company->name }}</td>
-                                                <td>{{ $subscription->plan->name }}</td>
+                                                <td>{{ $subscription->company?->name ?? '—' }}</td>
+                                                <td>{{ $subscription->plan?->name ?? '—' }}</td>
                                                 <td>{{ $subscription->parcel_count }}</td>
                                                 <td>{{ $subscription->deliveryman_count }}</td>
                                                 <td>{{ settings()->currency }} {{ $subscription->price }}</td>

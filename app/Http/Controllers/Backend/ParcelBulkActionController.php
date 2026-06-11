@@ -20,6 +20,10 @@ use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Support\Facades\Validator;
 
 use App\Services\DeliveryPandaService;
+use App\Services\ZajelService;
+use App\Services\AramexService;
+use App\Services\JetService;
+use App\Services\LogestechsService;
 
 class ParcelBulkActionController extends Controller
 {
@@ -30,14 +34,21 @@ class ParcelBulkActionController extends Controller
     protected $repo;
     protected $shop;
     protected $deliveryPanda;
+    protected ZajelService $zajel;
+    protected AramexService $aramex;
+    protected JetService $jet;
+    protected LogestechsService $logestechs;
     public function __construct(
         ParcelInterface $repo,
         MerchantInterface $merchant,
         ShopsInterface $shop,
         DeliveryManInterface $deliveryman,
         HubInterface $hub,
-        DeliveryPandaService $deliveryPanda
-
+        DeliveryPandaService $deliveryPanda,
+        ZajelService $zajel,
+        AramexService $aramex,
+        JetService $jet,
+        LogestechsService $logestechs
         )
     {
         $this->merchant     = $merchant;
@@ -46,7 +57,10 @@ class ParcelBulkActionController extends Controller
         $this->deliveryman  = $deliveryman;
         $this->hub          = $hub;
         $this->deliveryPanda = $deliveryPanda;
-
+        $this->zajel         = $zajel;
+        $this->aramex        = $aramex;
+        $this->jet           = $jet;
+        $this->logestechs    = $logestechs;
     }
     
      
@@ -202,10 +216,13 @@ public function apply(Request $request)
 {
     $request->validate([
         'shipment_ids'   => ['required','string'],
-        'action_type'    => ['nullable','in:change_status,assign_deliveryman,assign_3pl'],
+        'action_type'    => ['nullable','in:change_status,assign_deliveryman,assign_3pl,cancel'],
         'status'         => ['nullable','integer'],
         'deliveryman_id' => ['nullable','integer','exists:delivery_man,id'],
-        'company'        => ['nullable','string','in:panda,zajil'],
+        'company'        => ['nullable','string','in:panda,zajel,aramex,jet,logestechs'],
+        'logestechs_company_id' => ['nullable','string','max:64','required_if:company,logestechs'],
+        'logestechs_email'      => ['nullable','string','max:120','required_if:company,logestechs'],
+        'logestechs_password'   => ['nullable','string','max:120','required_if:company,logestechs'],
     ]);
     
     // dd($request->all());
@@ -257,7 +274,23 @@ public function apply(Request $request)
         ->count();
            
            
-       if ($company !== 'panda') {
+       if ($company === 'zajel') {
+            return $this->assignZajelBulk($parcels, $rwh_parcels, $request);
+        }
+
+        if ($company === 'aramex') {
+            return $this->assignAramexBulk($parcels, $rwh_parcels, $request);
+        }
+
+        if ($company === 'jet') {
+            return $this->assignJetBulk($parcels, $rwh_parcels, $request);
+        }
+
+        if ($company === 'logestechs') {
+            return $this->assignLogestechsBulk($parcels, $rwh_parcels, $request);
+        }
+
+        if ($company !== 'panda') {
             return back()->with('error', __('3PL company not supported or not selected.'));
         }
 
@@ -360,10 +393,50 @@ public function apply(Request $request)
         return back()->with('success', $summary);
     
 
+    }elseif($action == 'cancel'){
+
+        // Only "Created" (PENDING) shipments may be cancelled — same rule as the
+        // single-parcel cancel on /admin/parcel/details. Anything past pickup must
+        // go through the return flow instead, so it is skipped here.
+        $reason = trim((string) $request->input('note', '')) ?: null;
+
+        $cancelled = 0;
+        $skipped   = [];
+        $failed    = [];
+
+        foreach ($parcels as $p) {
+            if (! $p->isCancellable()) {
+                $skipped[] = $p->tracking_id ?? ('#' . $p->id);
+                continue;
+            }
+            try {
+                if ($this->repo->cancelShipment($p->id, $reason)) {
+                    $cancelled++;
+                } else {
+                    $failed[] = $p->tracking_id ?? ('#' . $p->id);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('bulk cancel failed', ['parcel_id' => $p->id, 'error' => $e->getMessage()]);
+                $failed[] = $p->tracking_id ?? ('#' . $p->id);
+            }
+        }
+
+        $msg = __('Cancelled :n shipment(s).', ['n' => $cancelled]);
+        if (! empty($skipped)) {
+            $msg .= ' ' . __('Skipped :n — only newly created shipments can be cancelled: :ids', [
+                'n'   => count($skipped),
+                'ids' => implode(', ', array_slice($skipped, 0, 20)),
+            ]);
+        }
+        if (! empty($failed)) {
+            return back()->with('warning', $msg)->with('errors_list', $failed);
+        }
+        return back()->with('success', $msg);
+
     }else{
-        
+
           return back()->with('error', __('Select action type'));
-        
+
     }
 
     
@@ -555,6 +628,326 @@ public function change_status($parcels, Request $request)
  
 
     
+    /**
+     * Bulk-assign the given parcels to Zajel. Mirrors the Panda flow but
+     * uses the cleaner ZajelService (no transport bugs, no hardcoded driver).
+     */
+    protected function assignZajelBulk($parcels, int $rwhCount, Request $request)
+    {
+        if (! $this->zajel->isConfigured()) {
+            return back()->with('error', __('Zajel is not configured (missing ZAJEL_API_KEY / ZAJEL_CUSTOMER_CODE).'));
+        }
+
+        if (count($parcels) !== $rwhCount) {
+            return back()->with('error', __('All selected shipment must be RECEIVED_WAREHOUSE'));
+        }
+
+        $success = 0;
+        $fail    = 0;
+        $errors  = [];
+
+        foreach ($parcels as $p) {
+            try {
+                $payload  = $this->zajel->buildShipmentPayload($p);
+                $response = $this->zajel->createShipment($payload);
+
+                if (! empty($response['_error']) || empty($response['success'])) {
+                    $fail++;
+                    $errors[] = __('Parcel :id failed: :msg', [
+                        'id'  => $p->id,
+                        'msg' => $response['message'] ?? ($response['title'] ?? 'unknown error'),
+                    ]);
+                    Parcels_3pl::create([
+                        'parcel_id'       => $p->id,
+                        'parcel_3pl_name' => 'zajel',
+                        'awb_number'      => null,
+                        'awb_pdf'         => null,
+                        'response'        => $response,
+                    ]);
+                    continue;
+                }
+
+                $awb       = $response['referenceNumber'] ?? null;
+                $labelInfo = $awb ? $this->zajel->getShipmentLabel((string) $awb) : null;
+                $awbPdf    = is_array($labelInfo) && empty($labelInfo['_error'])
+                    ? ($labelInfo['url'] ?? $labelInfo['label_url'] ?? null)
+                    : null;
+
+                Parcels_3pl::create([
+                    'parcel_id'       => $p->id,
+                    'parcel_3pl_name' => 'zajel',
+                    'awb_number'      => $awb,
+                    'awb_pdf'         => $awbPdf,
+                    'response'        => $response,
+                ]);
+                $success++;
+            } catch (\Throwable $e) {
+                $fail++;
+                $errors[] = __('Parcel :id failed: :msg', [
+                    'id'  => $p->id,
+                    'msg' => $e->getMessage(),
+                ]);
+                Parcels_3pl::create([
+                    'parcel_id'       => $p->id,
+                    'parcel_3pl_name' => 'zajel',
+                    'awb_number'      => null,
+                    'awb_pdf'         => null,
+                    'response'        => ['exception' => $e->getMessage()],
+                ]);
+            }
+        }
+
+        $summary = __('3PL assignment finished. Success: :s, Fail: :f', ['s' => $success, 'f' => $fail]);
+        if ($fail > 0) {
+            return back()->with('warning', $summary)->with('errors_list', $errors);
+        }
+        return back()->with('success', $summary);
+    }
+
+
+    /**
+     * Bulk-assign the given parcels to Aramex. Uses SOAP CreateShipments and
+     * persists one Parcels_3pl row per parcel (success or failure).
+     */
+    protected function assignAramexBulk($parcels, int $rwhCount, Request $request)
+    {
+        if (! $this->aramex->isConfigured()) {
+            return back()->with('error', __('Aramex is not configured (missing ARAMEX_USERNAME / ARAMEX_ACCOUNT_NUMBER).'));
+        }
+
+        if (count($parcels) !== $rwhCount) {
+            return back()->with('error', __('All selected shipment must be RECEIVED_WAREHOUSE'));
+        }
+
+        $success = 0;
+        $fail    = 0;
+        $errors  = [];
+
+        foreach ($parcels as $p) {
+            try {
+                $shipment = $this->aramex->buildShipmentPayload($p);
+                $response = $this->aramex->createShipments([$shipment]);
+
+                $hasErr   = ! empty($response['_error']) || ! empty($response['HasErrors']);
+                $awb      = null;
+                $labelUrl = null;
+                $errMsg   = $response['message'] ?? null;
+
+                if (! $hasErr) {
+                    $processed = $response['Shipments']['ProcessedShipment'] ?? null;
+                    if ($processed && isset($processed[0])) {
+                        $processed = $processed[0];
+                    }
+                    if ($processed) {
+                        $hasErr   = ! empty($processed['HasErrors']);
+                        $awb      = $processed['ID'] ?? null;
+                        $labelUrl = $processed['ShipmentLabel']['LabelURL'] ?? null;
+                        if ($hasErr) {
+                            $notifs = $processed['Notifications']['Notification'] ?? [];
+                            if (isset($notifs[0])) {
+                                $errMsg = $notifs[0]['Message'] ?? null;
+                            } else {
+                                $errMsg = $notifs['Message'] ?? null;
+                            }
+                        }
+                    } else {
+                        $hasErr = true;
+                    }
+                }
+
+                Parcels_3pl::create([
+                    'parcel_id'       => $p->id,
+                    'parcel_3pl_name' => 'aramex',
+                    'awb_number'      => $hasErr ? null : $awb,
+                    'awb_pdf'         => $hasErr ? null : $labelUrl,
+                    'response'        => $response,
+                ]);
+
+                if ($hasErr) {
+                    $fail++;
+                    $errors[] = __('Parcel :id failed: :msg', [
+                        'id'  => $p->id,
+                        'msg' => $errMsg ?: 'unknown error',
+                    ]);
+                } else {
+                    $success++;
+                }
+            } catch (\Throwable $e) {
+                $fail++;
+                $errors[] = __('Parcel :id failed: :msg', [
+                    'id'  => $p->id,
+                    'msg' => $e->getMessage(),
+                ]);
+                Parcels_3pl::create([
+                    'parcel_id'       => $p->id,
+                    'parcel_3pl_name' => 'aramex',
+                    'awb_number'      => null,
+                    'awb_pdf'         => null,
+                    'response'        => ['exception' => $e->getMessage()],
+                ]);
+            }
+        }
+
+        $summary = __('3PL assignment finished. Success: :s, Fail: :f', ['s' => $success, 'f' => $fail]);
+        if ($fail > 0) {
+            return back()->with('warning', $summary)->with('errors_list', $errors);
+        }
+        return back()->with('success', $summary);
+    }
+
+
+    /**
+     * Bulk-assign the given parcels to J&T (jet.co.id). Mirrors the Zajel/Aramex
+     * shape: per-parcel call, Parcels_3pl row on success or failure, summary banner.
+     */
+    protected function assignJetBulk($parcels, int $rwhCount, Request $request)
+    {
+        if (! $this->jet->isConfigured()) {
+            return back()->with('error', __('Jet is not configured (missing JET_USERNAME / JET_API_KEY / JET_SECRET_KEY / JET_ORDER_URL).'));
+        }
+
+        if (count($parcels) !== $rwhCount) {
+            return back()->with('error', __('All selected shipment must be RECEIVED_WAREHOUSE'));
+        }
+
+        $success = 0;
+        $fail    = 0;
+        $errors  = [];
+
+        foreach ($parcels as $p) {
+            try {
+                $orderPayload = $this->jet->buildOrderPayload($p);
+                $response     = $this->jet->createOrder($orderPayload);
+
+                $detail = $response['detail'] ?? null;
+                if ($detail && isset($detail[0])) $detail = $detail[0];
+
+                $statusOk = ! empty($response['success']) && is_array($detail)
+                            && (($detail['status'] ?? '') === 'Sukses')
+                            && ! empty($detail['awb_no']);
+
+                Parcels_3pl::create([
+                    'parcel_id'       => $p->id,
+                    'parcel_3pl_name' => 'jet',
+                    'awb_number'      => $statusOk ? ($detail['awb_no'] ?? null) : null,
+                    'awb_pdf'         => null,
+                    'response'        => $response,
+                ]);
+
+                if ($statusOk) {
+                    $success++;
+                } else {
+                    $fail++;
+                    $errors[] = __('Parcel :id failed: :msg', [
+                        'id'  => $p->id,
+                        'msg' => (is_array($detail) ? ($detail['reason'] ?? '') : '')
+                                 ?: ($response['desc'] ?? $response['message'] ?? 'unknown error'),
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                $fail++;
+                $errors[] = __('Parcel :id failed: :msg', [
+                    'id'  => $p->id,
+                    'msg' => $e->getMessage(),
+                ]);
+                Parcels_3pl::create([
+                    'parcel_id'       => $p->id,
+                    'parcel_3pl_name' => 'jet',
+                    'awb_number'      => null,
+                    'awb_pdf'         => null,
+                    'response'        => ['exception' => $e->getMessage()],
+                ]);
+            }
+        }
+
+        $summary = __('3PL assignment finished. Success: :s, Fail: :f', ['s' => $success, 'f' => $fail]);
+        if ($fail > 0) {
+            return back()->with('warning', $summary)->with('errors_list', $errors);
+        }
+        return back()->with('success', $summary);
+    }
+
+
+    /**
+     * Bulk-assign the given parcels to Logestechs against a single target
+     * company_id (picked at submit time). Mirrors Zajel/Aramex/Jet shape;
+     * note the service is currently a STUB until Postman docs land.
+     */
+    protected function assignLogestechsBulk($parcels, int $rwhCount, Request $request)
+    {
+        if (! $this->logestechs->isConfigured()) {
+            return back()->with('error', __('Logestechs is not configured (missing LOGESTECHS_BASE_URL).'));
+        }
+        $targetCompanyId = trim((string) $request->input('logestechs_company_id'));
+        $lEmail          = trim((string) $request->input('logestechs_email'));
+        $lPassword       = (string) $request->input('logestechs_password');
+        if ($targetCompanyId === '' || $lEmail === '' || $lPassword === '') {
+            return back()->with('error', __('logestechs_company_id, logestechs_email, and logestechs_password are required.'));
+        }
+        if (count($parcels) !== $rwhCount) {
+            return back()->with('error', __('All selected shipment must be RECEIVED_WAREHOUSE'));
+        }
+
+        $success = 0;
+        $fail    = 0;
+        $errors  = [];
+
+        foreach ($parcels as $p) {
+            try {
+                // Resolve per-parcel destination village (cached by Logestechs response).
+                $villageQuery = (string) (optional($p->area)->en_name ?: optional($p->city)->en_name ?: '');
+                $village      = $villageQuery !== '' ? $this->logestechs->resolveVillage($targetCompanyId, $villageQuery) : null;
+
+                $payload  = $this->logestechs->buildCreatePayload($p, $lEmail, $lPassword, null, $village);
+                $response = $this->logestechs->createShipment($payload, $targetCompanyId);
+
+                $hasErr = ! empty($response['_error']);
+                $awb    = $response['barcode']      ?? null;
+                $label  = $response['barcodeImage'] ?? null;
+
+                Parcels_3pl::create([
+                    'parcel_id'         => $p->id,
+                    'parcel_3pl_name'   => 'logestechs',
+                    'target_company_id' => $targetCompanyId,
+                    'awb_number'        => $hasErr ? null : $awb,
+                    'awb_pdf'           => $hasErr ? null : $label,
+                    'response'          => $response,
+                ]);
+
+                if ($hasErr) {
+                    $fail++;
+                    $errors[] = __('Parcel :id failed: :msg', [
+                        'id'  => $p->id,
+                        'msg' => $response['body']['error'] ?? $response['message'] ?? 'unknown error',
+                    ]);
+                } else {
+                    $success++;
+                }
+            } catch (\Throwable $e) {
+                $fail++;
+                $errors[] = __('Parcel :id failed: :msg', [
+                    'id'  => $p->id,
+                    'msg' => $e->getMessage(),
+                ]);
+                Parcels_3pl::create([
+                    'parcel_id'         => $p->id,
+                    'parcel_3pl_name'   => 'logestechs',
+                    'target_company_id' => $targetCompanyId,
+                    'awb_number'        => null,
+                    'awb_pdf'           => null,
+                    'response'          => ['exception' => $e->getMessage()],
+                ]);
+            }
+        }
+
+        $summary = __('3PL assignment finished. Success: :s, Fail: :f', ['s' => $success, 'f' => $fail]);
+        if ($fail > 0) {
+            return back()->with('warning', $summary)->with('errors_list', $errors);
+        }
+        return back()->with('success', $summary);
+    }
+
+
         public function PandaThirdParty($id)
 {
    

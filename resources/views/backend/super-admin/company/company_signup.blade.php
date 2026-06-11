@@ -2,7 +2,7 @@
 @section('title','Company Signup')
 @section('content')
 
-<div class="company-register-page-wrapper " style="width: 100%; padding: 20px;display: none;">
+<div class="company-register-page-wrapper " style="width: 100%; padding: 20px;">
     <!-- Language Toggle -->
     <div class="lang-switcher-fixed">
         <button class="lang-btn active" onclick="setLanguage('en')" id="lang-en">

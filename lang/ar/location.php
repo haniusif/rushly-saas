@@ -1,6 +1,6 @@
 <?php
 return [
-    'dhaka'        => 'دكا',
-    'sub_city'     => 'المدينة الفرعية',
-    'outside_dhaka'=> 'خارج دكا'
+    'dhaka'         => 'الرياض',
+    'sub_city'      => 'المدينة الرئيسية',
+    'outside_dhaka' => 'منطقة نائية'
 ];

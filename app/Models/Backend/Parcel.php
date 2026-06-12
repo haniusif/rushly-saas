@@ -49,6 +49,50 @@ class Parcel extends Model
     
     protected static function booted()
 {
+    /*
+    |--------------------------------------------------------------------------
+    | Tenant isolation (global scope)
+    |--------------------------------------------------------------------------
+    | Every Eloquent query against Parcel (find, where, ::all, eager loads
+    | via Eloquent — anything that goes through the query builder) is
+    | automatically constrained to the current tenant's company_id. This
+    | closes a class of leaks where a caller did `Parcel::find($id)` with
+    | $id coming from the URL or request payload, bypassing the local
+    | scopeCompanywise() scope.
+    |
+    | Guards (skip the scope when ANY of these is true):
+    |  - tenant() is null         (CLI, artisan, jobs, queue workers, tinker,
+    |                              cron, scheduler, central-domain requests).
+    |    The settings() helper falls back to id=1 in those contexts and that
+    |    fallback would silently clamp every CLI query to tenant 1 — worse
+    |    than no scope at all.
+    |  - tenant()->company_id is null  (defensive — half-resolved tenant).
+    |  - Authenticated user is SUPER_ADMIN (cross-tenant access by design).
+    |
+    | Escape hatch:
+    |    Parcel::withoutGlobalScope('tenant')->find($id)
+    | Use this for super-admin tools, cross-tenant analytics, or webhook
+    | callbacks that look up by carrier reference rather than by trust.
+    |
+    | The legacy scopeCompanywise() local scope is retained for backward
+    | compatibility — calls like Parcel::companywise()->... still work,
+    | they're just redundant now.
+    */
+    static::addGlobalScope('tenant', function ($query) {
+        // stancl/tenancy resolves tenant() during the request. If it's
+        // null, we're outside any tenant HTTP context — skip the scope.
+        if (!function_exists('tenant') || !tenant() || !tenant()->company_id) {
+            return;
+        }
+        // Super-admins have explicit cross-tenant authority.
+        if (\Illuminate\Support\Facades\Auth::check()
+            && (int) \Illuminate\Support\Facades\Auth::user()->user_type === \App\Enums\UserType::SUPER_ADMIN) {
+            return;
+        }
+        $table = (new static())->getTable();
+        $query->where($table . '.company_id', (int) tenant()->company_id);
+    });
+
     static::updating(function ($parcel) {
         // Once a shipment is CANCELLED, no further updates of any kind are
         // allowed. Returning false aborts the save. Callers should check

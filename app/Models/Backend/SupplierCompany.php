@@ -20,4 +20,11 @@ class SupplierCompany extends Model
     {
         return $this->hasMany(DeliveryMan::class, 'supplier_company_id');
     }
+
+    public function getMyStatusAttribute()
+    {
+        return $this->status == 1
+            ? '<span class="badge badge-pill badge-success">' . trans('status.1') . '</span>'
+            : '<span class="badge badge-pill badge-danger">'  . trans('status.2') . '</span>';
+    }
 }

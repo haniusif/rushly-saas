@@ -112,6 +112,18 @@ class PermissionSeeder extends Seeder
                 'update' => 'department_update',
                 'delete' => 'department_delete'
             ],
+            'supplier_companies'   => [
+                'read'   => 'supplier_company_read',
+                'create' => 'supplier_company_create',
+                'update' => 'supplier_company_update',
+                'delete' => 'supplier_company_delete',
+            ],
+            'operational_areas'    => [
+                'read'   => 'operational_area_read',
+                'create' => 'operational_area_create',
+                'update' => 'operational_area_update',
+                'delete' => 'operational_area_delete',
+            ],
             'users'                => [
                 'read'  => 'user_read',
                 'create' => 'user_create',
@@ -476,6 +488,18 @@ class PermissionSeeder extends Seeder
                 'create' => 'department_create',
                 'update' => 'department_update',
                 'delete' => 'department_delete'
+            ],
+            'supplier_companies'   => [
+                'read'   => 'supplier_company_read',
+                'create' => 'supplier_company_create',
+                'update' => 'supplier_company_update',
+                'delete' => 'supplier_company_delete',
+            ],
+            'operational_areas'    => [
+                'read'   => 'operational_area_read',
+                'create' => 'operational_area_create',
+                'update' => 'operational_area_update',
+                'delete' => 'operational_area_delete',
             ],
 
             'users'      => [

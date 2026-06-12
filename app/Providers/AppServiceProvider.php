@@ -47,6 +47,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind('App\Repositories\Profile\ProfileInterface', 'App\Repositories\Profile\ProfileRepository');
         $this->app->bind('App\Repositories\Designation\DesignationInterface', 'App\Repositories\Designation\DesignationRepository');
         $this->app->bind('App\Repositories\Department\DepartmentInterface', 'App\Repositories\Department\DepartmentRepository');
+        $this->app->bind('App\Repositories\SupplierCompany\SupplierCompanyInterface', 'App\Repositories\SupplierCompany\SupplierCompanyRepository');
+        $this->app->bind('App\Repositories\OperationalArea\OperationalAreaInterface', 'App\Repositories\OperationalArea\OperationalAreaRepository');
         $this->app->bind('App\Repositories\Merchant\MerchantInterface', 'App\Repositories\Merchant\MerchantRepository');
         $this->app->bind('App\Repositories\MerchantShops\ShopsInterface', 'App\Repositories\MerchantShops\ShopsRepository');
         $this->app->bind('App\Repositories\MerchantDeliveryCharge\MerchantDeliveryChargeInterface', 'App\Repositories\MerchantDeliveryCharge\MerchantDeliveryChargeRepository');

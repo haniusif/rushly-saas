@@ -43,6 +43,8 @@ use App\Http\Controllers\Backend\WMSController;
 use App\Http\Controllers\Backend\DeliveryManController;
 use App\Http\Controllers\Backend\DesignationController;
 use App\Http\Controllers\Backend\DepartmentController;
+use App\Http\Controllers\Backend\SupplierCompanyController;
+use App\Http\Controllers\Backend\OperationalAreaController;
 use App\Http\Controllers\Backend\FraudController;
 use App\Http\Controllers\Backend\NdrController;
 use App\Http\Controllers\Backend\AbnormalShipmentController;
@@ -74,6 +76,9 @@ use App\Http\Controllers\Backend\TodoController;
 use App\Http\Controllers\Backend\SupportController;
 use App\Http\Controllers\Backend\GeneralSettingsController;
 use App\Http\Controllers\Backend\IntegrationsController;
+use App\Http\Controllers\Backend\CountryController;
+use App\Http\Controllers\Backend\CityController;
+use App\Http\Controllers\Backend\AreaController;
 use App\Http\Controllers\Backend\AssetcategoryController;
 use App\Http\Controllers\Backend\NewsOfferController;
 use App\Http\Controllers\Backend\SalaryController;
@@ -197,6 +202,11 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
             Route::post('merchant/otp-verification',      [MerchantController::class, 'otpVerification'])->name('merchant.otp-verification');
             Route::get('merchant/otp-verification-form',  [MerchantController::class, 'otpVerificationForm'])->name('merchant.otp-verification-form');
             Route::post('merchant/resend-otp',            [MerchantController::class, 'resendOTP'])->name('merchant.resend-otp');
+
+            // Public KYC application (no login required)
+            Route::get('merchant/apply',          [MerchantController::class, 'apply'])->name('merchant.apply');
+            Route::post('merchant/apply',         [MerchantController::class, 'applyStore'])->name('merchant.apply.store');
+            Route::get('merchant/apply/success',  [MerchantController::class, 'applySuccess'])->name('merchant.apply.success');
             //social authentication
             Route::get('/login/{social}',                 [SocialLoginController::class, 'socialRedirect'])->name('social.login');
             Route::get('/google/login',                   [SocialLoginController::class, 'authGoogleLogin']); //google login , need url add in  your google app
@@ -592,6 +602,20 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::get('departments/edit/{id}',     [DepartmentController::class, 'edit'])->name('departments.edit')->middleware('hasPermission:department_update');
                         Route::put('departments/update',        [DepartmentController::class, 'update'])->name('departments.update')->middleware('hasPermission:department_update');
                         Route::delete('department/delete/{id}', [DepartmentController::class, 'destroy'])->name('department.delete')->middleware('hasPermission:department_delete');
+                        // Supplier companies (for outsourced drivers)
+                        Route::get('supplier-companies',               [SupplierCompanyController::class, 'index'])->name('supplier_companies.index')->middleware('hasPermission:supplier_company_read');
+                        Route::get('supplier-companies/create',        [SupplierCompanyController::class, 'create'])->name('supplier_companies.create')->middleware('hasPermission:supplier_company_create');
+                        Route::post('supplier-companies/store',        [SupplierCompanyController::class, 'store'])->name('supplier_companies.store')->middleware('hasPermission:supplier_company_create');
+                        Route::get('supplier-companies/edit/{id}',     [SupplierCompanyController::class, 'edit'])->name('supplier_companies.edit')->middleware('hasPermission:supplier_company_update');
+                        Route::put('supplier-companies/update',        [SupplierCompanyController::class, 'update'])->name('supplier_companies.update')->middleware('hasPermission:supplier_company_update');
+                        Route::delete('supplier-company/delete/{id}',  [SupplierCompanyController::class, 'destroy'])->name('supplier_company.delete')->middleware('hasPermission:supplier_company_delete');
+                        // Operational areas (driver coverage zones)
+                        Route::get('operational-areas',                [OperationalAreaController::class, 'index'])->name('operational_areas.index')->middleware('hasPermission:operational_area_read');
+                        Route::get('operational-areas/create',         [OperationalAreaController::class, 'create'])->name('operational_areas.create')->middleware('hasPermission:operational_area_create');
+                        Route::post('operational-areas/store',         [OperationalAreaController::class, 'store'])->name('operational_areas.store')->middleware('hasPermission:operational_area_create');
+                        Route::get('operational-areas/edit/{id}',      [OperationalAreaController::class, 'edit'])->name('operational_areas.edit')->middleware('hasPermission:operational_area_update');
+                        Route::put('operational-areas/update',         [OperationalAreaController::class, 'update'])->name('operational_areas.update')->middleware('hasPermission:operational_area_update');
+                        Route::delete('operational-area/delete/{id}',  [OperationalAreaController::class, 'destroy'])->name('operational_area.delete')->middleware('hasPermission:operational_area_delete');
                         // Fraud
                         Route::get('fraud',                [FraudController::class, 'index'])->name('fraud.index')->middleware('hasPermission:fraud_read');
                         Route::get('fraud/create',         [FraudController::class, 'create'])->name('fraud.create')->middleware('hasPermission:fraud_create');
@@ -705,6 +729,29 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::get('integrations',                  [IntegrationsController::class, 'index'])->name('integrations.index')->middleware('hasPermission:integrations_read');
                         Route::get('integrations/{platform}/edit',  [IntegrationsController::class, 'edit'])->name('integrations.edit')->middleware('hasPermission:integrations_update');
                         Route::put('integrations/{platform}',       [IntegrationsController::class, 'update'])->name('integrations.update')->middleware('hasPermission:integrations_update');
+
+                        // Countries / Cities / Areas
+                        Route::get('countries',              [CountryController::class, 'index'])->name('country.index');
+                        Route::get('countries/create',       [CountryController::class, 'create'])->name('country.create');
+                        Route::post('countries/store',       [CountryController::class, 'store'])->name('country.store');
+                        Route::get('countries/edit/{id}',    [CountryController::class, 'edit'])->name('country.edit');
+                        Route::put('countries/update/{id}',  [CountryController::class, 'update'])->name('country.update');
+                        Route::delete('countries/delete/{id}', [CountryController::class, 'destroy'])->name('country.delete');
+
+                        Route::get('cities',              [CityController::class, 'index'])->name('city.index');
+                        Route::get('cities/create',       [CityController::class, 'create'])->name('city.create');
+                        Route::post('cities/store',       [CityController::class, 'store'])->name('city.store');
+                        Route::get('cities/edit/{id}',    [CityController::class, 'edit'])->name('city.edit');
+                        Route::put('cities/update/{id}',  [CityController::class, 'update'])->name('city.update');
+                        Route::delete('cities/delete/{id}', [CityController::class, 'destroy'])->name('city.delete');
+
+                        Route::get('areas',              [AreaController::class, 'index'])->name('area.index');
+                        Route::get('areas/create',       [AreaController::class, 'create'])->name('area.create');
+                        Route::post('areas/store',       [AreaController::class, 'store'])->name('area.store');
+                        Route::get('areas/edit/{id}',    [AreaController::class, 'edit'])->name('area.edit');
+                        Route::put('areas/update/{id}',  [AreaController::class, 'update'])->name('area.update');
+                        Route::delete('areas/delete/{id}', [AreaController::class, 'destroy'])->name('area.delete');
+
                         //currency settings
                         Route::get('currency',                      [CurrencyController::class, 'index'])->name('currency.index')->middleware('hasPermission:currency_read');
                         Route::get('currency/create',               [CurrencyController::class, 'create'])->name('currency.create')->middleware('hasPermission:currency_create');

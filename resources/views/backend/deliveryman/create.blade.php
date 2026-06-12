@@ -6,87 +6,178 @@
 
 @push('css')
 <style>
-    .rl-section-card { margin-bottom: 18px; }
-    .rl-section-head { display: flex; align-items: center; gap: 8px; }
+    /* ===== Form chrome ===== */
+    .rl-section-card {
+        margin-bottom: 18px;
+        border: 1px solid #e6e8ee;
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 1px 2px rgba(16,24,40,.04);
+    }
+    .rl-section-card .card-body { padding: 22px 24px; }
+    .rl-section-head {
+        display: flex; align-items: center; gap: 10px;
+        font-weight: 600; color: #1f2937; font-size: 16px;
+        margin: 0;
+    }
+    .rl-section-head .num {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 28px; height: 28px; border-radius: 50%;
+        background: #eaf3ff; color: #0066ff; font-size: 13px; font-weight: 700;
+    }
     .rl-section-head .badge { font-size: 12px; }
-    .rl-required { color: #dc3545; }
+    .rl-required { color: #dc3545; margin-inline-start: 4px; }
     .rl-help { color: #6c757d; font-size: 12px; }
-    /* Conditional blocks are gated by .is-visible (driven by driver_type).
+    .rl-section-card label {
+        font-size: 12px; font-weight: 600;
+        color: #4b5563; letter-spacing: .2px;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+    }
+    .rl-section-card .form-control {
+        border-radius: 10px;
+        border: 1px solid #d0d5dd;
+        padding: 10px 12px;
+        font-size: 14px;
+        transition: border-color .15s, box-shadow .15s;
+    }
+    .rl-section-card .form-control:focus {
+        border-color: #2680ff;
+        box-shadow: 0 0 0 3px rgba(38,128,255,.18);
+    }
+    .rl-section-card .form-control.is-invalid {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 3px rgba(220,53,69,.12);
+    }
+    .rl-section-card hr { border: 0; height: 1px; background: #eef0f4; margin: 14px 0 18px; }
+    .rl-uploads-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+
+    /* ===== Conditional blocks (driver_type) =====
        Exclude wizard steps so the wizard's own .is-active gate wins on
-       elements that are both a wizard step AND a conditional block (the
-       bank step). Without :not, equal-specificity rules collide and the
-       bank step renders next to the active step. */
+       elements that are both wizard step AND conditional block (the bank step). */
     .rl-conditional-block:not(.rl-wizard-step) { display: none; }
     .rl-conditional-block:not(.rl-wizard-step).is-visible { display: block; }
-    .rl-uploads-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
 
-    /* Wizard */
+    /* ===== Wizard shell + stepper ===== */
     .rl-wizard-shell {
-        background: #fff; border: 1px solid #e6e8ee; border-radius: 12px;
-        padding: 14px 16px; margin-bottom: 16px;
+        background: #fff; border: 1px solid #e6e8ee; border-radius: 14px;
+        padding: 16px 18px; margin-bottom: 18px;
+        box-shadow: 0 1px 2px rgba(16,24,40,.04);
     }
     .rl-wizard-progressbar {
         height: 6px; background: #eef0f4; border-radius: 999px; overflow: hidden;
-        margin-bottom: 12px;
+        margin-bottom: 14px;
     }
     .rl-wizard-progressbar > i {
-        display: block; height: 100%; width: 0%; background: linear-gradient(90deg, #007bff, #00b3ff);
-        border-radius: 999px; transition: width .25s ease;
+        display: block; height: 100%; width: 0%;
+        background: linear-gradient(90deg, #2680ff, #00c4ff);
+        border-radius: 999px; transition: width .35s ease;
     }
     .rl-wizard-stepper {
         display: flex; flex-wrap: wrap; align-items: center;
         gap: 6px; margin: 0;
     }
     .rl-wizard-stepper .rl-wizard-pill {
-        display: inline-flex; align-items: center; gap: 6px;
-        padding: 6px 12px; border-radius: 999px;
-        background: #f2f4f8; color: #4a5567;
-        font-size: 12px; font-weight: 600; white-space: nowrap;
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 8px 14px; border-radius: 999px;
+        background: #f4f6fa; color: #475467;
+        font-size: 12.5px; font-weight: 600; white-space: nowrap;
         cursor: pointer; user-select: none;
-        transition: background-color .15s, color .15s, transform .15s;
+        transition: background-color .15s, color .15s, transform .12s ease;
     }
-    .rl-wizard-stepper .rl-wizard-pill:hover { background: #e2e7ef; }
+    .rl-wizard-stepper .rl-wizard-pill:hover { background: #e6ebf3; }
+    .rl-wizard-stepper .rl-wizard-pill:active { transform: scale(.98); }
     .rl-wizard-stepper .rl-wizard-pill .num {
         display: inline-flex; align-items: center; justify-content: center;
         width: 22px; height: 22px; border-radius: 50%;
-        background: #cfd6e0; color: #fff; font-size: 11px;
+        background: #d0d5dd; color: #fff; font-size: 11px; font-weight: 700;
     }
     .rl-wizard-stepper .rl-wizard-pill.is-active {
-        background: #007bff; color: #fff;
-        box-shadow: 0 2px 8px rgba(0,123,255,.25);
+        background: linear-gradient(135deg, #2680ff, #00b6ff);
+        color: #fff;
+        box-shadow: 0 4px 14px rgba(38,128,255,.32);
     }
-    .rl-wizard-stepper .rl-wizard-pill.is-active .num { background: rgba(255,255,255,.25); }
+    .rl-wizard-stepper .rl-wizard-pill.is-active .num { background: rgba(255,255,255,.28); }
     .rl-wizard-stepper .rl-wizard-pill.is-done {
-        background: #d4edda; color: #155724;
+        background: #e6f7ec; color: #117a3d;
     }
-    .rl-wizard-stepper .rl-wizard-pill.is-done .num { background: #28a745; color: #fff; }
+    .rl-wizard-stepper .rl-wizard-pill.is-done .num { background: #2ea860; color: #fff; }
     .rl-wizard-stepper .rl-wizard-pill.is-skipped { display: none; }
     .rl-wizard-stepper .rl-wizard-pill.has-error {
-        background: #f8d7da; color: #721c24;
+        background: #fdecee; color: #b42318;
     }
     .rl-wizard-stepper .rl-wizard-pill.has-error .num { background: #dc3545; color: #fff; }
 
     .rl-wizard-step { display: none; }
-    .rl-wizard-step.is-active { display: block; }
+    .rl-wizard-step.is-active { display: block; animation: rl-fade .22s ease-out; }
+    @keyframes rl-fade {
+        from { opacity: 0; transform: translateY(4px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
 
     .rl-wizard-nav {
         display: flex; justify-content: space-between; align-items: center;
-        gap: 12px; padding: 12px 0 24px 0;
+        gap: 12px; padding: 14px 0 28px 0;
         flex-wrap: wrap;
     }
-    .rl-wizard-progress {
-        color: #6c757d; font-size: 13px; font-weight: 500;
-    }
+    .rl-wizard-progress { color: #6c757d; font-size: 13px; font-weight: 500; }
     .rl-wizard-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .rl-wizard-actions .btn { padding: 9px 16px; border-radius: 10px; font-weight: 600; }
 
-    /* RTL: flip the chevron icons so "next" still points forward visually. */
     [dir="rtl"] .rl-wizard-nav .fa-chevron-left,
     [dir="rtl"] .rl-wizard-nav .fa-chevron-right { transform: scaleX(-1); }
 
+    /* ===== Summary panel ===== */
+    .rl-summary {
+        position: sticky; top: 80px;
+        background: #fff; border: 1px solid #e6e8ee; border-radius: 14px;
+        padding: 20px;
+        box-shadow: 0 1px 2px rgba(16,24,40,.04);
+    }
+    .rl-summary h6 {
+        font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+        color: #98a2b3; margin: 14px 0 6px;
+    }
+    .rl-summary .rl-avatar {
+        width: 64px; height: 64px; border-radius: 50%;
+        background: linear-gradient(135deg, #2680ff, #00b6ff);
+        color: #fff; display: flex; align-items: center; justify-content: center;
+        font-size: 24px; font-weight: 700;
+        margin: 0 auto 10px;
+    }
+    .rl-summary .rl-name {
+        font-size: 16px; font-weight: 700; color: #1f2937; text-align: center;
+    }
+    .rl-summary .rl-meta { color: #667085; font-size: 12px; text-align: center; }
+    .rl-summary .rl-row {
+        display: flex; justify-content: space-between; align-items: baseline;
+        gap: 8px; padding: 5px 0;
+        font-size: 13px;
+    }
+    .rl-summary .rl-row .lbl { color: #667085; }
+    .rl-summary .rl-row .val { color: #1f2937; font-weight: 600; text-align: end; word-break: break-word; }
+    .rl-summary .rl-badge {
+        display: inline-block; padding: 3px 10px; border-radius: 999px;
+        font-size: 11px; font-weight: 700;
+    }
+    .rl-summary .rl-badge--type { background: #eef4ff; color: #1d4fb8; }
+    .rl-summary .rl-badge--active { background: #e6f7ec; color: #117a3d; }
+    .rl-summary .rl-badge--suspended { background: #fff3cd; color: #855e00; }
+    .rl-summary .rl-badge--leave { background: #fff8e1; color: #856404; }
+    .rl-summary .rl-badge--terminated { background: #fdecee; color: #b42318; }
+    .rl-summary .rl-warning {
+        background: #fff3cd; color: #855e00; border-radius: 10px;
+        padding: 8px 10px; font-size: 12px; margin-top: 8px;
+        display: none;
+    }
+    .rl-summary .rl-warning.is-visible { display: block; }
+    .rl-summary .rl-empty { color: #98a2b3; font-style: italic; font-size: 13px; }
+
     @media (max-width: 640px) {
-        .rl-wizard-stepper .rl-wizard-pill { font-size: 11px; padding: 5px 9px; }
+        .rl-wizard-stepper .rl-wizard-pill { font-size: 11px; padding: 6px 10px; }
         .rl-wizard-nav { justify-content: center; }
         .rl-wizard-progress { width: 100%; text-align: center; order: -1; }
+        .rl-summary { position: static; }
     }
 </style>
 @endpush
@@ -128,11 +219,14 @@
             </div>
         </div>
 
+        <div class="row">
+        <div class="col-lg-8 col-md-12">
+
         {{-- 1. Basic identity --}}
         <div class="card rl-section-card rl-wizard-step" data-step="1">
             <div class="card-body">
                 <h4 class="rl-section-head">
-                    <span class="badge badge-primary">1</span> {{ __('deliveryman.section_basic') }}
+                    <span class="num">1</span> {{ __('deliveryman.section_basic') }}
                 </h4>
                 <hr>
                 <div class="row">
@@ -201,7 +295,7 @@
         <div class="card rl-section-card rl-wizard-step" data-step="2">
             <div class="card-body">
                 <h4 class="rl-section-head">
-                    <span class="badge badge-primary">2</span> {{ __('deliveryman.section_id') }}
+                    <span class="num">2</span> {{ __('deliveryman.section_id') }}
                 </h4>
                 <hr>
                 <div class="row">
@@ -235,7 +329,7 @@
         <div class="card rl-section-card rl-wizard-step" data-step="3">
             <div class="card-body">
                 <h4 class="rl-section-head">
-                    <span class="badge badge-primary">3</span> {{ __('deliveryman.section_address') }}
+                    <span class="num">3</span> {{ __('deliveryman.section_address') }}
                 </h4>
                 <hr>
                 <div class="row">
@@ -260,7 +354,7 @@
         <div class="card rl-section-card rl-wizard-step" data-step="4">
             <div class="card-body">
                 <h4 class="rl-section-head">
-                    <span class="badge badge-primary">4</span> {{ __('deliveryman.section_employment') }}
+                    <span class="num">4</span> {{ __('deliveryman.section_employment') }}
                 </h4>
                 <hr>
                 <div class="row">
@@ -377,7 +471,7 @@
         <div class="card rl-section-card rl-wizard-step" data-step="5">
             <div class="card-body">
                 <h4 class="rl-section-head">
-                    <span class="badge badge-primary">5</span> {{ __('deliveryman.section_license') }}
+                    <span class="num">5</span> {{ __('deliveryman.section_license') }}
                 </h4>
                 <hr>
                 <div class="row">
@@ -401,7 +495,7 @@
         <div class="card rl-section-card rl-wizard-step rl-conditional-block" data-step="6" data-show-for="freelancer">
             <div class="card-body">
                 <h4 class="rl-section-head">
-                    <span class="badge badge-primary">6</span> {{ __('deliveryman.section_bank') }}
+                    <span class="num">6</span> {{ __('deliveryman.section_bank') }}
                 </h4>
                 <hr>
                 <div class="row">
@@ -421,7 +515,7 @@
         <div class="card rl-section-card rl-wizard-step" data-step="7">
             <div class="card-body">
                 <h4 class="rl-section-head">
-                    <span class="badge badge-primary">7</span> {{ __('deliveryman.section_documents') }}
+                    <span class="num">7</span> {{ __('deliveryman.section_documents') }}
                 </h4>
                 <hr>
                 <div class="rl-uploads-grid">
@@ -448,6 +542,34 @@
                 </div>
             </div>
         </div>
+
+        </div>{{-- /col-lg-8 (form sections) --}}
+
+        {{-- Live summary panel (sticky on desktop, stacks under form on mobile) --}}
+        <aside class="col-lg-4 col-md-12">
+            <div class="rl-summary" id="rl-summary">
+                <div class="rl-avatar" id="rl-summary-avatar">?</div>
+                <div class="rl-name" id="rl-summary-name">—</div>
+                <div class="rl-meta" id="rl-summary-meta">{{ __('deliveryman.create_deliveryman') }}</div>
+
+                <h6>{{ __('deliveryman.section_basic') }}</h6>
+                <div class="rl-row"><span class="lbl">{{ __('deliveryman.mobile') }}</span><span class="val" id="rl-sum-mobile">—</span></div>
+                <div class="rl-row"><span class="lbl">{{ __('deliveryman.email') }}</span><span class="val" id="rl-sum-email">—</span></div>
+                <div class="rl-row"><span class="lbl">{{ __('deliveryman.nationality') }}</span><span class="val" id="rl-sum-nat">—</span></div>
+
+                <h6>{{ __('deliveryman.section_employment') }}</h6>
+                <div class="rl-row"><span class="lbl">{{ __('deliveryman.driver_type') }}</span><span class="val"><span class="rl-badge rl-badge--type" id="rl-sum-type">—</span></span></div>
+                <div class="rl-row"><span class="lbl">{{ __('deliveryman.hub') }}</span><span class="val" id="rl-sum-hub">—</span></div>
+                <div class="rl-row"><span class="lbl">{{ __('deliveryman.status') }}</span><span class="val"><span class="rl-badge rl-badge--active" id="rl-sum-status">—</span></span></div>
+                <div class="rl-row"><span class="lbl">{{ __('deliveryman.joining_date') }}</span><span class="val" id="rl-sum-join">—</span></div>
+
+                <div class="rl-warning" id="rl-sum-contract-warn">
+                    <i class="fa fa-exclamation-triangle"></i>
+                    {{ __('deliveryman.contract_expiry_hint') }}
+                </div>
+            </div>
+        </aside>
+        </div>{{-- /row --}}
 
         <div class="rl-wizard-nav">
             <button type="button" class="btn btn-outline-secondary" id="rl-wizard-prev">
@@ -671,11 +793,103 @@
         });
     });
 
-    radios.forEach(r => r.addEventListener('change', () => { applyConditional(); render(); }));
+    radios.forEach(r => r.addEventListener('change', () => { applyConditional(); render(); syncSummary(); }));
 
     // Live-clear invalid styling as the user fixes a field.
-    form.addEventListener('input',  e => { if (e.target.checkValidity?.()) e.target.classList.remove('is-invalid'); });
-    form.addEventListener('change', e => { if (e.target.checkValidity?.()) e.target.classList.remove('is-invalid'); });
+    form.addEventListener('input',  e => {
+        if (e.target.checkValidity?.()) e.target.classList.remove('is-invalid');
+        syncSummary();
+    });
+    form.addEventListener('change', e => {
+        if (e.target.checkValidity?.()) e.target.classList.remove('is-invalid');
+        syncSummary();
+    });
+
+    /* =========================================================
+       Live summary panel
+       Reads form values straight from the DOM. No new sources of truth.
+    ========================================================= */
+    const sum = {
+        avatar:    document.getElementById('rl-summary-avatar'),
+        name:      document.getElementById('rl-summary-name'),
+        meta:      document.getElementById('rl-summary-meta'),
+        mobile:    document.getElementById('rl-sum-mobile'),
+        email:     document.getElementById('rl-sum-email'),
+        nat:       document.getElementById('rl-sum-nat'),
+        type:      document.getElementById('rl-sum-type'),
+        hub:       document.getElementById('rl-sum-hub'),
+        status:    document.getElementById('rl-sum-status'),
+        join:      document.getElementById('rl-sum-join'),
+        contractW: document.getElementById('rl-sum-contract-warn'),
+    };
+    const statusLabels = {
+        '1': @json(__('deliveryman.status_active')),
+        '2': @json(__('deliveryman.status_suspended')),
+        '3': @json(__('deliveryman.status_leave')),
+        '4': @json(__('deliveryman.status_terminated')),
+    };
+    const statusClass = {
+        '1': 'rl-badge rl-badge--active',
+        '2': 'rl-badge rl-badge--suspended',
+        '3': 'rl-badge rl-badge--leave',
+        '4': 'rl-badge rl-badge--terminated',
+    };
+    const typeLabels = {
+        'freelancer':       @json(__('deliveryman.driver_type_freelancer')),
+        'outsourced':       @json(__('deliveryman.driver_type_outsourced')),
+        'company_courier':  @json(__('deliveryman.driver_type_company_courier')),
+    };
+
+    function fieldVal(name) {
+        const el = form.querySelector('[name="' + name + '"]');
+        return el ? (el.value || '').trim() : '';
+    }
+    function selectLabel(name) {
+        const el = form.querySelector('select[name="' + name + '"]');
+        if (!el || el.selectedIndex < 0) return '';
+        const opt = el.options[el.selectedIndex];
+        return opt && opt.value ? (opt.textContent || '').trim() : '';
+    }
+    function initials(name) {
+        if (!name) return '?';
+        return name.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+    }
+    function daysUntil(yyyyMmDd) {
+        if (!yyyyMmDd) return null;
+        const d = new Date(yyyyMmDd + 'T00:00:00');
+        if (isNaN(d.getTime())) return null;
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        return Math.round((d - today) / 86400000);
+    }
+
+    function syncSummary() {
+        const name      = fieldVal('name') || fieldVal('name_en');
+        const mobile    = fieldVal('mobile');
+        const email     = fieldVal('email');
+        const nat       = fieldVal('nationality');
+        const type      = currentType();
+        const hubLabel  = selectLabel('hub_id');
+        const statusV   = fieldVal('status') || '1';
+        const join      = fieldVal('joining_date');
+        const contractE = fieldVal('contract_end_date');
+
+        sum.name.textContent   = name || '—';
+        sum.avatar.textContent = initials(name);
+        sum.mobile.textContent = mobile || '—';
+        sum.email.textContent  = email  || '—';
+        sum.nat.textContent    = nat    || '—';
+        sum.type.textContent   = typeLabels[type] || '—';
+        sum.hub.textContent    = hubLabel || '—';
+        sum.join.textContent   = join || '—';
+
+        sum.status.textContent = statusLabels[statusV] || '—';
+        sum.status.className   = statusClass[statusV] || 'rl-badge';
+
+        const dleft = daysUntil(contractE);
+        const soon  = dleft !== null && dleft >= 0 && dleft <= 30;
+        sum.contractW.classList.toggle('is-visible', !!soon);
+    }
 
     // Final guard: on Submit, validate ALL visible steps. If anything is
     // invalid, block submission and jump to the first failing step.
@@ -701,6 +915,7 @@
         if (stepWithError) active = parseInt(stepWithError.dataset.step, 10);
     }
     render();
+    syncSummary();
 })();
 </script>
 @endpush

@@ -93,7 +93,16 @@
                     </div>
                     <div class="col-md-4 form-group">
                         <label>الجنسية</label>
-                        <input type="text" name="nationality" class="form-control" value="{{ old('nationality') }}">
+                        <select name="nationality" class="form-control" data-rl-search="1">
+                            <option value="">—</option>
+                            @foreach($nationalities as $c)
+                                @php $label = $c->name ?: $c->en_name; @endphp
+                                <option value="{{ $label }}" {{ old('nationality') === $label ? 'selected' : '' }}>{{ $label }}@if($c->en_name && $c->en_name !== $label) — {{ $c->en_name }}@endif</option>
+                            @endforeach
+                        </select>
+                        @if($nationalities->isEmpty())
+                            <small class="rl-help">جدول الدول فارغ — قم بتشغيل CountrySeeder.</small>
+                        @endif
                     </div>
                 </div>
             </div>

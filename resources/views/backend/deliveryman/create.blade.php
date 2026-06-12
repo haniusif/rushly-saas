@@ -11,8 +11,13 @@
     .rl-section-head .badge { font-size: 12px; }
     .rl-required { color: #dc3545; }
     .rl-help { color: #6c757d; font-size: 12px; }
-    .rl-conditional-block { display: none; }
-    .rl-conditional-block.is-visible { display: block; }
+    /* Conditional blocks are gated by .is-visible (driven by driver_type).
+       Exclude wizard steps so the wizard's own .is-active gate wins on
+       elements that are both a wizard step AND a conditional block (the
+       bank step). Without :not, equal-specificity rules collide and the
+       bank step renders next to the active step. */
+    .rl-conditional-block:not(.rl-wizard-step) { display: none; }
+    .rl-conditional-block:not(.rl-wizard-step).is-visible { display: block; }
     .rl-uploads-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
 
     /* Wizard */
@@ -559,13 +564,20 @@
     }
 
     function showInvalid(input) {
-        const stepEl = input.closest('.rl-wizard-step');
-        if (stepEl) {
-            active = parseInt(stepEl.dataset.step, 10);
+        const ownerStep = input.closest('.rl-wizard-step');
+        if (ownerStep) {
+            active = parseInt(ownerStep.dataset.step, 10);
             render();
         }
         try { input.focus({ preventScroll: false }); } catch (_) { input.focus(); }
         input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // reportValidity shows the browser's native validation tooltip on the
+        // input — without this, checkValidity is silent and the user gets no
+        // feedback explaining what's wrong with the field.
+        if (typeof input.reportValidity === 'function') {
+            // Defer until after the scroll lands so the tooltip anchors correctly.
+            setTimeout(() => { try { input.reportValidity(); } catch (_) {} }, 200);
+        }
     }
 
     function markPillErrors() {

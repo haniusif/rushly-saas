@@ -116,8 +116,24 @@ public function shipments($date)
             if($request->salary !==""):
                 $deliveryUser->salary          = $request->salary;
             endif;
+
+            // Extended identity / address fields
+            $deliveryUser->name_en                = $request->name_en;
+            $deliveryUser->alt_mobile             = $request->alt_mobile;
+            $deliveryUser->gender                 = $request->gender;
+            $deliveryUser->dob                    = $request->dob ?: null;
+            $deliveryUser->nationality            = $request->nationality;
+            $deliveryUser->id_type                = $request->id_type;
+            $deliveryUser->id_number              = $request->id_number;
+            $deliveryUser->id_expiry              = $request->id_expiry ?: null;
+            $deliveryUser->district               = $request->district;
+            $deliveryUser->short_national_address = $request->short_national_address;
+
             if(isset($request->image_id) &&$request->image_id != null) {
                $deliveryUser->image_id = $this->user_image($deliveryUser->image_id, $request->image_id);
+            }
+            if(isset($request->id_image_id) && $request->id_image_id != null) {
+                $deliveryUser->id_image_id = $this->_storeUpload(null, $request->id_image_id, 'uploads/deliveryMan/id');
             }
            $deliveryUser->save();
            $deliveryMan                                 = new DeliveryMan();
@@ -141,11 +157,71 @@ public function shipments($date)
            if(isset($request->driving_license_image_id) &&$request->driving_license_image_id != null) {
                $deliveryMan->driving_license_image_id = $this->driving_license_image($deliveryMan->driving_license_image_id, $request->driving_license_image_id);
            }
+
+            // Extended employment + license + bank fields
+            $deliveryMan->driver_type         = $request->driver_type;
+            $deliveryMan->employee_number     = $request->employee_number;
+            $deliveryMan->joining_date        = $request->joining_date ?: null;
+            $deliveryMan->contract_end_date   = $request->contract_end_date ?: null;
+            $deliveryMan->direct_manager_id   = $request->direct_manager_id ?: null;
+            $deliveryMan->license_number      = $request->license_number;
+            $deliveryMan->license_expiry      = $request->license_expiry ?: null;
+            $deliveryMan->iqama_expiry        = $request->iqama_expiry ?: null;
+            $deliveryMan->bank_account_no     = $request->bank_account_no;
+            $deliveryMan->iban                = $request->iban;
+            $deliveryMan->supplier_company_id = $request->supplier_company_id ?: null;
+            $deliveryMan->operational_area_id = $request->operational_area_id ?: null;
+
+            if(isset($request->iqama_image_id) && $request->iqama_image_id != null) {
+                $deliveryMan->iqama_image_id = $this->_storeUpload(null, $request->iqama_image_id, 'uploads/deliveryMan/iqama');
+            }
+            if(isset($request->contract_image_id) && $request->contract_image_id != null) {
+                $deliveryMan->contract_image_id = $this->_storeUpload(null, $request->contract_image_id, 'uploads/deliveryMan/contract');
+            }
+            if(isset($request->promissory_note_image_id) && $request->promissory_note_image_id != null) {
+                $deliveryMan->promissory_note_image_id = $this->_storeUpload(null, $request->promissory_note_image_id, 'uploads/deliveryMan/promissory');
+            }
+
            $deliveryMan->save();
             DB::commit();
             return true;
        } catch (\Exception $e) {
             DB::rollBack();
+            return false;
+        }
+    }
+
+    /**
+     * Generic image-upload helper. Returns an Upload row id, or false on
+     * failure. Keep the legacy per-field methods (`user_image`,
+     * `driving_license_image`) alongside this; they wire pre-existing
+     * fields and changing them risks regressions.
+     */
+    private function _storeUpload($image_id, $image, string $relativeDir)
+    {
+        try {
+            $image_name = '';
+            if (!blank($image)) {
+                $destinationPath = public_path($relativeDir);
+                if (!is_dir($destinationPath)) {
+                    @mkdir($destinationPath, 0775, true);
+                }
+                $filename   = date('YmdHis') . '_' . random_int(1000, 9999) . '.' . $image->getClientOriginalExtension();
+                $image->move($destinationPath, $filename);
+                $image_name = trim($relativeDir, '/') . '/' . $filename;
+            }
+            if (blank($image_id)) {
+                $upload = new Upload();
+            } else {
+                $upload = Upload::find($image_id);
+                if ($upload && $upload->original && file_exists(public_path($upload->original))) {
+                    @unlink(public_path($upload->original));
+                }
+            }
+            $upload->original = $image_name;
+            $upload->save();
+            return $upload->id;
+        } catch (\Exception $e) {
             return false;
         }
     }

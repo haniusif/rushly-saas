@@ -40,22 +40,65 @@ class DeliveryManRequest extends FormRequest
             $password = ['required', 'min:6'];
         }
 
+        $driverType = Request::input('driver_type');
+
         return [
+            // Core
             'name'                       => ['required', 'string','max:191'],
+            'name_en'                    => ['nullable', 'string', 'max:191'],
             'email'                      => $email,
             'password'                   => $password,
             'mobile'                     => $mobile,
+            'alt_mobile'                 => ['nullable', 'string', 'max:50'],
+            'gender'                     => ['nullable', 'in:male,female'],
+            'dob'                        => ['nullable', 'date'],
+            'nationality'                => ['nullable', 'string', 'max:100'],
+
+            // ID
+            'id_type'                    => ['nullable', 'in:national_id,iqama'],
+            'id_number'                  => ['nullable', 'string', 'max:50'],
+            'id_expiry'                  => ['nullable', 'date'],
+            'id_image_id'                => 'nullable|image|mimes:jpeg,png,jpg|max:5098',
+
+            // Address
             'address'                    => ['required','string', 'max:200'],
+            'district'                   => ['nullable', 'string', 'max:191'],
+            'short_national_address'     => ['nullable', 'string', 'max:50'],
+
+            // Employment
+            'driver_type'                => ['required', 'in:freelancer,outsourced,company_courier'],
+            'employee_number'            => [$driverType === 'company_courier' ? 'required' : 'nullable', 'string', 'max:50'],
+            'joining_date'               => ['nullable', 'date'],
+            'contract_end_date'          => ['nullable', 'date', 'after_or_equal:joining_date'],
+            'status'                     => ['required', 'numeric'],
             'hub_id'                     => ['required', 'numeric'],
+            'direct_manager_id'          => ['nullable', 'numeric'],
+            'operational_area_id'        => ['nullable', 'numeric'],
+            'supplier_company_id'        => [$driverType === 'outsourced' ? 'required' : 'nullable', 'numeric'],
+
+            // License
+            'license_number'             => ['nullable', 'string', 'max:50'],
+            'license_expiry'             => ['nullable', 'date'],
+            'iqama_expiry'               => ['nullable', 'date'],
+
+            // Bank (freelancers)
+            'bank_account_no'            => [$driverType === 'freelancer' ? 'nullable' : 'nullable', 'string', 'max:50'],
+            'iban'                       => [$driverType === 'freelancer' ? 'nullable' : 'nullable', 'string', 'max:50'],
+
+            // Charges
             'delivery_charge'            => ['nullable', 'numeric'],
             'pickup_charge'              => ['nullable', 'numeric'],
             'return_charge'              => ['nullable', 'numeric'],
             'opening_balance'            => ['nullable', 'numeric'],
-            'status'                     => ['required', 'numeric'],
+
+            // Uploads
             'image_id'                   => 'nullable|image|mimes:jpeg,png,jpg|max:5098',
             'driving_license_image_id'   => 'nullable|image|mimes:jpeg,png,jpg|max:5098',
-            'salary'                     => ['numeric']
+            'iqama_image_id'             => 'nullable|image|mimes:jpeg,png,jpg|max:5098',
+            'contract_image_id'          => 'nullable|image|mimes:jpeg,png,jpg|max:5098',
+            'promissory_note_image_id'   => 'nullable|image|mimes:jpeg,png,jpg|max:5098',
 
+            'salary'                     => ['nullable', 'numeric'],
         ];
     }
 

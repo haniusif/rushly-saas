@@ -7,6 +7,10 @@ use App\Repositories\DeliveryMan\DeliveryManInterface;
 use Illuminate\Http\Request;
 use App\Http\Requests\DeliveryMan\DeliveryManRequest;
 use App\Models\Backend\DeliveryMan;
+use App\Models\Backend\OperationalArea;
+use App\Models\Backend\SupplierCompany;
+use App\Models\User;
+use App\Enums\UserType;
 use Brian2694\Toastr\Facades\Toastr;
 class DeliveryManController extends Controller
 {
@@ -29,8 +33,20 @@ class DeliveryManController extends Controller
 
     public function create()
     {
-        $hubs         = $this->repo->hubs();
-      return view('backend.deliveryman.create',compact('hubs'));
+        $hubs              = $this->repo->hubs();
+        $supplierCompanies = SupplierCompany::companywise()->where('status', 1)->orderBy('name')->get();
+        $operationalAreas  = OperationalArea::companywise()->where('status', 1)->orderBy('name')->get();
+        // Direct-manager candidates: admins + incharges + hub users on this tenant.
+        $managers = User::whereIn('user_type', [
+                UserType::ADMIN, UserType::INCHARGE, UserType::HUB,
+            ])
+            ->where('company_id', settings()->id)
+            ->orderBy('name')
+            ->get(['id', 'name', 'user_type']);
+
+        return view('backend.deliveryman.create', compact(
+            'hubs', 'supplierCompanies', 'operationalAreas', 'managers'
+        ));
     }
 
 

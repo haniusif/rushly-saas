@@ -14,7 +14,61 @@ class DeliveryMan extends Model
     use HasFactory, LogsActivity;
 
     protected $table = 'delivery_man';
-    protected $fillable = ['company_id','user_id','status','delivery_charge','pickup_charge','return_charge','opening_balance','current_balance'];
+    protected $fillable = [
+        'company_id', 'user_id', 'status',
+        'delivery_charge', 'pickup_charge', 'return_charge',
+        'opening_balance', 'current_balance',
+        'driver_type', 'employee_number', 'joining_date', 'contract_end_date',
+        'direct_manager_id', 'license_number', 'license_expiry', 'iqama_expiry',
+        'bank_account_no', 'iban',
+        'supplier_company_id', 'operational_area_id',
+        'iqama_image_id', 'contract_image_id', 'promissory_note_image_id',
+    ];
+
+    protected $casts = [
+        'joining_date'      => 'date',
+        'contract_end_date' => 'date',
+        'license_expiry'    => 'date',
+        'iqama_expiry'      => 'date',
+    ];
+
+    public function supplierCompany()
+    {
+        return $this->belongsTo(SupplierCompany::class, 'supplier_company_id');
+    }
+
+    public function operationalArea()
+    {
+        return $this->belongsTo(OperationalArea::class, 'operational_area_id');
+    }
+
+    public function directManager()
+    {
+        return $this->belongsTo(User::class, 'direct_manager_id');
+    }
+
+    public function iqamaImage()
+    {
+        return $this->belongsTo(Upload::class, 'iqama_image_id');
+    }
+
+    public function contractImage()
+    {
+        return $this->belongsTo(Upload::class, 'contract_image_id');
+    }
+
+    public function promissoryNoteImage()
+    {
+        return $this->belongsTo(Upload::class, 'promissory_note_image_id');
+    }
+
+    /** True iff contract ends within the given number of days (default 30). */
+    public function isContractExpiringSoon(int $days = 30): bool
+    {
+        if (!$this->contract_end_date) return false;
+        return now()->lte($this->contract_end_date)
+            && now()->diffInDays($this->contract_end_date, false) <= $days;
+    }
 
 
     public function scopeOrderByDesc($query, $data)

@@ -85,4 +85,10 @@ return array (
   'iqama_photo'                   => 'صورة الإقامة',
   'contract_photo'                => 'صورة العقد',
   'promissory_note_photo'         => 'صورة السند لأمر',
+
+  // Wizard navigation
+  'wizard_next'                   => 'التالي',
+  'wizard_prev'                   => 'السابق',
+  'wizard_submit'                 => 'إرسال',
+  'wizard_step_of'                => 'الخطوة :current من :total',
 );

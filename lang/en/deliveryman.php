@@ -85,4 +85,10 @@ return array (
   'iqama_photo'                   => 'Iqama photo',
   'contract_photo'                => 'Contract photo',
   'promissory_note_photo'         => 'Promissory note photo',
+
+  // Wizard navigation
+  'wizard_next'                   => 'Next',
+  'wizard_prev'                   => 'Previous',
+  'wizard_submit'                 => 'Submit',
+  'wizard_step_of'                => 'Step :current of :total',
 );

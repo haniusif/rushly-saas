@@ -14,6 +14,45 @@
     .rl-conditional-block { display: none; }
     .rl-conditional-block.is-visible { display: block; }
     .rl-uploads-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+
+    /* Wizard */
+    .rl-wizard-stepper {
+        display: flex; flex-wrap: wrap; align-items: center;
+        gap: 8px; padding: 12px 0 18px 0;
+    }
+    .rl-wizard-stepper .rl-wizard-pill {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 6px 12px; border-radius: 999px;
+        background: #eef0f4; color: #6c757d;
+        font-size: 12px; font-weight: 600;
+        cursor: pointer; user-select: none;
+        transition: background-color .15s, color .15s;
+    }
+    .rl-wizard-stepper .rl-wizard-pill .num {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 22px; height: 22px; border-radius: 50%;
+        background: #cfd6e0; color: #fff; font-size: 11px;
+    }
+    .rl-wizard-stepper .rl-wizard-pill.is-active {
+        background: #007bff; color: #fff;
+    }
+    .rl-wizard-stepper .rl-wizard-pill.is-active .num { background: rgba(255,255,255,.25); }
+    .rl-wizard-stepper .rl-wizard-pill.is-done {
+        background: #d4edda; color: #155724;
+    }
+    .rl-wizard-stepper .rl-wizard-pill.is-done .num { background: #28a745; color: #fff; }
+    .rl-wizard-stepper .rl-wizard-pill.is-skipped { display: none; }
+    .rl-wizard-stepper .rl-wizard-divider { width: 24px; height: 2px; background: #cfd6e0; border-radius: 2px; }
+
+    .rl-wizard-step { display: none; }
+    .rl-wizard-step.is-active { display: block; }
+
+    .rl-wizard-nav {
+        display: flex; justify-content: space-between; align-items: center;
+        gap: 12px; padding: 16px 0 24px 0;
+    }
+    .rl-wizard-progress { color: #6c757d; font-size: 13px; }
+    .rl-wizard-actions { display: flex; gap: 8px; }
 </style>
 @endpush
 
@@ -40,8 +79,19 @@
     <form action="{{ route('deliveryman.store') }}" method="POST" enctype="multipart/form-data" id="deliveryman-form">
         @csrf
 
+        {{-- Wizard stepper (clickable pills, jumps to step) --}}
+        <div class="rl-wizard-stepper" id="rl-wizard-stepper">
+            <span class="rl-wizard-pill" data-go="1"><span class="num">1</span> {{ __('deliveryman.section_basic') }}</span>
+            <span class="rl-wizard-pill" data-go="2"><span class="num">2</span> {{ __('deliveryman.section_id') }}</span>
+            <span class="rl-wizard-pill" data-go="3"><span class="num">3</span> {{ __('deliveryman.section_address') }}</span>
+            <span class="rl-wizard-pill" data-go="4"><span class="num">4</span> {{ __('deliveryman.section_employment') }}</span>
+            <span class="rl-wizard-pill" data-go="5"><span class="num">5</span> {{ __('deliveryman.section_license') }}</span>
+            <span class="rl-wizard-pill" data-go="6" data-show-for="freelancer"><span class="num">6</span> {{ __('deliveryman.section_bank') }}</span>
+            <span class="rl-wizard-pill" data-go="7"><span class="num">7</span> {{ __('deliveryman.section_documents') }}</span>
+        </div>
+
         {{-- 1. Basic identity --}}
-        <div class="card rl-section-card">
+        <div class="card rl-section-card rl-wizard-step" data-step="1">
             <div class="card-body">
                 <h4 class="rl-section-head">
                     <span class="badge badge-primary">1</span> {{ __('deliveryman.section_basic') }}
@@ -110,7 +160,7 @@
         </div>
 
         {{-- 2. ID --}}
-        <div class="card rl-section-card">
+        <div class="card rl-section-card rl-wizard-step" data-step="2">
             <div class="card-body">
                 <h4 class="rl-section-head">
                     <span class="badge badge-primary">2</span> {{ __('deliveryman.section_id') }}
@@ -144,7 +194,7 @@
         </div>
 
         {{-- 3. Address --}}
-        <div class="card rl-section-card">
+        <div class="card rl-section-card rl-wizard-step" data-step="3">
             <div class="card-body">
                 <h4 class="rl-section-head">
                     <span class="badge badge-primary">3</span> {{ __('deliveryman.section_address') }}
@@ -169,7 +219,7 @@
         </div>
 
         {{-- 4. Employment --}}
-        <div class="card rl-section-card">
+        <div class="card rl-section-card rl-wizard-step" data-step="4">
             <div class="card-body">
                 <h4 class="rl-section-head">
                     <span class="badge badge-primary">4</span> {{ __('deliveryman.section_employment') }}
@@ -286,7 +336,7 @@
         </div>
 
         {{-- 5. License --}}
-        <div class="card rl-section-card">
+        <div class="card rl-section-card rl-wizard-step" data-step="5">
             <div class="card-body">
                 <h4 class="rl-section-head">
                     <span class="badge badge-primary">5</span> {{ __('deliveryman.section_license') }}
@@ -309,8 +359,8 @@
             </div>
         </div>
 
-        {{-- 6. Freelancer bank info (conditional) --}}
-        <div class="card rl-section-card rl-conditional-block" data-show-for="freelancer">
+        {{-- 6. Freelancer bank info (conditional; wizard skips when not freelancer) --}}
+        <div class="card rl-section-card rl-wizard-step rl-conditional-block" data-step="6" data-show-for="freelancer">
             <div class="card-body">
                 <h4 class="rl-section-head">
                     <span class="badge badge-primary">6</span> {{ __('deliveryman.section_bank') }}
@@ -330,7 +380,7 @@
         </div>
 
         {{-- 7. Official documents (uploads) --}}
-        <div class="card rl-section-card">
+        <div class="card rl-section-card rl-wizard-step" data-step="7">
             <div class="card-body">
                 <h4 class="rl-section-head">
                     <span class="badge badge-primary">7</span> {{ __('deliveryman.section_documents') }}
@@ -361,9 +411,22 @@
             </div>
         </div>
 
-        <div class="d-flex justify-content-end mb-4">
-            <a href="{{ route('deliveryman.index') }}" class="btn btn-secondary ml-2">{{ __('levels.cancel') }}</a>
-            <button type="submit" class="btn btn-primary">{{ __('levels.save') }}</button>
+        <div class="rl-wizard-nav">
+            <button type="button" class="btn btn-outline-secondary" id="rl-wizard-prev">
+                <i class="fa fa-chevron-left"></i> {{ __('deliveryman.wizard_prev') }}
+            </button>
+
+            <div class="rl-wizard-progress" id="rl-wizard-progress">—</div>
+
+            <div class="rl-wizard-actions">
+                <a href="{{ route('deliveryman.index') }}" class="btn btn-secondary">{{ __('levels.cancel') }}</a>
+                <button type="button" class="btn btn-primary" id="rl-wizard-next">
+                    {{ __('deliveryman.wizard_next') }} <i class="fa fa-chevron-right"></i>
+                </button>
+                <button type="submit" class="btn btn-success" id="rl-wizard-submit" style="display:none;">
+                    <i class="fa fa-check"></i> {{ __('deliveryman.wizard_submit') }}
+                </button>
+            </div>
         </div>
     </form>
 </div>
@@ -372,35 +435,145 @@
 @push('js')
 <script>
 (function () {
-    // Show/hide blocks keyed by driver_type. Disable inputs in hidden blocks
-    // so the browser doesn't submit them and validation skips required fields
-    // that don't apply to the current type.
-    //
-    // Markup contract:
-    //   <... class="rl-conditional-block" data-show-for="freelancer">
-    //   <... class="rl-conditional-block" data-show-for="freelancer,outsourced">  // multiple types ok
+    /* =========================================================
+       Conditional blocks (driver_type)
+       Markup: <... class="rl-conditional-block" data-show-for="freelancer">
+       Hidden blocks get their inputs disabled so they don't submit
+       and don't trip required-field validation that doesn't apply.
+    ========================================================= */
     const radios = document.querySelectorAll('input[name="driver_type"]');
-    const blocks = document.querySelectorAll('.rl-conditional-block');
+    const condBlocks = document.querySelectorAll('.rl-conditional-block');
 
     function currentType() {
         const checked = document.querySelector('input[name="driver_type"]:checked');
         return checked ? checked.value : null;
     }
 
-    function applyVisibility() {
+    function applyConditional() {
         const t = currentType();
-        blocks.forEach(block => {
+        condBlocks.forEach(block => {
             const allowed = (block.dataset.showFor || '').split(',').map(s => s.trim());
-            const shouldShow = allowed.includes(t);
-            block.classList.toggle('is-visible', shouldShow);
+            const ok = allowed.includes(t);
+            block.classList.toggle('is-visible', ok);
+            // Disable inputs in hidden blocks (visibility independent of wizard step).
             block.querySelectorAll('input, select, textarea').forEach(el => {
-                el.disabled = !shouldShow;
+                el.dataset.condDisabled = ok ? '' : '1';
+                el.disabled = !ok || el.dataset.stepDisabled === '1';
             });
+        });
+        // Conditional pills (e.g. step 6 — Bank) hide/show in the stepper.
+        document.querySelectorAll('#rl-wizard-stepper .rl-wizard-pill[data-show-for]').forEach(pill => {
+            const allowed = (pill.dataset.showFor || '').split(',').map(s => s.trim());
+            pill.classList.toggle('is-skipped', !allowed.includes(t));
         });
     }
 
-    radios.forEach(r => r.addEventListener('change', applyVisibility));
-    applyVisibility();
+    /* =========================================================
+       Wizard
+       Strategy:
+         - Steps are 1..N (data-step on each section).
+         - "Visible" step list is recomputed when driver_type changes
+           (skips any step that's also a conditional-block whose
+           data-show-for doesn't match).
+         - Inputs in non-active steps are NOT disabled — server gets the
+           full payload on submit. This matters because the form is one
+           POST, not progressive save.
+    ========================================================= */
+    const steps    = Array.from(document.querySelectorAll('.rl-wizard-step'));
+    const pills    = Array.from(document.querySelectorAll('#rl-wizard-stepper .rl-wizard-pill'));
+    const btnPrev  = document.getElementById('rl-wizard-prev');
+    const btnNext  = document.getElementById('rl-wizard-next');
+    const btnSubmit= document.getElementById('rl-wizard-submit');
+    const progress = document.getElementById('rl-wizard-progress');
+    const form     = document.getElementById('deliveryman-form');
+    const stepOfTemplate = @json(__('deliveryman.wizard_step_of'));
+
+    let active = 1;
+
+    function visibleStepNums() {
+        const t = currentType();
+        return steps
+            .filter(s => {
+                if (!s.classList.contains('rl-conditional-block')) return true;
+                const allowed = (s.dataset.showFor || '').split(',').map(x => x.trim());
+                return allowed.includes(t);
+            })
+            .map(s => parseInt(s.dataset.step, 10));
+    }
+
+    function render() {
+        const visible = visibleStepNums();
+        // Clamp active to the visible list.
+        if (!visible.includes(active)) {
+            active = visible[0] || 1;
+        }
+        const idxInVisible = visible.indexOf(active);
+        steps.forEach(s => {
+            s.classList.toggle('is-active', parseInt(s.dataset.step, 10) === active);
+        });
+        pills.forEach(p => {
+            const n = parseInt(p.dataset.go, 10);
+            p.classList.toggle('is-active', n === active);
+            p.classList.toggle('is-done', visible.indexOf(n) > -1 && visible.indexOf(n) < idxInVisible);
+        });
+        btnPrev.disabled = idxInVisible <= 0;
+        const isLast = idxInVisible >= visible.length - 1;
+        btnNext.style.display   = isLast ? 'none'   : 'inline-block';
+        btnSubmit.style.display = isLast ? 'inline-block' : 'none';
+        progress.textContent = stepOfTemplate
+            .replace(':current', idxInVisible + 1)
+            .replace(':total',   visible.length);
+    }
+
+    function goRelative(delta) {
+        const visible = visibleStepNums();
+        const idx = visible.indexOf(active);
+        const next = Math.max(0, Math.min(visible.length - 1, idx + delta));
+        active = visible[next];
+        render();
+        // Scroll active step into view for long pages.
+        const el = steps.find(s => parseInt(s.dataset.step, 10) === active);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    btnPrev.addEventListener('click', () => goRelative(-1));
+    btnNext.addEventListener('click', () => goRelative(+1));
+
+    pills.forEach(p => {
+        p.addEventListener('click', () => {
+            if (p.classList.contains('is-skipped')) return;
+            active = parseInt(p.dataset.go, 10);
+            render();
+            const el = steps.find(s => parseInt(s.dataset.step, 10) === active);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
+
+    radios.forEach(r => r.addEventListener('change', () => { applyConditional(); render(); }));
+
+    // If validation errors come back from the server, jump to the first step
+    // that contains an invalid input so the user sees the error immediately.
+    form.addEventListener('submit', (e) => {
+        const firstInvalid = form.querySelector('.is-invalid');
+        if (firstInvalid) {
+            const stepEl = firstInvalid.closest('.rl-wizard-step');
+            if (stepEl) {
+                active = parseInt(stepEl.dataset.step, 10);
+                render();
+            }
+        }
+    });
+
+    // First paint
+    applyConditional();
+    // If the server bounced us back with a validation error, jump to that step
+    // even before submit (i.e. on initial render).
+    const firstInvalid = form.querySelector('.is-invalid');
+    if (firstInvalid) {
+        const stepEl = firstInvalid.closest('.rl-wizard-step');
+        if (stepEl) active = parseInt(stepEl.dataset.step, 10);
+    }
+    render();
 })();
 </script>
 @endpush

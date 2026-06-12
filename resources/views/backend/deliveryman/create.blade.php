@@ -16,18 +16,31 @@
     .rl-uploads-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
 
     /* Wizard */
+    .rl-wizard-shell {
+        background: #fff; border: 1px solid #e6e8ee; border-radius: 12px;
+        padding: 14px 16px; margin-bottom: 16px;
+    }
+    .rl-wizard-progressbar {
+        height: 6px; background: #eef0f4; border-radius: 999px; overflow: hidden;
+        margin-bottom: 12px;
+    }
+    .rl-wizard-progressbar > i {
+        display: block; height: 100%; width: 0%; background: linear-gradient(90deg, #007bff, #00b3ff);
+        border-radius: 999px; transition: width .25s ease;
+    }
     .rl-wizard-stepper {
         display: flex; flex-wrap: wrap; align-items: center;
-        gap: 8px; padding: 12px 0 18px 0;
+        gap: 6px; margin: 0;
     }
     .rl-wizard-stepper .rl-wizard-pill {
         display: inline-flex; align-items: center; gap: 6px;
         padding: 6px 12px; border-radius: 999px;
-        background: #eef0f4; color: #6c757d;
-        font-size: 12px; font-weight: 600;
+        background: #f2f4f8; color: #4a5567;
+        font-size: 12px; font-weight: 600; white-space: nowrap;
         cursor: pointer; user-select: none;
-        transition: background-color .15s, color .15s;
+        transition: background-color .15s, color .15s, transform .15s;
     }
+    .rl-wizard-stepper .rl-wizard-pill:hover { background: #e2e7ef; }
     .rl-wizard-stepper .rl-wizard-pill .num {
         display: inline-flex; align-items: center; justify-content: center;
         width: 22px; height: 22px; border-radius: 50%;
@@ -35,6 +48,7 @@
     }
     .rl-wizard-stepper .rl-wizard-pill.is-active {
         background: #007bff; color: #fff;
+        box-shadow: 0 2px 8px rgba(0,123,255,.25);
     }
     .rl-wizard-stepper .rl-wizard-pill.is-active .num { background: rgba(255,255,255,.25); }
     .rl-wizard-stepper .rl-wizard-pill.is-done {
@@ -42,17 +56,33 @@
     }
     .rl-wizard-stepper .rl-wizard-pill.is-done .num { background: #28a745; color: #fff; }
     .rl-wizard-stepper .rl-wizard-pill.is-skipped { display: none; }
-    .rl-wizard-stepper .rl-wizard-divider { width: 24px; height: 2px; background: #cfd6e0; border-radius: 2px; }
+    .rl-wizard-stepper .rl-wizard-pill.has-error {
+        background: #f8d7da; color: #721c24;
+    }
+    .rl-wizard-stepper .rl-wizard-pill.has-error .num { background: #dc3545; color: #fff; }
 
     .rl-wizard-step { display: none; }
     .rl-wizard-step.is-active { display: block; }
 
     .rl-wizard-nav {
         display: flex; justify-content: space-between; align-items: center;
-        gap: 12px; padding: 16px 0 24px 0;
+        gap: 12px; padding: 12px 0 24px 0;
+        flex-wrap: wrap;
     }
-    .rl-wizard-progress { color: #6c757d; font-size: 13px; }
-    .rl-wizard-actions { display: flex; gap: 8px; }
+    .rl-wizard-progress {
+        color: #6c757d; font-size: 13px; font-weight: 500;
+    }
+    .rl-wizard-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* RTL: flip the chevron icons so "next" still points forward visually. */
+    [dir="rtl"] .rl-wizard-nav .fa-chevron-left,
+    [dir="rtl"] .rl-wizard-nav .fa-chevron-right { transform: scaleX(-1); }
+
+    @media (max-width: 640px) {
+        .rl-wizard-stepper .rl-wizard-pill { font-size: 11px; padding: 5px 9px; }
+        .rl-wizard-nav { justify-content: center; }
+        .rl-wizard-progress { width: 100%; text-align: center; order: -1; }
+    }
 </style>
 @endpush
 
@@ -79,15 +109,18 @@
     <form action="{{ route('deliveryman.store') }}" method="POST" enctype="multipart/form-data" id="deliveryman-form">
         @csrf
 
-        {{-- Wizard stepper (clickable pills, jumps to step) --}}
-        <div class="rl-wizard-stepper" id="rl-wizard-stepper">
-            <span class="rl-wizard-pill" data-go="1"><span class="num">1</span> {{ __('deliveryman.section_basic') }}</span>
-            <span class="rl-wizard-pill" data-go="2"><span class="num">2</span> {{ __('deliveryman.section_id') }}</span>
-            <span class="rl-wizard-pill" data-go="3"><span class="num">3</span> {{ __('deliveryman.section_address') }}</span>
-            <span class="rl-wizard-pill" data-go="4"><span class="num">4</span> {{ __('deliveryman.section_employment') }}</span>
-            <span class="rl-wizard-pill" data-go="5"><span class="num">5</span> {{ __('deliveryman.section_license') }}</span>
-            <span class="rl-wizard-pill" data-go="6" data-show-for="freelancer"><span class="num">6</span> {{ __('deliveryman.section_bank') }}</span>
-            <span class="rl-wizard-pill" data-go="7"><span class="num">7</span> {{ __('deliveryman.section_documents') }}</span>
+        {{-- Wizard stepper (clickable pills + thin progress bar) --}}
+        <div class="rl-wizard-shell">
+            <div class="rl-wizard-progressbar"><i id="rl-wizard-bar"></i></div>
+            <div class="rl-wizard-stepper" id="rl-wizard-stepper">
+                <span class="rl-wizard-pill" data-go="1"><span class="num">1</span> {{ __('deliveryman.section_basic') }}</span>
+                <span class="rl-wizard-pill" data-go="2"><span class="num">2</span> {{ __('deliveryman.section_id') }}</span>
+                <span class="rl-wizard-pill" data-go="3"><span class="num">3</span> {{ __('deliveryman.section_address') }}</span>
+                <span class="rl-wizard-pill" data-go="4"><span class="num">4</span> {{ __('deliveryman.section_employment') }}</span>
+                <span class="rl-wizard-pill" data-go="5"><span class="num">5</span> {{ __('deliveryman.section_license') }}</span>
+                <span class="rl-wizard-pill" data-go="6" data-show-for="freelancer"><span class="num">6</span> {{ __('deliveryman.section_bank') }}</span>
+                <span class="rl-wizard-pill" data-go="7"><span class="num">7</span> {{ __('deliveryman.section_documents') }}</span>
+            </div>
         </div>
 
         {{-- 1. Basic identity --}}
@@ -437,11 +470,10 @@
 (function () {
     /* =========================================================
        Conditional blocks (driver_type)
-       Markup: <... class="rl-conditional-block" data-show-for="freelancer">
        Hidden blocks get their inputs disabled so they don't submit
        and don't trip required-field validation that doesn't apply.
     ========================================================= */
-    const radios = document.querySelectorAll('input[name="driver_type"]');
+    const radios     = document.querySelectorAll('input[name="driver_type"]');
     const condBlocks = document.querySelectorAll('.rl-conditional-block');
 
     function currentType() {
@@ -455,13 +487,10 @@
             const allowed = (block.dataset.showFor || '').split(',').map(s => s.trim());
             const ok = allowed.includes(t);
             block.classList.toggle('is-visible', ok);
-            // Disable inputs in hidden blocks (visibility independent of wizard step).
             block.querySelectorAll('input, select, textarea').forEach(el => {
-                el.dataset.condDisabled = ok ? '' : '1';
-                el.disabled = !ok || el.dataset.stepDisabled === '1';
+                el.disabled = !ok;
             });
         });
-        // Conditional pills (e.g. step 6 — Bank) hide/show in the stepper.
         document.querySelectorAll('#rl-wizard-stepper .rl-wizard-pill[data-show-for]').forEach(pill => {
             const allowed = (pill.dataset.showFor || '').split(',').map(s => s.trim());
             pill.classList.toggle('is-skipped', !allowed.includes(t));
@@ -469,23 +498,26 @@
     }
 
     /* =========================================================
-       Wizard
+       Wizard with per-step validation
        Strategy:
-         - Steps are 1..N (data-step on each section).
-         - "Visible" step list is recomputed when driver_type changes
-           (skips any step that's also a conditional-block whose
-           data-show-for doesn't match).
-         - Inputs in non-active steps are NOT disabled — server gets the
-           full payload on submit. This matters because the form is one
-           POST, not progressive save.
+         - All inputs always live in the DOM. checkValidity() is run only
+           on the current step before advancing — so going backward never
+           blocks, and skipping forward via the pill stepper revalidates
+           every step in between.
+         - Field-level invalid styling is added/removed on each check via
+           the .is-invalid class. Server-side @error('field') also writes
+           that class, so the same CSS path applies for both.
+         - A focus + scroll on the first invalid input gives the user a
+           clear next action.
     ========================================================= */
-    const steps    = Array.from(document.querySelectorAll('.rl-wizard-step'));
-    const pills    = Array.from(document.querySelectorAll('#rl-wizard-stepper .rl-wizard-pill'));
-    const btnPrev  = document.getElementById('rl-wizard-prev');
-    const btnNext  = document.getElementById('rl-wizard-next');
-    const btnSubmit= document.getElementById('rl-wizard-submit');
-    const progress = document.getElementById('rl-wizard-progress');
-    const form     = document.getElementById('deliveryman-form');
+    const steps     = Array.from(document.querySelectorAll('.rl-wizard-step'));
+    const pills     = Array.from(document.querySelectorAll('#rl-wizard-stepper .rl-wizard-pill'));
+    const btnPrev   = document.getElementById('rl-wizard-prev');
+    const btnNext   = document.getElementById('rl-wizard-next');
+    const btnSubmit = document.getElementById('rl-wizard-submit');
+    const progress  = document.getElementById('rl-wizard-progress');
+    const progBar   = document.getElementById('rl-wizard-bar');
+    const form      = document.getElementById('deliveryman-form');
     const stepOfTemplate = @json(__('deliveryman.wizard_step_of'));
 
     let active = 1;
@@ -501,77 +533,160 @@
             .map(s => parseInt(s.dataset.step, 10));
     }
 
+    function stepEl(n) {
+        return steps.find(s => parseInt(s.dataset.step, 10) === n);
+    }
+
+    // Returns { ok: true } or { ok: false, firstInvalid: HTMLElement }.
+    function validateStep(n) {
+        const el = stepEl(n);
+        if (!el) return { ok: true };
+        const inputs = el.querySelectorAll('input, select, textarea');
+        let firstInvalid = null;
+        inputs.forEach(i => {
+            if (i.disabled || i.type === 'hidden' || i.type === 'file') {
+                i.classList.remove('is-invalid');
+                return;
+            }
+            if (!i.checkValidity()) {
+                i.classList.add('is-invalid');
+                if (!firstInvalid) firstInvalid = i;
+            } else {
+                i.classList.remove('is-invalid');
+            }
+        });
+        return firstInvalid ? { ok: false, firstInvalid } : { ok: true };
+    }
+
+    function showInvalid(input) {
+        const stepEl = input.closest('.rl-wizard-step');
+        if (stepEl) {
+            active = parseInt(stepEl.dataset.step, 10);
+            render();
+        }
+        try { input.focus({ preventScroll: false }); } catch (_) { input.focus(); }
+        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function markPillErrors() {
+        // After a validation attempt, paint pills whose step has any .is-invalid.
+        pills.forEach(p => {
+            const n = parseInt(p.dataset.go, 10);
+            const s = stepEl(n);
+            const hasInvalid = !!(s && s.querySelector('.is-invalid'));
+            p.classList.toggle('has-error', hasInvalid);
+        });
+    }
+
     function render() {
         const visible = visibleStepNums();
-        // Clamp active to the visible list.
-        if (!visible.includes(active)) {
-            active = visible[0] || 1;
-        }
-        const idxInVisible = visible.indexOf(active);
+        if (!visible.includes(active)) active = visible[0] || 1;
+        const idx = visible.indexOf(active);
+
         steps.forEach(s => {
             s.classList.toggle('is-active', parseInt(s.dataset.step, 10) === active);
         });
         pills.forEach(p => {
             const n = parseInt(p.dataset.go, 10);
             p.classList.toggle('is-active', n === active);
-            p.classList.toggle('is-done', visible.indexOf(n) > -1 && visible.indexOf(n) < idxInVisible);
+            const positionInVisible = visible.indexOf(n);
+            p.classList.toggle('is-done', positionInVisible > -1 && positionInVisible < idx);
         });
-        btnPrev.disabled = idxInVisible <= 0;
-        const isLast = idxInVisible >= visible.length - 1;
-        btnNext.style.display   = isLast ? 'none'   : 'inline-block';
+
+        btnPrev.disabled = idx <= 0;
+        const isLast = idx >= visible.length - 1;
+        btnNext.style.display   = isLast ? 'none' : 'inline-block';
         btnSubmit.style.display = isLast ? 'inline-block' : 'none';
+
         progress.textContent = stepOfTemplate
-            .replace(':current', idxInVisible + 1)
+            .replace(':current', idx + 1)
             .replace(':total',   visible.length);
+
+        const pct = visible.length > 0
+            ? Math.round(((idx + 1) / visible.length) * 100)
+            : 0;
+        if (progBar) progBar.style.width = pct + '%';
+
+        markPillErrors();
     }
 
-    function goRelative(delta) {
-        const visible = visibleStepNums();
-        const idx = visible.indexOf(active);
-        const next = Math.max(0, Math.min(visible.length - 1, idx + delta));
-        active = visible[next];
-        render();
-        // Scroll active step into view for long pages.
-        const el = steps.find(s => parseInt(s.dataset.step, 10) === active);
+    function scrollToActive() {
+        const el = stepEl(active);
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    btnPrev.addEventListener('click', () => goRelative(-1));
-    btnNext.addEventListener('click', () => goRelative(+1));
+    function attemptAdvanceTo(targetStep) {
+        // Going backward or staying: free.
+        if (targetStep <= active) {
+            active = targetStep;
+            render();
+            scrollToActive();
+            return;
+        }
+        // Going forward: validate every visible step from active up to targetStep-1.
+        const visible = visibleStepNums();
+        const from = visible.indexOf(active);
+        const to   = visible.indexOf(targetStep);
+        if (from === -1 || to === -1) return;
+        for (let i = from; i < to; i++) {
+            const res = validateStep(visible[i]);
+            if (!res.ok) {
+                showInvalid(res.firstInvalid);
+                markPillErrors();
+                return;
+            }
+        }
+        active = targetStep;
+        render();
+        scrollToActive();
+    }
+
+    btnPrev.addEventListener('click', () => {
+        const visible = visibleStepNums();
+        const idx = visible.indexOf(active);
+        if (idx > 0) attemptAdvanceTo(visible[idx - 1]);
+    });
+    btnNext.addEventListener('click', () => {
+        const visible = visibleStepNums();
+        const idx = visible.indexOf(active);
+        if (idx < visible.length - 1) attemptAdvanceTo(visible[idx + 1]);
+    });
 
     pills.forEach(p => {
         p.addEventListener('click', () => {
             if (p.classList.contains('is-skipped')) return;
-            active = parseInt(p.dataset.go, 10);
-            render();
-            const el = steps.find(s => parseInt(s.dataset.step, 10) === active);
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            attemptAdvanceTo(parseInt(p.dataset.go, 10));
         });
     });
 
     radios.forEach(r => r.addEventListener('change', () => { applyConditional(); render(); }));
 
-    // If validation errors come back from the server, jump to the first step
-    // that contains an invalid input so the user sees the error immediately.
+    // Live-clear invalid styling as the user fixes a field.
+    form.addEventListener('input',  e => { if (e.target.checkValidity?.()) e.target.classList.remove('is-invalid'); });
+    form.addEventListener('change', e => { if (e.target.checkValidity?.()) e.target.classList.remove('is-invalid'); });
+
+    // Final guard: on Submit, validate ALL visible steps. If anything is
+    // invalid, block submission and jump to the first failing step.
     form.addEventListener('submit', (e) => {
-        const firstInvalid = form.querySelector('.is-invalid');
-        if (firstInvalid) {
-            const stepEl = firstInvalid.closest('.rl-wizard-step');
-            if (stepEl) {
-                active = parseInt(stepEl.dataset.step, 10);
-                render();
+        const visible = visibleStepNums();
+        for (const n of visible) {
+            const res = validateStep(n);
+            if (!res.ok) {
+                e.preventDefault();
+                showInvalid(res.firstInvalid);
+                markPillErrors();
+                return;
             }
         }
     });
 
-    // First paint
+    // First paint. If the server bounced back with @error styling, land on
+    // the first failing step so the user sees the issue immediately.
     applyConditional();
-    // If the server bounced us back with a validation error, jump to that step
-    // even before submit (i.e. on initial render).
-    const firstInvalid = form.querySelector('.is-invalid');
-    if (firstInvalid) {
-        const stepEl = firstInvalid.closest('.rl-wizard-step');
-        if (stepEl) active = parseInt(stepEl.dataset.step, 10);
+    const firstServerInvalid = form.querySelector('.is-invalid');
+    if (firstServerInvalid) {
+        const stepWithError = firstServerInvalid.closest('.rl-wizard-step');
+        if (stepWithError) active = parseInt(stepWithError.dataset.step, 10);
     }
     render();
 })();

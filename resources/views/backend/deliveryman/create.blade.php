@@ -505,7 +505,7 @@
            blocks, and skipping forward via the pill stepper revalidates
            every step in between.
          - Field-level invalid styling is added/removed on each check via
-           the .is-invalid class. Server-side @error('field') also writes
+           the .is-invalid class. Server-side @@error('field') also writes
            that class, so the same CSS path applies for both.
          - A focus + scroll on the first invalid input gives the user a
            clear next action.
@@ -680,7 +680,7 @@
         }
     });
 
-    // First paint. If the server bounced back with @error styling, land on
+    // First paint. If the server bounced back with @@error styling, land on
     // the first failing step so the user sees the issue immediately.
     applyConditional();
     const firstServerInvalid = form.querySelector('.is-invalid');

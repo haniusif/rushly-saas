@@ -235,6 +235,89 @@ class MerchantRepository implements MerchantInterface{
             return false;
         }
     }
+    // Public KYC application (creates a pending merchant + user; admin reviews & activates)
+    public function applyStore($request)
+    {
+        try {
+            DB::beginTransaction();
+
+            $uniqueID                       = $this->generateUniqueID();
+            $merchantUser                   = new User();
+            $merchantUser->unique_id        = $uniqueID;
+            $merchantUser->company_id       = settings()->id;
+            $merchantUser->name             = $request->name;
+            $merchantUser->mobile           = $request->mobile;
+            $merchantUser->email            = $request->email;
+            $merchantUser->password         = Hash::make(str()->random(16));
+            $merchantUser->user_type        = UserType::MERCHANT;
+            $merchantUser->status           = Status::INACTIVE;
+            $merchantUser->verification_status = Status::INACTIVE;
+            $merchantUser->permissions      = [];
+            $merchantUser->save();
+
+            $merchant                       = new Merchant();
+            $merchant->company_id           = settings()->id;
+            $merchant->user_id              = $merchantUser->id;
+            $merchant->business_name        = $request->business_name;
+            $merchant->merchant_unique_id   = $uniqueID;
+            $merchant->address              = $request->address;
+            $merchant->opening_balance      = 0;
+            $merchant->vat                  = 0;
+            $merchant->cod_charges          = [
+                'inside_city'  => '0',
+                'sub_city'     => '0',
+                'outside_city' => '0',
+            ];
+            $merchant->status               = Status::INACTIVE;
+
+            // KYC text fields
+            foreach ([
+                'cr_number','tax_number','owner_id_number','classification',
+                'delivery_type','expected_daily_shipments',
+                'national_address_short_code','iban','bank_name','swift_code',
+            ] as $field) {
+                if ($request->filled($field)) {
+                    $merchant->{$field} = $request->input($field);
+                }
+            }
+            if ($request->filled('cr_expiry')) {
+                $merchant->cr_expiry = $request->input('cr_expiry');
+            }
+            if ($request->has('services')) {
+                $merchant->services = array_values(array_filter((array) $request->input('services')));
+            }
+            $merchant->save();
+
+            // Files
+            foreach ([
+                'cr_file'               => 'cr_file_id',
+                'contract_file'         => 'contract_file_id',
+                'owner_id_file'         => 'owner_id_file_id',
+                'national_address_file' => 'national_address_file_id',
+                'iban_file'             => 'iban_file_id',
+                'nid'                   => 'nid_id',
+                'trade_license'         => 'trade_license',
+            ] as $input => $column) {
+                if ($request->hasFile($input)) {
+                    if ($column === 'nid_id') {
+                        $merchant->{$column} = $this->merchaant_nid($merchant->{$column}, $request->file($input));
+                    } elseif ($column === 'trade_license') {
+                        $merchant->{$column} = $this->trade_license($merchant->{$column}, $request->file($input));
+                    } else {
+                        $merchant->{$column} = $this->uploadMerchantFile($merchant->{$column}, $request->file($input), $input);
+                    }
+                }
+            }
+            $merchant->save();
+
+            DB::commit();
+            return $merchant->id;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return false;
+        }
+    }
+
     // Resend OTP
     public function resendOTP($request) {
         try {
@@ -341,13 +424,100 @@ class MerchantRepository implements MerchantInterface{
                 $merchant->reference_phone       = $request->reference_phone;
             endif; 
             $merchant->wallet_use_activation  = $request->wallet_use_activation;
+
+            // KYC / business / bank fields
+            foreach ([
+                'cr_number','tax_number','owner_id_number','classification',
+                'delivery_type','expected_daily_shipments',
+                'national_address_short_code','iban','bank_name','swift_code',
+            ] as $field) {
+                if ($request->filled($field)) {
+                    $merchant->{$field} = $request->input($field);
+                } elseif ($request->has($field)) {
+                    $merchant->{$field} = null;
+                }
+            }
+            if ($request->filled('cr_expiry')) {
+                $merchant->cr_expiry = $request->input('cr_expiry');
+            } elseif ($request->has('cr_expiry')) {
+                $merchant->cr_expiry = null;
+            }
+            if ($request->has('services')) {
+                $merchant->services = array_values(array_filter((array) $request->input('services')));
+            }
+
+            // Geography coverage flag — the array sync runs after save().
+            if ($request->has('covers_all_cities')) {
+                $merchant->covers_all_cities = $request->boolean('covers_all_cities');
+            }
+
+            // KYC file uploads
+            foreach ([
+                'cr_file'               => 'cr_file_id',
+                'contract_file'         => 'contract_file_id',
+                'owner_id_file'         => 'owner_id_file_id',
+                'national_address_file' => 'national_address_file_id',
+                'iban_file'             => 'iban_file_id',
+            ] as $input => $column) {
+                if ($request->hasFile($input)) {
+                    $merchant->{$column} = $this->uploadMerchantFile($merchant->{$column}, $request->file($input), $input);
+                }
+            }
+
             $merchant->save();
+
+            // Geography pivots — sync after save so we have a stable merchant id.
+            if ($request->has('country_ids')) {
+                $countryIds = array_values(array_filter(array_map('intval', (array) $request->input('country_ids', []))));
+                $merchant->countries()->sync($countryIds);
+            }
+            // Detach all cities when "covers all" is on, so stale per-city
+            // entries don't accidentally reappear when the toggle is flipped.
+            if ($merchant->covers_all_cities) {
+                $merchant->cities()->sync([]);
+            } else if ($request->has('city_ids')) {
+                $cityIds = array_values(array_filter(array_map('intval', (array) $request->input('city_ids', []))));
+                $merchant->cities()->sync($cityIds);
+            }
+
             DB::commit();
             return true;
         }
-        catch (\Exception $e) { 
+        catch (\Exception $e) {
             DB::rollBack();
             return false;
+        }
+    }
+
+    // Generic uploader for merchant KYC files (CR, contract, owner ID, national address, IBAN)
+    public function uploadMerchantFile($upload_id, $file, string $folder)
+    {
+        try {
+            $image_name = '';
+            if (!blank($file)) {
+                $destinationPath = public_path('uploads/merchant/'.$folder);
+                $filename        = date('YmdHis') . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $file->move($destinationPath, $filename);
+                $image_name      = 'uploads/merchant/'.$folder.'/'.$filename;
+            }
+
+            if (blank($upload_id)) {
+                $upload = new Upload();
+            } else {
+                $upload = Upload::find($upload_id);
+                if ($upload && file_exists($upload->original)) {
+                    unlink($upload->original);
+                }
+                if (!$upload) {
+                    $upload = new Upload();
+                }
+            }
+
+            $upload->original = $image_name;
+            $upload->save();
+            return $upload->id;
+        } catch (\Exception $e) {
+            return $upload_id;
         }
     }
 

@@ -84,6 +84,47 @@ class MerchantController extends Controller
         }
     }
 
+    // Public KYC application form (no auth required)
+    public function apply(Request $request)
+    {
+        $this->setApplyLocale($request);
+        return view('backend.merchant.apply');
+    }
+
+    private function setApplyLocale(Request $request): void
+    {
+        $lang = $request->query('lang');
+        if (in_array($lang, ['ar','en'], true)) {
+            app()->setLocale($lang);
+            session()->put('locale', $lang);
+        }
+    }
+
+    public function applyStore(Request $request)
+    {
+        $validated = $request->validate([
+            'business_name' => ['required','string','max:191'],
+            'name'          => ['required','string','max:191'],
+            'mobile'        => ['required','string','max:32'],
+            'email'         => ['nullable','email','max:191'],
+            'address'       => ['required','string','max:500'],
+        ]);
+
+        $merchantId = $this->repo->applyStore($request);
+        if ($merchantId) {
+            return redirect()->route('merchant.apply.success')->with('merchant_application_id', $merchantId);
+        }
+        Toastr::error(__('merchant.error_msg'), __('message.error'));
+        return redirect()->back()->withInput($request->all());
+    }
+
+    public function applySuccess(Request $request)
+    {
+        $this->setApplyLocale($request);
+        $merchantId = session('merchant_application_id');
+        return view('backend.merchant.apply-success', compact('merchantId'));
+    }
+
 
     public function otpVerification(OtpRequest $request)
     {
@@ -146,7 +187,14 @@ class MerchantController extends Controller
         if(blank($merchant)){
             abort(404);
         }
-        return view('backend.merchant.edit',compact('merchant','hubs'));
+        // Eager-load for the Geography block so coverageSummary() and the
+        // pre-selected options don't trigger separate lookups in the view.
+        $merchant->load(['countries:id,name,en_name,code', 'cities:id,country_id,name,en_name']);
+        $countries = \App\Models\Backend\Country::where('is_active', true)
+            ->orderBy('sorting')->orderBy('name')->get(['id', 'name', 'en_name', 'code']);
+        $cities = \App\Models\Backend\City::where('is_active', 1)
+            ->orderBy('sorting')->orderBy('name')->get(['id', 'country_id', 'name', 'en_name']);
+        return view('backend.merchant.edit', compact('merchant', 'hubs', 'countries', 'cities'));
     }
 
     /**

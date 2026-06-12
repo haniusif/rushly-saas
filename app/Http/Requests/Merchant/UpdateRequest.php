@@ -30,11 +30,23 @@ class UpdateRequest extends FormRequest
         return [
             'name'                  => ['required','string','max:191'],
             'business_name'         => ['required','string'],
-            'mobile'                => ['required','numeric','digits_between:11,14'], 
+            'mobile'                => ['required','numeric','digits_between:11,14'],
             'hub'                   => ['required','numeric'],
-            'status'                => ['required','numeric'], 
+            'status'                => ['required','numeric'],
             'address'               => ['required','string','max:191'],
-            'payment_period'        => ['numeric']
+            'payment_period'        => ['numeric'],
+            // Geography coverage. At least one country always required.
+            // Cities only required when covers_all_cities is unchecked.
+            'country_ids'           => ['required','array','min:1'],
+            'country_ids.*'         => ['integer','exists:countries,id'],
+            'covers_all_cities'     => ['nullable','boolean'],
+            'city_ids'              => ['nullable','array',
+                                        function ($attr, $value, $fail) {
+                                            if (! $this->boolean('covers_all_cities') && empty($value)) {
+                                                $fail(trans('merchant.cities_required_unless_all'));
+                                            }
+                                        }],
+            'city_ids.*'            => ['integer','exists:cities,id'],
         ];
     }
  

@@ -20,10 +20,40 @@ class Merchant extends Model
     protected $fillable = ['title','business_name','current_balance','user_id'];
 
     protected $casts = [
-        "cod_charges" => 'array',
-        "services"    => 'array',
-        "cr_expiry"   => 'date',
+        "cod_charges"       => 'array',
+        "services"          => 'array',
+        "cr_expiry"         => 'date',
+        "covers_all_cities" => 'boolean',
     ];
+
+    public function countries()
+    {
+        return $this->belongsToMany(Country::class, 'merchant_countries', 'merchant_id', 'country_id')
+            ->withTimestamps();
+    }
+
+    public function cities()
+    {
+        return $this->belongsToMany(City::class, 'merchant_cities', 'merchant_id', 'city_id')
+            ->withTimestamps();
+    }
+
+    /** Human-readable coverage summary for the merchant index/edit. */
+    public function coverageSummary(): string
+    {
+        $countryNames = $this->relationLoaded('countries')
+            ? $this->countries->pluck('name')->all()
+            : $this->countries()->pluck('name')->all();
+        if (empty($countryNames)) {
+            return '-';
+        }
+        $line = implode(', ', $countryNames);
+        if ($this->covers_all_cities) {
+            return $line . ' (all cities)';
+        }
+        $cityCount = $this->relationLoaded('cities') ? $this->cities->count() : $this->cities()->count();
+        return $line . ' (' . $cityCount . ' cities)';
+    }
 
     /**
      * Canonical service keys for the merchant subscription model.

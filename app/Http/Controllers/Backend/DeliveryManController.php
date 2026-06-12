@@ -7,7 +7,7 @@ use App\Repositories\DeliveryMan\DeliveryManInterface;
 use Illuminate\Http\Request;
 use App\Http\Requests\DeliveryMan\DeliveryManRequest;
 use App\Models\Backend\DeliveryMan;
-use App\Models\Backend\Country;
+use App\Models\Backend\Nationality;
 use App\Models\Backend\OperationalArea;
 use App\Models\Backend\SupplierCompany;
 use App\Models\User;
@@ -37,7 +37,7 @@ class DeliveryManController extends Controller
         $hubs              = $this->repo->hubs();
         $supplierCompanies = SupplierCompany::companywise()->where('status', 1)->orderBy('name')->get();
         $operationalAreas  = OperationalArea::companywise()->where('status', 1)->orderBy('name')->get();
-        $nationalities     = Country::where('is_active', true)
+        $nationalities     = Nationality::active()
             ->orderBy('sorting')
             ->orderBy('name')
             ->get(['id', 'name', 'en_name', 'code']);

@@ -101,7 +101,7 @@
                             @endforeach
                         </select>
                         @if($nationalities->isEmpty())
-                            <small class="rl-help">جدول الدول فارغ — قم بتشغيل CountrySeeder.</small>
+                            <small class="rl-help">جدول الجنسيات فارغ — قم بتشغيل NationalitySeeder.</small>
                         @endif
                     </div>
                 </div>

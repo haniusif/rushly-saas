@@ -507,4 +507,6 @@ return [
     'password_tip_length'      => 'At least 8 characters',
     'password_tip_mix'         => 'Mix of letters and numbers',
     'password_tip_uniq'        => 'Unique to this account',
+    'qty'                      => 'Qty',
+    'select'                   => 'Select',
 ];

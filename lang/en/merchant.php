@@ -130,6 +130,12 @@ return array (
   'service_last_mile'            => 'Last Mile',
   'service_fulfillment'          => 'Fulfillment',
   'service_storage'              => 'Storage',
+  // Product picker on parcel create (visible when merchant has Fulfillment service)
+  'fulfillment_products'         => 'Fulfillment products',
+  'fulfillment_products_help'    => "Attach SKUs from this merchant's WMS catalog",
+  'fulfillment_products_empty'   => 'This merchant has no active products in WMS yet.',
+  'product'                      => 'Product',
+  'add_product'                  => 'Add product',
   'delivery_type'                => 'Delivery Type',
   'delivery_type_dry'            => 'Dry',
   'delivery_type_refrigerated'   => 'Refrigerated',

@@ -517,6 +517,8 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::post('parcel/import/merchant',                   [ParcelController::class, 'getImportMerchant'])->name('parcel.import.merchant.get');
                         //merchant fetch using ajax
                         Route::post('get-merchant-cod',                         [parcelController::class, 'getMerchantCod'])->name('get.merchant.cod');
+                        // WMS product picker (fulfillment-enabled merchants)
+                        Route::get('parcel/merchant-products',                  [ParcelController::class, 'merchantProducts'])->name('parcel.merchantProducts')->middleware('hasPermission:parcel_create');
                         // Deliveryman
                         Route::get('tms',                [TMSController::class, 'tms'])->name('tms')->middleware('hasPermission:delivery_man_read');
                         Route::get('tms/driver/{driver_id}/export',                [TMSController::class, 'print_runsheet'])->name('tms.runsheet')->middleware('hasPermission:delivery_man_read');
@@ -1042,6 +1044,8 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         
                         
                         Route::get('parcel/get-areas', [MerchantParcelController::class, 'getAreasByCity'])->name('merchant-panel.parcel.getAreas');
+                        // WMS product picker (only meaningful when the merchant has fulfillment service)
+                        Route::get('parcel/my-products', [MerchantParcelController::class, 'myProducts'])->name('merchant-panel.parcel.myProducts');
 
 
                         // Parcel Routes

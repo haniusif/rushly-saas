@@ -319,6 +319,9 @@
                                     </label>
                                 </div>
                             </div>
+                            {{-- Product picker — visible only when this merchant has Fulfillment service. --}}
+                            @include('backend.parcel.partials.product_picker')
+
                             <div class="row mt-2">
                                 <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12  d-flex justify-content-end">
                                     <button type="submit"
@@ -460,8 +463,12 @@
     <script>
         var deliverChargeUrl = '{{ route('merchant-panel.parcel.deliveryCharge.get') }}';
         var merchantData = @json($merchant);
+        window.rlProductPickerEndpoint    = '{{ route('merchant-panel.parcel.myProducts') }}';
+        // No merchant select on the merchant panel — the merchant is the logged-in user.
+        window.rlProductPickerMerchantSel = null;
     </script>
     <script src="{{ static_asset('backend/js/merchant_panel/parcel/create.js') }}"></script>
+    <script src="{{ static_asset('backend/js/parcel/product-picker.js') }}"></script>
     
     
     

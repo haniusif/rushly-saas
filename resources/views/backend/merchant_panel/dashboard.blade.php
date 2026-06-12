@@ -27,6 +27,31 @@ $currency = settings()->currency;
             </div>
         </div>
         <!-- end pageheader  -->
+
+        @php
+            $rlMerchant = optional(Auth::user())->merchant;
+            $rlServices = $rlMerchant ? $rlMerchant->activeServices() : [];
+        @endphp
+        @if(!empty($rlServices))
+        {{-- Read-only service badges. Admin controls them on /admin/merchant/{id}/edit. --}}
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
+                    <span class="text-muted small mr-2">{{ __('merchant.services') }}:</span>
+                    @foreach($rlServices as $rlSvc)
+                        @php
+                            $rlIcon = ['last_mile' => 'ti-truck-delivery', 'fulfillment' => 'ti-package', 'storage' => 'ti-building-warehouse'][$rlSvc] ?? 'ti-check';
+                            $rlClass = ['last_mile' => 'badge-info', 'fulfillment' => 'badge-success', 'storage' => 'badge-warning'][$rlSvc] ?? 'badge-secondary';
+                        @endphp
+                        <span class="badge {{ $rlClass }}" style="padding:7px 12px;font-size:12px;">
+                            <i class="ti {{ $rlIcon }} mr-1"></i>{{ __('merchant.service_' . $rlSvc) }}
+                        </span>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+        @endif
+
         <div class="ecommerce-widget merchant-dashboard-filter">
             <div class="row p-0 mb-3">
                 <div class="col-12 col-md-6">

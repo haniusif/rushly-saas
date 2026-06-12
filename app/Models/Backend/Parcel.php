@@ -209,7 +209,12 @@ class Parcel extends Model
     {
         return $this->hasMany(ParcelEvent::class,'parcel_id','id');
     }
-    
+
+    public function items()
+    {
+        return $this->hasMany(ParcelItem::class, 'parcel_id');
+    }
+
     public function lastParcelEvent()
 {
     return $this->hasOne(ParcelEvent::class, 'parcel_id', 'id')->latest('id'); 

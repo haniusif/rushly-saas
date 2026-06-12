@@ -682,6 +682,34 @@ public function filter($request, $paginate = 10)
             } catch (\Exception $exception) {
             }
 
+            // Persist product picker selections (fulfillment-enabled merchants only).
+            // Snapshots sku + name at save time so renaming a SKU later
+            // doesn't rewrite this parcel's history.
+            $items = $request->input('items', []);
+            if (is_array($items) && !empty($items)) {
+                $productIds = array_filter(array_map(fn($it) => $it['wms_product_id'] ?? null, $items));
+                $products = !empty($productIds)
+                    ? \App\Models\Backend\Wms\WmsProduct::companywise()
+                        ->where('merchant_id', $parcel->merchant_id)
+                        ->whereIn('id', $productIds)
+                        ->get()
+                        ->keyBy('id')
+                    : collect();
+                foreach ($items as $row) {
+                    $pid = $row['wms_product_id'] ?? null;
+                    $product = $pid ? ($products[$pid] ?? null) : null;
+                    if (!$product) continue;
+                    \App\Models\Backend\ParcelItem::create([
+                        'parcel_id'      => $parcel->id,
+                        'wms_product_id' => $product->id,
+                        'sku'            => $product->sku,
+                        'name'           => $product->name,
+                        'quantity'       => max(1, (int) ($row['quantity'] ?? 1)),
+                        'note'           => $row['note'] ?? null,
+                    ]);
+                }
+            }
+
             DB::commit();
             if(SmsSendSettingHelper(SmsSendStatus::PARCEL_CREATE)) {
                 if(session()->has('locale') && session()->get('locale') == 'bn'):

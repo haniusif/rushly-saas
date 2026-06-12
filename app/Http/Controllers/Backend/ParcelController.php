@@ -833,6 +833,39 @@ class ParcelController extends Controller
     }
 
 
+    /**
+     * AJAX: list the WMS products that belong to the selected merchant,
+     * suitable for the product picker in the parcel-create form. Returns
+     * { has_fulfillment, products: [{id, sku, name, unit, unit_price?}, ...] }.
+     * Tenant-scoping comes from the global Parcel scope as a side benefit
+     * (merchant_id is constrained to the current tenant via the merchants
+     * scope on the row that was originally selected).
+     */
+    public function merchantProducts(Request $request)
+    {
+        if (! $request->ajax() && ! $request->wantsJson()) {
+            abort(404);
+        }
+        $merchantId = (int) $request->query('merchant_id');
+        $merchant = Merchant::where('id', $merchantId)->where('company_id', settings()->id)->first();
+        if (! $merchant) {
+            return response()->json(['has_fulfillment' => false, 'products' => []]);
+        }
+        if (! $merchant->hasService('fulfillment')) {
+            return response()->json(['has_fulfillment' => false, 'products' => []]);
+        }
+        $products = \App\Models\Backend\Wms\WmsProduct::companywise()
+            ->where('merchant_id', $merchant->id)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'sku', 'name', 'unit', 'barcode']);
+
+        return response()->json([
+            'has_fulfillment' => true,
+            'products'        => $products,
+        ]);
+    }
+
     public function getMerchantCod(Request $request){
 
 

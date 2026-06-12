@@ -20,8 +20,70 @@ class Merchant extends Model
     protected $fillable = ['title','business_name','current_balance','user_id'];
 
     protected $casts = [
-        "cod_charges"      => 'array',
+        "cod_charges" => 'array',
+        "services"    => 'array',
+        "cr_expiry"   => 'date',
     ];
+
+    /**
+     * Canonical service keys for the merchant subscription model.
+     * The underlying column is the JSON `services` array cast.
+     * Add an entry here and it surfaces in the existing admin edit
+     * checkboxes (resources/views/backend/merchant/edit.blade.php
+     * "Classification and services") + on the merchant-panel badges.
+     */
+    public const SERVICE_KEYS = ['last_mile', 'fulfillment', 'storage'];
+
+    public function hasService(string $key): bool
+    {
+        return in_array($key, (array) ($this->services ?? []), true);
+    }
+
+    /** Filtered list of active services for display. */
+    public function activeServices(): array
+    {
+        return array_values(array_intersect(self::SERVICE_KEYS, (array) ($this->services ?? [])));
+    }
+
+    protected $kycFileRelations = [
+        'cr_file_id'               => 'crFile',
+        'contract_file_id'         => 'contractFile',
+        'owner_id_file_id'         => 'ownerIdFile',
+        'national_address_file_id' => 'nationalAddressFile',
+        'iban_file_id'             => 'ibanFile',
+    ];
+
+    public function crFile()                { return $this->belongsTo(Upload::class, 'cr_file_id'); }
+    public function contractFile()          { return $this->belongsTo(Upload::class, 'contract_file_id'); }
+    public function ownerIdFile()           { return $this->belongsTo(Upload::class, 'owner_id_file_id'); }
+    public function nationalAddressFile()   { return $this->belongsTo(Upload::class, 'national_address_file_id'); }
+    public function ibanFile()              { return $this->belongsTo(Upload::class, 'iban_file_id'); }
+
+    public function getCrFileUrlAttribute()              { return $this->uploadUrl('crFile'); }
+    public function getContractFileUrlAttribute()        { return $this->uploadUrl('contractFile'); }
+    public function getOwnerIdFileUrlAttribute()         { return $this->uploadUrl('ownerIdFile'); }
+    public function getNationalAddressFileUrlAttribute() { return $this->uploadUrl('nationalAddressFile'); }
+    public function getIbanFileUrlAttribute()            { return $this->uploadUrl('ibanFile'); }
+
+    protected function uploadUrl(string $relation): ?string
+    {
+        $upload = $this->{$relation};
+        if (!$upload) {
+            return null;
+        }
+        $path = $upload->original ?? null;
+        // Legacy rows may store as ['original' => '...'] instead of plain string.
+        if (is_array($path)) {
+            $path = $path['original'] ?? null;
+        }
+        if (!is_string($path) || $path === '') {
+            return null;
+        }
+        if (!file_exists(public_path($path))) {
+            return null;
+        }
+        return static_asset($path);
+    }
 
     // Get all row. Descending order using scope.
     public function scopeOrderByDesc($query, $data)

@@ -318,6 +318,9 @@
                                 </div>
                                
                             </div>
+                            {{-- Product picker — visible only when the selected merchant has Fulfillment service. --}}
+                            @include('backend.parcel.partials.product_picker')
+
                             <div class="row mt-2">
                                 <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12  d-flex justify-content-end">
                                     <a href="{{ route('parcel.index') }}"
@@ -465,8 +468,11 @@
     <script>
         var deliverChargeUrl = '{{ route('parcel.deliveryCharge.get') }}';
         var merchantUrl = '{{ route('parcel.merchant.get') }}';
+        window.rlProductPickerEndpoint    = '{{ route('parcel.merchantProducts') }}';
+        window.rlProductPickerMerchantSel = '#merchant_id';
     </script>
     <script src="{{ static_asset('backend/js/parcel/create.js') }}"></script>
+    <script src="{{ static_asset('backend/js/parcel/product-picker.js') }}"></script>
     
     
     

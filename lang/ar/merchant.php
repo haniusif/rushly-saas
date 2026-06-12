@@ -129,6 +129,12 @@ return array (
   'service_last_mile'            => 'التوصيل (Last Mile)',
   'service_fulfillment'          => 'فلفلمنت',
   'service_storage'              => 'تخزين',
+  // Product picker on parcel create
+  'fulfillment_products'         => 'منتجات الفلفلمنت',
+  'fulfillment_products_help'    => 'ربط أصناف من قائمة منتجات التاجر في المستودع',
+  'fulfillment_products_empty'   => 'لا توجد منتجات نشطة لهذا التاجر في المستودع بعد.',
+  'product'                      => 'المنتج',
+  'add_product'                  => 'إضافة منتج',
   'delivery_type'                => 'نوع التوصيل',
   'delivery_type_dry'            => 'جاف',
   'delivery_type_refrigerated'   => 'مبرد',

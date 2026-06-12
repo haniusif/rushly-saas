@@ -28,6 +28,7 @@ use App\Models\Backend\ParcelEvent;
 use Brian2694\Toastr\Facades\Toastr;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
+use Inertia\Inertia;
 
 
    use Illuminate\Support\Facades\Storage;
@@ -54,14 +55,22 @@ class MerchantParcelController extends Controller
         $userID = Auth::user()->id;
         $merchant = $this->repo->getMerchant($userID);
         $parcels = $this->repo->all($merchant->id);
-        return view('backend.merchant_panel.parcel.index',compact('parcels','request' ));
+        return Inertia::render('Merchant/Parcel/Index', [
+            'parcels'  => $parcels,
+            'merchant' => $merchant,
+            'filters'  => $request->only(['status', 'date', 'search']),
+        ]);
     }
     public function parcelBank(Request $request)
     {
         $userID = Auth::user()->id;
         $merchant = $this->repo->getMerchant($userID);
         $parcels = $this->repo->parcelBank($merchant->id);
-        return view('backend.merchant_panel.parcel.parcel_bank',compact('parcels','request' ));
+        return Inertia::render('Merchant/ParcelBank/Index', [
+            'parcels'  => $parcels,
+            'merchant' => $merchant,
+            'filters'  => $request->only(['status', 'date', 'search']),
+        ]);
     }
 
     public function filter(Request $request)
@@ -80,15 +89,68 @@ class MerchantParcelController extends Controller
     {
         $userID = Auth::user()->id;
         $merchant = $this->repo->getMerchant($userID);
-        $shops = $this->repo->getShops($merchant->id);
-       
-        $merchantShop = $shops[0];
-        $deliveryCategories = $this->repo->deliveryCategories();
-        $deliveryCharges = $this->repo->deliveryCharges();
-        $packagings = $this->repo->packaging();
-        $deliveryTypes      = $this->repo->deliveryTypes();
-        $cities      = $this->repo->cities();
-        return view('backend.merchant_panel.parcel.create',compact('merchant','merchantShop','deliveryTypes','shops','deliveryCategories','deliveryCharges','packagings' , 'cities'));
+
+        // Normalize shops to a stable {id, name, phone, address, lat, long} shape.
+        // getShops() pads index 0 with the default shop, which may be null.
+        $shops = collect($this->repo->getShops($merchant->id))
+            ->filter()
+            ->map(fn ($s) => [
+                'id'      => $s->id,
+                'name'    => $s->name,
+                'phone'   => $s->contact_no,
+                'address' => $s->address,
+                'lat'     => $s->merchant_lat,
+                'long'    => $s->merchant_long,
+                'is_default' => (bool) ($s->default_shop ?? false),
+            ])
+            ->values();
+
+        // Categories: deliveryCharges() returns the list of category_ids that have
+        // a configured rate; deliveryCategories() is the [id => CategoryObj] lookup.
+        $categoryMap   = $this->repo->deliveryCategories();
+        $chargeableIds = collect($this->repo->deliveryCharges())->all();
+        $availableCats = collect($chargeableIds)
+            ->map(fn ($id) => isset($categoryMap[$id]) ? [
+                'id'   => $categoryMap[$id]->id,
+                'name' => $categoryMap[$id]->title ?? $categoryMap[$id]->name ?? '',
+            ] : null)
+            ->filter()
+            ->values();
+
+        // Delivery types: the existing Blade hardcodes 1=same_day, 2=next_day,
+        // 3=sub_city, 4=outside_City and labels via the deliveryType.* lang file.
+        $deliveryTypeMap = [
+            'same_day'     => 1,
+            'next_day'     => 2,
+            'sub_city'     => 3,
+            'outside_City' => 4, // matches legacy capitalization in lang file
+        ];
+        $deliveryTypes = collect($this->repo->deliveryTypes())
+            ->map(function ($dt) use ($deliveryTypeMap) {
+                $id = $deliveryTypeMap[$dt->key] ?? null;
+                if (!$id) return null;
+                return ['id' => $id, 'name' => __('deliveryType.' . $dt->key)];
+            })
+            ->filter()
+            ->values();
+
+        // Cities: surface en_name alongside name so the React side can pick per locale.
+        $cities = collect($this->repo->cities())
+            ->map(fn ($c) => [
+                'id'   => $c->id,
+                'name' => app()->getLocale() === 'ar' ? ($c->name ?: $c->en_name) : ($c->en_name ?: $c->name),
+            ])
+            ->values();
+
+        return Inertia::render('Merchant/Parcel/Create', [
+            'merchant'      => $merchant,
+            'defaultShop'   => $shops->first(),
+            'shops'         => $shops,
+            'deliveryTypes' => $deliveryTypes,
+            'categories'    => $availableCats,
+            'packagings'    => $this->repo->packaging(),
+            'cities'        => $cities,
+        ]);
     }
 
     public function store(StoreRequest $request)
@@ -544,6 +606,32 @@ public function showImportForm()
     
     
     
+    /**
+     * AJAX: list the logged-in merchant's WMS products for the picker on
+     * /merchant-panel/parcel/create. Returns has_fulfillment + products.
+     * Merchant is fixed by Auth::user()->merchant, so no IDOR risk here.
+     */
+    public function myProducts(Request $request)
+    {
+        $merchant = optional(\Illuminate\Support\Facades\Auth::user())->merchant;
+        if (! $merchant) {
+            return response()->json(['has_fulfillment' => false, 'products' => []]);
+        }
+        if (! $merchant->hasService('fulfillment')) {
+            return response()->json(['has_fulfillment' => false, 'products' => []]);
+        }
+        $products = \App\Models\Backend\Wms\WmsProduct::companywise()
+            ->where('merchant_id', $merchant->id)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'sku', 'name', 'unit', 'barcode']);
+
+        return response()->json([
+            'has_fulfillment' => true,
+            'products'        => $products,
+        ]);
+    }
+
         public function getAreasByCity(Request $request)
 {
     $areas = Area::where('city_id', $request->city_id)

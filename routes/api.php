@@ -36,6 +36,15 @@ use App\Http\Controllers\Webhooks\ZajelWebhookController;
 use App\Http\Controllers\Api\V10\External\SallaParcelController;
 use App\Http\Controllers\Api\V10\External\WooCommerceParcelController;
 use App\Http\Controllers\Api\V10\External\ZidParcelController;
+use App\Http\Controllers\Api\V10\Admin\AdminAuthController;
+use App\Http\Controllers\Api\V10\Admin\AdminDashboardController;
+use App\Http\Controllers\Api\V10\Admin\AdminParcelController;
+use App\Http\Controllers\Api\V10\Admin\AdminMerchantController;
+use App\Http\Controllers\Api\V10\Admin\AdminDriverController;
+use App\Http\Controllers\Api\V10\Admin\AdminHubController;
+use App\Http\Controllers\Api\V10\Admin\AdminPaymentRequestController;
+use App\Http\Controllers\Api\V10\Admin\AdminSupportController;
+use App\Http\Controllers\Api\V10\Admin\AdminFraudController;
 
 
 
@@ -87,6 +96,55 @@ Route::prefix('v10/external/woocommerce')->middleware(['CheckApiKey'])->group(fu
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
+});
+
+/*
+|--------------------------------------------------------------------------
+| Admin API (back-office mobile app)
+|--------------------------------------------------------------------------
+| Auth = apiKey header + Sanctum bearer + CheckAdminRole. Open to ADMIN,
+| SUPER_ADMIN, INCHARGE, HUB user_types — merchants / deliverymen are
+| rejected even with valid tokens.
+*/
+Route::prefix('v10/admin')->middleware(['CheckApiKey'])->group(function () {
+    Route::post('/login', [AdminAuthController::class, 'login']);
+
+    Route::middleware(['auth:sanctum', 'CheckAdminRole'])->group(function () {
+        Route::get('/profile',                              [AdminAuthController::class,         'profile']);
+        Route::post('/logout',                              [AdminAuthController::class,         'logout']);
+
+        Route::get('/dashboard',                            [AdminDashboardController::class,    'index']);
+        Route::get('/dashboard/timeseries',                 [AdminDashboardController::class,    'timeseries']);
+
+        Route::get('/parcels',                              [AdminParcelController::class,       'index']);
+        Route::get('/parcels/{id}',                         [AdminParcelController::class,       'show']);
+        Route::get('/parcels/{id}/logs',                    [AdminParcelController::class,       'logs']);
+        Route::post('/parcels/{id}/assign-driver',          [AdminParcelController::class,       'assignDriver']);
+        Route::post('/parcels/{id}/status',                 [AdminParcelController::class,       'forceStatus']);
+
+        Route::get('/merchants',                            [AdminMerchantController::class,     'index']);
+        Route::get('/merchants/{id}',                       [AdminMerchantController::class,     'show']);
+        Route::post('/merchants/{id}/toggle-active',        [AdminMerchantController::class,     'toggleActive']);
+
+        Route::get('/drivers',                              [AdminDriverController::class,       'index']);
+        Route::get('/drivers/{id}',                         [AdminDriverController::class,       'show']);
+
+        Route::get('/hubs',                                 [AdminHubController::class,          'index']);
+        Route::get('/hubs/{id}',                            [AdminHubController::class,          'show']);
+
+        Route::get('/payment-requests',                     [AdminPaymentRequestController::class, 'index']);
+        Route::post('/payment-requests/{id}/approve',       [AdminPaymentRequestController::class, 'approve']);
+        Route::post('/payment-requests/{id}/reject',        [AdminPaymentRequestController::class, 'reject']);
+
+        Route::get('/support',                              [AdminSupportController::class,      'index']);
+        Route::get('/support/{id}',                         [AdminSupportController::class,      'show']);
+        Route::post('/support/{id}/reply',                  [AdminSupportController::class,      'reply']);
+        Route::post('/support/{id}/close',                  [AdminSupportController::class,      'close']);
+
+        Route::get('/fraud',                                [AdminFraudController::class,        'index']);
+        Route::post('/fraud',                               [AdminFraudController::class,        'store']);
+        Route::delete('/fraud/{id}',                        [AdminFraudController::class,        'destroy']);
+    });
 });
 
 Route::prefix('v10')->group(function() {

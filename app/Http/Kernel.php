@@ -74,6 +74,7 @@ class Kernel extends HttpKernel
         'hasPermission'     => \App\Http\Middleware\PermissionCheckMiddleware::class,
         'XSS'               => \App\Http\Middleware\XSS::class,
         'CheckApiKey'       => CheckApiKeyMiddleware::class,
+        'CheckAdminRole'    => \App\Http\Middleware\CheckAdminRoleMiddleware::class,
         'headersCheck'      =>\App\Http\Middleware\ModifyHeaderMiddleware::class,
         'IsInstalled'       =>\App\Http\Middleware\IsInstalledMiddleware::class,
         'IsNotInstalled'    =>\App\Http\Middleware\IsNotInstalledMiddleware::class,

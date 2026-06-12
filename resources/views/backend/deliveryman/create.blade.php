@@ -25,7 +25,6 @@
         width: 28px; height: 28px; border-radius: 50%;
         background: #eaf3ff; color: #0066ff; font-size: 13px; font-weight: 700;
     }
-    .rl-section-head .badge { font-size: 12px; }
     .rl-required { color: #dc3545; margin-inline-start: 4px; }
     .rl-help { color: #6c757d; font-size: 12px; }
     .rl-section-card label {
@@ -202,7 +201,10 @@
         </div>
     </div>
 
-    <form action="{{ route('deliveryman.store') }}" method="POST" enctype="multipart/form-data" id="deliveryman-form">
+    {{-- novalidate suppresses native HTML5 validation tooltips so they don't
+         fire on hidden inputs in non-active wizard steps. Validation is fully
+         driven by the wizard JS (which uses checkValidity + reportValidity). --}}
+    <form action="{{ route('deliveryman.store') }}" method="POST" enctype="multipart/form-data" id="deliveryman-form" novalidate>
         @csrf
 
         {{-- Wizard stepper (clickable pills + thin progress bar) --}}
@@ -376,13 +378,13 @@
                     </div>
 
                     <div class="col-md-6 form-group rl-conditional-block" data-show-for="company_courier">
-                        <label>{{ __('deliveryman.employee_number') }}</label>
-                        <input type="text" name="employee_number" class="form-control" value="{{ old('employee_number') }}">
+                        <label>{{ __('deliveryman.employee_number') }} <span class="rl-required">*</span></label>
+                        <input type="text" name="employee_number" class="form-control" value="{{ old('employee_number') }}" required>
                     </div>
 
                     <div class="col-md-6 form-group rl-conditional-block" data-show-for="outsourced">
                         <label>{{ __('deliveryman.supplier_company') }} <span class="rl-required">*</span></label>
-                        <select name="supplier_company_id" class="form-control">
+                        <select name="supplier_company_id" class="form-control" required>
                             <option value="">—</option>
                             @foreach($supplierCompanies as $sc)
                                 <option value="{{ $sc->id }}" {{ old('supplier_company_id') == $sc->id ? 'selected' : '' }}>{{ $sc->name }}</option>
@@ -714,7 +716,14 @@
 
     function render() {
         const visible = visibleStepNums();
-        if (!visible.includes(active)) active = visible[0] || 1;
+        // If the active step is no longer in the visible list (e.g. user was
+        // on step 6 (Bank, Freelancer-only) and switched driver type), fall
+        // back to the nearest previous visible step rather than jumping all
+        // the way to step 1.
+        if (!visible.includes(active)) {
+            const prev = visible.filter(n => n < active).pop();
+            active = prev || visible[0] || 1;
+        }
         const idx = visible.indexOf(active);
 
         steps.forEach(s => {
@@ -791,6 +800,24 @@
             if (p.classList.contains('is-skipped')) return;
             attemptAdvanceTo(parseInt(p.dataset.go, 10));
         });
+    });
+
+    // Pressing Enter on a text input inside the form would normally submit.
+    // In a wizard that's almost always wrong: the user is on step 3 and
+    // means "advance to step 4", not "POST the whole half-filled form".
+    // Catch Enter on any single-line input and trigger Next instead, except
+    // on the last visible step where we let it submit normally.
+    form.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        const tag = (e.target.tagName || '').toLowerCase();
+        if (tag === 'textarea') return;             // Enter in textarea inserts newline
+        if (tag === 'button') return;                // submit/next buttons handle themselves
+        const visible = visibleStepNums();
+        const isLast = visible.indexOf(active) >= visible.length - 1;
+        if (!isLast) {
+            e.preventDefault();
+            btnNext.click();
+        }
     });
 
     radios.forEach(r => r.addEventListener('change', () => { applyConditional(); render(); syncSummary(); }));

@@ -23,7 +23,16 @@ use Illuminate\Support\Facades\Mail;
 
 class MerchantRepository implements MerchantInterface{
     public function all(){
-        return Merchant::where('company_id',settings()->id)->with('user','user.upload')->orderByDesc('id')->paginate(50);
+        return Merchant::where('company_id',settings()->id)
+            ->with([
+                'user', 'user.upload',
+                // For the Coverage column on the index. Limited selects keep
+                // the page light when a tenant has many merchants.
+                'countries:id,name,en_name,code',
+                'cities:id,country_id,name,en_name',
+            ])
+            ->orderByDesc('id')
+            ->paginate(50);
     }
 
     public function merchantIdlist(){

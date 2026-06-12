@@ -44,64 +44,65 @@
         <div class="card rl-section-card">
             <div class="card-body">
                 <h4 class="rl-section-head">
-                    <span class="badge badge-primary">1</span> البيانات الأساسية
+                    <span class="badge badge-primary">1</span> {{ __('deliveryman.section_basic') }}
                 </h4>
                 <hr>
                 <div class="row">
                     <div class="col-md-6 form-group">
-                        <label>الاسم الكامل <span class="rl-required">*</span></label>
+                        <label>{{ __('deliveryman.full_name') }} <span class="rl-required">*</span></label>
                         <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name') }}" required>
                         @error('name') <small class="text-danger">{{ $message }}</small> @enderror
                     </div>
                     <div class="col-md-6 form-group">
-                        <label>الاسم بالإنجليزية</label>
+                        <label>{{ __('deliveryman.name_en') }}</label>
                         <input type="text" name="name_en" class="form-control" value="{{ old('name_en') }}">
                     </div>
 
                     <div class="col-md-6 form-group">
-                        <label>رقم الجوال <span class="rl-required">*</span></label>
+                        <label>{{ __('deliveryman.mobile') }} <span class="rl-required">*</span></label>
                         <input type="text" name="mobile" class="form-control @error('mobile') is-invalid @enderror" value="{{ old('mobile') }}" required>
                         @error('mobile') <small class="text-danger">{{ $message }}</small> @enderror
                     </div>
                     <div class="col-md-6 form-group">
-                        <label>رقم جوال بديل</label>
+                        <label>{{ __('deliveryman.alt_mobile') }}</label>
                         <input type="text" name="alt_mobile" class="form-control" value="{{ old('alt_mobile') }}">
                     </div>
 
                     <div class="col-md-6 form-group">
-                        <label>البريد الإلكتروني <span class="rl-required">*</span></label>
+                        <label>{{ __('deliveryman.email') }} <span class="rl-required">*</span></label>
                         <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email') }}" required>
                         @error('email') <small class="text-danger">{{ $message }}</small> @enderror
                     </div>
                     <div class="col-md-6 form-group">
-                        <label>كلمة المرور <span class="rl-required">*</span></label>
+                        <label>{{ __('deliveryman.password') }} <span class="rl-required">*</span></label>
                         <input type="password" name="password" class="form-control @error('password') is-invalid @enderror" required>
                         @error('password') <small class="text-danger">{{ $message }}</small> @enderror
                     </div>
 
                     <div class="col-md-4 form-group">
-                        <label>الجنس</label>
+                        <label>{{ __('deliveryman.gender') }}</label>
                         <select name="gender" class="form-control">
                             <option value="">—</option>
-                            <option value="male"   {{ old('gender') === 'male' ? 'selected' : '' }}>ذكر</option>
-                            <option value="female" {{ old('gender') === 'female' ? 'selected' : '' }}>أنثى</option>
+                            <option value="male"   {{ old('gender') === 'male' ? 'selected' : '' }}>{{ __('deliveryman.gender_male') }}</option>
+                            <option value="female" {{ old('gender') === 'female' ? 'selected' : '' }}>{{ __('deliveryman.gender_female') }}</option>
                         </select>
                     </div>
                     <div class="col-md-4 form-group">
-                        <label>تاريخ الميلاد</label>
+                        <label>{{ __('deliveryman.dob') }}</label>
                         <input type="date" name="dob" class="form-control" value="{{ old('dob') }}">
                     </div>
                     <div class="col-md-4 form-group">
-                        <label>الجنسية</label>
+                        <label>{{ __('deliveryman.nationality') }}</label>
                         <select name="nationality" class="form-control" data-rl-search="1">
                             <option value="">—</option>
+                            @php $isAr = app()->getLocale() === 'ar'; @endphp
                             @foreach($nationalities as $c)
-                                @php $label = $c->name ?: $c->en_name; @endphp
-                                <option value="{{ $label }}" {{ old('nationality') === $label ? 'selected' : '' }}>{{ $label }}@if($c->en_name && $c->en_name !== $label) — {{ $c->en_name }}@endif</option>
+                                @php $label = $isAr ? ($c->name ?: $c->en_name) : ($c->en_name ?: $c->name); @endphp
+                                <option value="{{ $label }}" {{ old('nationality') === $label ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
                         </select>
                         @if($nationalities->isEmpty())
-                            <small class="rl-help">جدول الجنسيات فارغ — قم بتشغيل NationalitySeeder.</small>
+                            <small class="rl-help">{{ __('deliveryman.nationality_empty') }}</small>
                         @endif
                     </div>
                 </div>
@@ -112,31 +113,31 @@
         <div class="card rl-section-card">
             <div class="card-body">
                 <h4 class="rl-section-head">
-                    <span class="badge badge-primary">2</span> بيانات الهوية
+                    <span class="badge badge-primary">2</span> {{ __('deliveryman.section_id') }}
                 </h4>
                 <hr>
                 <div class="row">
                     <div class="col-md-4 form-group">
-                        <label>نوع الهوية</label>
+                        <label>{{ __('deliveryman.id_type') }}</label>
                         <select name="id_type" class="form-control">
                             <option value="">—</option>
-                            <option value="national_id" {{ old('id_type') === 'national_id' ? 'selected' : '' }}>هوية وطنية</option>
-                            <option value="iqama"       {{ old('id_type') === 'iqama' ? 'selected' : '' }}>إقامة</option>
+                            <option value="national_id" {{ old('id_type') === 'national_id' ? 'selected' : '' }}>{{ __('deliveryman.id_type_national') }}</option>
+                            <option value="iqama"       {{ old('id_type') === 'iqama' ? 'selected' : '' }}>{{ __('deliveryman.id_type_iqama') }}</option>
                         </select>
                     </div>
                     <div class="col-md-4 form-group">
-                        <label>رقم الهوية</label>
+                        <label>{{ __('deliveryman.id_number') }}</label>
                         <input type="text" name="id_number" class="form-control" value="{{ old('id_number') }}">
                     </div>
                     <div class="col-md-4 form-group">
-                        <label>تاريخ الانتهاء</label>
+                        <label>{{ __('deliveryman.id_expiry') }}</label>
                         <input type="date" name="id_expiry" class="form-control" value="{{ old('id_expiry') }}">
                     </div>
 
                     <div class="col-md-6 form-group">
-                        <label>صورة الهوية</label>
+                        <label>{{ __('deliveryman.id_image') }}</label>
                         <input type="file" name="id_image_id" class="form-control" accept="image/*">
-                        <small class="rl-help">JPEG/PNG, حد أقصى 5 ميغابايت</small>
+                        <small class="rl-help">{{ __('deliveryman.file_help') }}</small>
                     </div>
                 </div>
             </div>
@@ -146,22 +147,22 @@
         <div class="card rl-section-card">
             <div class="card-body">
                 <h4 class="rl-section-head">
-                    <span class="badge badge-primary">3</span> بيانات العنوان
+                    <span class="badge badge-primary">3</span> {{ __('deliveryman.section_address') }}
                 </h4>
                 <hr>
                 <div class="row">
                     <div class="col-md-12 form-group">
-                        <label>العنوان التفصيلي <span class="rl-required">*</span></label>
+                        <label>{{ __('deliveryman.address') }} <span class="rl-required">*</span></label>
                         <input type="text" name="address" class="form-control @error('address') is-invalid @enderror" value="{{ old('address') }}" required>
                         @error('address') <small class="text-danger">{{ $message }}</small> @enderror
                     </div>
                     <div class="col-md-6 form-group">
-                        <label>الحي</label>
+                        <label>{{ __('deliveryman.district') }}</label>
                         <input type="text" name="district" class="form-control" value="{{ old('district') }}">
                     </div>
                     <div class="col-md-6 form-group">
-                        <label>الرقم المختصر للعنوان الوطني</label>
-                        <input type="text" name="short_national_address" class="form-control" value="{{ old('short_national_address') }}" placeholder="مثال: ABCD1234">
+                        <label>{{ __('deliveryman.short_national_address') }}</label>
+                        <input type="text" name="short_national_address" class="form-control" value="{{ old('short_national_address') }}" placeholder="{{ __('deliveryman.short_national_address_placeholder') }}">
                     </div>
                 </div>
             </div>
@@ -171,34 +172,34 @@
         <div class="card rl-section-card">
             <div class="card-body">
                 <h4 class="rl-section-head">
-                    <span class="badge badge-primary">4</span> بيانات التوظيف
+                    <span class="badge badge-primary">4</span> {{ __('deliveryman.section_employment') }}
                 </h4>
                 <hr>
                 <div class="row">
                     <div class="col-md-12 form-group">
-                        <label>نوع المندوب <span class="rl-required">*</span></label>
+                        <label>{{ __('deliveryman.driver_type') }} <span class="rl-required">*</span></label>
                         <div class="btn-group btn-group-toggle" data-toggle="buttons">
                             @php $dt = old('driver_type', 'company_courier'); @endphp
                             <label class="btn btn-outline-primary {{ $dt === 'freelancer' ? 'active' : '' }}">
-                                <input type="radio" name="driver_type" value="freelancer" {{ $dt === 'freelancer' ? 'checked' : '' }}> Freelancer
+                                <input type="radio" name="driver_type" value="freelancer" {{ $dt === 'freelancer' ? 'checked' : '' }}> {{ __('deliveryman.driver_type_freelancer') }}
                             </label>
                             <label class="btn btn-outline-primary {{ $dt === 'outsourced' ? 'active' : '' }}">
-                                <input type="radio" name="driver_type" value="outsourced" {{ $dt === 'outsourced' ? 'checked' : '' }}> Outsourced
+                                <input type="radio" name="driver_type" value="outsourced" {{ $dt === 'outsourced' ? 'checked' : '' }}> {{ __('deliveryman.driver_type_outsourced') }}
                             </label>
                             <label class="btn btn-outline-primary {{ $dt === 'company_courier' ? 'active' : '' }}">
-                                <input type="radio" name="driver_type" value="company_courier" {{ $dt === 'company_courier' ? 'checked' : '' }}> Company Courier
+                                <input type="radio" name="driver_type" value="company_courier" {{ $dt === 'company_courier' ? 'checked' : '' }}> {{ __('deliveryman.driver_type_company_courier') }}
                             </label>
                         </div>
                         @error('driver_type') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
                     </div>
 
                     <div class="col-md-6 form-group rl-conditional-block" data-show-for="company_courier">
-                        <label>رقم الموظف</label>
+                        <label>{{ __('deliveryman.employee_number') }}</label>
                         <input type="text" name="employee_number" class="form-control" value="{{ old('employee_number') }}">
                     </div>
 
                     <div class="col-md-6 form-group rl-conditional-block" data-show-for="outsourced">
-                        <label>الشركة المزودة <span class="rl-required">*</span></label>
+                        <label>{{ __('deliveryman.supplier_company') }} <span class="rl-required">*</span></label>
                         <select name="supplier_company_id" class="form-control">
                             <option value="">—</option>
                             @foreach($supplierCompanies as $sc)
@@ -206,32 +207,32 @@
                             @endforeach
                         </select>
                         @if($supplierCompanies->isEmpty())
-                            <small class="rl-help">لا توجد شركات مزودة مسجلة بعد.</small>
+                            <small class="rl-help">{{ __('deliveryman.supplier_company_empty') }}</small>
                         @endif
                     </div>
 
                     <div class="col-md-6 form-group">
-                        <label>تاريخ الانضمام</label>
+                        <label>{{ __('deliveryman.joining_date') }}</label>
                         <input type="date" name="joining_date" class="form-control" value="{{ old('joining_date') }}">
                     </div>
                     <div class="col-md-6 form-group">
-                        <label>تاريخ انتهاء العقد</label>
+                        <label>{{ __('deliveryman.contract_end_date') }}</label>
                         <input type="date" name="contract_end_date" class="form-control" value="{{ old('contract_end_date') }}">
-                        <small class="rl-help">سيظهر تنبيه عند اقتراب الانتهاء خلال 30 يومًا.</small>
+                        <small class="rl-help">{{ __('deliveryman.contract_expiry_hint') }}</small>
                     </div>
 
                     <div class="col-md-6 form-group">
-                        <label>الحالة <span class="rl-required">*</span></label>
+                        <label>{{ __('deliveryman.status') }} <span class="rl-required">*</span></label>
                         <select name="status" class="form-control" required>
-                            <option value="1" {{ old('status', 1) == 1 ? 'selected' : '' }}>نشط</option>
-                            <option value="2" {{ old('status') == 2 ? 'selected' : '' }}>موقوف</option>
-                            <option value="3" {{ old('status') == 3 ? 'selected' : '' }}>إجازة</option>
-                            <option value="4" {{ old('status') == 4 ? 'selected' : '' }}>منتهي التعاقد</option>
+                            <option value="1" {{ old('status', 1) == 1 ? 'selected' : '' }}>{{ __('deliveryman.status_active') }}</option>
+                            <option value="2" {{ old('status') == 2 ? 'selected' : '' }}>{{ __('deliveryman.status_suspended') }}</option>
+                            <option value="3" {{ old('status') == 3 ? 'selected' : '' }}>{{ __('deliveryman.status_leave') }}</option>
+                            <option value="4" {{ old('status') == 4 ? 'selected' : '' }}>{{ __('deliveryman.status_terminated') }}</option>
                         </select>
                     </div>
 
                     <div class="col-md-6 form-group">
-                        <label>الفرع / Hub <span class="rl-required">*</span></label>
+                        <label>{{ __('deliveryman.hub') }} <span class="rl-required">*</span></label>
                         <select name="hub_id" class="form-control @error('hub_id') is-invalid @enderror" required>
                             <option value="">—</option>
                             @foreach($hubs as $hub)
@@ -242,7 +243,7 @@
                     </div>
 
                     <div class="col-md-6 form-group">
-                        <label>المدير المباشر</label>
+                        <label>{{ __('deliveryman.direct_manager') }}</label>
                         <select name="direct_manager_id" class="form-control">
                             <option value="">—</option>
                             @foreach($managers as $m)
@@ -251,7 +252,7 @@
                         </select>
                     </div>
                     <div class="col-md-6 form-group">
-                        <label>المنطقة التشغيلية</label>
+                        <label>{{ __('deliveryman.operational_area') }}</label>
                         <select name="operational_area_id" class="form-control">
                             <option value="">—</option>
                             @foreach($operationalAreas as $oa)
@@ -261,7 +262,7 @@
                     </div>
 
                     <div class="col-md-4 form-group">
-                        <label>الراتب</label>
+                        <label>{{ __('deliveryman.salary') }}</label>
                         <input type="number" step="any" name="salary" class="form-control" value="{{ old('salary') }}">
                     </div>
                     <div class="col-md-4 form-group">
@@ -288,20 +289,20 @@
         <div class="card rl-section-card">
             <div class="card-body">
                 <h4 class="rl-section-head">
-                    <span class="badge badge-primary">5</span> بيانات الرخصة
+                    <span class="badge badge-primary">5</span> {{ __('deliveryman.section_license') }}
                 </h4>
                 <hr>
                 <div class="row">
                     <div class="col-md-6 form-group">
-                        <label>رقم الرخصة</label>
+                        <label>{{ __('deliveryman.license_number') }}</label>
                         <input type="text" name="license_number" class="form-control" value="{{ old('license_number') }}">
                     </div>
                     <div class="col-md-6 form-group">
-                        <label>تاريخ انتهاء الرخصة</label>
+                        <label>{{ __('deliveryman.license_expiry') }}</label>
                         <input type="date" name="license_expiry" class="form-control" value="{{ old('license_expiry') }}">
                     </div>
                     <div class="col-md-6 form-group">
-                        <label>تاريخ انتهاء الإقامة</label>
+                        <label>{{ __('deliveryman.iqama_expiry') }}</label>
                         <input type="date" name="iqama_expiry" class="form-control" value="{{ old('iqama_expiry') }}">
                     </div>
                 </div>
@@ -312,17 +313,17 @@
         <div class="card rl-section-card rl-conditional-block" data-show-for="freelancer">
             <div class="card-body">
                 <h4 class="rl-section-head">
-                    <span class="badge badge-primary">6</span> البيانات البنكية (Freelancer)
+                    <span class="badge badge-primary">6</span> {{ __('deliveryman.section_bank') }}
                 </h4>
                 <hr>
                 <div class="row">
                     <div class="col-md-6 form-group">
-                        <label>رقم الحساب البنكي</label>
+                        <label>{{ __('deliveryman.bank_account_no') }}</label>
                         <input type="text" name="bank_account_no" class="form-control" value="{{ old('bank_account_no') }}">
                     </div>
                     <div class="col-md-6 form-group">
-                        <label>الآيبان (IBAN)</label>
-                        <input type="text" name="iban" class="form-control" value="{{ old('iban') }}" placeholder="SA00 0000 0000 0000 0000 0000">
+                        <label>{{ __('deliveryman.iban') }}</label>
+                        <input type="text" name="iban" class="form-control" value="{{ old('iban') }}" placeholder="{{ __('deliveryman.iban_placeholder') }}">
                     </div>
                 </div>
             </div>
@@ -332,28 +333,28 @@
         <div class="card rl-section-card">
             <div class="card-body">
                 <h4 class="rl-section-head">
-                    <span class="badge badge-primary">7</span> المستندات الرسمية
+                    <span class="badge badge-primary">7</span> {{ __('deliveryman.section_documents') }}
                 </h4>
                 <hr>
                 <div class="rl-uploads-grid">
                     <div>
-                        <label>صورة شخصية</label>
+                        <label>{{ __('deliveryman.personal_photo') }}</label>
                         <input type="file" name="image_id" class="form-control" accept="image/*">
                     </div>
                     <div>
-                        <label>صورة الرخصة</label>
+                        <label>{{ __('deliveryman.license_photo') }}</label>
                         <input type="file" name="driving_license_image_id" class="form-control" accept="image/*">
                     </div>
                     <div class="rl-conditional-block" data-show-for="freelancer">
-                        <label>صورة الإقامة</label>
+                        <label>{{ __('deliveryman.iqama_photo') }}</label>
                         <input type="file" name="iqama_image_id" class="form-control" accept="image/*">
                     </div>
                     <div class="rl-conditional-block" data-show-for="freelancer">
-                        <label>صورة العقد</label>
+                        <label>{{ __('deliveryman.contract_photo') }}</label>
                         <input type="file" name="contract_image_id" class="form-control" accept="image/*">
                     </div>
                     <div class="rl-conditional-block" data-show-for="freelancer">
-                        <label>صورة السند لأمر</label>
+                        <label>{{ __('deliveryman.promissory_note_photo') }}</label>
                         <input type="file" name="promissory_note_image_id" class="form-control" accept="image/*">
                     </div>
                 </div>

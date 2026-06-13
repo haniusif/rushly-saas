@@ -682,30 +682,63 @@ public function filter($request, $paginate = 10)
             } catch (\Exception $exception) {
             }
 
-            // Persist product picker selections (fulfillment-enabled merchants only).
-            // Snapshots sku + name at save time so renaming a SKU later
-            // doesn't rewrite this parcel's history.
+            // Persist parcel items from two callers:
+            //
+            //   1) The picker UI on /admin/parcel/create and the merchant
+            //      panel sends rows with wms_product_id (id-based lookup).
+            //
+            //   2) Bridge integrations (rushly-shopify, future bridges)
+            //      send rows with only sku + name — no id, because the
+            //      bridge doesn't know the WMS product id. We best-effort
+            //      match the sku against the merchant's catalog to fill
+            //      wms_product_id, then snapshot sku + name regardless so
+            //      the parcel has an immutable record of what shipped.
             $items = $request->input('items', []);
             if (is_array($items) && !empty($items)) {
                 $productIds = array_filter(array_map(fn($it) => $it['wms_product_id'] ?? null, $items));
-                $products = !empty($productIds)
+                $rawSkus    = array_filter(array_map(fn($it) => isset($it['sku']) ? trim((string) $it['sku']) : '', $items), fn($s) => $s !== '');
+
+                $byId  = !empty($productIds)
                     ? \App\Models\Backend\Wms\WmsProduct::companywise()
                         ->where('merchant_id', $parcel->merchant_id)
                         ->whereIn('id', $productIds)
                         ->get()
                         ->keyBy('id')
                     : collect();
+
+                $bySku = !empty($rawSkus)
+                    ? \App\Models\Backend\Wms\WmsProduct::companywise()
+                        ->where('merchant_id', $parcel->merchant_id)
+                        ->whereIn('sku', array_unique($rawSkus))
+                        ->get()
+                        ->keyBy('sku')
+                    : collect();
+
                 foreach ($items as $row) {
-                    $pid = $row['wms_product_id'] ?? null;
-                    $product = $pid ? ($products[$pid] ?? null) : null;
-                    if (!$product) continue;
+                    $pid     = $row['wms_product_id'] ?? null;
+                    $sku     = isset($row['sku']) ? trim((string) $row['sku']) : '';
+                    $product = $pid ? ($byId[$pid] ?? null) : null;
+                    if (!$product && $sku !== '') {
+                        $product = $bySku[$sku] ?? null;
+                    }
+                    // Resolve final sku + name. Prefer the catalog entry's
+                    // value when matched (so a bridge that sends a stale
+                    // SKU still gets the current canonical name) — fall
+                    // back to whatever the caller sent.
+                    $finalName = $product?->name ?? (isset($row['name']) ? trim((string) $row['name']) : '');
+                    $finalSku  = $product?->sku  ?? $sku;
+                    if ($finalName === '') {
+                        // Without at least a name there's nothing to snapshot
+                        // and the column is non-nullable.
+                        continue;
+                    }
                     \App\Models\Backend\ParcelItem::create([
                         'parcel_id'      => $parcel->id,
-                        'wms_product_id' => $product->id,
-                        'sku'            => $product->sku,
-                        'name'           => $product->name,
+                        'wms_product_id' => $product?->id,
+                        'sku'            => $finalSku ?: null,
+                        'name'           => $finalName,
                         'quantity'       => max(1, (int) ($row['quantity'] ?? 1)),
-                        'note'           => $row['note'] ?? null,
+                        'note'           => isset($row['note']) ? mb_substr((string) $row['note'], 0, 500) : null,
                     ]);
                 }
             }

@@ -475,11 +475,16 @@ public function filter($request, $paginate = 10)
     }
 
     public function details($id) {
+        // Always eager-load items + the underlying WMS product so the
+        // details view (and a future API resource) can render the SKU
+        // line table without N+1 lookups.
+        $with = ['merchant', 'merchant.user', 'merchantShop', 'deliveryCategory', 'packaging',
+                 'items', 'items.product'];
         $userHubID = auth()->user()->hub_id;
         if(!blank($userHubID)){
-            return Parcel::companywise()->where(['id'=> $id,'hub_id'=>$userHubID])->with('merchant', 'merchant.user','merchantShop','deliveryCategory','packaging')->first();
+            return Parcel::companywise()->where(['id'=> $id,'hub_id'=>$userHubID])->with($with)->first();
         }else {
-            return Parcel::companywise()->where(['id'=> $id])->with('merchant', 'merchant.user','merchantShop','deliveryCategory','packaging')->first();
+            return Parcel::companywise()->where(['id'=> $id])->with($with)->first();
         }
     }
 

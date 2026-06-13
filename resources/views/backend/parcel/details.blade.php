@@ -288,7 +288,54 @@
                     </div>
                 </div>
                 @endif
-                
+
+                {{-- Parcel items (from WMS picker on /admin/parcel/create OR Shopify line_items). --}}
+                @if($parcel->items && $parcel->items->count() > 0)
+                <div class="card mt-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="ti ti-package mr-1"></i>{{ __('merchant.fulfillment_products') }}</h5>
+                        <span class="badge badge-light">
+                            {{ $parcel->items->sum('quantity') }} {{ __('levels.qty') }} · {{ $parcel->items->count() }} {{ __('merchant.product') }}
+                        </span>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width:50%">{{ __('merchant.product') }}</th>
+                                    <th>SKU</th>
+                                    <th class="text-right">{{ __('levels.qty') }}</th>
+                                    <th>{{ __('levels.note') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($parcel->items as $rlItem)
+                                <tr>
+                                    <td>
+                                        {{ $rlItem->name }}
+                                        @if($rlItem->product)
+                                            <a href="{{ route('wms.products.show', $rlItem->product->id) }}" class="ml-2 small text-muted" title="Open in WMS">
+                                                <i class="ti ti-external-link"></i>
+                                            </a>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($rlItem->sku)
+                                            <code>{{ $rlItem->sku }}</code>
+                                        @else
+                                            <span class="text-muted">—</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-right"><strong>{{ $rlItem->quantity }}</strong></td>
+                                    <td class="text-muted">{{ $rlItem->note ?: '—' }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @endif
+
                 @if($parcel->images && $parcel->images->count() > 0)
 
 <div class="card mt-4">

@@ -105,7 +105,12 @@ public function parcel_by_daterange($merchant_id, $from, $to , $paginate = 10)
     }
 
     public function details($id) {
-        return Parcel::where('id', $id)->with('merchant', 'merchant.user','merchantShop','deliveryCategory','packaging')->first();
+        // items + items.product so the new Fulfillment products card on
+        // /merchant-panel/parcel/details/{id} doesn't N+1 across line rows.
+        return Parcel::where('id', $id)
+            ->with('merchant', 'merchant.user', 'merchantShop', 'deliveryCategory', 'packaging',
+                   'items', 'items.product')
+            ->first();
     }
 
     public function statusUpdate($id, $status_id) {
@@ -298,7 +303,14 @@ public function parcel_by_daterange($merchant_id, $from, $to , $paginate = 10)
 
             return true;
         }
-        catch (\Exception $e) {
+        catch (\Throwable $e) {
+            \Log::error('Parcel store() failed', [
+                'msg'  => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'merchant_id' => $merchant_id,
+                'payload' => $request->all(),
+            ]);
             return false;
         }
     }

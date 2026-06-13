@@ -13,7 +13,14 @@
   <meta property="og:description" content="{{ @settings()->name }} — {{ __('levels.smart_logistics_platform') }}" />
   <meta property="og:type" content="website" />
   <title>@yield('title', @settings()->name)</title>
-  <link rel="icon" type="image/png" href="{{ static_asset('frontend/favicon.png') }}" />
+  {{-- Full favicon set generated to /public/favicon — covers desktop browsers,
+       iOS home-screen, Android PWA install, and the PWA manifest. --}}
+  <link rel="icon" type="image/x-icon" href="{{ static_asset('favicon/favicon.ico') }}" />
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ static_asset('favicon/favicon-32x32.png') }}" />
+  <link rel="icon" type="image/png" sizes="16x16" href="{{ static_asset('favicon/favicon-16x16.png') }}" />
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ static_asset('favicon/apple-touch-icon.png') }}" />
+  <link rel="manifest" href="{{ static_asset('favicon/site.webmanifest') }}" />
+  <meta name="theme-color" content="#ffffff" />
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">

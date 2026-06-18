@@ -7,13 +7,19 @@
   body.login-centered {
     background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 10%, transparent), color-mix(in srgb, var(--secondary) 8%, transparent));
     display: flex; align-items: center; justify-content: center; padding: 24px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   }
-  body.rtl.login-centered .lc-card { direction: rtl; }
+  body.login-centered.rtl { font-family: 'Tajawal', 'Cairo', sans-serif; }
+  body.login-centered .lc-card { direction: inherit; }
   .lc-card {
     width: 100%; max-width: 440px; background: #fff;
     border-radius: 24px; padding: 40px 36px;
     box-shadow: 0 25px 50px -12px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.04);
   }
+  /* Inputs in RTL: align typed text + placeholder to the right edge. */
+  body.login-centered.rtl .lc-card input[type="text"],
+  body.login-centered.rtl .lc-card input[type="email"],
+  body.login-centered.rtl .lc-card input[type="password"] { text-align: right; }
 </style>
 @endpush
 

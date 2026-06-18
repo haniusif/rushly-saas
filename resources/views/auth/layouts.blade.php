@@ -17,8 +17,11 @@
     };
     [$pr,$pg,$pb] = $hex2rgb($__brandPrimary);
     $__brandPrimaryLight = "rgba({$pr},{$pg},{$pb},0.10)";
+    // Direction from Laravel locale — server-rendered so there's no LTR→RTL flash on mount.
+    $__isRtl = in_array(app()->getLocale(), ['ar','he','fa','ur'], true);
+    $__dir   = $__isRtl ? 'rtl' : 'ltr';
 @endphp
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="ltr">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ $__dir }}">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -561,7 +564,7 @@
         }
     </style>
 </head>
-<body class="@yield('body-class')">
+<body class="@yield('body-class') {{ $__isRtl ? 'rtl' : '' }}">
     @yield('content')
 
     @stack('scripts')

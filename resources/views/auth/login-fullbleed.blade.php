@@ -8,7 +8,13 @@
     display: block !important;
     min-height: 100vh; position: relative; overflow-x: hidden;
     background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   }
+  body.login-fullbleed.rtl { font-family: 'Tajawal', 'Cairo', sans-serif; }
+  body.login-fullbleed.rtl .fb-card input[type="text"],
+  body.login-fullbleed.rtl .fb-card input[type="email"],
+  body.login-fullbleed.rtl .fb-card input[type="password"] { text-align: right; }
+  body.login-fullbleed.rtl .fb-card input::placeholder { text-align: right; }
   body.login-fullbleed::before {
     content: ""; position: absolute; inset: 0;
     background:

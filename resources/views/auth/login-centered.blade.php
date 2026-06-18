@@ -72,7 +72,7 @@
         {{ __('levels.remember_me') }}
       </label>
       @if (Route::has('password.request'))
-        <a href="{{ route('password.request') }}" class="text-sm font-medium hover:underline" style="color: var(--primary)">{{ __('levels.forget_password') }}</a>
+        <a href="{{ route('password.request') }}" class="text-sm font-medium hover:underline" style="color: var(--primary)">{{ __('levels.forgot_password') }}</a>
       @endif
     </div>
 

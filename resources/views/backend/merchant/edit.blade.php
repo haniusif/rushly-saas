@@ -466,6 +466,139 @@
             </div>
         </div>
 
+        {{-- Custom theme (overrides tenant brand for this merchant's portal) --}}
+        <div class="rl-mx-card rl-theme-card">
+            <div class="rl-mx-card__head"><i class="ti ti-palette"></i><span>{{ __('merchant.custom_theme') }}</span></div>
+            <div class="rl-mx-card__body">
+                <p class="text-muted" style="font-size:12px;margin:-4px 0 12px">{{ __('merchant.custom_theme_help') }}</p>
+                <div class="row">
+                    <div class="col-12 col-lg-7">
+                        <h6 class="rl-theme-section">{{ __('merchant.theme_section_colors') }}</h6>
+                        <div class="rl-theme-grid">
+                            @foreach([
+                                ['primary_color',      $merchant->primary_color,      '#a21f5c'],
+                                ['text_color',         $merchant->text_color,         '#ffffff'],
+                                ['sidebar_color',      $merchant->sidebar_color,      '#0f172a'],
+                                ['sidebar_text_color', $merchant->sidebar_text_color, '#f1f5f9'],
+                                ['topbar_color',       $merchant->topbar_color,       '#ffffff'],
+                                ['topbar_text_color',  $merchant->topbar_text_color,  '#0f172a'],
+                                ['accent_color',       $merchant->accent_color,       '#0ea5e9'],
+                            ] as [$name, $current, $fallback])
+                                <div class="form-group">
+                                    <label for="{{ $name }}">{{ __('merchant.'.$name) }}</label>
+                                    <div class="input-group">
+                                        <input type="color" id="{{ $name }}_picker" class="form-control rl-theme-swatch" value="{{ old($name, $current ?: $fallback) }}" data-target="{{ $name }}">
+                                        <input type="text" id="{{ $name }}" name="{{ $name }}" class="form-control rl-theme-hex" maxlength="7" pattern="^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$" placeholder="{{ __('merchant.theme_inherit') }}" value="{{ old($name, $current) }}" data-picker="{{ $name }}_picker">
+                                    </div>
+                                    @error($name)<small class="text-danger mt-2">{{ $message }}</small>@enderror
+                                </div>
+                            @endforeach
+                        </div>
+
+                        <h6 class="rl-theme-section">{{ __('merchant.theme_section_layout') }}</h6>
+                        <div class="rl-theme-grid">
+                            <div class="form-group">
+                                <label for="sidebar_style">{{ __('merchant.sidebar_style') }}</label>
+                                <select id="sidebar_style" name="sidebar_style" class="form-control rl-theme-select">
+                                    <option value="">{{ __('merchant.theme_inherit') }}</option>
+                                    @foreach(['dark','light','brand'] as $k)
+                                        <option value="{{ $k }}" @selected(old('sidebar_style', $merchant->sidebar_style) === $k)>{{ __('merchant.sidebar_style_'.$k) }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="font_family">{{ __('merchant.font_family') }}</label>
+                                <select id="font_family" name="font_family" class="form-control rl-theme-select">
+                                    <option value="">{{ __('merchant.theme_inherit') }}</option>
+                                    @foreach(['inter','cairo','tajawal','roboto','system'] as $k)
+                                        <option value="{{ $k }}" @selected(old('font_family', $merchant->font_family) === $k)>{{ __('merchant.font_'.$k) }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="border_radius">{{ __('merchant.border_radius') }}</label>
+                                <select id="border_radius" name="border_radius" class="form-control rl-theme-select">
+                                    <option value="">{{ __('merchant.theme_inherit') }}</option>
+                                    @foreach(['sharp','default','rounded'] as $k)
+                                        <option value="{{ $k }}" @selected(old('border_radius', $merchant->border_radius) === $k)>{{ __('merchant.border_radius_'.$k) }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="density">{{ __('merchant.density') }}</label>
+                                <select id="density" name="density" class="form-control rl-theme-select">
+                                    <option value="">{{ __('merchant.theme_inherit') }}</option>
+                                    @foreach(['comfortable','dense'] as $k)
+                                        <option value="{{ $k }}" @selected(old('density', $merchant->density) === $k)>{{ __('merchant.density_'.$k) }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+
+                        <h6 class="rl-theme-section">{{ __('merchant.theme_section_logos') }}</h6>
+                        <div class="rl-theme-grid">
+                            <div class="form-group">
+                                <label for="logo">{{ __('merchant.logo_dark') }}</label>
+                                @if($merchant->logo_url)
+                                    <div class="mb-2"><img src="{{ $merchant->logo_url }}" alt="logo" class="rl-theme-logo-preview" style="background:#f4f4f5"></div>
+                                @endif
+                                <input id="logo" type="file" name="logo" accept="image/*" class="form-control">
+                                @error('logo')<small class="text-danger mt-2">{{ $message }}</small>@enderror
+                            </div>
+                            <div class="form-group">
+                                <label for="light_logo">{{ __('merchant.logo_light') }}</label>
+                                @if($merchant->light_logo_url)
+                                    <div class="mb-2"><img src="{{ $merchant->light_logo_url }}" alt="light logo" class="rl-theme-logo-preview" style="background:#29245a"></div>
+                                @endif
+                                <input id="light_logo" type="file" name="light_logo" accept="image/*" class="form-control">
+                                @error('light_logo')<small class="text-danger mt-2">{{ $message }}</small>@enderror
+                            </div>
+                            <div class="form-group">
+                                <label for="favicon">{{ __('merchant.favicon') }}</label>
+                                @if($merchant->favicon_url)
+                                    <div class="mb-2"><img src="{{ $merchant->favicon_url }}" alt="favicon" class="rl-theme-logo-preview" style="background:#f4f4f5;height:32px;width:32px"></div>
+                                @endif
+                                <input id="favicon" type="file" name="favicon" accept=".ico,image/*" class="form-control">
+                                <small class="text-muted">{{ __('merchant.favicon_help') }}</small>
+                                @error('favicon')<small class="text-danger mt-2">{{ $message }}</small>@enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Live preview --}}
+                    <div class="col-12 col-lg-5">
+                        <div class="rl-theme-preview-wrap">
+                            <h6 class="rl-theme-section">{{ __('merchant.theme_preview') }}</h6>
+                            <div id="rl-theme-preview" class="rl-theme-preview" data-business="{{ $merchant->business_name }}">
+                                <aside class="rl-tp-side">
+                                    <div class="rl-tp-side-head">
+                                        <span class="rl-tp-logo">{{ strtoupper(mb_substr($merchant->business_name, 0, 1)) }}</span>
+                                        <span class="rl-tp-side-name">{{ $merchant->business_name }}</span>
+                                    </div>
+                                    <ul class="rl-tp-nav">
+                                        <li class="rl-tp-active">{{ __('merchant.dashboard') }}</li>
+                                        <li>{{ __('merchant.shop') }}</li>
+                                        <li>{{ __('merchant.payment_info') }}</li>
+                                    </ul>
+                                </aside>
+                                <div class="rl-tp-main">
+                                    <header class="rl-tp-top">
+                                        <span class="rl-tp-search">{{ __('merchant.search_placeholder') ?? 'Search…' }}</span>
+                                        <span class="rl-tp-avatar">{{ strtoupper(mb_substr($merchant->user->name ?? 'M', 0, 1)) }}</span>
+                                    </header>
+                                    <div class="rl-tp-body">
+                                        <div class="rl-tp-card"><span class="rl-tp-link">{{ __('merchant.dashboard') }}</span></div>
+                                        <div class="rl-tp-card rl-tp-card--ghost"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <small class="text-muted d-block mt-2">{{ __('merchant.custom_theme_help') }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         {{-- COD charges --}}
         @if(count($merchant->cod_charges))
         <div class="rl-mx-card">
@@ -605,9 +738,112 @@
     .rl-mx-actions { width: 100%; }
     .rl-mx-actions .btn { flex: 1; }
 }
+
+/* ===== Custom theme section ===== */
+.rl-theme-card .rl-theme-section { font-size: 12px; font-weight: 700; color: #475467; text-transform: uppercase; letter-spacing: .04em; margin: 8px 0 12px; }
+.rl-theme-card .rl-theme-section:not(:first-child) { margin-top: 20px; padding-top: 16px; border-top: 1px dashed #e5e7eb; }
+.rl-theme-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+@media (max-width: 575px) { .rl-theme-grid { grid-template-columns: 1fr; } }
+.rl-theme-swatch { max-width: 60px; padding: 4px; cursor: pointer; }
+.rl-theme-hex { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.rl-theme-logo-preview { height: 48px; padding: 6px; border-radius: 6px; }
+
+/* Live preview canvas */
+.rl-theme-preview-wrap { position: sticky; top: 20px; }
+.rl-theme-preview {
+    display: flex; height: 260px; border-radius: 12px; overflow: hidden;
+    border: 1px solid #e5e7eb; background: #f8fafc;
+    --tp-sidebar-bg: #0f172a; --tp-sidebar-fg: #f1f5f9; --tp-sidebar-active-bg: #a21f5c; --tp-sidebar-active-fg: #ffffff;
+    --tp-topbar-bg: #ffffff; --tp-topbar-fg: #0f172a; --tp-topbar-tint: rgba(15,23,42,0.06);
+    --tp-accent: #0ea5e9; --tp-radius: 8px;
+    font-family: inherit;
+}
+.rl-theme-preview .rl-tp-side { width: 92px; flex-shrink: 0; background: var(--tp-sidebar-bg); color: var(--tp-sidebar-fg); display: flex; flex-direction: column; }
+.rl-theme-preview .rl-tp-side-head { display: flex; align-items: center; gap: 6px; padding: 12px 10px; font-size: 11px; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,.08); }
+.rl-theme-preview .rl-tp-logo { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: calc(var(--tp-radius) - 2px); background: var(--tp-sidebar-active-bg); color: var(--tp-sidebar-active-fg); font-size: 11px; font-weight: 700; }
+.rl-theme-preview .rl-tp-side-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rl-theme-preview .rl-tp-nav { list-style: none; padding: 8px; margin: 0; font-size: 10px; }
+.rl-theme-preview .rl-tp-nav li { padding: 6px 8px; border-radius: var(--tp-radius); opacity: .7; margin-bottom: 4px; }
+.rl-theme-preview .rl-tp-active { background: var(--tp-sidebar-active-bg); color: var(--tp-sidebar-active-fg); opacity: 1; font-weight: 600; }
+.rl-theme-preview .rl-tp-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.rl-theme-preview .rl-tp-top { height: 42px; flex-shrink: 0; background: var(--tp-topbar-bg); color: var(--tp-topbar-fg); display: flex; align-items: center; gap: 8px; padding: 0 10px; border-bottom: 1px solid rgba(0,0,0,.06); }
+.rl-theme-preview .rl-tp-search { flex: 1; background: var(--tp-topbar-tint); border-radius: var(--tp-radius); padding: 4px 8px; font-size: 10px; opacity: .7; }
+.rl-theme-preview .rl-tp-avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--tp-topbar-tint); display: inline-grid; place-items: center; font-size: 10px; font-weight: 600; }
+.rl-theme-preview .rl-tp-body { flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.rl-theme-preview .rl-tp-card { background: #fff; border: 1px solid #e5e7eb; border-radius: var(--tp-radius); padding: 10px; font-size: 11px; }
+.rl-theme-preview .rl-tp-card--ghost { background: #fff; flex: 1; }
+.rl-theme-preview .rl-tp-link { color: var(--tp-accent); font-weight: 600; }
 </style>
 @endpush
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+(function () {
+    var preview = document.getElementById('rl-theme-preview');
+    if (!preview) return;
+
+    // Two-way sync: color picker <-> hex input. Empty hex = clear to inherit (picker shows fallback).
+    document.querySelectorAll('.rl-theme-swatch').forEach(function (picker) {
+        var hex = document.getElementById(picker.dataset.target);
+        picker.addEventListener('input', function () { hex.value = picker.value; update(); });
+    });
+    document.querySelectorAll('.rl-theme-hex').forEach(function (hex) {
+        var picker = document.getElementById(hex.dataset.picker);
+        hex.addEventListener('input', function () {
+            if (/^#([A-Fa-f0-9]{6})$/.test(hex.value)) picker.value = hex.value;
+            update();
+        });
+    });
+    document.querySelectorAll('.rl-theme-select').forEach(function (sel) {
+        sel.addEventListener('change', update);
+    });
+
+    function val(id, fallback) {
+        var el = document.getElementById(id);
+        if (!el) return fallback;
+        var v = (el.value || '').trim();
+        return v ? v : fallback;
+    }
+
+    var FONTS = {
+        inter: '"Inter", sans-serif',
+        cairo: '"Cairo", "Tajawal", sans-serif',
+        tajawal: '"Tajawal", sans-serif',
+        roboto: '"Roboto", sans-serif',
+        system: 'ui-sans-serif, system-ui, -apple-system, sans-serif',
+    };
+    var RADII = { sharp: '2px', default: '8px', rounded: '14px' };
+
+    function update() {
+        var primary       = val('primary_color',      '#a21f5c');
+        var textOn        = val('text_color',         '#ffffff');
+        var sidebarBg     = val('sidebar_color',      '');
+        var sidebarFg     = val('sidebar_text_color', '');
+        var topbarBg      = val('topbar_color',       '');
+        var topbarFg      = val('topbar_text_color',  '');
+        var accent        = val('accent_color',       primary);
+        var sidebarStyle  = val('sidebar_style',      '');
+        var font          = val('font_family',        '');
+        var radius        = val('border_radius',      '');
+
+        if (!sidebarBg) sidebarBg = sidebarStyle === 'light' ? '#ffffff' : (sidebarStyle === 'brand' ? primary : '#0f172a');
+        if (!sidebarFg) sidebarFg = sidebarStyle === 'light' ? '#0f172a' : (sidebarStyle === 'brand' ? textOn : '#f1f5f9');
+        if (!topbarBg)  topbarBg  = primary;
+        if (!topbarFg)  topbarFg  = textOn;
+
+        preview.style.setProperty('--tp-sidebar-bg', sidebarBg);
+        preview.style.setProperty('--tp-sidebar-fg', sidebarFg);
+        preview.style.setProperty('--tp-sidebar-active-bg', primary);
+        preview.style.setProperty('--tp-sidebar-active-fg', textOn);
+        preview.style.setProperty('--tp-topbar-bg', topbarBg);
+        preview.style.setProperty('--tp-topbar-fg', topbarFg);
+        preview.style.setProperty('--tp-topbar-tint', 'rgba(255,255,255,0.2)');
+        preview.style.setProperty('--tp-accent', accent);
+        preview.style.setProperty('--tp-radius', RADII[radius] || RADII.default);
+        preview.style.fontFamily = FONTS[font] || '';
+    }
+    update();
+})();
+</script>
 @endpush

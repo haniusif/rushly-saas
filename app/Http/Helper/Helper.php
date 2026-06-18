@@ -103,16 +103,73 @@ if(!function_exists('hasPermission')){
 }
 
 if(!function_exists('settings')){
-    function settings(){ 
+    function settings(){
         return  GeneralSettings::with('rxlogo','rxfavicon')->where('status',Status::ACTIVE)->where(function($query){
-            if(tenant() && tenant()->company_id):  
+            if(tenant() && tenant()->company_id):
                 $query->where('id',tenant()->company_id);
-            elseif(Auth::user() && Auth::user()->user_type != UserType::SUPER_ADMIN): 
+            elseif(Auth::user() && Auth::user()->user_type != UserType::SUPER_ADMIN):
                 $query->where('id',Auth::user()->company_id);
             else:
                 $query->where('id',1);
             endif;
         })->first();
+    }
+}
+
+if(!function_exists('merchantBrand')){
+    /**
+     * Resolve the brand palette + assets for the current request: start from the tenant's
+     * general_settings, then overlay the merchant's per-portal overrides if a merchant is
+     * authenticated. Used by both the Inertia middleware (props.brand) and the root Blade
+     * (<head> server-render) so the two stay in sync.
+     *
+     * Returns null when neither tenant settings nor user is available (rare — installer, etc).
+     */
+    function merchantBrand(): ?array {
+        try { $s = settings(); } catch (\Throwable $e) { $s = null; }
+        if (!$s) return null;
+
+        $brand = [
+            'name'               => $s->name ?? null,
+            'logo'               => $s->logo_image ?? null,
+            'light_logo'         => $s->light_logo_image ?? null,
+            'favicon'            => $s->favicon_image ?? null,
+            'primary_color'      => $s->primary_color ?? null,
+            'text_color'         => $s->text_color ?? null,
+            'sidebar_color'      => null,
+            'sidebar_text_color' => null,
+            'topbar_color'       => null,
+            'topbar_text_color'  => null,
+            'accent_color'       => null,
+            'sidebar_style'      => null,
+            'font_family'        => null,
+            'border_radius'      => null,
+            'density'            => null,
+        ];
+
+        $user = Auth::user();
+        if ($user) {
+            $merchant = \App\Models\Backend\Merchant::where('user_id', $user->id)->first();
+            if ($merchant) {
+                $brand['name']               = $merchant->business_name ?: $brand['name'];
+                $brand['primary_color']      = $merchant->primary_color ?: $brand['primary_color'];
+                $brand['text_color']         = $merchant->text_color    ?: $brand['text_color'];
+                $brand['sidebar_color']      = $merchant->sidebar_color;
+                $brand['sidebar_text_color'] = $merchant->sidebar_text_color;
+                $brand['topbar_color']       = $merchant->topbar_color;
+                $brand['topbar_text_color']  = $merchant->topbar_text_color;
+                $brand['accent_color']       = $merchant->accent_color;
+                $brand['sidebar_style']      = $merchant->sidebar_style;
+                $brand['font_family']        = $merchant->font_family;
+                $brand['border_radius']      = $merchant->border_radius;
+                $brand['density']            = $merchant->density;
+                if ($merchant->logo_url)       $brand['logo']       = $merchant->logo_url;
+                if ($merchant->light_logo_url) $brand['light_logo'] = $merchant->light_logo_url;
+                if ($merchant->favicon_url)    $brand['favicon']    = $merchant->favicon_url;
+            }
+        }
+
+        return $brand;
     }
 }
 

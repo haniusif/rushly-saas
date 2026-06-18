@@ -110,6 +110,15 @@ class LoginController extends Controller
         $this->middleware('guest')->except('logout');
     }
 
+    /**
+     * Where to send the user after sign-out. Default trait sends to '/' (tenant home),
+     * but for the merchant portal we want the login screen.
+     */
+    protected function loggedOut(Request $request)
+    {
+        return redirect()->route('login');
+    }
+
     protected function credentials(Request $request)
     {
          

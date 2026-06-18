@@ -267,6 +267,91 @@
                     </div>
                 </section>
 
+                {{-- 4.5 CUSTOM THEME --}}
+                <section class="gs-section" data-gs-panel="theme">
+                    <h4>{{ __('merchant.custom_theme') }}</h4>
+                    <p class="gs-sub">{{ __('merchant.custom_theme_help') }}</p>
+                    <hr>
+
+                    <h5 class="mt-3" style="font-size:13px;color:#475467;font-weight:600">{{ __('merchant.theme_section_colors') }}</h5>
+                    <div class="gs-row">
+                        @foreach([
+                            ['primary_color',      '#a21f5c'],
+                            ['text_color',         '#ffffff'],
+                            ['sidebar_color',      '#0f172a'],
+                            ['sidebar_text_color', '#f1f5f9'],
+                            ['topbar_color',       '#ffffff'],
+                            ['topbar_text_color',  '#0f172a'],
+                            ['accent_color',       '#0ea5e9'],
+                        ] as [$name, $fallback])
+                            <div class="form-group">
+                                <label for="{{ $name }}">{{ __('merchant.'.$name) }}</label>
+                                <div class="input-group">
+                                    <input type="color" id="{{ $name }}_picker" class="form-control rl-theme-swatch" style="max-width:60px;padding:4px" value="{{ old($name, $fallback) }}" data-target="{{ $name }}">
+                                    <input type="text" id="{{ $name }}" name="{{ $name }}" class="form-control rl-theme-hex" maxlength="7" pattern="^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$" placeholder="{{ __('merchant.theme_inherit') }}" value="{{ old($name) }}" data-picker="{{ $name }}_picker">
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <h5 class="mt-3" style="font-size:13px;color:#475467;font-weight:600">{{ __('merchant.theme_section_layout') }}</h5>
+                    <div class="gs-row">
+                        <div class="form-group">
+                            <label for="sidebar_style">{{ __('merchant.sidebar_style') }}</label>
+                            <select id="sidebar_style" name="sidebar_style" class="form-control rl-theme-select">
+                                <option value="">{{ __('merchant.theme_inherit') }}</option>
+                                @foreach(['dark','light','brand'] as $k)
+                                    <option value="{{ $k }}" @selected(old('sidebar_style') === $k)>{{ __('merchant.sidebar_style_'.$k) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="font_family">{{ __('merchant.font_family') }}</label>
+                            <select id="font_family" name="font_family" class="form-control rl-theme-select">
+                                <option value="">{{ __('merchant.theme_inherit') }}</option>
+                                @foreach(['inter','cairo','tajawal','roboto','system'] as $k)
+                                    <option value="{{ $k }}" @selected(old('font_family') === $k)>{{ __('merchant.font_'.$k) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="border_radius">{{ __('merchant.border_radius') }}</label>
+                            <select id="border_radius" name="border_radius" class="form-control rl-theme-select">
+                                <option value="">{{ __('merchant.theme_inherit') }}</option>
+                                @foreach(['sharp','default','rounded'] as $k)
+                                    <option value="{{ $k }}" @selected(old('border_radius') === $k)>{{ __('merchant.border_radius_'.$k) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="density">{{ __('merchant.density') }}</label>
+                            <select id="density" name="density" class="form-control rl-theme-select">
+                                <option value="">{{ __('merchant.theme_inherit') }}</option>
+                                @foreach(['comfortable','dense'] as $k)
+                                    <option value="{{ $k }}" @selected(old('density') === $k)>{{ __('merchant.density_'.$k) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+                    <h5 class="mt-3" style="font-size:13px;color:#475467;font-weight:600">{{ __('merchant.theme_section_logos') }}</h5>
+                    <div class="gs-row">
+                        <div class="form-group">
+                            <label for="logo">{{ __('merchant.logo_dark') }}</label>
+                            <input id="logo" type="file" name="logo" accept="image/*" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="light_logo">{{ __('merchant.logo_light') }}</label>
+                            <input id="light_logo" type="file" name="light_logo" accept="image/*" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="favicon">{{ __('merchant.favicon') }}</label>
+                            <input id="favicon" type="file" name="favicon" accept=".ico,image/*" class="form-control">
+                            <small class="text-muted">{{ __('merchant.favicon_help') }}</small>
+                        </div>
+                    </div>
+                </section>
+
                 {{-- 5. COD CHARGES --}}
                 <section class="gs-section" data-gs-panel="cod">
                     <h4>{{ __('levels.cod_charge') }}</h4>

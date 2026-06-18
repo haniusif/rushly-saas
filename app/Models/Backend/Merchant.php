@@ -88,12 +88,18 @@ class Merchant extends Model
     public function ownerIdFile()           { return $this->belongsTo(Upload::class, 'owner_id_file_id'); }
     public function nationalAddressFile()   { return $this->belongsTo(Upload::class, 'national_address_file_id'); }
     public function ibanFile()              { return $this->belongsTo(Upload::class, 'iban_file_id'); }
+    public function logo()                  { return $this->belongsTo(Upload::class, 'logo_id'); }
+    public function lightLogo()             { return $this->belongsTo(Upload::class, 'light_logo_id'); }
+    public function favicon()               { return $this->belongsTo(Upload::class, 'favicon_id'); }
 
     public function getCrFileUrlAttribute()              { return $this->uploadUrl('crFile'); }
     public function getContractFileUrlAttribute()        { return $this->uploadUrl('contractFile'); }
     public function getOwnerIdFileUrlAttribute()         { return $this->uploadUrl('ownerIdFile'); }
     public function getNationalAddressFileUrlAttribute() { return $this->uploadUrl('nationalAddressFile'); }
     public function getIbanFileUrlAttribute()            { return $this->uploadUrl('ibanFile'); }
+    public function getLogoUrlAttribute()                { return $this->uploadUrl('logo'); }
+    public function getLightLogoUrlAttribute()           { return $this->uploadUrl('lightLogo'); }
+    public function getFaviconUrlAttribute()             { return $this->uploadUrl('favicon'); }
 
     protected function uploadUrl(string $relation): ?string
     {

@@ -120,6 +120,7 @@ class MerchantRepository implements MerchantInterface{
             $merchant->reference_name         = $request->reference_name;
             $merchant->reference_phone        = $request->reference_phone;
             $merchant->wallet_use_activation  = $request->wallet_use_activation;
+            $this->applyCustomTheme($merchant, $request);
             $merchant->save();
             $shop               = new MerchantShops();
             $shop->merchant_id  = $merchant->id;
@@ -473,6 +474,8 @@ class MerchantRepository implements MerchantInterface{
                 }
             }
 
+            $this->applyCustomTheme($merchant, $request);
+
             $merchant->save();
 
             // Geography pivots — sync after save so we have a stable merchant id.
@@ -499,6 +502,48 @@ class MerchantRepository implements MerchantInterface{
     }
 
     // Generic uploader for merchant KYC files (CR, contract, owner ID, national address, IBAN)
+    protected function applyCustomTheme(Merchant $merchant, $request): void
+    {
+        // Hex colors: accept "#RRGGBB" / "#RGB". Empty string = clear override.
+        $colorFields = [
+            'primary_color','text_color',
+            'sidebar_color','sidebar_text_color',
+            'topbar_color','topbar_text_color',
+            'accent_color',
+        ];
+        foreach ($colorFields as $field) {
+            if (!$request->has($field)) continue;
+            $value = trim((string) $request->input($field));
+            if ($value === '') {
+                $merchant->{$field} = null;
+            } elseif (preg_match('/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/', $value)) {
+                $merchant->{$field} = strtolower($value);
+            }
+        }
+        // Enums — whitelist enforced here so the DB never holds an invalid value.
+        $enums = [
+            'sidebar_style' => ['dark','light','brand'],
+            'font_family'   => ['inter','cairo','tajawal','roboto','system'],
+            'border_radius' => ['sharp','default','rounded'],
+            'density'       => ['dense','comfortable'],
+        ];
+        foreach ($enums as $field => $allowed) {
+            if (!$request->has($field)) continue;
+            $value = trim((string) $request->input($field));
+            if ($value === '') {
+                $merchant->{$field} = null;
+            } elseif (in_array($value, $allowed, true)) {
+                $merchant->{$field} = $value;
+            }
+        }
+        // Logo / light_logo / favicon file uploads — folder under uploads/merchant/.
+        foreach (['logo' => 'logo_id', 'light_logo' => 'light_logo_id', 'favicon' => 'favicon_id'] as $input => $column) {
+            if ($request->hasFile($input)) {
+                $merchant->{$column} = $this->uploadMerchantFile($merchant->{$column}, $request->file($input), 'theme/'.$input);
+            }
+        }
+    }
+
     public function uploadMerchantFile($upload_id, $file, string $folder)
     {
         try {

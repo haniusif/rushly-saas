@@ -47,6 +47,20 @@ class UpdateRequest extends FormRequest
                                             }
                                         }],
             'city_ids.*'            => ['integer','exists:cities,id'],
+            'primary_color'         => ['nullable','string','regex:/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/'],
+            'text_color'            => ['nullable','string','regex:/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/'],
+            'sidebar_color'         => ['nullable','string','regex:/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/'],
+            'sidebar_text_color'    => ['nullable','string','regex:/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/'],
+            'topbar_color'          => ['nullable','string','regex:/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/'],
+            'topbar_text_color'     => ['nullable','string','regex:/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/'],
+            'accent_color'          => ['nullable','string','regex:/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/'],
+            'sidebar_style'         => ['nullable','in:dark,light,brand'],
+            'font_family'           => ['nullable','in:inter,cairo,tajawal,roboto,system'],
+            'border_radius'         => ['nullable','in:sharp,default,rounded'],
+            'density'               => ['nullable','in:dense,comfortable'],
+            'logo'                  => ['nullable','image','mimes:jpg,jpeg,png,webp,svg','max:2048'],
+            'light_logo'            => ['nullable','image','mimes:jpg,jpeg,png,webp,svg','max:2048'],
+            'favicon'               => ['nullable','image','mimes:jpg,jpeg,png,webp,svg,ico','max:512'],
         ];
     }
  

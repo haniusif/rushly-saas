@@ -9,17 +9,17 @@
         <div class="rl-page-head">
             <div class="rl-page-head__title">
                 <h2 class="rl-page-head__h">{{ settings()->name }} · {{ __('menus.dashboard') }}</h2>
-                <p class="rl-page-head__sub">{{ __('Operations overview') }}</p>
+                <p class="rl-page-head__sub">{{ __('dashboard.operations_overview') }}</p>
             </div>
             <form action="{{ route('dashboard.index', ['test' => 'custom']) }}" method="get" class="rl-filter">
                 <div class="rl-filter__field">
-                    <i class="fa fa-calendar-alt"></i>
+                    <i class="ti ti-calendar"></i>
                     <input type="text" name="filter_date" placeholder="YYYY-MM-DD" autocomplete="off"
                         class="form-control date_range_picker" value="{{ $request->filter_date }}" required />
                 </div>
                 <input type="hidden" name="days" value="custom" />
                 <button type="submit" class="btn rl-btn-primary">
-                    <i class="fa fa-filter"></i> {{ __('levels.filter') }}
+                    <i class="ti ti-filter"></i> {{ __('levels.filter') }}
                 </button>
             </form>
         </div>
@@ -37,26 +37,26 @@
                 <div class="rl-followup__head">
                     <div class="rl-followup__icon">🛟</div>
                     <div>
-                        <h6 class="rl-followup__title">{{ __('Follow-up Center') }}</h6>
-                        <small class="rl-followup__sub">{{ __('Open NDRs and abnormal shipments needing attention.') }}</small>
+                        <h6 class="rl-followup__title">{{ __('dashboard.followup_center') }}</h6>
+                        <small class="rl-followup__sub">{{ __('dashboard.followup_subtitle') }}</small>
                     </div>
                 </div>
                 <div class="rl-followup__pills">
                     <a href="{{ route('ndr.index') }}" class="rl-pill rl-pill--red">
                         <span class="rl-pill__num">{{ $fuOpenNdrs }}</span>
-                        <span class="rl-pill__lbl">{{ __('Open NDRs') }}</span>
+                        <span class="rl-pill__lbl">{{ __('dashboard.open_ndrs') }}</span>
                     </a>
                     <a href="{{ route('ndr.index', ['date_from' => now()->toDateString(), 'date_to' => now()->toDateString()]) }}" class="rl-pill rl-pill--amber">
                         <span class="rl-pill__num">{{ $fuTodayNdrs }}</span>
-                        <span class="rl-pill__lbl">{{ __("Today's NDRs") }}</span>
+                        <span class="rl-pill__lbl">{{ __('dashboard.today_ndrs') }}</span>
                     </a>
                     <a href="{{ route('abnormal.index') }}" class="rl-pill rl-pill--orange">
                         <span class="rl-pill__num">{{ $fuOpenAbn }}</span>
-                        <span class="rl-pill__lbl">{{ __('Open abnormal') }}</span>
+                        <span class="rl-pill__lbl">{{ __('dashboard.open_abnormal') }}</span>
                     </a>
                     <a href="{{ route('abnormal.index', ['severity' => 'critical']) }}" class="rl-pill rl-pill--dark">
                         <span class="rl-pill__num">{{ $fuCriticalAbn }}</span>
-                        <span class="rl-pill__lbl">{{ __('Critical') }}</span>
+                        <span class="rl-pill__lbl">{{ __('dashboard.critical') }}</span>
                     </a>
                 </div>
             </div>
@@ -66,7 +66,7 @@
         <div class="rl-kpi-grid">
             @if (hasPermission('total_parcel') == true)
                 <a href="{{ route('parcel.index') }}" class="rl-kpi rl-kpi--sky">
-                    <div class="rl-kpi__icon"><i class="fa fa-box-open"></i></div>
+                    <div class="rl-kpi__icon"><i class="ti ti-box"></i></div>
                     <div class="rl-kpi__body">
                         <span class="rl-kpi__label">{{ __('dashboard.total_parcel') }}</span>
                         <span class="rl-kpi__num">{{ $data['total_parcel'] }}</span>
@@ -76,7 +76,7 @@
 
             @if (hasPermission('total_user') == true)
                 <a href="{{ route('users.index') }}" class="rl-kpi rl-kpi--violet">
-                    <div class="rl-kpi__icon"><i class="fa fa-users"></i></div>
+                    <div class="rl-kpi__icon"><i class="ti ti-users"></i></div>
                     <div class="rl-kpi__body">
                         <span class="rl-kpi__label">{{ __('dashboard.total_user') }}</span>
                         <span class="rl-kpi__num">{{ $data['total_user'] }}</span>
@@ -86,7 +86,7 @@
 
             @if (hasPermission('total_merchant') == true)
                 <a href="{{ route('merchant.index') }}" class="rl-kpi rl-kpi--teal">
-                    <div class="rl-kpi__icon"><i class="fa fa-store"></i></div>
+                    <div class="rl-kpi__icon"><i class="ti ti-building-store"></i></div>
                     <div class="rl-kpi__body">
                         <span class="rl-kpi__label">{{ __('dashboard.total_merchant') }}</span>
                         <span class="rl-kpi__num">{{ $data['total_merchant'] }}</span>
@@ -96,7 +96,7 @@
 
             @if (hasPermission('total_delivery_man') == true)
                 <a href="{{ route('deliveryman.index') }}" class="rl-kpi rl-kpi--indigo">
-                    <div class="rl-kpi__icon"><i class="fas fa-motorcycle"></i></div>
+                    <div class="rl-kpi__icon"><i class="ti ti-car"></i></div>
                     <div class="rl-kpi__body">
                         <span class="rl-kpi__label">{{ __('dashboard.total_delivery_man') }}</span>
                         <span class="rl-kpi__num">{{ $data['total_delivery_man'] }}</span>
@@ -106,7 +106,7 @@
 
             @if (hasPermission('total_hubs') == true)
                 <a href="{{ route('hubs.index') }}" class="rl-kpi rl-kpi--slate">
-                    <div class="rl-kpi__icon"><i class="fas fa-warehouse"></i></div>
+                    <div class="rl-kpi__icon"><i class="ti ti-building-warehouse"></i></div>
                     <div class="rl-kpi__body">
                         <span class="rl-kpi__label">{{ __('dashboard.total_hubs') }}</span>
                         <span class="rl-kpi__num">{{ $data['total_hubs'] }}</span>
@@ -116,7 +116,7 @@
 
             @if (hasPermission('total_accounts') == true)
                 <a href="{{ route('accounts.index') }}" class="rl-kpi rl-kpi--rose">
-                    <div class="rl-kpi__icon"><i class="fa fa-credit-card"></i></div>
+                    <div class="rl-kpi__icon"><i class="ti ti-credit-card"></i></div>
                     <div class="rl-kpi__body">
                         <span class="rl-kpi__label">{{ __('dashboard.total_accounts') }}</span>
                         <span class="rl-kpi__num">{{ $data['total_accounts'] }}</span>
@@ -127,7 +127,7 @@
             @if (hasPermission('total_partial_deliverd') == true)
                 <a href="{{ route('parcel.filter', ['parcel_status' => \App\Enums\ParcelStatus::PARTIAL_DELIVERED]) }}"
                     class="rl-kpi rl-kpi--amber">
-                    <div class="rl-kpi__icon"><i class="fas fa-hand-holding-box fa-handshake"></i></div>
+                    <div class="rl-kpi__icon"><i class="ti ti-package-export"></i></div>
                     <div class="rl-kpi__body">
                         <span class="rl-kpi__label">{{ __('dashboard.total_partial_deliverd') }}</span>
                         <span class="rl-kpi__num">{{ $data['total_partial_deliverd'] }}</span>
@@ -138,7 +138,7 @@
             @if (hasPermission('total_parcels_deliverd') == true)
                 <a href="{{ route('parcel.filter', ['parcel_status' => \App\Enums\ParcelStatus::DELIVERED]) }}"
                     class="rl-kpi rl-kpi--green">
-                    <div class="rl-kpi__icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="rl-kpi__icon"><i class="ti ti-circle-check"></i></div>
                     <div class="rl-kpi__body">
                         <span class="rl-kpi__label">{{ __('dashboard.total_deliverd') }}</span>
                         <span class="rl-kpi__num">{{ $data['total_deliverd'] }}</span>
@@ -151,9 +151,9 @@
         @if (hasPermission('all_statements') == true)
             @php
                 $stmts = [
-                    ['title' => __('dashboard.delivery_man') . ' · ' . __('dashboard.statements'), 'income' => $d_income, 'expense' => $d_expense, 'icon' => 'fas fa-motorcycle'],
-                    ['title' => __('dashboard.merchant') . ' · ' . __('dashboard.statements'), 'income' => $m_income, 'expense' => $m_expense, 'icon' => 'fa fa-store'],
-                    ['title' => __('hub.title') . ' · ' . __('dashboard.statements'), 'income' => $h_income, 'expense' => $h_expense, 'icon' => 'fas fa-warehouse'],
+                    ['title' => __('dashboard.delivery_man') . ' · ' . __('dashboard.statements'), 'income' => $d_income, 'expense' => $d_expense, 'icon' => 'ti ti-car'],
+                    ['title' => __('dashboard.merchant') . ' · ' . __('dashboard.statements'), 'income' => $m_income, 'expense' => $m_expense, 'icon' => 'ti ti-building-store'],
+                    ['title' => __('hub.title') . ' · ' . __('dashboard.statements'), 'income' => $h_income, 'expense' => $h_expense, 'icon' => 'ti ti-building-warehouse'],
                 ];
             @endphp
             <div class="rl-stmt-grid">

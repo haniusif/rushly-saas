@@ -86,6 +86,16 @@ return [
     'total_company'                => 'Total Company',
     'total_plans'                  => 'Total Plans',
     'total_subscription'           => 'Total Subscription',
-    'total_subscription_price'     => 'Total subscription price'
+    'total_subscription_price'     => 'Total subscription price',
 
+    // Page head
+    'operations_overview'          => 'Operations overview',
+
+    // Follow-up Center widget
+    'followup_center'              => 'Follow-up Center',
+    'followup_subtitle'            => 'Open NDRs and abnormal shipments needing attention.',
+    'open_ndrs'                    => 'Open NDRs',
+    'today_ndrs'                   => "Today's NDRs",
+    'open_abnormal'                => 'Open abnormal',
+    'critical'                     => 'Critical',
 ];

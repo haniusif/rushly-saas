@@ -63,6 +63,9 @@ return [
 
   'profile'             => 'Profile',
   'settings'            =>  'Setting',
+  'countries'           =>  'Countries',
+  'cities'              =>  'Cities',
+  'areas'               =>  'Areas',
   'change_password'     =>  'Change password',
   'logout'              =>   'Logout',
   'regular'             =>   'Regular',
@@ -87,5 +90,22 @@ return [
    'plans'                       =>'Plans',
    'company'                     => 'Company',
 
+   // Operations
+   'bulk_action'                 => 'Bulk action',
+   'ndr'                         => 'NDR',
+   'abnormal_shipments'          => 'Abnormal shipments',
+   'tms'                         => 'TMS',
 
+   // Warehouse Management (WMS)
+   'warehouse_management'        => 'Warehouse Management',
+   'wms_dashboard'               => 'Dashboard',
+   'products'                    => 'Products',
+   'stock'                       => 'Stock',
+   'storage_locations'           => 'Storage locations',
+   'receiving_grn'               => 'Receiving (GRN)',
+   'fulfillment'                 => 'Fulfillment',
+   'outbound'                    => 'Outbound',
+   'adjustments'                 => 'Adjustments',
+   'cycle_counts'                => 'Cycle counts',
+   'damage_reports'              => 'Damage reports',
 ];

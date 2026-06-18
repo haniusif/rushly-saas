@@ -92,5 +92,22 @@ return [
    'push_notification'         => 'الإشعارات الفورية',
    'notification_settings'     => 'إعدادات الإشعارات',
 
+   // العمليات
+   'bulk_action'               => 'إجراء جماعي',
+   'ndr'                       => 'بلاغات عدم التوصيل',
+   'abnormal_shipments'        => 'الشحنات غير الطبيعية',
+   'tms'                       => 'إدارة النقل (TMS)',
 
+   // إدارة المستودعات (WMS)
+   'warehouse_management'      => 'إدارة المستودعات',
+   'wms_dashboard'             => 'لوحة المستودع',
+   'products'                  => 'المنتجات',
+   'stock'                     => 'المخزون',
+   'storage_locations'         => 'مواقع التخزين',
+   'receiving_grn'             => 'استلام البضائع (GRN)',
+   'fulfillment'               => 'تجهيز الطلبات',
+   'outbound'                  => 'الإرسال للخارج',
+   'adjustments'               => 'تعديلات المخزون',
+   'cycle_counts'              => 'الجرد الدوري',
+   'damage_reports'            => 'تقارير التلف',
 ];

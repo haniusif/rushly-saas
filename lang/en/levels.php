@@ -509,4 +509,5 @@ return [
     'password_tip_uniq'        => 'Unique to this account',
     'qty'                      => 'Qty',
     'select'                   => 'Select',
+    'copied'                   => 'Copied',
 ];

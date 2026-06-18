@@ -8,7 +8,7 @@
             @if (hasPermission('dashboard_read') == true)
                 <a class="nav-link {{ request()->is('/dashboard*') ? 'active' : '' }}" href="{{ url('/dashboard') }}"
                     aria-expanded="false" data-target="#submenu-1" aria-controls="submenu-1"><i
-                        class="fa fa-home"></i>{{ __('menus.dashboard') }}</a>
+                        class="ti ti-home"></i>{{ __('menus.dashboard') }}</a>
             @endif
         </li>
         
@@ -17,13 +17,13 @@
             <li class="nav-item ">
                 <a class="nav-link {{ request()->is('admin/parcel*') ? 'active' : '' }}"
                     href="{{ route('parcel.index') }}" aria-expanded="false" data-target="#submenu-1"
-                    aria-controls="submenu-1"><i class="fa fa-dolly"></i>{{ __('menus.parcel') }}</a>
+                    aria-controls="submenu-1"><i class="ti ti-package"></i>{{ __('menus.parcel') }}</a>
             </li>
             
               <li class="nav-item ">
                 <a class="nav-link {{ request()->is('admin/bulk_action') ? 'active' : '' }}"
                     href="{{ route('parcel.bulk_action') }}" aria-expanded="false" data-target="#submenu-1"
-                    aria-controls="submenu-1"><i class="fa fa-magic"></i>{{ __('Bulk action') }}</a>
+                    aria-controls="submenu-1"><i class="ti ti-wand"></i>{{ __('menus.bulk_action') }}</a>
             </li>
         @endif
 
@@ -35,7 +35,7 @@
             <li class="nav-item">
                 <a class="nav-link {{ request()->is('admin/ndr*') ? 'active' : '' }}"
                    href="{{ route('ndr.index') }}">
-                    <i class="fa fa-exclamation-triangle"></i>{{ __('NDR') }}
+                    <i class="ti ti-alert-triangle"></i>{{ __('menus.ndr') }}
                     @if ($openNdrCount > 0)
                         <span class="badge badge-pill badge-danger ml-2">{{ $openNdrCount }}</span>
                     @endif
@@ -54,7 +54,7 @@
             <li class="nav-item">
                 <a class="nav-link {{ request()->is('admin/abnormal*') ? 'active' : '' }}"
                    href="{{ route('abnormal.index') }}">
-                    <i class="fa fa-hourglass-half"></i>{{ __('Abnormal Shipments') }}
+                    <i class="ti ti-hourglass"></i>{{ __('menus.abnormal_shipments') }}
                     @if ($criticalAbnCount > 0)
                         <span class="badge badge-pill badge-dark ml-2" style="background:#1f2937; color:#fcd34d;">{{ $criticalAbnCount }}</span>
                     @endif
@@ -70,7 +70,7 @@
     <a class="nav-link {{ request()->is('admin/wms*') ? 'active' : '' }}"
        href="#" data-toggle="collapse" data-target="#wms-manage" aria-expanded="false"
        aria-controls="wms-manage">
-        <i class="fas fa-warehouse"></i> {{ __('Warehouse Management') }}
+        <i class="ti ti-building-warehouse"></i> {{ __('menus.warehouse_management') }}
     </a>
     <div id="wms-manage" class="{{ request()->is('admin/wms*') ? '' : 'collapse' }} submenu">
        
@@ -79,70 +79,70 @@
     <li class="nav-item">
         <a class="nav-link {{ request()->is('admin/wms') || request()->is('admin/wms/dashboard*') ? 'active' : '' }}"
            href="{{ route('wms.dashboard') }}">
-            <i class="fas fa-tachometer-alt"></i> {{ __('Dashboard') }}
+            <i class="ti ti-gauge"></i> {{ __('menus.wms_dashboard') }}
         </a>
     </li>
 
     <li class="nav-item">
         <a class="nav-link {{ request()->is('admin/wms/products*') ? 'active' : '' }}"
            href="{{ route('wms.products.index') }}">
-            <i class="fas fa-box"></i> {{ __('Products') }}
+            <i class="ti ti-box"></i> {{ __('menus.products') }}
         </a>
     </li>
 
     <li class="nav-item">
         <a class="nav-link {{ request()->is('admin/wms/stock*') ? 'active' : '' }}"
            href="{{ route('wms.stock.index') }}">
-            <i class="fas fa-clipboard-list"></i> {{ __('Stock') }}
+            <i class="ti ti-clipboard-list"></i> {{ __('menus.stock') }}
         </a>
     </li>
 
     <li class="nav-item">
         <a class="nav-link {{ request()->is('admin/wms/locations*') ? 'active' : '' }}"
            href="{{ route('wms.locations.index') }}">
-            <i class="fas fa-map-marker-alt"></i> {{ __('Storage Locations') }}
+            <i class="ti ti-map-pin"></i> {{ __('menus.storage_locations') }}
         </a>
     </li>
 
     <li class="nav-item">
         <a class="nav-link {{ request()->is('admin/wms/grn*') ? 'active' : '' }}"
            href="{{ route('wms.grn.index') }}">
-            <i class="fas fa-truck-loading"></i> {{ __('Receiving (GRN)') }}
+            <i class="ti ti-truck-loading"></i> {{ __('menus.receiving_grn') }}
         </a>
     </li>
 
     <li class="nav-item">
         <a class="nav-link {{ request()->is('admin/wms/fulfillment*') ? 'active' : '' }}"
            href="{{ route('wms.fulfillment.index') }}">
-            <i class="fas fa-dolly"></i> {{ __('Fulfillment') }}
+            <i class="ti ti-package"></i> {{ __('menus.fulfillment') }}
         </a>
     </li>
 
     <li class="nav-item">
         <a class="nav-link {{ request()->is('admin/wms/outbound*') ? 'active' : '' }}"
            href="{{ route('wms.outbound.index') }}">
-            <i class="fas fa-paper-plane"></i> {{ __('Outbound') }}
+            <i class="ti ti-send"></i> {{ __('menus.outbound') }}
         </a>
     </li>
 
     <li class="nav-item">
         <a class="nav-link {{ request()->is('admin/wms/adjustments*') ? 'active' : '' }}"
            href="{{ route('wms.adjustments.index') }}">
-            <i class="fas fa-exchange-alt"></i> {{ __('Adjustments') }}
+            <i class="ti ti-arrows-exchange"></i> {{ __('menus.adjustments') }}
         </a>
     </li>
 
     <li class="nav-item">
         <a class="nav-link {{ request()->is('admin/wms/cycle-counts*') ? 'active' : '' }}"
            href="{{ route('wms.cycle-counts.index') }}">
-            <i class="fas fa-check-double"></i> {{ __('Cycle Counts') }}
+            <i class="ti ti-checks"></i> {{ __('menus.cycle_counts') }}
         </a>
     </li>
 
     <li class="nav-item">
         <a class="nav-link {{ request()->is('admin/wms/damage*') ? 'active' : '' }}"
            href="{{ route('wms.damage.index') }}">
-            <i class="fas fa-bug"></i> {{ __('Damage Reports') }}
+            <i class="ti ti-bug"></i> {{ __('menus.damage_reports') }}
         </a>
     </li>
 
@@ -158,20 +158,20 @@
             <li class="nav-item ">
                 <a class="nav-link {{ request()->is('admin/deliveryman*') ? 'active' : '' }}"
                     href="{{ route('deliveryman.index') }}" aria-expanded="false" data-target="#submenu-1"
-                    aria-controls="submenu-1"><i class="fa fa-people-carry"></i>{{ __('menus.deliveryman') }}</a>
+                    aria-controls="submenu-1"><i class="ti ti-truck-delivery"></i>{{ __('menus.deliveryman') }}</a>
             </li>
             
              <li class="nav-item ">
                 <a class="nav-link {{ request()->is('admin/tms*') ? 'active' : '' }}"
                     href="{{ route('tms') }}" aria-expanded="false" data-target="#submenu-1"
-                    aria-controls="submenu-1"><i class="fa fa-map"></i>{{ __('TMS') }}</a>
+                    aria-controls="submenu-1"><i class="ti ti-map"></i>{{ __('menus.tms') }}</a>
             </li>
         @endif
         @if (hasPermission('hub_read') == true || hasPermission('hub_payment_read') == true)
             <li class="nav-item">
                 <a class="nav-link {{ request()->is('admin/hubs*', 'admin/request/hub/payment*', 'admin/hub/incharge*', 'admin/hub/view*') ? 'active' : '' }}"
                     href="#" data-toggle="collapse" aria-expanded="false" data-target="#hub-manage"
-                    aria-controls="hub-manage"><i class="fas fa-warehouse"></i>{{ __('menus.hub_mange') }}</a>
+                    aria-controls="hub-manage"><i class="ti ti-building-warehouse"></i>{{ __('menus.hub_mange') }}</a>
                 <div id="hub-manage"
                     class="{{ request()->is('admin/hubs*', 'admin/request/hub/payment*', 'admin/hub/incharge*', 'admin/hub/view*') ? '' : 'collapse' }} submenu">
                     <ul class="nav flex-column">
@@ -196,7 +196,7 @@
             <li class="nav-item">
                 <a class="nav-link {{ request()->is('admin/merchant/*', 'admin/payment*') ? 'active' : '' }}"
                     href="#" data-toggle="collapse" aria-expanded="false" data-target="#merchant-manage"
-                    aria-controls="merchant-manage"><i class="fas fa-users"></i>{{ __('menus.merchant_manage') }}</a>
+                    aria-controls="merchant-manage"><i class="ti ti-users"></i>{{ __('menus.merchant_manage') }}</a>
                 <div id="merchant-manage"
                     class="{{ request()->is('admin/merchant*', 'admin/payment*') ? '' : 'collapse' }} submenu">
                     <ul class="nav flex-column">
@@ -222,7 +222,7 @@
             <li class="nav-item ">
                 <a class="nav-link {{ request()->is('admin/todo/todo_list*') ? 'active' : '' }}"
                     href="{{ route('todo.index') }}" aria-expanded="false" data-target="#hubs" aria-controls="hubs"><i
-                        class="fas fa-tasks"></i>{{ __('menus.todo_list') }}</a>
+                        class="ti ti-list-check"></i>{{ __('menus.todo_list') }}</a>
             </li>
         @endif
 
@@ -231,7 +231,7 @@
             <li class="nav-item ">
                 <a class="nav-link {{ request()->is('admin/support*') ? 'active' : '' }}"
                     href="{{ route('support.index') }}" aria-expanded="false" data-target="#hubs"
-                    aria-controls="hubs"><i class="fa fa-comments"></i>{{ __('menus.support') }}</a>
+                    aria-controls="hubs"><i class="ti ti-message-circle"></i>{{ __('menus.support') }}</a>
             </li>
         @endif
 
@@ -245,7 +245,7 @@
             <li class="nav-item ">
                 <a class="nav-link {{ request()->is('admin/news-offer*') ? 'active' : '' }}"
                     href="{{ route('news-offer.index') }}"><i
-                        class="fa fa-newspaper"></i>{{ __('menus.news_offer') }}</a>
+                        class="ti ti-news"></i>{{ __('menus.news_offer') }}</a>
             </li>
         @endif
         
@@ -256,7 +256,7 @@
             <li class="nav-item ">
                 <a class="nav-link {{ request()->is('admin/logs*') ? 'active' : '' }}"
                     href="{{ route('logs.index') }}" aria-expanded="false" data-target="#active_log"
-                    aria-controls="active_log"><i class="fa fa-history"></i>{{ __('menus.active_logs') }}</a>
+                    aria-controls="active_log"><i class="ti ti-history"></i>{{ __('menus.active_logs') }}</a>
             </li>
         @endif
         {{-- Fraud --}}
@@ -264,7 +264,7 @@
             <li class="nav-item ">
                 <a class="nav-link {{ request()->is('admin/fraud*') ? 'active' : '' }}"
                     href="{{ route('fraud.index') }}" aria-expanded="false" data-target="#active_log"
-                    aria-controls="active_log"><i class="fa fa-user-times"></i>{{ __('menus.fraud_check') }}</a>
+                    aria-controls="active_log"><i class="ti ti-user-x"></i>{{ __('menus.fraud_check') }}</a>
             </li>
         @endif
 
@@ -272,7 +272,7 @@
             <li class="nav-item ">
                 <a class="nav-link {{ request()->is('admin/subscribe*') ? 'active' : '' }}"
                     href="{{ route('subscribe.index') }}" aria-expanded="false" data-target="#active_log"
-                    aria-controls="active_log"><i class="fas fa-users"></i>{{ __('account.subscribe') }}</a>
+                    aria-controls="active_log"><i class="ti ti-users"></i>{{ __('account.subscribe') }}</a>
             </li>
         @endif
         
@@ -309,7 +309,7 @@
             <li class="nav-item">
                 <a class="nav-link {{ request()->is('admin/pickup-request*') ? 'active' : '' }}" href="#"
                     data-toggle="collapse" aria-expanded="false" data-target="#pickup-request"
-                    aria-controls="hub-manage"><i class="fa fa-truck-moving"></i>{{ __('menus.pickup_request') }}</a>
+                    aria-controls="hub-manage"><i class="ti ti-truck"></i>{{ __('menus.pickup_request') }}</a>
                 <div id="pickup-request"
                     class="{{ request()->is('admin/pickup-request*') ? '' : 'collapse' }} submenu">
                     <ul class="nav flex-column">
@@ -337,7 +337,7 @@
             <li class="nav-item ">
                 <a class="nav-link {{ request()->is('admin/assets*') ? 'active' : '' }}"
                     href="{{ route('asset.index') }}" aria-expanded="false" data-target="#hubs"
-                    aria-controls="hubs"><i class="fa fa-fw fa-users"></i>{{ __('menus.assets') }}</a>
+                    aria-controls="hubs"><i class="ti ti-users-group"></i>{{ __('menus.assets') }}</a>
             </li>
         @endif
 
@@ -345,7 +345,7 @@
             <li class="nav-item ">
                 <a class="nav-link {{ request()->is('admin/wallet-request*') ? 'active' : '' }}"
                     href="{{ route('wallet.request.index') }}"><i
-                        class="fa fa-wallet"></i>{{ __('parcel.wallet_request') }}</a>
+                        class="ti ti-wallet"></i>{{ __('parcel.wallet_request') }}</a>
             </li>
         @endif
 
@@ -355,7 +355,7 @@
             <li class="nav-item ">
                 <a class="nav-link {{ request()->is('admin/online-payment-list*') ? 'active' : '' }}"
                     href="{{ route('online.payment.list') }}"><i
-                        class="fas fa-credit-card"></i>{{ __('menus.payments_received') }}</a>
+                        class="ti ti-credit-card"></i>{{ __('menus.payments_received') }}</a>
             </li>
         @endif
 
@@ -363,7 +363,7 @@
             <li class="nav-item ">
                 <a class="nav-link {{ request()->is('admin/payout*') ? 'active' : '' }}"
                     href="{{ route('payout.index') }}"><i
-                        class="fas fa-hand-holding-usd"></i>{{ __('menus.payout') }}</a>
+                        class="ti ti-cash"></i>{{ __('menus.payout') }}</a>
             </li>
         @endif
 
@@ -374,7 +374,7 @@
             <li class="nav-item">
                 <a class="nav-link {{ request()->is('admin/accounts*', 'admin/fund-transfer*', 'admin/account-head*', 'admin/bank-transaction*', 'admin/hub/cash-received-deliveryman*', 'admin/hub/payment-request*', 'admin/paid/invoice*') ? 'active' : '' }} "
                     href="#" data-toggle="collapse" aria-expanded="false" data-target="#account"
-                    aria-controls="account"><i class="fas fa-user"></i>{{ __('menus.accounts') }}</a>
+                    aria-controls="account"><i class="ti ti-user"></i>{{ __('menus.accounts') }}</a>
                 <div id="account"
                     class="{{ request()->is('admin/accounts*', 'admin/fund-transfer*', 'admin/expense*', 'admin/income*', 'admin/account-head*', 'admin/bank-transaction*', 'admin/hub/cash-received-deliveryman*', 'admin/hub/payment-request*', 'admin/paid/invoice*') ? '' : 'collapse' }} submenu">
                     <ul class="nav flex-column">
@@ -455,7 +455,7 @@
             <li class="nav-item">
                 <a class="nav-link {{ request()->is('admin/roles*', 'admin/users*', 'admin/designations*', 'admin/departments*') ? 'active' : '' }} "
                     href="#" data-toggle="collapse" aria-expanded="false" data-target="#submenu-2"
-                    aria-controls="submenu-2"><i class="fas fa-th"></i>{{ __('menus.user_role') }}</a>
+                    aria-controls="submenu-2"><i class="ti ti-layout-grid"></i>{{ __('menus.user_role') }}</a>
                 <div id="submenu-2"
                     class="{{ request()->is('admin/roles*', 'admin/users*', 'admin/designations*', 'admin/departments*') ? '' : 'collapse' }} submenu">
                     <ul class="nav flex-column">
@@ -498,7 +498,7 @@
                 <a class="nav-link {{ request()->is('admin/salary/salary-generate*', 'admin/salary*') ? 'active' : '' }}"
                     href="#" data-toggle="collapse" aria-expanded="false" data-target="#salarygenerate"
                     aria-controls="salarygenerate"><i
-                        class="fas fa-hand-holding-usd"></i>{{ __('salary.payroll') }}</a>
+                        class="ti ti-cash"></i>{{ __('salary.payroll') }}</a>
                 <div id="salarygenerate"
                     class="{{ request()->is('admin/salary/salary-generate*', 'admin/salary*') ? '' : 'collapse' }} submenu">
                     <ul class="nav flex-column">
@@ -529,7 +529,7 @@
             <li class="nav-item">
                 <a class="nav-link {{ request()->is('admin/reports/*') ? 'active' : '' }}" href="#"
                     data-toggle="collapse" aria-expanded="false" data-target="#reports" aria-controls="reports"><i
-                        class="fas fa-print"></i>{{ __('reports.title') }}</a>
+                        class="ti ti-printer"></i>{{ __('reports.title') }}</a>
                 <div id="reports" class="{{ request()->is('admin/reports*') ? '' : 'collapse' }} submenu">
                     <ul class="nav flex-column">
                         
@@ -586,7 +586,7 @@
             <li class="nav-item ">
                 <a class="nav-link {{ request()->is('admin/push-notification*') ? 'active' : '' }}"
                     href="{{ route('push-notification.index') }}" aria-expanded="false" data-target="#submenu-1"
-                    aria-controls="submenu-1"><i class="fa fa-bell"></i>{{ __('menus.push_notification') }}</a>
+                    aria-controls="submenu-1"><i class="ti ti-bell"></i>{{ __('menus.push_notification') }}</a>
             </li>
         @endif
  
@@ -604,7 +604,7 @@
             <li class="nav-item">
                 <a class="nav-link {{ request()->is('admin/front-web*') ? 'active' : '' }}" href="#"
                     data-toggle="collapse" aria-expanded="false" data-target="#front-web"
-                    aria-controls="front-web"><i class="fas fa-globe"></i>{{ __('levels.front_web') }}</a>
+                    aria-controls="front-web"><i class="ti ti-world"></i>{{ __('levels.front_web') }}</a>
 
                 <div id="front-web" class="{{ request()->is('admin/front-web*') ? '' : 'collapse' }} submenu">
                     <ul class="nav flex-column">
@@ -671,7 +671,7 @@
             <li class="nav-item">
                 <a class="nav-link {{ request()->is('admin/database-backup*', 'admin/delivery-category*', 'admin/delivery-category*', 'admin/delivery-charge*', 'admin/packaging*', 'admin/delivery-type*', 'admin/liquid-fragile*', 'admin/sms-settings*', 'admin/sms-send-settings*', 'admin/general-settings*', 'admin/notification-settings*', 'admin/googlemap-settings*', 'admin/asset-category*', 'admin/social-login-setting*', 'admin/pay-out/setup*', 'admin/settings/pay-out/setup*', 'admin/settings/invoice-generate-menually*', 'admin/currency*', 'admin/integrations*') ? 'active' : '' }} "
                     href="#" data-toggle="collapse" aria-expanded="false" data-target="#submenu-0"
-                    aria-controls="submenu-0"><i class="fa fa-cogs"></i> {{ __('menus.settings') }}</a>
+                    aria-controls="submenu-0"><i class="ti ti-settings"></i> {{ __('menus.settings') }}</a>
                 <div class="{{ request()->is('admin/database-backup*', 'admin/delivery-category*', 'admin/delivery-charge*', 'admin/packaging*', 'admin/delivery-type*', 'admin/liquid-fragile*', 'admin/sms-settings*', 'admin/sms-send-settings*', 'admin/general-settings*', 'admin/notification-settings*', 'admin/googlemap-settings*', 'admin/asset-category*', 'admin/social-login-setting*', 'admin/pay-out/setup*', 'admin/settings/pay-out/setup*', 'admin/settings/invoice-generate-menually*', 'admin/currency*', 'admin/integrations*') ? '' : 'collapse' }} submenu"
                     id="submenu-0" class="collapse submenu">
                     <ul class="nav flex-column">

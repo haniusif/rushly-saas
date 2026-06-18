@@ -72,6 +72,5 @@ return [
     'app_secret'                        => 'أدخل سر التطبيق',
     'client_id'                         => 'أدخل معرّف العميل',
     'client_secret'                     => 'أدخل سر العميل',
-
-
+    'enter_address'         => 'أدخل العنوان',
 ];

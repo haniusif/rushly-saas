@@ -131,6 +131,7 @@ return array (
   'Selling_price_of_parcel'         =>  'سعر بيع الشحنة',
   'enter_invoice_number'            =>  'أدخل رقم الفاتورة',
   'settings_update_success'         => 'تم تحديث الإعدادات بنجاح',
-  'invoice_id'                      => 'رقم الفاتورة'
+  'invoice_id'                      => 'رقم الفاتورة',
+  'wallet_request'                  => 'طلب من المحفظة',
 
 );

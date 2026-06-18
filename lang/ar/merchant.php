@@ -195,6 +195,8 @@ return array (
   'change_password'              => 'تغيير كلمة المرور',
   'logout'                       => 'تسجيل الخروج',
   'logout_confirm'               => 'هل تريد تسجيل الخروج؟',
+  'impersonate'                  => 'دخول كتاجر',
+  'impersonate_confirm'          => 'تسجيل الدخول باسم :name؟ ستبقى جلسة المشرف محفوظة ويمكنك العودة في أي وقت.',
 
   // Tenant + per-merchant login layout picker
   'login_layout'                 => 'تخطيط صفحة الدخول',

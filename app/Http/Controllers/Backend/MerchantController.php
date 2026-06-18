@@ -240,5 +240,77 @@ class MerchantController extends Controller
         return redirect()->back();
     }
 
+    /**
+     * Sign in as the merchant's user — for support / debugging. The original admin
+     * id is stashed in the session so we can switch back via stopImpersonate(). The
+     * action is written to the activity log so it's auditable.
+     */
+    public function impersonate($id, Request $request)
+    {
+        $merchant = \App\Models\Backend\Merchant::with('user')->find($id);
+        if (! $merchant || ! $merchant->user) {
+            Toastr::error(__('merchant.error_msg'), __('message.error'));
+            return redirect()->back();
+        }
+        $admin = \Auth::user();
+        if (! $admin) abort(403);
+
+        // Don't allow nested impersonation — must stop the current one first.
+        if ($request->session()->has('impersonator_id')) {
+            Toastr::error('Already impersonating. Stop the current session first.', __('message.error'));
+            return redirect()->back();
+        }
+        if ($admin->id === $merchant->user->id) {
+            Toastr::error("Can't impersonate yourself.", __('message.error'));
+            return redirect()->back();
+        }
+
+        // Audit trail — spatie/activitylog is already used elsewhere in the project.
+        try {
+            activity('impersonation')
+                ->causedBy($admin)
+                ->performedOn($merchant)
+                ->withProperties([
+                    'admin_id'    => $admin->id,
+                    'admin_email' => $admin->email,
+                    'merchant_id' => $merchant->id,
+                    'target_user' => $merchant->user->email,
+                    'ip'          => $request->ip(),
+                ])
+                ->log('Started impersonation');
+        } catch (\Throwable $e) { /* activity log not critical */ }
+
+        $request->session()->put('impersonator_id', $admin->id);
+        \Auth::login($merchant->user);
+
+        return redirect()->route('dashboard.index');
+    }
+
+    /**
+     * Restore the admin session captured by impersonate().
+     */
+    public function stopImpersonate(Request $request)
+    {
+        $adminId = $request->session()->pull('impersonator_id');
+        if (! $adminId) {
+            return redirect()->route('dashboard.index');
+        }
+        $admin = \App\Models\User::find($adminId);
+        if (! $admin) {
+            \Auth::logout();
+            return redirect()->route('login');
+        }
+
+        try {
+            activity('impersonation')
+                ->causedBy($admin)
+                ->withProperties(['admin_id' => $admin->id, 'restored_at' => now()->toIso8601String()])
+                ->log('Stopped impersonation');
+        } catch (\Throwable $e) { /* ignore */ }
+
+        \Auth::login($admin);
+        return redirect()->route('merchant.index');
+    }
+
 
 }

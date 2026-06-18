@@ -196,6 +196,8 @@ return array (
   'change_password'              => 'Change password',
   'logout'                       => 'Sign out',
   'logout_confirm'               => 'Sign out of this portal?',
+  'impersonate'                  => 'Login as merchant',
+  'impersonate_confirm'          => 'Sign in as :name? Your admin session is preserved and you can return at any time.',
 
   // Tenant + per-merchant login layout picker
   'login_layout'                 => 'Login page layout',

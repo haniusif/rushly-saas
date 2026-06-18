@@ -175,6 +175,14 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                 ->middleware('guest')
                 ->name('login.branded');
             Auth::routes();
+
+            // Stop impersonation — accessible to whoever is currently logged in (the
+            // impersonated merchant) as long as session.impersonator_id is set.
+            // No permission middleware: the gate is "did an admin set up this session?".
+            Route::post('/impersonate/stop', [\App\Http\Controllers\Backend\MerchantController::class, 'stopImpersonate'])
+                ->middleware('auth')
+                ->name('merchant.impersonate.stop');
+
             //frontend
             Route::controller(FrontendController::class)->group(function () {
                 Route::get('/',                      'index')->name('home');
@@ -363,6 +371,9 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::delete('merchant/delete/{id}', [MerchantController::class, 'destroy'])->name('merchant.delete')->middleware('hasPermission:merchant_delete');
                         Route::get('merchant/view/{id}',      [MerchantController::class, 'view'])->name('merchant.view')->middleware('hasPermission:merchant_view');
                         Route::get('merchant/invoice-generate/{id}',      [MerchantController::class, 'invoiceGenerate'])->name('merchant.invoice.generate')->middleware('hasPermission:merchant_view');
+                        // Impersonate the merchant's user for support/debugging.
+                        // Gated on merchant_update so any admin who can edit a merchant can also log in as them.
+                        Route::post('merchant/impersonate/{id}',          [MerchantController::class, 'impersonate'])->name('merchant.impersonate')->middleware('hasPermission:merchant_update');
                         //Merchent delivery charge routes
                         Route::post('merchant/delivery-charge/info',                    [MerchantDeliveryChargeController::class, 'deliveryChargeInfo'])->name('merchant.deliveryCharge.deliveryChargeInfo');
                         Route::get('merchant/{merchant}/delivery-charge/index',         [MerchantDeliveryChargeController::class, 'index'])->name('merchant.deliveryCharge.index')->middleware('hasPermission:merchant_delivery_charge_read');

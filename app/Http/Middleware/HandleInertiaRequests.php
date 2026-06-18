@@ -33,6 +33,10 @@ class HandleInertiaRequests extends Middleware
 
             'brand' => fn () => $this->brand(),
 
+            // Set when an admin is currently signed in as this user via the
+            // impersonation feature. Drives the "you're viewing as X" banner.
+            'impersonator' => fn () => $this->impersonator($request),
+
             'app' => [
                 'name'   => config('app.name'),
                 'locale' => app()->getLocale(),
@@ -54,5 +58,18 @@ class HandleInertiaRequests extends Middleware
     protected function brand(): ?array
     {
         return merchantBrand();
+    }
+
+    protected function impersonator(Request $request): ?array
+    {
+        $id = $request->session()->get('impersonator_id');
+        if (! $id) return null;
+        $admin = \App\Models\User::find($id);
+        if (! $admin) return null;
+        return [
+            'id'    => $admin->id,
+            'name'  => $admin->name,
+            'email' => $admin->email,
+        ];
     }
 }

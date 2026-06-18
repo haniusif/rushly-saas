@@ -73,6 +73,12 @@
                                             @endif
                                             @if(hasPermission('merchant_update'))
                                                 <a href="{{ route('merchant.edit',$merchant->id) }}" class="dropdown-item"><i class="ti ti-edit"></i> {{ __('levels.edit') }}</a>
+                                                <form method="POST" action="{{ route('merchant.impersonate', $merchant->id) }}" style="margin:0">
+                                                    @csrf
+                                                    <button type="submit" class="dropdown-item text-warning" onclick="return confirm('{{ __('merchant.impersonate_confirm', ['name' => $merchant->business_name ?: ($merchant->user->name ?? 'merchant')]) }}')">
+                                                        <i class="ti ti-mask"></i> {{ __('merchant.impersonate') }}
+                                                    </button>
+                                                </form>
                                             @endif
                                         </div>
                                     </div>
@@ -209,6 +215,12 @@
                                                  
                                                     @if( hasPermission('merchant_update') == true   )
                                                         <a href="{{route('merchant.edit',$merchant->id)}}" class="dropdown-item"><i class="fas fa-edit" aria-hidden="true"></i> {{ __('levels.edit') }}</a>
+                                                        <form method="POST" action="{{ route('merchant.impersonate', $merchant->id) }}" style="margin:0">
+                                                            @csrf
+                                                            <button type="submit" class="dropdown-item text-warning" onclick="return confirm('{{ __('merchant.impersonate_confirm', ['name' => $merchant->business_name ?: ($merchant->user->name ?? 'merchant')]) }}')">
+                                                                <i class="fas fa-user-secret" aria-hidden="true"></i> {{ __('merchant.impersonate') }}
+                                                            </button>
+                                                        </form>
                                                     @endif
                                                     @if( hasPermission('merchant_delete') == true )
                                                         <!--<form id="delete" value="Test" action="{{route('merchant.delete',$merchant->id)}}" method="POST" data-title="{{ __('delete.merchant') }}">-->

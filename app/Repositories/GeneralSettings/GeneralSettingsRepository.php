@@ -49,6 +49,33 @@ class GeneralSettingsRepository implements GeneralSettingsInterface{
             $row->login_layout = $request->input('login_layout');
         }
 
+        // Extended theme defaults (inherited by every merchant on this tenant unless
+        // they set their own override). Each field can be cleared by passing "".
+        foreach (['sidebar_color','sidebar_text_color','topbar_color','topbar_text_color','accent_color'] as $field) {
+            if (! $request->has($field)) continue;
+            $v = trim((string) $request->input($field));
+            if ($v === '') {
+                $row->{$field} = null;
+            } elseif (preg_match('/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/', $v)) {
+                $row->{$field} = strtolower($v);
+            }
+        }
+        $enums = [
+            'sidebar_style' => ['dark','light','brand'],
+            'font_family'   => ['inter','cairo','tajawal','roboto','system'],
+            'border_radius' => ['sharp','default','rounded'],
+            'density'       => ['dense','comfortable'],
+        ];
+        foreach ($enums as $field => $allowed) {
+            if (! $request->has($field)) continue;
+            $v = trim((string) $request->input($field));
+            if ($v === '') {
+                $row->{$field} = null;
+            } elseif (in_array($v, $allowed, true)) {
+                $row->{$field} = $v;
+            }
+        }
+
         if(isset($request->logo) && $request->logo != null)
         {
             $row->logo = $this->file($row->logo, $request->logo);

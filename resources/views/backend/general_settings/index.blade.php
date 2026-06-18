@@ -209,6 +209,68 @@
                             <small class="text-muted">{{ __('merchant.login_layout_help') }}</small>
                         </div>
                     </div>
+
+                    {{-- Extended theme defaults — every merchant on this tenant inherits these
+                         unless they set their own override on the merchant edit page. --}}
+                    <h5 class="mt-4" style="font-size:13px;color:#475467;font-weight:600">{{ __('merchant.theme_section_colors') }} ({{ __('merchant.theme_inherit') }})</h5>
+                    <div class="gs-row">
+                        @foreach([
+                            ['sidebar_color',      '#0f172a'],
+                            ['sidebar_text_color', '#f1f5f9'],
+                            ['topbar_color',       '#ffffff'],
+                            ['topbar_text_color',  '#0f172a'],
+                            ['accent_color',       '#0ea5e9'],
+                        ] as [$name, $fallback])
+                            @php $current = settings()->{$name} ?? null; @endphp
+                            <div class="form-group">
+                                <label for="{{ $name }}">{{ __('merchant.'.$name) }}</label>
+                                <div class="gs-color-swatch">
+                                    <input type="color" id="{{ $name }}_picker" value="{{ old($name, $current ?: $fallback) }}" onchange="document.getElementById('{{ $name }}').value=this.value">
+                                    <input type="text" id="{{ $name }}" name="{{ $name }}" class="form-control" maxlength="7" pattern="^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$" placeholder="(blank = no default)" value="{{ old($name, $current) }}" oninput="if(/^#([A-Fa-f0-9]{6})$/.test(this.value)) document.getElementById('{{ $name }}_picker').value=this.value">
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <h5 class="mt-3" style="font-size:13px;color:#475467;font-weight:600">{{ __('merchant.theme_section_layout') }}</h5>
+                    <div class="gs-row">
+                        <div class="form-group">
+                            <label for="sidebar_style">{{ __('merchant.sidebar_style') }}</label>
+                            <select id="sidebar_style" name="sidebar_style" class="form-control">
+                                <option value="">{{ __('merchant.theme_inherit') }}</option>
+                                @foreach(['dark','light','brand'] as $k)
+                                    <option value="{{ $k }}" @selected(old('sidebar_style', settings()->sidebar_style) === $k)>{{ __('merchant.sidebar_style_'.$k) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="font_family">{{ __('merchant.font_family') }}</label>
+                            <select id="font_family" name="font_family" class="form-control">
+                                <option value="">{{ __('merchant.theme_inherit') }}</option>
+                                @foreach(['inter','cairo','tajawal','roboto','system'] as $k)
+                                    <option value="{{ $k }}" @selected(old('font_family', settings()->font_family) === $k)>{{ __('merchant.font_'.$k) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="border_radius">{{ __('merchant.border_radius') }}</label>
+                            <select id="border_radius" name="border_radius" class="form-control">
+                                <option value="">{{ __('merchant.theme_inherit') }}</option>
+                                @foreach(['sharp','default','rounded'] as $k)
+                                    <option value="{{ $k }}" @selected(old('border_radius', settings()->border_radius) === $k)>{{ __('merchant.border_radius_'.$k) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="density">{{ __('merchant.density') }}</label>
+                            <select id="density" name="density" class="form-control">
+                                <option value="">{{ __('merchant.theme_inherit') }}</option>
+                                @foreach(['comfortable','dense'] as $k)
+                                    <option value="{{ $k }}" @selected(old('density', settings()->density) === $k)>{{ __('merchant.density_'.$k) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
                 </section>
 
                 {{-- LOGOS --}}

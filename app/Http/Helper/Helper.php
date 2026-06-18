@@ -171,6 +171,8 @@ if(!function_exists('merchantBrand')){
         try { $s = settings(); } catch (\Throwable $e) { $s = null; }
         if (!$s) return null;
 
+        // Start from tenant defaults — every extended field can live on general_settings now,
+        // so a merchant without overrides truly inherits the tenant's full theme.
         $brand = [
             'name'               => $s->name ?? null,
             'logo'               => $s->logo_image ?? null,
@@ -178,33 +180,34 @@ if(!function_exists('merchantBrand')){
             'favicon'            => $s->favicon_image ?? null,
             'primary_color'      => $s->primary_color ?? null,
             'text_color'         => $s->text_color ?? null,
-            'sidebar_color'      => null,
-            'sidebar_text_color' => null,
-            'topbar_color'       => null,
-            'topbar_text_color'  => null,
-            'accent_color'       => null,
-            'sidebar_style'      => null,
-            'font_family'        => null,
-            'border_radius'      => null,
-            'density'            => null,
+            'sidebar_color'      => $s->sidebar_color ?? null,
+            'sidebar_text_color' => $s->sidebar_text_color ?? null,
+            'topbar_color'       => $s->topbar_color ?? null,
+            'topbar_text_color'  => $s->topbar_text_color ?? null,
+            'accent_color'       => $s->accent_color ?? null,
+            'sidebar_style'      => $s->sidebar_style ?? null,
+            'font_family'        => $s->font_family ?? null,
+            'border_radius'      => $s->border_radius ?? null,
+            'density'            => $s->density ?? null,
         ];
 
+        // Merchant override wins per-field. Empty string / null on the merchant row → inherit tenant.
         $user = Auth::user();
         if ($user) {
             $merchant = \App\Models\Backend\Merchant::where('user_id', $user->id)->first();
             if ($merchant) {
-                $brand['name']               = $merchant->business_name ?: $brand['name'];
-                $brand['primary_color']      = $merchant->primary_color ?: $brand['primary_color'];
-                $brand['text_color']         = $merchant->text_color    ?: $brand['text_color'];
-                $brand['sidebar_color']      = $merchant->sidebar_color;
-                $brand['sidebar_text_color'] = $merchant->sidebar_text_color;
-                $brand['topbar_color']       = $merchant->topbar_color;
-                $brand['topbar_text_color']  = $merchant->topbar_text_color;
-                $brand['accent_color']       = $merchant->accent_color;
-                $brand['sidebar_style']      = $merchant->sidebar_style;
-                $brand['font_family']        = $merchant->font_family;
-                $brand['border_radius']      = $merchant->border_radius;
-                $brand['density']            = $merchant->density;
+                $brand['name']               = $merchant->business_name      ?: $brand['name'];
+                $brand['primary_color']      = $merchant->primary_color      ?: $brand['primary_color'];
+                $brand['text_color']         = $merchant->text_color         ?: $brand['text_color'];
+                $brand['sidebar_color']      = $merchant->sidebar_color      ?: $brand['sidebar_color'];
+                $brand['sidebar_text_color'] = $merchant->sidebar_text_color ?: $brand['sidebar_text_color'];
+                $brand['topbar_color']       = $merchant->topbar_color       ?: $brand['topbar_color'];
+                $brand['topbar_text_color']  = $merchant->topbar_text_color  ?: $brand['topbar_text_color'];
+                $brand['accent_color']       = $merchant->accent_color       ?: $brand['accent_color'];
+                $brand['sidebar_style']      = $merchant->sidebar_style      ?: $brand['sidebar_style'];
+                $brand['font_family']        = $merchant->font_family        ?: $brand['font_family'];
+                $brand['border_radius']      = $merchant->border_radius      ?: $brand['border_radius'];
+                $brand['density']            = $merchant->density            ?: $brand['density'];
                 if ($merchant->logo_url)       $brand['logo']       = $merchant->logo_url;
                 if ($merchant->light_logo_url) $brand['light_logo'] = $merchant->light_logo_url;
                 if ($merchant->favicon_url)    $brand['favicon']    = $merchant->favicon_url;

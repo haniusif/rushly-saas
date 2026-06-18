@@ -533,6 +533,16 @@
                                     @endforeach
                                 </select>
                             </div>
+                            <div class="form-group">
+                                <label for="login_layout">{{ __('merchant.login_layout') }}</label>
+                                <select id="login_layout" name="login_layout" class="form-control rl-theme-select">
+                                    <option value="">{{ __('merchant.theme_inherit') }}</option>
+                                    @foreach(['split','centered','fullbleed'] as $k)
+                                        <option value="{{ $k }}" @selected(old('login_layout', $merchant->login_layout) === $k)>{{ __('merchant.login_layout_'.$k) }}</option>
+                                    @endforeach
+                                </select>
+                                <small class="text-muted">{{ __('merchant.login_layout_help_merchant') }}</small>
+                            </div>
                         </div>
 
                         <h6 class="rl-theme-section">{{ __('merchant.theme_section_logos') }}</h6>

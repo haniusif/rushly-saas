@@ -45,6 +45,9 @@ class GeneralSettingsRepository implements GeneralSettingsInterface{
         if($request->text_color):
             $row->text_color           = $request->text_color;
         endif;
+        if (in_array($request->input('login_layout'), ['split','centered','fullbleed'], true)) {
+            $row->login_layout = $request->input('login_layout');
+        }
 
         if(isset($request->logo) && $request->logo != null)
         {

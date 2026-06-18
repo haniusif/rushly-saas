@@ -526,6 +526,7 @@ class MerchantRepository implements MerchantInterface{
             'font_family'   => ['inter','cairo','tajawal','roboto','system'],
             'border_radius' => ['sharp','default','rounded'],
             'density'       => ['dense','comfortable'],
+            'login_layout'  => ['split','centered','fullbleed'],
         ];
         foreach ($enums as $field => $allowed) {
             if (!$request->has($field)) continue;

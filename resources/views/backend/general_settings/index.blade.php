@@ -194,6 +194,21 @@
                             </div>
                         </div>
                     </div>
+
+                    {{-- Tenant default login layout (merchant overrides override this) --}}
+                    <div class="gs-row">
+                        <div class="form-group">
+                            <label for="login_layout">{{ __('merchant.login_layout') }}</label>
+                            <select id="login_layout" name="login_layout" class="form-control">
+                                @foreach(['split','centered','fullbleed'] as $opt)
+                                    <option value="{{ $opt }}" @selected(old('login_layout', settings()->login_layout ?? 'split') === $opt)>
+                                        {{ __('merchant.login_layout_'.$opt) }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted">{{ __('merchant.login_layout_help') }}</small>
+                        </div>
+                    </div>
                 </section>
 
                 {{-- LOGOS --}}

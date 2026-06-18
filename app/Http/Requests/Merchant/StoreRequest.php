@@ -44,6 +44,7 @@ class StoreRequest extends FormRequest
             'font_family'           => ['nullable','in:inter,cairo,tajawal,roboto,system'],
             'border_radius'         => ['nullable','in:sharp,default,rounded'],
             'density'               => ['nullable','in:dense,comfortable'],
+            'login_layout'          => ['nullable','in:split,centered,fullbleed'],
             'logo'                  => ['nullable','image','mimes:jpg,jpeg,png,webp,svg','max:2048'],
             'light_logo'            => ['nullable','image','mimes:jpg,jpeg,png,webp,svg','max:2048'],
             'favicon'               => ['nullable','image','mimes:jpg,jpeg,png,webp,svg,ico','max:512'],

@@ -52,9 +52,20 @@
     </div>
 
     <div class="w-full max-w-md">
-      {{-- Logo --}}
+      {{-- Logo (prefers the resolved login brand — tenant by default, merchant override when /login/{slug}) --}}
+      @php
+        $__lb       = $loginBrand ?? loginBrand();
+        $__lbName   = $__lb['name'] ?? config('app.name', 'Rushly');
+        $__lbLogo   = $__lb['logo'] ?? null;
+      @endphp
       <a href="{{ url('/') }}" class="inline-block">
-        <img src="{{ @settings()->logo_image }}" alt="{{ @settings()->name }}" class="h-10 w-auto" />
+        @if($__lbLogo)
+          <img src="{{ $__lbLogo }}" alt="{{ $__lbName }}" class="h-10 w-auto" />
+        @else
+          <span class="inline-grid place-items-center h-10 w-10 rounded-lg text-white font-bold text-lg" style="background: var(--primary);">
+            {{ strtoupper(mb_substr($__lbName, 0, 1)) }}
+          </span>
+        @endif
       </a>
 
       {{-- Heading --}}
@@ -62,7 +73,7 @@
         @if($isTenant)
           {{ __('levels.welcome_back') }}
         @else
-          {{ __('levels.sign_in_to') }} <span class="gradient-text">{{ @settings()->name }}</span>
+          {{ __('levels.sign_in_to') }} <span class="gradient-text">{{ $__lbName }}</span>
         @endif
       </h1>
       <p class="mt-3 text-base text-gray-500">

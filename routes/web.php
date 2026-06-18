@@ -168,6 +168,12 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
             CompanyActivationMiddleware::class
         ])->group(function () {
 
+            // Branded login: /login/{merchant_unique_id} pre-overlays that merchant's
+            // brand on the otherwise tenant-branded login screen. Registered BEFORE
+            // Auth::routes() so /login (no slug) still hits the framework default.
+            Route::get('/login/{slug}', [\App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])
+                ->middleware('guest')
+                ->name('login.branded');
             Auth::routes();
             //frontend
             Route::controller(FrontendController::class)->group(function () {

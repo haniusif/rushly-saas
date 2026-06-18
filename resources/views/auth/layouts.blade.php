@@ -1,31 +1,56 @@
 <!DOCTYPE html>
+@php
+    // Resolve brand for the pre-auth screens. Defaults to tenant; merchant-branded login
+    // pages pass an overlay via LoginController::showLoginForm($slug).
+    $__loginBrand   = $loginBrand ?? loginBrand();
+    $__brandName    = $__loginBrand['name'] ?? config('app.name', 'Rushly');
+    $__brandFavicon = $__loginBrand['favicon'] ?? null;
+    $__brandPrimary = $__loginBrand['primary_color'] ?? '#a21f5c';
+    $__brandText    = $__loginBrand['text_color'] ?? '#ffffff';
+    // Gradient endpoint: prefer accent_color, else darken primary 25% by mixing with black.
+    $__brandAccent  = $__loginBrand['accent_color'] ?? '#29245a';
+    // Tint for backgrounds (#xxxRGB → rgba alpha=0.12).
+    $hex2rgb = function ($h) {
+        $h = ltrim($h, '#');
+        if (strlen($h) === 3) $h = $h[0].$h[0].$h[1].$h[1].$h[2].$h[2];
+        return strlen($h) === 6 ? [hexdec(substr($h,0,2)), hexdec(substr($h,2,2)), hexdec(substr($h,4,2))] : [162,31,92];
+    };
+    [$pr,$pg,$pb] = $hex2rgb($__brandPrimary);
+    $__brandPrimaryLight = "rgba({$pr},{$pg},{$pb},0.10)";
+@endphp
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="ltr">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <meta name="description" content="Rushly - Smart Logistics Management Platform"/>
+    <meta name="description" content="{{ $__brandName }} portal"/>
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title') - Rushly</title>
-    
+    <meta name="theme-color" content="{{ $__brandPrimary }}">
+    <title>@yield('title') - {{ $__brandName }}</title>
+    @if($__brandFavicon)
+        <link rel="icon" type="image/png" href="{{ $__brandFavicon }}">
+        <link rel="apple-touch-icon" href="{{ $__brandFavicon }}">
+    @endif
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Tailwind Config -->
+
+    <!-- Tailwind Config — primary/secondary fed from $__loginBrand so each tenant's
+         login uses their colors. Tailwind reads these at config-eval time. -->
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        primary: '#a21f5c',
-                        secondary: '#29245a',
+                        primary: '{{ $__brandPrimary }}',
+                        secondary: '{{ $__brandAccent }}',
                         accent: '#0F172A',
                         'surface': '#F8FAFC',
-                        'primary-light': '#f0e6ee',
+                        'primary-light': '{{ $__brandPrimaryLight }}',
                         'secondary-light': '#3d356b'
                     },
                     fontFamily: {
@@ -36,14 +61,14 @@
             }
         }
     </script>
-    
+
     @stack('styles')
-    
+
     <style>
         :root {
-            --primary: #a21f5c;
-            --secondary: #29245a;
-            --primary-light: #f0e6ee;
+            --primary: {{ $__brandPrimary }};
+            --secondary: {{ $__brandAccent }};
+            --primary-light: {{ $__brandPrimaryLight }};
             --text-dark: #0F172A;
             --text-gray: #64748B;
             --border-color: #E2E8F0;
@@ -72,11 +97,11 @@
         }
 
         .gradient-primary {
-            background: linear-gradient(135deg, #a21f5c 0%, #29245a 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
         }
 
         .gradient-text {
-            background: linear-gradient(135deg, #a21f5c 0%, #29245a 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;

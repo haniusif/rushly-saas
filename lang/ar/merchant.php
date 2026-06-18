@@ -195,6 +195,14 @@ return array (
   'change_password'              => 'تغيير كلمة المرور',
   'logout'                       => 'تسجيل الخروج',
   'logout_confirm'               => 'هل تريد تسجيل الخروج؟',
+
+  // Tenant + per-merchant login layout picker
+  'login_layout'                 => 'تخطيط صفحة الدخول',
+  'login_layout_help'            => 'التخطيط الافتراضي لصفحة /login. يمكن لكل تاجر تخصيصه برابطه الخاص.',
+  'login_layout_help_merchant'   => 'التخطيط المستخدم عند فتح رابط الدخول الخاص بهذا التاجر. يرث الإعداد الافتراضي عند تركه فارغًا.',
+  'login_layout_split'           => 'مقسوم (نموذج يسار، تدرّج يمين)',
+  'login_layout_centered'        => 'بطاقة متمركزة',
+  'login_layout_fullbleed'       => 'خلفية ملونة كاملة',
   'sidebar_color'                => 'لون القائمة الجانبية',
   'sidebar_text_color'           => 'لون نص القائمة الجانبية',
   'topbar_color'                 => 'لون الشريط العلوي',

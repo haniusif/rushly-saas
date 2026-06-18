@@ -119,6 +119,26 @@ class LoginController extends Controller
         return redirect()->route('login');
     }
 
+    /**
+     * Branded login screen. Without a slug the view shows the tenant brand; with a
+     * slug matching a `merchant_unique_id` it overlays that merchant's colors/logo
+     * pre-auth so admins can hand out merchant-branded login URLs.
+     */
+    public function showLoginForm(?string $slug = null)
+    {
+        $brand = loginBrand($slug);
+        $layout = $brand['login_layout'] ?? 'split';
+        $view = match ($layout) {
+            'centered'  => 'auth.login-centered',
+            'fullbleed' => 'auth.login-fullbleed',
+            default     => 'auth.login',
+        };
+        return view($view, [
+            'loginBrand' => $brand,
+            'loginSlug'  => $slug,
+        ]);
+    }
+
     protected function credentials(Request $request)
     {
          

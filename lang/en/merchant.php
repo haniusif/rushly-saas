@@ -196,6 +196,14 @@ return array (
   'change_password'              => 'Change password',
   'logout'                       => 'Sign out',
   'logout_confirm'               => 'Sign out of this portal?',
+
+  // Tenant + per-merchant login layout picker
+  'login_layout'                 => 'Login page layout',
+  'login_layout_help'            => 'Default layout for /login. Merchants can override this for their branded login URL.',
+  'login_layout_help_merchant'   => 'Layout used when this merchant\'s branded login URL is visited. Inherits the tenant default when blank.',
+  'login_layout_split'           => 'Split (form left, gradient right)',
+  'login_layout_centered'        => 'Centered card',
+  'login_layout_fullbleed'       => 'Full-bleed brand background',
   'sidebar_color'                => 'Sidebar background',
   'sidebar_text_color'           => 'Sidebar text',
   'topbar_color'                 => 'Topbar background',

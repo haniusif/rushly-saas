@@ -332,6 +332,15 @@
                                 @endforeach
                             </select>
                         </div>
+                        <div class="form-group">
+                            <label for="login_layout">{{ __('merchant.login_layout') }}</label>
+                            <select id="login_layout" name="login_layout" class="form-control rl-theme-select">
+                                <option value="">{{ __('merchant.theme_inherit') }}</option>
+                                @foreach(['split','centered','fullbleed'] as $k)
+                                    <option value="{{ $k }}" @selected(old('login_layout') === $k)>{{ __('merchant.login_layout_'.$k) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
 
                     <h5 class="mt-3" style="font-size:13px;color:#475467;font-weight:600">{{ __('merchant.theme_section_logos') }}</h5>

@@ -116,6 +116,48 @@ if(!function_exists('settings')){
     }
 }
 
+if(!function_exists('loginBrand')){
+    /**
+     * Resolve the brand for the pre-auth login screen. Defaults to the tenant brand;
+     * when `$slug` is provided and matches a `merchants.merchant_unique_id`, that
+     * merchant's overrides are overlaid so admins can hand out branded login URLs
+     * like /login/246981 that show the merchant's colors/logo before sign-in.
+     */
+    function loginBrand(?string $slug = null): ?array {
+        $tenantBrand = merchantBrand(); // base = tenant
+        if (! $tenantBrand) return null;
+
+        // Tenant default for `login_layout` comes from general_settings.
+        try {
+            $s = settings();
+            $tenantBrand['login_layout'] = $s->login_layout ?? null;
+        } catch (\Throwable $e) {
+            $tenantBrand['login_layout'] = null;
+        }
+
+        if (! $slug) return $tenantBrand;
+
+        $merchant = \App\Models\Backend\Merchant::where('merchant_unique_id', $slug)->first();
+        if (! $merchant) return $tenantBrand;
+
+        $tenantBrand['name']               = $merchant->business_name ?: $tenantBrand['name'];
+        $tenantBrand['primary_color']      = $merchant->primary_color ?: $tenantBrand['primary_color'];
+        $tenantBrand['text_color']         = $merchant->text_color    ?: $tenantBrand['text_color'];
+        $tenantBrand['sidebar_color']      = $merchant->sidebar_color;
+        $tenantBrand['sidebar_text_color'] = $merchant->sidebar_text_color;
+        $tenantBrand['topbar_color']       = $merchant->topbar_color;
+        $tenantBrand['topbar_text_color']  = $merchant->topbar_text_color;
+        $tenantBrand['accent_color']       = $merchant->accent_color;
+        $tenantBrand['font_family']        = $merchant->font_family;
+        // Merchant override wins over tenant default.
+        $tenantBrand['login_layout']       = $merchant->login_layout ?: $tenantBrand['login_layout'];
+        if ($merchant->logo_url)       $tenantBrand['logo']       = $merchant->logo_url;
+        if ($merchant->light_logo_url) $tenantBrand['light_logo'] = $merchant->light_logo_url;
+        if ($merchant->favicon_url)    $tenantBrand['favicon']    = $merchant->favicon_url;
+        return $tenantBrand;
+    }
+}
+
 if(!function_exists('merchantBrand')){
     /**
      * Resolve the brand palette + assets for the current request: start from the tenant's

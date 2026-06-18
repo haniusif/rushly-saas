@@ -1,6 +1,6 @@
 @extends('backend.partials.master')
 @section('title')
-    {{ __('Abnormal Shipments') }} — {{ __('Settings') }}
+    {{ __('abnormal.title') }} — {{ __('settings.title') }}
 @endsection
 
 @push('styles')
@@ -25,8 +25,8 @@
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item"><a href="{{ route('dashboard.index') }}" class="breadcrumb-link">{{ __('levels.dashboard') }}</a></li>
-                            <li class="breadcrumb-item"><a href="{{ route('abnormal.index') }}" class="breadcrumb-link">{{ __('Abnormal Shipments') }}</a></li>
-                            <li class="breadcrumb-item active">{{ __('Settings') }}</li>
+                            <li class="breadcrumb-item"><a href="{{ route('abnormal.index') }}" class="breadcrumb-link">{{ __('abnormal.title') }}</a></li>
+                            <li class="breadcrumb-item active">{{ __('settings.title') }}</li>
                         </ol>
                     </nav>
                 </div>
@@ -40,10 +40,10 @@
                 @csrf @method('PUT')
 
                 <div class="card mb-3">
-                    <div class="card-header"><h6 class="mb-0">{{ __('Detection') }}</h6></div>
+                    <div class="card-header"><h6 class="mb-0">{{ __('abnormal.detection') }}</h6></div>
                     <div class="card-body">
                         <div class="form-group mb-3">
-                            <label class="d-block small text-muted">{{ __('Flag a shipment as abnormal after no activity for…') }}</label>
+                            <label class="d-block small text-muted">{{ __('abnormal.detection_after_inactivity') }}</label>
                             <div class="pill-radio">
                                 @foreach ([1,2,3,4,5,7] as $d)
                                     <label>
@@ -55,11 +55,11 @@
                                     <input type="number" name="threshold_days" min="1" max="60" class="form-control form-control-sm d-inline" style="width:70px;display:inline-block;margin-left:6px;" value="{{ $config['threshold_days'] }}" />
                                 </label>
                             </div>
-                            <small class="text-muted">{{ __('Default: 3 days') }}</small>
+                            <small class="text-muted">{{ __('abnormal.default_3_days') }}</small>
                         </div>
 
                         <div class="form-group mb-0">
-                            <label class="d-block small text-muted">{{ __('Auto-escalation threshold') }}</label>
+                            <label class="d-block small text-muted">{{ __('abnormal.auto_escalation_threshold') }}</label>
                             <div class="pill-radio">
                                 @foreach ([5,7,10,14] as $d)
                                     <label>
@@ -71,42 +71,42 @@
                                     <input type="number" name="auto_escalation_days" min="1" max="60" class="form-control form-control-sm d-inline" style="width:70px;display:inline-block;margin-left:6px;" value="{{ $config['auto_escalation_days'] }}" />
                                 </label>
                             </div>
-                            <small class="text-muted">{{ __('When stale_days hits this, push notify company admins.') }}</small>
+                            <small class="text-muted">{{ __('abnormal.auto_escalation_hint') }}</small>
                         </div>
                     </div>
                 </div>
 
                 <div class="card mb-3">
-                    <div class="card-header"><h6 class="mb-0">{{ __('Exclude from detection') }}</h6></div>
+                    <div class="card-header"><h6 class="mb-0">{{ __('abnormal.exclude_from_detection') }}</h6></div>
                     <div class="card-body">
                         <div class="switch-row">
-                            <label for="ex_h">{{ __('Public holidays') }} <small class="text-muted d-block">{{ __('Days marked as holiday do not count toward stale_days.') }}</small></label>
+                            <label for="ex_h">{{ __('abnormal.public_holidays') }} <small class="text-muted d-block">{{ __('abnormal.public_holidays_hint') }}</small></label>
                             <input type="checkbox" id="ex_h" name="exclude_holidays"  {{ $config['exclude_holidays']  ? 'checked' : '' }} />
                         </div>
                         <div class="switch-row">
-                            <label for="ex_c">{{ __('Pending customs clearance') }} <small class="text-muted d-block">{{ __('Held at customs is not abnormal.') }}</small></label>
+                            <label for="ex_c">{{ __('abnormal.pending_customs') }} <small class="text-muted d-block">{{ __('abnormal.pending_customs_hint') }}</small></label>
                             <input type="checkbox" id="ex_c" name="exclude_customs"   {{ $config['exclude_customs']   ? 'checked' : '' }} />
                         </div>
                         <div class="switch-row">
-                            <label for="ex_o">{{ __('On hold by sender request') }} <small class="text-muted d-block">{{ __('Merchant explicitly paused the shipment.') }}</small></label>
+                            <label for="ex_o">{{ __('abnormal.sender_hold') }} <small class="text-muted d-block">{{ __('abnormal.sender_hold_hint') }}</small></label>
                             <input type="checkbox" id="ex_o" name="exclude_on_hold"   {{ $config['exclude_on_hold']   ? 'checked' : '' }} />
                         </div>
                     </div>
                 </div>
 
                 <div class="card mb-3">
-                    <div class="card-header"><h6 class="mb-0">{{ __('Notifications') }}</h6></div>
+                    <div class="card-header"><h6 class="mb-0">{{ __('abnormal.notifications') }}</h6></div>
                     <div class="card-body">
                         <div class="switch-row">
-                            <label for="dd">{{ __('Daily digest at 8:00 AM') }} <small class="text-muted d-block">{{ __('Push notification to supervisors summarising all open abnormals.') }}</small></label>
+                            <label for="dd">{{ __('abnormal.daily_digest_8am') }} <small class="text-muted d-block">{{ __('abnormal.daily_digest_hint') }}</small></label>
                             <input type="checkbox" id="dd" name="daily_digest_enabled" {{ $config['daily_digest_enabled'] ? 'checked' : '' }} />
                         </div>
                     </div>
                 </div>
 
                 <div class="d-flex">
-                    <a href="{{ route('abnormal.index') }}" class="btn btn-light">{{ __('Cancel') }}</a>
-                    <button class="btn btn-primary ml-auto">{{ __('Save Settings') }}</button>
+                    <a href="{{ route('abnormal.index') }}" class="btn btn-light">{{ __('levels.cancel') }}</a>
+                    <button class="btn btn-primary ml-auto">{{ __('abnormal.save_settings') }}</button>
                 </div>
             </form>
         </div>

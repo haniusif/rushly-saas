@@ -1,6 +1,6 @@
 @extends('backend.partials.master')
 @section('title')
-    {{ __('NDR') }} #{{ $ndr->id }}
+    {{ __('ndr.title') }} #{{ $ndr->id }}
 @endsection
 
 @push('styles')
@@ -32,7 +32,7 @@
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item"><a href="{{ route('dashboard.index') }}" class="breadcrumb-link">{{ __('levels.dashboard') }}</a></li>
-                            <li class="breadcrumb-item"><a href="{{ route('ndr.index') }}" class="breadcrumb-link">{{ __('NDR') }}</a></li>
+                            <li class="breadcrumb-item"><a href="{{ route('ndr.index') }}" class="breadcrumb-link">{{ __('ndr.title') }}</a></li>
                             <li class="breadcrumb-item active">#{{ $ndr->id }}</li>
                         </ol>
                     </nav>
@@ -46,36 +46,36 @@
         <div class="col-lg-7">
             <div class="card mb-3">
                 <div class="card-header d-flex align-items-center justify-content-between">
-                    <h5 class="mb-0">{{ __('NDR') }} #{{ $ndr->id }}</h5>
+                    <h5 class="mb-0">{{ __('ndr.title') }} #{{ $ndr->id }}</h5>
                     <div>
-                        <span class="attempt-badge att-{{ (int) $ndr->attempt_number }}">{{ __('Attempt') }} {{ $ndr->attempt_number }}/3</span>
+                        <span class="attempt-badge att-{{ (int) $ndr->attempt_number }}">{{ __('ndr.attempt') }} {{ $ndr->attempt_number }}/3</span>
                         <span class="nstatus ns-{{ $ndr->status }} ml-1">{{ ucwords(str_replace('_',' ',$ndr->status)) }}</span>
                     </div>
                 </div>
                 <div class="card-body">
-                    <h6 class="text-uppercase text-muted small">{{ __('Parcel') }}</h6>
+                    <h6 class="text-uppercase text-muted small">{{ __('ndr.parcel') }}</h6>
                     <dl class="m-0">
-                        <div class="info-row"><dt>{{ __('Tracking ID') }}</dt><dd>{{ optional($ndr->parcel)->tracking_id }}</dd></div>
-                        <div class="info-row"><dt>{{ __('Merchant') }}</dt><dd>{{ optional($ndr->parcel?->merchant)->business_name ?? '—' }}</dd></div>
-                        <div class="info-row"><dt>{{ __('Customer') }}</dt><dd>{{ optional($ndr->parcel)->customer_name ?? '—' }}</dd></div>
-                        <div class="info-row"><dt>{{ __('Phone') }}</dt><dd>{{ optional($ndr->parcel)->customer_phone ?? '—' }}</dd></div>
-                        <div class="info-row"><dt>{{ __('Address') }}</dt><dd>{{ optional($ndr->parcel)->customer_address ?? '—' }}</dd></div>
-                        <div class="info-row"><dt>{{ __('Cash Collection') }}</dt><dd>{{ number_format((float) (optional($ndr->parcel)->cash_collection ?? 0), 2) }}</dd></div>
+                        <div class="info-row"><dt>{{ __('ndr.tracking_id') }}</dt><dd>{{ optional($ndr->parcel)->tracking_id }}</dd></div>
+                        <div class="info-row"><dt>{{ __('levels.merchant') }}</dt><dd>{{ optional($ndr->parcel?->merchant)->business_name ?? '—' }}</dd></div>
+                        <div class="info-row"><dt>{{ __('levels.customer') }}</dt><dd>{{ optional($ndr->parcel)->customer_name ?? '—' }}</dd></div>
+                        <div class="info-row"><dt>{{ __('levels.phone') }}</dt><dd>{{ optional($ndr->parcel)->customer_phone ?? '—' }}</dd></div>
+                        <div class="info-row"><dt>{{ __('levels.address') }}</dt><dd>{{ optional($ndr->parcel)->customer_address ?? '—' }}</dd></div>
+                        <div class="info-row"><dt>{{ __('ndr.cash_collection') }}</dt><dd>{{ number_format((float) (optional($ndr->parcel)->cash_collection ?? 0), 2) }}</dd></div>
                     </dl>
 
-                    <h6 class="text-uppercase text-muted small mt-4">{{ __('Failure') }}</h6>
+                    <h6 class="text-uppercase text-muted small mt-4">{{ __('ndr.failure') }}</h6>
                     <dl class="m-0">
-                        <div class="info-row"><dt>{{ __('Reason') }}</dt><dd><strong>{{ ucwords(str_replace('_',' ',$ndr->failure_reason)) }}</strong></dd></div>
-                        <div class="info-row"><dt>{{ __('Deliveryman') }}</dt><dd>{{ optional($ndr->deliveryman)->name ?? '—' }}</dd></div>
-                        <div class="info-row"><dt>{{ __('Created By') }}</dt><dd>{{ optional($ndr->createdBy)->name ?? '—' }} <small class="text-muted">{{ $ndr->created_at?->diffForHumans() }}</small></dd></div>
+                        <div class="info-row"><dt>{{ __('ndr.reason') }}</dt><dd><strong>{{ ucwords(str_replace('_',' ',$ndr->failure_reason)) }}</strong></dd></div>
+                        <div class="info-row"><dt>{{ __('levels.deliveryman') }}</dt><dd>{{ optional($ndr->deliveryman)->name ?? '—' }}</dd></div>
+                        <div class="info-row"><dt>{{ __('ndr.created_by') }}</dt><dd>{{ optional($ndr->createdBy)->name ?? '—' }} <small class="text-muted">{{ $ndr->created_at?->diffForHumans() }}</small></dd></div>
                         @if ($ndr->next_attempt_date)
-                            <div class="info-row"><dt>{{ __('Next Attempt') }}</dt><dd>{{ $ndr->next_attempt_date->format('Y-m-d') }}</dd></div>
+                            <div class="info-row"><dt>{{ __('ndr.next_attempt') }}</dt><dd>{{ $ndr->next_attempt_date->format('Y-m-d') }}</dd></div>
                         @endif
                         @if ($ndr->driver_notes)
-                            <div class="info-row"><dt>{{ __('Driver Notes') }}</dt><dd>{{ $ndr->driver_notes }}</dd></div>
+                            <div class="info-row"><dt>{{ __('ndr.driver_notes') }}</dt><dd>{{ $ndr->driver_notes }}</dd></div>
                         @endif
                         @if ($ndr->driver_photo)
-                            <div class="info-row"><dt>{{ __('Driver Photo') }}</dt><dd><a href="{{ url($ndr->driver_photo) }}" target="_blank"><img src="{{ url($ndr->driver_photo) }}" style="max-width:220px;border-radius:8px;" /></a></dd></div>
+                            <div class="info-row"><dt>{{ __('ndr.driver_photo') }}</dt><dd><a href="{{ url($ndr->driver_photo) }}" target="_blank"><img src="{{ url($ndr->driver_photo) }}" style="max-width:220px;border-radius:8px;" /></a></dd></div>
                         @endif
                     </dl>
                 </div>
@@ -86,28 +86,28 @@
         <div class="col-lg-5">
             @if ($ndr->status !== 'resolved' && $ndr->status !== 'returned')
                 <div class="card mb-3">
-                    <div class="card-header"><h6 class="mb-0">{{ __('Take Action') }}</h6></div>
+                    <div class="card-header"><h6 class="mb-0">{{ __('ndr.take_action') }}</h6></div>
                     <div class="card-body">
                         <form method="POST" action="{{ route('ndr.action', $ndr->id) }}">
                             @csrf @method('PUT')
                             <div class="form-group">
-                                <label class="d-block mb-2">{{ __('Action') }}</label>
+                                <label class="d-block mb-2">{{ __('ndr.action') }}</label>
                                 <select name="action_taken" class="form-control" id="actionSelect" required>
-                                    <option value="">{{ __('Choose action…') }}</option>
-                                    <option value="reschedule">{{ __('Reschedule (set next attempt)') }}</option>
-                                    <option value="return_to_merchant">{{ __('Return to Merchant') }}</option>
-                                    <option value="transfer_hub">{{ __('Transfer to Hub') }}</option>
-                                    <option value="escalate">{{ __('Escalate to supervisor') }}</option>
+                                    <option value="">{{ __('ndr.choose_action') }}</option>
+                                    <option value="reschedule">{{ __('ndr.reschedule_action') }}</option>
+                                    <option value="return_to_merchant">{{ __('ndr.return_to_merchant_action') }}</option>
+                                    <option value="transfer_hub">{{ __('ndr.transfer_hub_action') }}</option>
+                                    <option value="escalate">{{ __('ndr.escalate_action') }}</option>
                                 </select>
                             </div>
 
                             <div class="form-group d-none" id="dateGroup">
-                                <label>{{ __('Next attempt date') }}</label>
+                                <label>{{ __('ndr.next_attempt_date') }}</label>
                                 <input type="date" name="next_attempt_date" class="form-control" />
                             </div>
 
                             <div class="form-group d-none" id="hubGroup">
-                                <label>{{ __('Target hub') }}</label>
+                                <label>{{ __('ndr.target_hub') }}</label>
                                 <select name="hub_id" class="form-control">
                                     <option value="">—</option>
                                     @foreach ($hubs as $hub)
@@ -116,34 +116,34 @@
                                 </select>
                             </div>
 
-                            <button class="btn btn-primary btn-block" type="submit">{{ __('Apply Action') }}</button>
+                            <button class="btn btn-primary btn-block" type="submit">{{ __('ndr.apply_action') }}</button>
                         </form>
                     </div>
                 </div>
 
                 <form method="POST" action="{{ route('ndr.resolve', $ndr->id) }}" class="mb-3">
                     @csrf @method('PUT')
-                    <button class="btn btn-success btn-block">{{ __('Mark Resolved') }}</button>
+                    <button class="btn btn-success btn-block">{{ __('ndr.mark_resolved') }}</button>
                 </form>
             @endif
 
             <div class="card">
-                <div class="card-header"><h6 class="mb-0">{{ __('History') }}</h6></div>
+                <div class="card-header"><h6 class="mb-0">{{ __('ndr.history') }}</h6></div>
                 <div class="card-body">
                     <div class="timeline">
                         <div class="tl-item">
-                            <strong>{{ __('NDR created') }}</strong>
+                            <strong>{{ __('ndr.ndr_created') }}</strong>
                             <div class="small text-muted">{{ $ndr->created_at?->toDateTimeString() }} — {{ optional($ndr->createdBy)->name }}</div>
                         </div>
                         @if ($ndr->action_taken)
                             <div class="tl-item">
-                                <strong>{{ __('Action') }}: {{ ucwords(str_replace('_',' ',$ndr->action_taken)) }}</strong>
+                                <strong>{{ __('ndr.action') }}: {{ ucwords(str_replace('_',' ',$ndr->action_taken)) }}</strong>
                                 <div class="small text-muted">{{ $ndr->updated_at?->toDateTimeString() }}</div>
                             </div>
                         @endif
                         @if ($ndr->resolved_at)
                             <div class="tl-item">
-                                <strong>{{ __('Resolved') }}</strong>
+                                <strong>{{ __('ndr.resolved') }}</strong>
                                 <div class="small text-muted">{{ $ndr->resolved_at?->toDateTimeString() }} — {{ optional($ndr->resolvedBy)->name }}</div>
                             </div>
                         @endif

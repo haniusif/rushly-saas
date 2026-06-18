@@ -85,7 +85,7 @@
                                     <th>{{ __('levels.id') }}</th>
                                     <th>{{ __('levels.category') }}</th>
                                     <th>{{ __('levels.weight') }}</th>
-                                    <th>{{ __('Extra weight') }}</th>
+                                    <th>{{ __('levels.extra_weight') }}</th>
                                     
                                     <th>{{ __('levels.position') }}</th>
                                     <th>{{ __('levels.status') }}</th>
@@ -144,7 +144,7 @@
                 <div class="px-3 d-flex flex-row-reverse align-items-center">
                     <span>{{ $delivery_charges->links() }}</span>
                     <p class="p-2 small">
-                        {!! __('Showing') !!}
+                        {!! __('levels.showing') !!}
                         <span class="font-medium">{{ $delivery_charges->firstItem() }}</span>
                         {!! __('to') !!}
                         <span class="font-medium">{{ $delivery_charges->lastItem() }}</span>

@@ -214,7 +214,7 @@
                     <div class="table-responsive">
                         <span>{{ $data['parcels']->links() }}</span>
                         <p class="p-2 small">
-                            {!! __('Showing') !!}
+                            {!! __('levels.showing') !!}
                             <span class="font-medium">{{ $data['parcels']->firstItem() }}</span>
                             {!! __('to') !!}
                             <span class="font-medium">{{ $data['parcels']->lastItem() }}</span>

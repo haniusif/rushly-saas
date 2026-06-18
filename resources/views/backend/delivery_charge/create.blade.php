@@ -58,8 +58,8 @@
                                 
                                 
                                   <div class="form-group" id="extra_weight_price">
-                                    <label for="extra_weight_price">{{ __('Extra weight price') }}</label> <span class="text-danger">*</span>
-                                    <input id="extra_weight_price" type="number" name="extra_weight_price" step="0.1" min="0"  placeholder="{{ __('Extra weight price') }}"   class="form-control" value="{{old('extra_weight_price')}}" >
+                                    <label for="extra_weight_price">{{ __('levels.extra_weight_price') }}</label> <span class="text-danger">*</span>
+                                    <input id="extra_weight_price" type="number" name="extra_weight_price" step="0.1" min="0"  placeholder="{{ __('levels.extra_weight_price') }}"   class="form-control" value="{{old('extra_weight_price')}}" >
                                     @error('extra_weight_price')
                                         <small class="text-danger mt-2">{{ $message }}</small>
                                     @enderror

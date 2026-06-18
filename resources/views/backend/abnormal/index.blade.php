@@ -1,6 +1,6 @@
 @extends('backend.partials.master')
 @section('title')
-    {{ __('Abnormal Shipments') }}
+    {{ __('abnormal.title') }}
 @endsection
 
 @push('styles')
@@ -37,11 +37,11 @@
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item"><a href="{{ route('dashboard.index') }}" class="breadcrumb-link">{{ __('levels.dashboard') }}</a></li>
-                            <li class="breadcrumb-item active">{{ __('Abnormal Shipments') }}</li>
+                            <li class="breadcrumb-item active">{{ __('abnormal.title') }}</li>
                         </ol>
                     </nav>
                 </div>
-                <a href="{{ route('abnormal.settings') }}" class="btn btn-sm btn-outline-secondary">⚙ {{ __('Settings') }}</a>
+                <a href="{{ route('abnormal.settings') }}" class="btn btn-sm btn-outline-secondary">⚙ {{ __('settings.title') }}</a>
             </div>
         </div>
     </div>
@@ -49,16 +49,16 @@
     {{-- ===== Summary cards ===== --}}
     <div class="row mb-3">
         <div class="col-md-3 col-sm-6 mb-2">
-            <div class="sev-card sc-warn"><div class="num">{{ $summary['stalled_3'] }}</div><div class="lbl">{{ __('Stalled 3+ days') }}</div></div>
+            <div class="sev-card sc-warn"><div class="num">{{ $summary['stalled_3'] }}</div><div class="lbl">{{ __('abnormal.stalled_3_days') }}</div></div>
         </div>
         <div class="col-md-3 col-sm-6 mb-2">
-            <div class="sev-card sc-dang"><div class="num">{{ $summary['stalled_5'] }}</div><div class="lbl">{{ __('Stalled 5+ days') }}</div></div>
+            <div class="sev-card sc-dang"><div class="num">{{ $summary['stalled_5'] }}</div><div class="lbl">{{ __('abnormal.stalled_5_days') }}</div></div>
         </div>
         <div class="col-md-3 col-sm-6 mb-2">
-            <div class="sev-card sc-crit"><div class="num">{{ $summary['stalled_7'] }}</div><div class="lbl">{{ __('Stalled 7+ days (critical)') }}</div></div>
+            <div class="sev-card sc-crit"><div class="num">{{ $summary['stalled_7'] }}</div><div class="lbl">{{ __('abnormal.stalled_7_days_critical') }}</div></div>
         </div>
         <div class="col-md-3 col-sm-6 mb-2">
-            <div class="sev-card sc-lost"><div class="num">{{ $summary['closed_lost'] }}</div><div class="lbl">{{ __('Closed as Lost') }}</div></div>
+            <div class="sev-card sc-lost"><div class="num">{{ $summary['closed_lost'] }}</div><div class="lbl">{{ __('abnormal.closed_as_lost') }}</div></div>
         </div>
     </div>
 
@@ -68,36 +68,36 @@
             <div class="card mb-3">
                 <div class="card-body py-3">
                     <form method="GET" class="form-inline">
-                        <label class="mr-2 mb-1 text-muted small">{{ __('Duration') }}:</label>
+                        <label class="mr-2 mb-1 text-muted small">{{ __('abnormal.duration') }}:</label>
                         <select name="min_days" class="form-control form-control-sm mr-2 mb-1">
-                            <option value="">{{ __('All') }}</option>
+                            <option value="">{{ __('levels.all') }}</option>
                             <option value="3" {{ request('min_days')=='3' ? 'selected' : '' }}>3+</option>
                             <option value="5" {{ request('min_days')=='5' ? 'selected' : '' }}>5+</option>
                             <option value="7" {{ request('min_days')=='7' ? 'selected' : '' }}>7+</option>
                         </select>
                         <select name="severity" class="form-control form-control-sm mr-2 mb-1">
-                            <option value="">{{ __('Any severity') }}</option>
+                            <option value="">{{ __('abnormal.any_severity') }}</option>
                             <option value="warning"  {{ request('severity')=='warning'  ? 'selected' : '' }}>Warning</option>
                             <option value="danger"   {{ request('severity')=='danger'   ? 'selected' : '' }}>Danger</option>
                             <option value="critical" {{ request('severity')=='critical' ? 'selected' : '' }}>Critical</option>
                         </select>
                         <select name="status" class="form-control form-control-sm mr-2 mb-1">
-                            <option value="">{{ __('All status') }}</option>
+                            <option value="">{{ __('ndr.all_status') }}</option>
                             @foreach (['open','investigating','resolved','closed_lost'] as $s)
                                 <option value="{{ $s }}" {{ request('status')==$s ? 'selected' : '' }}>{{ ucwords(str_replace('_',' ',$s)) }}</option>
                             @endforeach
                         </select>
                         <select name="assigned_to" class="form-control form-control-sm mr-2 mb-1">
-                            <option value="">{{ __('Any investigator') }}</option>
+                            <option value="">{{ __('abnormal.any_investigator') }}</option>
                             @foreach ($deliverymans as $dm)
                                 <option value="{{ $dm->user_id ?? $dm->id }}" {{ request('assigned_to')==($dm->user_id ?? $dm->id) ? 'selected' : '' }}>
                                     {{ $dm->user->name ?? $dm->name ?? ('#'.$dm->id) }}
                                 </option>
                             @endforeach
                         </select>
-                        <button class="btn btn-sm btn-primary mr-2 mb-1">{{ __('Filter') }}</button>
-                        <a href="{{ route('abnormal.index') }}" class="btn btn-sm btn-light mb-1">{{ __('Clear') }}</a>
-                        <span class="ml-auto small text-muted mb-1">{{ __('Detection threshold') }}: <strong>{{ $threshold }} {{ __('days') }}</strong></span>
+                        <button class="btn btn-sm btn-primary mr-2 mb-1">{{ __('levels.filter') }}</button>
+                        <a href="{{ route('abnormal.index') }}" class="btn btn-sm btn-light mb-1">{{ __('levels.clear') }}</a>
+                        <span class="ml-auto small text-muted mb-1">{{ __('abnormal.detection_threshold') }}: <strong>{{ $threshold }} {{ __('abnormal.days') }}</strong></span>
                     </form>
                 </div>
             </div>
@@ -114,13 +114,13 @@
                             <thead class="thead-light">
                                 <tr>
                                     <th>#</th>
-                                    <th>{{ __('Tracking') }}</th>
-                                    <th>{{ __('Customer') }}</th>
-                                    <th>{{ __('Last Event') }}</th>
-                                    <th class="text-center">{{ __('Stale Days') }}</th>
-                                    <th>{{ __('Severity') }}</th>
-                                    <th>{{ __('Status') }}</th>
-                                    <th class="text-right pr-3">{{ __('Actions') }}</th>
+                                    <th>{{ __('levels.tracking') }}</th>
+                                    <th>{{ __('levels.customer') }}</th>
+                                    <th>{{ __('abnormal.last_event') }}</th>
+                                    <th class="text-center">{{ __('abnormal.stale_days') }}</th>
+                                    <th>{{ __('abnormal.severity') }}</th>
+                                    <th>{{ __('levels.status') }}</th>
+                                    <th class="text-right pr-3">{{ __('levels.actions') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -134,11 +134,11 @@
                                         <td><span class="sev-badge sev-{{ $a->severity }}">{{ $a->severity }}</span></td>
                                         <td><span class="stat-pill stat-{{ $a->status }}">{{ ucwords(str_replace('_',' ',$a->status)) }}</span></td>
                                         <td class="text-right pr-3">
-                                            <a href="{{ route('abnormal.show', $a->id) }}" class="btn btn-sm btn-outline-primary">{{ __('Open') }}</a>
+                                            <a href="{{ route('abnormal.show', $a->id) }}" class="btn btn-sm btn-outline-primary">{{ __('levels.open') }}</a>
                                         </td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="8" class="text-center text-muted py-4">{{ __('No abnormal shipments. The hourly cron will surface them as they appear.') }}</td></tr>
+                                    <tr><td colspan="8" class="text-center text-muted py-4">{{ __('abnormal.no_abnormal') }}</td></tr>
                                 @endforelse
                             </tbody>
                         </table>

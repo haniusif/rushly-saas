@@ -123,7 +123,7 @@
                                     @if( hasPermission('delivery_man_update') == true || hasPermission('delivery_man_delete') == true )
                                     <td>
                                         <div class="row">
-                                            <button tabindex="-1" data-toggle="dropdown" type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split"><span class="sr-only">{{ __('Toggle Dropdown') }}</span></button>
+                                            <button tabindex="-1" data-toggle="dropdown" type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split"><span class="sr-only">{{ __('levels.toggle_dropdown') }}</span></button>
                                             <div class="dropdown-menu">
                                                 @if( hasPermission('delivery_man_update') == true  )
                                                     <a href="{{route('deliveryman.edit',$deliveryman->id)}}" class="dropdown-item"><i class="fas fa-edit" aria-hidden="true"></i> {{ __('levels.edit') }}</a>
@@ -149,7 +149,7 @@
                 <div class="px-3 d-flex flex-row-reverse align-items-center">
                     <span>{{ $deliveryMans->links() }}</span>
                     <p class="p-2 small">
-                        {!! __('Showing') !!}
+                        {!! __('levels.showing') !!}
                         <span class="font-medium">{{ $deliveryMans->firstItem() }}</span>
                         {!! __('to') !!}
                         <span class="font-medium">{{ $deliveryMans->lastItem() }}</span>

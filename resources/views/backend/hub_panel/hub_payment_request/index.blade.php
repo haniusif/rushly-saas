@@ -100,7 +100,7 @@
                         <div class="px-3 d-flex flex-row-reverse align-items-center">
                             <span>{{ $payments->links() }}</span>
                             <p class="p-2 small">
-                                {!! __('Showing') !!}
+                                {!! __('levels.showing') !!}
                                 <span class="font-medium">{{ $payments->firstItem() }}</span>
                                 {!! __('to') !!}
                                 <span class="font-medium">{{ $payments->lastItem() }}</span>

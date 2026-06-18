@@ -1,6 +1,6 @@
 @extends('backend.partials.master')
 @section('title')
-    {{ __('Abnormal Shipment') }} #{{ $abnormal->id }}
+    {{ __('abnormal.singular') }} #{{ $abnormal->id }}
 @endsection
 
 @push('styles')
@@ -49,7 +49,7 @@
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item"><a href="{{ route('dashboard.index') }}" class="breadcrumb-link">{{ __('levels.dashboard') }}</a></li>
-                            <li class="breadcrumb-item"><a href="{{ route('abnormal.index') }}" class="breadcrumb-link">{{ __('Abnormal Shipments') }}</a></li>
+                            <li class="breadcrumb-item"><a href="{{ route('abnormal.index') }}" class="breadcrumb-link">{{ __('abnormal.title') }}</a></li>
                             <li class="breadcrumb-item active">#{{ $abnormal->id }}</li>
                         </ol>
                     </nav>
@@ -71,15 +71,15 @@
                 </div>
                 <div class="card-body">
                     <dl class="m-0">
-                        <div class="info-row"><dt>{{ __('Customer') }}</dt><dd>{{ optional($abnormal->parcel)->customer_name ?? '—' }}</dd></div>
-                        <div class="info-row"><dt>{{ __('Phone') }}</dt><dd>{{ optional($abnormal->parcel)->customer_phone ?? '—' }}</dd></div>
-                        <div class="info-row"><dt>{{ __('Merchant') }}</dt><dd>{{ optional($abnormal->parcel?->merchant)->business_name ?? '—' }}</dd></div>
-                        <div class="info-row"><dt>{{ __('Detected') }}</dt><dd>{{ $abnormal->detected_at?->diffForHumans() }}</dd></div>
-                        <div class="info-row"><dt>{{ __('Last Event') }}</dt><dd>{{ $abnormal->last_event_at?->toDateTimeString() }} <small class="text-muted">({{ $abnormal->last_event_at?->diffForHumans() }})</small></dd></div>
-                        <div class="info-row"><dt>{{ __('Assigned To') }}</dt><dd>{{ optional($abnormal->assignedTo)->name ?? __('Nobody yet') }}</dd></div>
+                        <div class="info-row"><dt>{{ __('levels.customer') }}</dt><dd>{{ optional($abnormal->parcel)->customer_name ?? '—' }}</dd></div>
+                        <div class="info-row"><dt>{{ __('levels.phone') }}</dt><dd>{{ optional($abnormal->parcel)->customer_phone ?? '—' }}</dd></div>
+                        <div class="info-row"><dt>{{ __('levels.merchant') }}</dt><dd>{{ optional($abnormal->parcel?->merchant)->business_name ?? '—' }}</dd></div>
+                        <div class="info-row"><dt>{{ __('abnormal.detected') }}</dt><dd>{{ $abnormal->detected_at?->diffForHumans() }}</dd></div>
+                        <div class="info-row"><dt>{{ __('abnormal.last_event') }}</dt><dd>{{ $abnormal->last_event_at?->toDateTimeString() }} <small class="text-muted">({{ $abnormal->last_event_at?->diffForHumans() }})</small></dd></div>
+                        <div class="info-row"><dt>{{ __('abnormal.assigned_to') }}</dt><dd>{{ optional($abnormal->assignedTo)->name ?? __('abnormal.nobody_yet') }}</dd></div>
                     </dl>
 
-                    <h6 class="text-uppercase text-muted small mt-4 mb-2">{{ __('Stale progress') }}</h6>
+                    <h6 class="text-uppercase text-muted small mt-4 mb-2">{{ __('abnormal.stale_progress') }}</h6>
                     <div class="progress-stale">
                         <div class="fill" style="width: {{ $pct }}%;"></div>
                         <div class="lbl">{{ $stale }} {{ __('of') }} {{ $autoEscalate }} {{ __('days (auto-escalation threshold)') }}</div>
@@ -88,10 +88,10 @@
             </div>
 
             <div class="card">
-                <div class="card-header"><h6 class="mb-0">{{ __('Event Timeline') }}</h6></div>
+                <div class="card-header"><h6 class="mb-0">{{ __('abnormal.event_timeline') }}</h6></div>
                 <div class="card-body">
                     @if ($events->isEmpty())
-                        <p class="text-muted mb-0">{{ __('No parcel events on file.') }}</p>
+                        <p class="text-muted mb-0">{{ __('abnormal.no_events') }}</p>
                     @else
                         <div class="timeline">
                             @foreach ($events as $e)
@@ -109,12 +109,12 @@
         {{-- RIGHT: actions + history --}}
         <div class="col-lg-5">
             <div class="card mb-3">
-                <div class="card-header"><h6 class="mb-0">{{ __('Investigation') }}</h6></div>
+                <div class="card-header"><h6 class="mb-0">{{ __('abnormal.investigation') }}</h6></div>
                 <div class="card-body">
                     <form method="POST" action="{{ route('abnormal.assign', $abnormal->id) }}" class="mb-3">
                         @csrf @method('PUT')
                         <div class="form-group">
-                            <label class="small text-muted">{{ __('Assign to investigator') }}</label>
+                            <label class="small text-muted">{{ __('abnormal.assign_to_investigator') }}</label>
                             <div class="d-flex">
                                 <select name="assigned_to" class="form-control mr-2">
                                     <option value="">—</option>
@@ -124,43 +124,43 @@
                                         </option>
                                     @endforeach
                                 </select>
-                                <button class="btn btn-outline-primary">{{ __('Assign') }}</button>
+                                <button class="btn btn-outline-primary">{{ __('abnormal.assign') }}</button>
                             </div>
                         </div>
                     </form>
 
                     <hr>
 
-                    <div class="small text-muted mb-2">{{ __('Take action') }}</div>
+                    <div class="small text-muted mb-2">{{ __('abnormal.take_action') }}</div>
                     <form method="POST" action="{{ route('abnormal.action', $abnormal->id) }}" class="d-inline">
                         @csrf
                         <input type="hidden" name="action" value="create_ndr" />
-                        <span class="action-chip"><button>🔴 {{ __('Create NDR') }}</button></span>
+                        <span class="action-chip"><button>🔴 {{ __('abnormal.create_ndr') }}</button></span>
                     </form>
                     <form method="POST" action="{{ route('abnormal.action', $abnormal->id) }}" class="d-inline">
                         @csrf
                         <input type="hidden" name="action" value="log_contact" />
-                        <input type="hidden" name="note" value="{{ __('Customer contact attempt logged.') }}" />
-                        <span class="action-chip"><button>📞 {{ __('Log customer contact') }}</button></span>
+                        <input type="hidden" name="note" value="{{ __('abnormal.customer_contact_logged') }}" />
+                        <span class="action-chip"><button>📞 {{ __('abnormal.log_customer_contact') }}</button></span>
                     </form>
                     <form method="POST" action="{{ route('abnormal.action', $abnormal->id) }}" class="d-inline">
                         @csrf
                         <input type="hidden" name="action" value="escalate" />
-                        <span class="action-chip"><button>⬆ {{ __('Escalate') }}</button></span>
+                        <span class="action-chip"><button>⬆ {{ __('abnormal.escalate') }}</button></span>
                     </form>
                     <form method="POST" action="{{ route('abnormal.action', $abnormal->id) }}" class="d-inline"
-                          onsubmit="return confirm('{{ __('Close-as-Lost requires two supervisors. Proceed?') }}');">
+                          onsubmit="return confirm('{{ __('abnormal.close_as_lost_confirm') }}');">
                         @csrf
                         <input type="hidden" name="action" value="close_lost" />
-                        <span class="action-chip" style="background:#fee2e2; border-color:#fca5a5; color:#991b1b;"><button>🚫 {{ __('Close as Lost') }}</button></span>
+                        <span class="action-chip" style="background:#fee2e2; border-color:#fca5a5; color:#991b1b;"><button>🚫 {{ __('abnormal.close_as_lost') }}</button></span>
                     </form>
 
                     @if ($abnormal->status !== 'resolved' && $abnormal->status !== 'closed_lost')
                         <hr>
                         <form method="POST" action="{{ route('abnormal.resolve', $abnormal->id) }}">
                             @csrf @method('PUT')
-                            <textarea name="note" rows="2" class="form-control mb-2" placeholder="{{ __('Resolution note (optional)') }}"></textarea>
-                            <button class="btn btn-success btn-block">{{ __('Mark Resolved') }}</button>
+                            <textarea name="note" rows="2" class="form-control mb-2" placeholder="{{ __('abnormal.resolution_note_placeholder') }}"></textarea>
+                            <button class="btn btn-success btn-block">{{ __('abnormal.mark_resolved') }}</button>
                         </form>
                     @endif
                 </div>
@@ -168,7 +168,7 @@
 
             @if ($abnormal->resolution_note)
                 <div class="card">
-                    <div class="card-header"><h6 class="mb-0">{{ __('Notes') }}</h6></div>
+                    <div class="card-header"><h6 class="mb-0">{{ __('abnormal.notes') }}</h6></div>
                     <div class="card-body">
                         <pre class="mb-0" style="white-space: pre-wrap; font-size: 13px;">{{ $abnormal->resolution_note }}</pre>
                     </div>

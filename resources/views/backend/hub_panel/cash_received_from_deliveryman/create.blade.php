@@ -35,7 +35,7 @@
                                 <div class="form-group delivery_man_search">
                                     <label for="parcelDeliveryManID_">{{ __('parcel.deliveryman') }}</label> <span class="text-danger">*</span>
                                     <select style="width: 100%" id="parcelDeliveryManID_"  name="delivery_man_id" data-url="{{ route('parcel.deliveryman.search') }}" class="form-control @error('delivery_man_id') is-invalid @enderror">
-                                        <option value=""> {{ __('Select Delivery Man') }}</option>
+                                        <option value=""> {{ __('levels.select_delivery_man') }}</option>
                                     </select>
                                     <input type="hidden" id="deliveryman_amount" value="0"/>
                                     <div  class="deliveryman_balance active"></div>

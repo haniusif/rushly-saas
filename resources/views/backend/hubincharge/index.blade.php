@@ -82,7 +82,7 @@
                                         )
                                     <td>
                                         <div class="row">
-                                            <button tabindex="-1" data-toggle="dropdown" type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split"><span class="sr-only">{{ __('Toggle Dropdown') }}</span></button>
+                                            <button tabindex="-1" data-toggle="dropdown" type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split"><span class="sr-only">{{ __('levels.toggle_dropdown') }}</span></button>
                                             <div class="dropdown-menu">
                                             @if( hasPermission('hub_incharge_update')    == true)
                                                 <a href="{{route('hub-incharge.edit',[$hub->id,$incharge])}}" class="dropdown-item"><i class="fas fa-edit" aria-hidden="true"></i> {{ __('levels.edit') }}</a>

@@ -1,6 +1,7 @@
 <?php
 
 return [
+        'title'      => 'الإعدادات',
         'location'   => 'الموقع',
         'charges'    => 'الرسوم',
         'save_change' => 'تم حفظ التغييرات بنجاح',

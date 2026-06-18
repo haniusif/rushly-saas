@@ -1,6 +1,6 @@
 @extends('backend.partials.master')
 @section('title')
-    {{ __('NDR') }} {{ __('levels.list') }}
+    {{ __('ndr.title') }} {{ __('levels.list') }}
 @endsection
 
 @push('styles')
@@ -36,7 +36,7 @@
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item"><a href="{{ route('dashboard.index') }}" class="breadcrumb-link">{{ __('levels.dashboard') }}</a></li>
-                            <li class="breadcrumb-item"><a href="" class="breadcrumb-link">{{ __('NDR') }}</a></li>
+                            <li class="breadcrumb-item"><a href="" class="breadcrumb-link">{{ __('ndr.title') }}</a></li>
                             <li class="breadcrumb-item active">{{ __('levels.list') }}</li>
                         </ol>
                     </nav>
@@ -50,25 +50,25 @@
         <div class="col-md-3 col-sm-6 mb-2">
             <div class="stat-card sc-today">
                 <div class="num">{{ $stats['today'] ?? 0 }}</div>
-                <div class="lbl">{{ __("Today's NDRs") }}</div>
+                <div class="lbl">{{ __('ndr.today_ndrs') }}</div>
             </div>
         </div>
         <div class="col-md-3 col-sm-6 mb-2">
             <div class="stat-card sc-open">
                 <div class="num">{{ ($stats['open'] ?? 0) + ($stats['in_progress'] ?? 0) }}</div>
-                <div class="lbl">{{ __('Pending') }}</div>
+                <div class="lbl">{{ __('ndr.pending') }}</div>
             </div>
         </div>
         <div class="col-md-3 col-sm-6 mb-2">
             <div class="stat-card sc-resolved">
                 <div class="num">{{ $stats['resolved'] ?? 0 }}</div>
-                <div class="lbl">{{ __('Resolved') }}</div>
+                <div class="lbl">{{ __('ndr.resolved') }}</div>
             </div>
         </div>
         <div class="col-md-3 col-sm-6 mb-2">
             <div class="stat-card sc-rate">
                 <div class="num">{{ $stats['return_rate'] ?? 0 }}%</div>
-                <div class="lbl">{{ __('Return Rate') }}</div>
+                <div class="lbl">{{ __('ndr.return_rate') }}</div>
             </div>
         </div>
     </div>
@@ -80,19 +80,19 @@
                 <div class="card-body py-3">
                     <form method="GET" class="form-inline" id="ndrFilters">
                         <select name="status" class="form-control form-control-sm mr-2 mb-1">
-                            <option value="">{{ __('All status') }}</option>
+                            <option value="">{{ __('ndr.all_status') }}</option>
                             @foreach (['open','in_progress','resolved','returned'] as $s)
                                 <option value="{{ $s }}" {{ request('status')==$s ? 'selected' : '' }}>{{ ucwords(str_replace('_',' ',$s)) }}</option>
                             @endforeach
                         </select>
                         <select name="failure_reason" class="form-control form-control-sm mr-2 mb-1">
-                            <option value="">{{ __('All reasons') }}</option>
+                            <option value="">{{ __('ndr.all_reasons') }}</option>
                             @foreach ($failureReasons as $key => $label)
                                 <option value="{{ $key }}" {{ request('failure_reason')==$key ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
                         </select>
                         <select name="deliveryman_id" class="form-control form-control-sm mr-2 mb-1">
-                            <option value="">{{ __('Any deliveryman') }}</option>
+                            <option value="">{{ __('ndr.any_deliveryman') }}</option>
                             @foreach ($deliverymans as $dm)
                                 <option value="{{ $dm->user_id ?? $dm->id }}" {{ request('deliveryman_id')==($dm->user_id ?? $dm->id) ? 'selected' : '' }}>
                                     {{ $dm->user->name ?? $dm->name ?? ('#'.$dm->id) }}
@@ -101,11 +101,11 @@
                         </select>
                         <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control form-control-sm mr-2 mb-1" />
                         <input type="date" name="date_to"   value="{{ request('date_to') }}"   class="form-control form-control-sm mr-2 mb-1" />
-                        <button type="submit" class="btn btn-sm btn-primary mr-2 mb-1">{{ __('Filter') }}</button>
-                        <a href="{{ route('ndr.index') }}" class="btn btn-sm btn-light mr-2 mb-1">{{ __('Clear') }}</a>
+                        <button type="submit" class="btn btn-sm btn-primary mr-2 mb-1">{{ __('levels.filter') }}</button>
+                        <a href="{{ route('ndr.index') }}" class="btn btn-sm btn-light mr-2 mb-1">{{ __('levels.clear') }}</a>
                         <a href="{{ route('ndr.export', request()->only(['status','failure_reason','deliveryman_id','date_from','date_to'])) }}"
                            class="btn btn-sm btn-success mb-1">
-                            <i class="fa fa-file-excel-o"></i> {{ __('Export to Excel') }}
+                            <i class="fa fa-file-excel-o"></i> {{ __('levels.export_to_excel') }}
                         </a>
                     </form>
                 </div>
@@ -123,13 +123,13 @@
                             <thead class="thead-light">
                                 <tr>
                                     <th>#</th>
-                                    <th>{{ __('Tracking') }}</th>
-                                    <th>{{ __('Attempt') }}</th>
-                                    <th>{{ __('Failure Reason') }}</th>
-                                    <th>{{ __('Deliveryman') }}</th>
-                                    <th>{{ __('Status') }}</th>
-                                    <th>{{ __('Created') }}</th>
-                                    <th class="text-right pr-3">{{ __('Actions') }}</th>
+                                    <th>{{ __('levels.tracking') }}</th>
+                                    <th>{{ __('ndr.attempt') }}</th>
+                                    <th>{{ __('ndr.failure_reason') }}</th>
+                                    <th>{{ __('levels.deliveryman') }}</th>
+                                    <th>{{ __('levels.status') }}</th>
+                                    <th>{{ __('levels.created') }}</th>
+                                    <th class="text-right pr-3">{{ __('levels.actions') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -147,12 +147,12 @@
                                         <td><span class="nstatus ns-{{ $ndr->status }}">{{ ucwords(str_replace('_',' ',$ndr->status)) }}</span></td>
                                         <td><small class="text-muted">{{ $ndr->created_at?->diffForHumans() }}</small></td>
                                         <td class="text-right pr-3">
-                                            <a href="{{ route('ndr.show', $ndr->id) }}" class="btn btn-sm btn-outline-primary">{{ __('View') }}</a>
+                                            <a href="{{ route('ndr.show', $ndr->id) }}" class="btn btn-sm btn-outline-primary">{{ __('levels.view') }}</a>
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" class="text-center text-muted py-4">{{ __('No NDRs found.') }}</td>
+                                        <td colspan="8" class="text-center text-muted py-4">{{ __('ndr.no_ndrs_found') }}</td>
                                     </tr>
                                 @endforelse
                             </tbody>

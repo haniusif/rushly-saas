@@ -133,5 +133,7 @@ return array (
   'settings_update_success'         => 'تم تحديث الإعدادات بنجاح',
   'invoice_id'                      => 'رقم الفاتورة',
   'wallet_request'                  => 'طلب من المحفظة',
+  'recipient_info'                  => 'بيانات المستلم',
+  'updated_on'                      => 'تم التحديث في',
 
 );

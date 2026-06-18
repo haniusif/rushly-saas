@@ -1,6 +1,6 @@
 @extends('backend.partials.master')
 @section('title')
-    {{ __('delivery_charge.title') }} {{ __('levels.lsit') }}
+    {{ __('delivery_charge.title') }} {{ __('levels.list') }}
 @endsection
 @section('maincontent')
 <!-- wrapper  -->
@@ -68,7 +68,7 @@
                 <div class="px-3 d-flex flex-row-reverse align-items-center">
                     <span>{{ $delivery_charges->links() }}</span>
                     <p class="p-2 small">
-                        {!! __('Showing') !!}
+                        {!! __('levels.showing') !!}
                         <span class="font-medium">{{ $delivery_charges->firstItem() }}</span>
                         {!! __('to') !!}
                         <span class="font-medium">{{ $delivery_charges->lastItem() }}</span>

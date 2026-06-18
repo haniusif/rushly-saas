@@ -1,6 +1,7 @@
 <?php
 
 return [
+        'title'               => 'Settings',
         'location'            => 'Location',
         'charges'             => 'Charges',
         'save_change'         => 'Save changed successfully',

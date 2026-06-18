@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" @if(app()->getLocale() == 'ar') dir="rtl"@endif>
+<html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}">
 <head>
     <!-- Required meta tags -->
     <meta charset="utf-8">
@@ -12,6 +12,7 @@
  <link href='https://fonts.googleapis.com/css?family=Cairo' rel='stylesheet'>
     <link rel="stylesheet" href="{{static_asset('backend')}}/libs/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css" integrity="sha512-MV7K8+y+gLIBoVD59lQIYicR65iaqukzvf/nwasF0nqhPay5w/9lJmVM2hMDcnK1OnMGCdVK+iQrJ7lzPJQd1w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.17.0/dist/tabler-icons.min.css">
 
     <link rel="stylesheet" href="{{static_asset('backend')}}/vendor/fonts/fontawesome/css/fontawesome-all.css">
     <link rel="stylesheet" href="{{static_asset('backend')}}/vendor/charts/chartist-bundle/chartist.css">

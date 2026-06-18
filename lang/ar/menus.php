@@ -7,6 +7,7 @@ return [
   'merchants'            => 'التجار',
   'deliveryman'          => 'مندوب التوصيل',
   'parcel'               => 'الشحنات',
+  'google_map_settings'  => 'إعدادات خرائط جوجل',
   'sms_send_settings'    => 'إعدادات إرسال الرسائل القصيرة',
   'sms_settings'         => 'إعدادات الرسائل القصيرة',
   'notification_settings' => 'إعدادات الإشعارات',
@@ -63,6 +64,9 @@ return [
 
   'profile'             => 'الملف الشخصي',
   'settings'            =>  'الإعدادات',
+  'countries'           =>  'الدول',
+  'cities'              =>  'المدن',
+  'areas'               =>  'المناطق',
   'change_password'     =>  'تغيير كلمة المرور',
   'logout'              =>   'تسجيل الخروج',
   'regular'             =>   'عادي',

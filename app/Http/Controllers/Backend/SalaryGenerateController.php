@@ -85,7 +85,33 @@ class SalaryGenerateController extends Controller
     }
 
     public function subscribe(){
-        $subscribes   = Subscribe::companywise()->paginate(15);
-        return view('backend.subscribe',compact('subscribes'));
+        $paginator = Subscribe::companywise()->orderByDesc('id')->paginate(15);
+
+        return \Inertia\Inertia::render('Admin/Subscribe/Index', [
+            'rows' => collect($paginator->items())->map(fn ($s) => [
+                'id'    => $s->id,
+                'email' => (string) $s->email,
+                'created_at' => optional($s->created_at)->format('Y-m-d H:i'),
+            ])->values(),
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'from'         => $paginator->firstItem(),
+                'to'           => $paginator->lastItem(),
+                'total'        => $paginator->total(),
+                'prev_url'     => $paginator->previousPageUrl(),
+                'next_url'     => $paginator->nextPageUrl(),
+            ],
+            't' => [
+                'title'    => __('account.subscribe') ?: 'Newsletter subscribers',
+                'list'     => __('levels.list') ?: 'List',
+                'email'    => __('levels.email') ?: 'Email',
+                'when'     => __('levels.created_at') ?: 'Subscribed at',
+                'no_rows'  => 'No subscribers yet.',
+                'prev'     => 'Prev',
+                'next'     => 'Next',
+                'showing_results' => 'Showing :from – :to of :total',
+            ],
+        ]);
     }
 }

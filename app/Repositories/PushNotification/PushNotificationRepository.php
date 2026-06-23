@@ -98,14 +98,19 @@ class PushNotificationRepository implements PushNotificationInterface{
     public function delete($id){
         try {
             $pushNotification = PushNotification::with('upload')->find($id);
-            if($pushNotification->company_id == settings()->id):
-                if(file_exists($pushNotification->upload->original))
-                    unlink($pushNotification->upload->original);
-                    Upload::destroy($pushNotification->upload->id);
-                $pushNotification->delete();
-                return true;
-            endif;
-            return false;
+            if (! $pushNotification || $pushNotification->company_id != settings()->id) {
+                return false;
+            }
+            $upload = $pushNotification->upload;
+            if ($upload) {
+                $path = public_path((string) $upload->original);
+                if ($upload->original && file_exists($path)) {
+                    @unlink($path);
+                }
+                Upload::destroy($upload->id);
+            }
+            $pushNotification->delete();
+            return true;
         }
         catch (\Exception $e) {
             return false;

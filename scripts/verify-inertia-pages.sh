@@ -44,6 +44,7 @@ PAGES=(
   "/admin/assets/index|Admin/Asset/Index"
   "/admin/assets/create|Admin/Asset/Form"
   "/admin/wallet-request|Admin/Wallet/Index"
+  "/admin/general-settings/index|Admin/GeneralSettings/Index"
 )
 
 WORK="$(mktemp -d)"

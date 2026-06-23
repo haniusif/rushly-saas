@@ -28,7 +28,9 @@ class DriverRunsheetExport implements FromArray, WithHeadings, ShouldAutoSize, W
 
     public function array(): array
     {
-        $this->shipments->loadMissing('parcel.merchant');
+        if ($this->shipments instanceof \Illuminate\Database\Eloquent\Collection) {
+            $this->shipments->loadMissing('parcel.merchant');
+        }
 
         $rows           = [];
         $index          = 1;

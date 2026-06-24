@@ -99,8 +99,78 @@ class AccountController extends Controller
 
     public function create()
     {
+        return \Inertia\Inertia::render('Admin/Account/Form', [
+            'mode'   => 'create',
+            'entity' => null,
+            'lookups' => $this->formLookups(),
+            'urls' => [
+                'submit' => route('accounts.store'),
+                'cancel' => route('accounts.index'),
+            ],
+            't' => $this->formLabels(__('account.create_account') ?: 'Create account'),
+        ]);
+    }
+
+    private function formLookups(): array
+    {
         $users = $this->repo->users();
-        return view('backend.account.create',compact('users'));
+        return [
+            'users'    => collect($users)->map(fn ($u) => ['value' => (string) $u->id, 'label' => $u->name])->values(),
+            'types'    => collect((array) config('rxcourier.account_type'))->map(fn ($v) => [
+                'value' => (string) $v,
+                'label' => trans('AccountType.' . $v) ?: (string) $v,
+            ])->values(),
+            'gateways' => [
+                ['value' => '1', 'label' => 'Cash'],
+                ['value' => '2', 'label' => 'Bank'],
+                ['value' => '3', 'label' => 'bKash'],
+                ['value' => '4', 'label' => 'Rocket'],
+                ['value' => '5', 'label' => 'Nagad'],
+            ],
+            'banks' => [
+                ['value' => '1', 'label' => 'BB'],
+                ['value' => '2', 'label' => 'DBBL'],
+                ['value' => '3', 'label' => 'IB'],
+            ],
+            'account_types' => [
+                ['value' => '1', 'label' => __('merchant.title') ?: 'Merchant'],
+                ['value' => '2', 'label' => __('placeholder.persional') ?: 'Personal'],
+            ],
+            'statuses' => collect((array) trans('status'))->map(fn ($v, $k) => [
+                'value' => (string) $k,
+                'label' => (string) $v,
+            ])->values(),
+        ];
+    }
+
+    private function formLabels(string $title): array
+    {
+        return [
+            'title'        => $title,
+            'list_title'   => __('account.title') ?: 'Accounts',
+            'type'         => __('levels.type') ?: 'Type',
+            'user'         => __('levels.user') ?: 'User',
+            'gateway'      => __('levels.gateway') ?: 'Gateway',
+            'opening_balance'      => __('levels.opening_balance') ?: 'Opening balance',
+            'account_holder_name'  => __('levels.account_holder_name') ?: 'Account holder name',
+            'account_no'   => __('levels.account_no') ?: 'Account number',
+            'bank'         => __('levels.bank') ?: 'Bank',
+            'branch_name'  => __('levels.branch_name') ?: 'Branch',
+            'mobile'       => __('levels.mobile') ?: 'Mobile',
+            'account_type' => __('levels.account_type') ?: 'Account type',
+            'status'       => __('levels.status') ?: 'Status',
+            'select'       => __('menus.select') ?: 'Select',
+            'save'         => __('levels.save') ?: 'Save',
+            'cancel'       => __('levels.cancel') ?: 'Cancel',
+            'back'         => __('levels.back') ?: 'Back',
+            'placeholder_balance'   => __('placeholder.Opening_Balance') ?: 'Opening balance',
+            'placeholder_holder'    => __('placeholder.Account_Holder_Name') ?: 'Account holder name',
+            'placeholder_account_no'=> __('placeholder.Enter_account_no') ?: 'Enter account no',
+            'placeholder_branch'    => __('placeholder.Enter_branch_name') ?: 'Enter branch name',
+            'placeholder_opening'   => __('placeholder.Enter_opening_balance') ?: 'Enter opening balance',
+            'placeholder_mobile'    => __('placeholder.Enter_mobile') ?: 'Enter mobile',
+            'gateway_help'          => 'Pick a gateway first — the rest of the form adjusts to its required fields.',
+        ];
     }
 
     public function store(StoreRequest $request)

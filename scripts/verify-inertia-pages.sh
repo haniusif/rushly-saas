@@ -54,6 +54,7 @@ PAGES=(
   "/admin/paid/invoice|Admin/PaidInvoice/Index"
   "/admin/payout|Admin/Payout/Index"
   "/admin/accounts/index|Admin/Account/Index"
+  "/admin/accounts/create|Admin/Account/Form"
   "/admin/users|Admin/User/Index"
   "/admin/salarys|Admin/Salary/Index"
 )

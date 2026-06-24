@@ -40,9 +40,12 @@ function ToggleSwitch({ active, onChange }) {
     );
 }
 
-function ProviderCard({ name, provider, submitUrl, statusKey, canEdit, t, fields }) {
+function ProviderCard({ name, provider, submitUrl, statusKey, canEdit, t, fields, help }) {
     // Build form data: provider fields + the status toggle field + smsMethod marker.
-    const initial = { ...provider.fields, [statusKey]: provider.active ? '1' : '0', smsMethod: provider.method, _method: 'put' };
+    // Status field uses the legacy HTML-checkbox convention ('on' = checked,
+    // anything else = unchecked) because SmsSettingRepository::update() does
+    // `$request->{x}_status == 'on' ? Status::ACTIVE : Status::INACTIVE`.
+    const initial = { ...provider.fields, [statusKey]: provider.active ? 'on' : 'off', smsMethod: provider.method, _method: 'put' };
     const form = useForm(initial);
 
     const onSubmit = (e) => {
@@ -57,6 +60,7 @@ function ProviderCard({ name, provider, submitUrl, statusKey, canEdit, t, fields
                     <MessageCircle className="h-5 w-5 text-primary" />
                     <h3 className="text-base font-semibold">{name}</h3>
                 </div>
+                {help && <p className="text-[11px] text-muted-foreground -mt-2 mb-3">{help}</p>}
                 <form onSubmit={onSubmit} className="space-y-4">
                     {fields.map((f) => (
                         <Field key={f.name} label={t[f.labelKey]} required={f.required} error={form.errors[f.name]}>
@@ -73,8 +77,8 @@ function ProviderCard({ name, provider, submitUrl, statusKey, canEdit, t, fields
                         <div className="flex items-center gap-3">
                             <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t.status}</span>
                             <ToggleSwitch
-                                active={form.data[statusKey] === '1'}
-                                onChange={(v) => form.setData(statusKey, v ? '1' : '0')}
+                                active={form.data[statusKey] === 'on'}
+                                onChange={(v) => form.setData(statusKey, v ? 'on' : 'off')}
                             />
                         </div>
                         {canEdit && (
@@ -130,6 +134,20 @@ export default function Index({ providers = {}, permissions = {}, urls = {}, t =
                     fields={[
                         { name: 'nexmo_key',        labelKey: 'nexmo_key',        required: true },
                         { name: 'nexmo_secret_key', labelKey: 'nexmo_secret_key', required: true },
+                    ]}
+                />
+                <ProviderCard
+                    name={providers.msegat?.name}
+                    provider={providers.msegat}
+                    submitUrl={urls.submit_msegat}
+                    statusKey="msegat_status"
+                    canEdit={permissions.update}
+                    t={t}
+                    help={t.msegat_help}
+                    fields={[
+                        { name: 'msegat_user_name', labelKey: 'msegat_user_name', placeholderKey: 'ph_msegat_user_name', required: true },
+                        { name: 'msegat_api_key',   labelKey: 'msegat_api_key',   placeholderKey: 'ph_msegat_api_key',   required: true },
+                        { name: 'msegat_sender',    labelKey: 'msegat_sender',    placeholderKey: 'ph_msegat_sender',    required: true },
                     ]}
                 />
             </div>

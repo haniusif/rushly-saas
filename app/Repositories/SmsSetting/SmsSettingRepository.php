@@ -23,6 +23,9 @@ class SmsSettingRepository implements SmsSettingInterface {
                 case SmsSetup::NEXMO:
                     $request['nexmo_status']   = $request->nexmo_status == 'on'? Status::ACTIVE:Status::INACTIVE;
                     break;
+                case SmsSetup::MSEGAT:
+                    $request['msegat_status']  = $request->msegat_status == 'on'? Status::ACTIVE:Status::INACTIVE;
+                    break;
                 default:
                     break;
             }

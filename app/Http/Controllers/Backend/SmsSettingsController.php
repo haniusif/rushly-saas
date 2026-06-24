@@ -54,6 +54,16 @@ class SmsSettingsController extends Controller
                     ],
                     'active' => smsSettings('nexmo_status') == Status::ACTIVE,
                 ],
+                'msegat' => [
+                    'method' => SmsSetup::MSEGAT,
+                    'name'   => 'MSEGAT SMS',
+                    'fields' => [
+                        'msegat_user_name' => smsSettings('msegat_user_name'),
+                        'msegat_api_key'   => smsSettings('msegat_api_key'),
+                        'msegat_sender'    => smsSettings('msegat_sender'),
+                    ],
+                    'active' => smsSettings('msegat_status') == Status::ACTIVE,
+                ],
             ],
             'permissions' => [
                 'update' => hasPermission('sms_settings_update') || hasPermission('sms_settings_create'),
@@ -62,6 +72,7 @@ class SmsSettingsController extends Controller
                 'submit_reve'   => route('sms-settings.update', SmsSetup::REVE),
                 'submit_twilio' => route('sms-settings.update', SmsSetup::TWILIO),
                 'submit_nexmo'  => route('sms-settings.update', SmsSetup::NEXMO),
+                'submit_msegat' => route('sms-settings.update', SmsSetup::MSEGAT),
             ],
             't' => [
                 'title'        => __('smsSettings.title') ?: 'SMS settings',
@@ -78,6 +89,13 @@ class SmsSettingsController extends Controller
                 'twilio_from'  => __('levels.twilio_from') ?: 'Twilio from',
                 'nexmo_key'    => __('levels.nexmo_key') ?: 'Nexmo key',
                 'nexmo_secret_key' => __('levels.nexmo_secret_key') ?: 'Nexmo secret key',
+                'msegat_user_name' => 'Username',
+                'msegat_api_key'   => 'API key',
+                'msegat_sender'    => 'Sender ID',
+                'msegat_help'      => 'Saudi Arabia SMS gateway (msegat.com). Sender ID must be pre-approved on your MSEGAT account.',
+                'ph_msegat_user_name' => 'Your MSEGAT username',
+                'ph_msegat_api_key'   => 'Your MSEGAT API key',
+                'ph_msegat_sender'    => 'e.g. RUSHLY',
                 'ph_api_key'       => __('placeholder.Enter_api_key') ?: 'Enter API key',
                 'ph_secret_key'    => __('placeholder.Enter_secret_key') ?: 'Enter secret key',
                 'ph_api_url'       => __('placeholder.Enter_api_url') ?: 'Enter API URL',

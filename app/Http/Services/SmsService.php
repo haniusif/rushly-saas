@@ -14,11 +14,15 @@ class SmsService
 
         $smsSetting = smsSettings('reve_status');
         $smsTwilioSetting = smsSettings('twilio_status');
+        $smsMsegatSetting = smsSettings('msegat_status');
         if($smsSetting == Status::ACTIVE){
             $this->reveSms ('otp',$userPhone,$otpCode);
         }
         if($smsTwilioSetting == Status::ACTIVE){
             $this->twilioSms('otp',$userPhone,$otpCode);
+        }
+        if($smsMsegatSetting == Status::ACTIVE){
+            $this->msegatSms('otp',$userPhone,$otpCode);
         }
 
     }
@@ -29,6 +33,7 @@ class SmsService
         $smsSetting       = smsSettings('reve_status');
         $smsTwilioSetting = smsSettings('twilio_status');
         $smsNexmoSetting  = smsSettings('nexmo_status');
+        $smsMsegatSetting = smsSettings('msegat_status');
         if($smsSetting == Status::ACTIVE){
             $this->reveSms ('sms',$userPhone,$msg);
         }
@@ -37,6 +42,9 @@ class SmsService
         }
         if($smsNexmoSetting == Status::ACTIVE){
             $this->nexmoSms('sms',$userPhone,$msg);
+        }
+        if($smsMsegatSetting == Status::ACTIVE){
+            $this->msegatSms('sms',$userPhone,$msg);
         }
 
     }
@@ -92,6 +100,46 @@ class SmsService
                 'body' => $message]);  
         return true;
         } catch (\Exception $exception) { 
+            return $exception;
+        }
+    }
+
+    /**
+     * MSEGAT (Saudi SMS gateway) — modern apiKey POST endpoint.
+     * Docs: https://documenter.getpostman.com/view/39158411/2sBXwqqqD2
+     */
+    private function msegatSms($type, $receiverNumber, $message)
+    {
+        try {
+            $userName = smsSettings('msegat_user_name');
+            $apiKey   = smsSettings('msegat_api_key');
+            $sender   = smsSettings('msegat_sender') ?: settings()->name;
+
+            if ($type === 'otp') {
+                $body = $message . ' is your ' . settings()->name . ' verification code.';
+            } else {
+                $body = $message;
+            }
+
+            $payload = [
+                'userName'   => $userName,
+                'apiKey'     => $apiKey,
+                'numbers'    => $receiverNumber,
+                'userSender' => $sender,
+                'msg'        => $body,
+            ];
+
+            $ch = curl_init('https://www.msegat.com/gw/sendsms.php');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            $response = curl_exec($ch);
+            curl_close($ch);
+            return $response;
+        } catch (\Exception $exception) {
             return $exception;
         }
     }

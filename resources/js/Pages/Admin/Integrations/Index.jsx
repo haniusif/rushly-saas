@@ -3,7 +3,7 @@ import { Head } from '@inertiajs/react';
 import {
     Plug, Settings, ExternalLink, Truck, Info, Store, Calculator, Network,
     ShoppingBag, ShoppingCart, PackageOpen, Package2, Plane, Rocket, Boxes, Package,
-    Receipt, BookOpen, LayoutGrid,
+    Receipt, BookOpen, LayoutGrid, MapPin,
 } from 'lucide-react';
 
 // Brand key → Lucide icon. Used as final fallback when no real logo is available.
@@ -286,7 +286,7 @@ function AccountingCard({ a, t, fallbackIcon = Calculator }) {
     );
 }
 
-export default function Index({ integrations = [], three_pls = [], accounting = [], erp = [], payments = [], permissions = {}, t = {} }) {
+export default function Index({ integrations = [], three_pls = [], accounting = [], erp = [], payments = [], location = [], permissions = {}, t = {} }) {
     return (
         <AdminLayout title={t.title} breadcrumbs={[t.breadcrumb_settings, t.title]}>
             <Head title={t.title} />
@@ -370,6 +370,23 @@ export default function Index({ integrations = [], three_pls = [], accounting = 
                     </Card>
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                         {payments.map((p) => <PaymentsCard key={p.key} p={p} t={t} />)}
+                    </div>
+                </>
+            )}
+
+            {location.length > 0 && (
+                <>
+                    <Card className="mb-4 mt-6">
+                        <CardContent className="p-5">
+                            <div className="flex items-center gap-2 mb-1">
+                                <MapPin className="h-5 w-5 text-primary" />
+                                <h2 className="text-lg font-semibold">{t.location_title}</h2>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{t.location_help}</p>
+                        </CardContent>
+                    </Card>
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {location.map((l) => <PaymentsCard key={l.key} p={l} t={t} />)}
                     </div>
                 </>
             )}

@@ -76,6 +76,7 @@ class IntegrationsController extends Controller
             'accounting'   => $this->buildAccounting($companyId),
             'erp'          => $this->buildErp($companyId),
             'payments'     => $this->buildPayments($companyId),
+            'location'     => $this->buildLocation($companyId),
             'permissions'  => [
                 'update' => hasPermission('integrations_update'),
             ],
@@ -112,6 +113,8 @@ class IntegrationsController extends Controller
                 'erp_help'          => 'Push Rushly merchants, invoices, payments and courier bills into a full ERP. Best for tenants that already manage operations end-to-end in one system.',
                 'payments_title'    => 'Payment Integrations',
                 'payments_help'     => 'Accept online payments on merchant invoices and the public checkout. Credentials are per-tenant — each tenant configures its own gateway accounts.',
+                'location_title'    => 'Location Integrations',
+                'location_help'     => 'Address validation, geocoding and pickup-point lookup. Per-tenant API keys.',
                 'methods_label'     => 'Methods',
                 'region_label'      => 'Region',
                 'api_docs'          => 'API docs',
@@ -213,6 +216,50 @@ class IntegrationsController extends Controller
                 'urls'    => [
                     'settings' => $payoutSetup,
                     'docs'     => 'https://stcpay.com.sa/business',
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Location / address-validation gateways. Same shape as buildPayments():
+     * detect readiness from existing per-tenant settings, render cards with
+     * region + capability chips + Configure / API-docs buttons.
+     */
+    private function buildLocation(?int $companyId): array
+    {
+        $mapKey      = (string) googleMapSettingKey();
+        $googleReady = $mapKey !== '';
+
+        $splKey      = (string) globalSettings('sna_api_key');
+        $splReady    = $splKey !== '';
+
+        return [
+            [
+                'key'      => 'google-maps',
+                'name'     => 'Google Maps',
+                'host'     => 'maps.googleapis.com',
+                'region'   => 'Global',
+                'methods'  => ['Places', 'Geocoding', 'Routes', 'Static maps'],
+                'enabled'  => $googleReady,
+                'ready'    => $googleReady,
+                'urls'     => [
+                    'settings' => route('googlemap-settings.index'),
+                    'docs'     => 'https://developers.google.com/maps/documentation',
+                ],
+            ],
+            [
+                'key'      => 'saudi-national-address',
+                'name'     => 'Saudi National Address',
+                'host'     => 'api.address.gov.sa',
+                'region'   => 'Saudi Arabia',
+                'methods'  => ['Short address lookup', 'Geocoding', 'Verify address'],
+                'enabled'  => $splReady,
+                'ready'    => $splReady,
+                'note'     => 'SPL (Saudi Post) API. Customers + drivers can paste a 4-letter + 4-digit short national address and have the full address auto-filled.',
+                'urls'     => [
+                    'settings' => route('googlemap-settings.index'),
+                    'docs'     => 'https://api.address.gov.sa/',
                 ],
             ],
         ];

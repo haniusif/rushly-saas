@@ -6,4 +6,5 @@ interface SmsSetup {
     CONST TWILIO   = 2;//
     CONST NEXMO    = 3;//
     CONST MSEGAT   = 4;//
+    CONST TAQNYAT  = 5;//
 }

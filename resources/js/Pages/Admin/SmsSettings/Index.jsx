@@ -150,6 +150,19 @@ export default function Index({ providers = {}, permissions = {}, urls = {}, t =
                         { name: 'msegat_sender',    labelKey: 'msegat_sender',    placeholderKey: 'ph_msegat_sender',    required: true },
                     ]}
                 />
+                <ProviderCard
+                    name={providers.taqnyat?.name}
+                    provider={providers.taqnyat}
+                    submitUrl={urls.submit_taqnyat}
+                    statusKey="taqnyat_status"
+                    canEdit={permissions.update}
+                    t={t}
+                    help={t.taqnyat_help}
+                    fields={[
+                        { name: 'taqnyat_token',  labelKey: 'taqnyat_token',  placeholderKey: 'ph_taqnyat_token',  required: true },
+                        { name: 'taqnyat_sender', labelKey: 'taqnyat_sender', placeholderKey: 'ph_taqnyat_sender', required: true },
+                    ]}
+                />
             </div>
         </AdminLayout>
     );

@@ -15,6 +15,7 @@ class SmsService
         $smsSetting = smsSettings('reve_status');
         $smsTwilioSetting = smsSettings('twilio_status');
         $smsMsegatSetting = smsSettings('msegat_status');
+        $smsTaqnyatSetting = smsSettings('taqnyat_status');
         if($smsSetting == Status::ACTIVE){
             $this->reveSms ('otp',$userPhone,$otpCode);
         }
@@ -23,6 +24,9 @@ class SmsService
         }
         if($smsMsegatSetting == Status::ACTIVE){
             $this->msegatSms('otp',$userPhone,$otpCode);
+        }
+        if($smsTaqnyatSetting == Status::ACTIVE){
+            $this->taqnyatSms('otp',$userPhone,$otpCode);
         }
 
     }
@@ -34,6 +38,7 @@ class SmsService
         $smsTwilioSetting = smsSettings('twilio_status');
         $smsNexmoSetting  = smsSettings('nexmo_status');
         $smsMsegatSetting = smsSettings('msegat_status');
+        $smsTaqnyatSetting = smsSettings('taqnyat_status');
         if($smsSetting == Status::ACTIVE){
             $this->reveSms ('sms',$userPhone,$msg);
         }
@@ -45,6 +50,9 @@ class SmsService
         }
         if($smsMsegatSetting == Status::ACTIVE){
             $this->msegatSms('sms',$userPhone,$msg);
+        }
+        if($smsTaqnyatSetting == Status::ACTIVE){
+            $this->taqnyatSms('sms',$userPhone,$msg);
         }
 
     }
@@ -100,6 +108,51 @@ class SmsService
                 'body' => $message]);  
         return true;
         } catch (\Exception $exception) { 
+            return $exception;
+        }
+    }
+
+    /**
+     * Taqnyat (Saudi SMS gateway) — Bearer-auth REST endpoint.
+     * Docs: https://dev.taqnyat.sa/ar/doc/sms/
+     */
+    private function taqnyatSms($type, $receiverNumber, $message)
+    {
+        try {
+            $token  = smsSettings('taqnyat_token');
+            $sender = smsSettings('taqnyat_sender') ?: settings()->name;
+
+            if ($type === 'otp') {
+                $body = $message . ' is your ' . settings()->name . ' verification code.';
+            } else {
+                $body = $message;
+            }
+
+            // Taqnyat expects an array of integer phone numbers under `recipients`.
+            $recipients = is_array($receiverNumber) ? $receiverNumber : [$receiverNumber];
+            $recipients = array_values(array_map(fn ($n) => (string) $n, $recipients));
+
+            $payload = [
+                'recipients' => $recipients,
+                'body'       => $body,
+                'sender'     => $sender,
+            ];
+
+            $ch = curl_init('https://api.taqnyat.sa/v1/messages');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Authorization: Bearer ' . $token,
+                'Content-Type: application/json',
+                'Accept: application/json',
+            ]);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            $response = curl_exec($ch);
+            curl_close($ch);
+            return $response;
+        } catch (\Exception $exception) {
             return $exception;
         }
     }

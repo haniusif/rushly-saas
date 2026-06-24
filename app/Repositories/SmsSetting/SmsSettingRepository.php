@@ -26,6 +26,9 @@ class SmsSettingRepository implements SmsSettingInterface {
                 case SmsSetup::MSEGAT:
                     $request['msegat_status']  = $request->msegat_status == 'on'? Status::ACTIVE:Status::INACTIVE;
                     break;
+                case SmsSetup::TAQNYAT:
+                    $request['taqnyat_status'] = $request->taqnyat_status == 'on'? Status::ACTIVE:Status::INACTIVE;
+                    break;
                 default:
                     break;
             }

@@ -64,6 +64,15 @@ class SmsSettingsController extends Controller
                     ],
                     'active' => smsSettings('msegat_status') == Status::ACTIVE,
                 ],
+                'taqnyat' => [
+                    'method' => SmsSetup::TAQNYAT,
+                    'name'   => 'Taqnyat SMS',
+                    'fields' => [
+                        'taqnyat_token'  => smsSettings('taqnyat_token'),
+                        'taqnyat_sender' => smsSettings('taqnyat_sender'),
+                    ],
+                    'active' => smsSettings('taqnyat_status') == Status::ACTIVE,
+                ],
             ],
             'permissions' => [
                 'update' => hasPermission('sms_settings_update') || hasPermission('sms_settings_create'),
@@ -73,6 +82,7 @@ class SmsSettingsController extends Controller
                 'submit_twilio' => route('sms-settings.update', SmsSetup::TWILIO),
                 'submit_nexmo'  => route('sms-settings.update', SmsSetup::NEXMO),
                 'submit_msegat' => route('sms-settings.update', SmsSetup::MSEGAT),
+                'submit_taqnyat' => route('sms-settings.update', SmsSetup::TAQNYAT),
             ],
             't' => [
                 'title'        => __('smsSettings.title') ?: 'SMS settings',
@@ -96,6 +106,11 @@ class SmsSettingsController extends Controller
                 'ph_msegat_user_name' => 'Your MSEGAT username',
                 'ph_msegat_api_key'   => 'Your MSEGAT API key',
                 'ph_msegat_sender'    => 'e.g. RUSHLY',
+                'taqnyat_token'    => 'Bearer token',
+                'taqnyat_sender'   => 'Sender ID',
+                'taqnyat_help'     => 'Saudi SMS gateway (taqnyat.sa). Sender ID is case-sensitive and must be pre-approved on your Taqnyat account.',
+                'ph_taqnyat_token' => 'Your Taqnyat API bearer token',
+                'ph_taqnyat_sender'=> 'e.g. RUSHLY',
                 'ph_api_key'       => __('placeholder.Enter_api_key') ?: 'Enter API key',
                 'ph_secret_key'    => __('placeholder.Enter_secret_key') ?: 'Enter secret key',
                 'ph_api_url'       => __('placeholder.Enter_api_url') ?: 'Enter API URL',

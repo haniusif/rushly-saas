@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Head } from '@inertiajs/react';
-import { Plug, Settings, ExternalLink, Truck, Info } from 'lucide-react';
+import { Plug, Settings, ExternalLink, Truck, Info, Store } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { Button } from '@/Components/ui/Button';
@@ -76,12 +76,23 @@ function EcommerceCard({ i, permissions, t }) {
                             ? <MonoVal>••••{i.writeback_tail}</MonoVal>
                             : <span className="text-destructive">{t.not_set}</span>}
                     </DLRow>
+                    {typeof i.stores_count !== 'undefined' && (
+                        <DLRow label={t.stores}>
+                            <strong className="tabular-nums">{Number(i.stores_count || 0).toLocaleString()}</strong>
+                            <span className="text-muted-foreground"> · {Number(i.stores_linked_count || 0).toLocaleString()} {t.linked}</span>
+                        </DLRow>
+                    )}
                 </dl>
 
                 <div className="mt-auto flex flex-wrap gap-2 pt-3 border-t border-border">
                     {permissions.update && (
                         <a href={i.urls.edit} className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90">
                             <Settings className="h-3.5 w-3.5 me-1" /> {t.configure}
+                        </a>
+                    )}
+                    {i.urls.stores && (
+                        <a href={i.urls.stores} className="inline-flex h-8 items-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-muted/40">
+                            <Store className="h-3.5 w-3.5 me-1" /> {t.manage_stores}
                         </a>
                     )}
                     {i.app_url && (

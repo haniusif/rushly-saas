@@ -48,6 +48,12 @@ use App\Http\Controllers\Backend\OperationalAreaController;
 use App\Http\Controllers\Backend\FraudController;
 use App\Http\Controllers\Backend\NdrController;
 use App\Http\Controllers\Backend\AbnormalShipmentController;
+use App\Http\Controllers\Backend\LabelTemplateController;
+use App\Http\Controllers\Backend\SettingsHubController;
+use App\Http\Controllers\Backend\Zatca\SettingsController as ZatcaSettingsController;
+use App\Http\Controllers\Backend\Zatca\InvoiceController as ZatcaInvoiceController;
+use App\Http\Controllers\Backend\MerchantPanel\Zatca\SettingsController as MerchantZatcaSettingsController;
+use App\Http\Controllers\Backend\MerchantPanel\Zatca\InvoiceController as MerchantZatcaInvoiceController;
 use App\Http\Controllers\Backend\Wms\WmsProductController;
 use App\Http\Controllers\Backend\Wms\WmsLocationController;
 use App\Http\Controllers\Backend\Wms\WmsStockController;
@@ -254,6 +260,9 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                     // Admin Routes
                     Route::group(['prefix' => 'admin'], function () {
 
+                        // Topbar global search (parcel / driver / client / product / ticket)
+                        Route::get('global-search', [\App\Http\Controllers\Backend\GlobalSearchController::class, 'search'])->name('global.search');
+
                         Route::resource('addons', AddonController::class);
                         Route::post('/addons/activation', [AddonController::class, 'activation'])->name('addons.activation');
 
@@ -444,6 +453,7 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::get('parcel/index',                          [ParcelController::class, 'index'])->name('parcel.index')->middleware('hasPermission:parcel_read');
                         Route::get('parcel/details/{id}',                   [ParcelController::class, 'details'])->name('parcel.details')->middleware('hasPermission:parcel_read');
                         Route::get('parcel/tracking-offcanvas/{id}',        [ParcelController::class, 'trackingOffcanvas'])->name('parcel.tracking_offcanvas')->middleware('hasPermission:parcel_read');
+                        Route::get('parcel/tracking-json/{id}',             [ParcelController::class, 'trackingJson'])->name('parcel.tracking_json')->middleware('hasPermission:parcel_read');
 
                         Route::post('parcel/inline-update/',                   [ParcelController::class, 'inlineupdate'])->name('parcel.inline.update')->middleware('hasPermission:parcel_read');
                         
@@ -665,6 +675,29 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                             Route::put('/{abnormal}/resolve',   [AbnormalShipmentController::class, 'resolve'])->name('resolve');
                         });
 
+                        // Settings hub — single landing page with cards for every settings module
+                        Route::get('settings',                                  [SettingsHubController::class, 'index'])->name('settings.index');
+
+                        // Shipping label templates (5 carrier-styled layouts + per-merchant override)
+                        Route::prefix('settings/label-templates')->name('label-templates.')->middleware('hasPermission:label_template_manage')->group(function () {
+                            Route::get('/',                                 [LabelTemplateController::class, 'index'])->name('index');
+                            Route::put('/',                                 [LabelTemplateController::class, 'updateDefault'])->name('update-default');
+                            Route::put('/merchant/{id}',                    [LabelTemplateController::class, 'updateMerchantOverride'])->whereNumber('id')->name('update-merchant');
+                            Route::get('/preview/{template}',               [LabelTemplateController::class, 'preview'])->name('preview');
+                        });
+
+                        // ZATCA (Saudi e-invoicing) Phase 1 — Generation
+                        Route::prefix('zatca')->name('zatca.')->middleware('hasPermission:zatca_manage')->group(function () {
+                            Route::get('settings',                          [ZatcaSettingsController::class, 'index'])->name('settings.index');
+                            Route::put('settings',                          [ZatcaSettingsController::class, 'update'])->name('settings.update');
+
+                            Route::get('invoices',                          [ZatcaInvoiceController::class, 'index'])->name('invoices.index');
+                            Route::get('invoices/{id}',                     [ZatcaInvoiceController::class, 'show'])->whereNumber('id')->name('invoices.show');
+                            Route::post('invoices/{id}/regenerate',         [ZatcaInvoiceController::class, 'regenerate'])->whereNumber('id')->name('invoices.regenerate');
+                            Route::get('invoices/{id}/pdf',                 [ZatcaInvoiceController::class, 'pdf'])->whereNumber('id')->name('invoices.pdf');
+                            Route::get('invoices/{id}/qr',                  [ZatcaInvoiceController::class, 'qr'])->whereNumber('id')->name('invoices.qr');
+                        });
+
                         // WMS module — Phase 2 (Products + Locations + Stock)
                         Route::prefix('wms')->name('wms.')->middleware('hasPermission:wms_manage')->group(function () {
                             // Dashboard (Phase 7)
@@ -702,6 +735,7 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                             // Adjustments (Phase 5) — dual-approval gate at ±20%
                             Route::put('adjustments/{id}/approve', [WmsAdjustmentController::class, 'approve'])->name('adjustments.approve');
                             Route::put('adjustments/{id}/reject',  [WmsAdjustmentController::class, 'reject'])->name('adjustments.reject');
+                            Route::get('adjustments/lookup-qty',   [WmsAdjustmentController::class, 'lookupQty'])->name('adjustments.lookup-qty');
                             Route::resource('adjustments', WmsAdjustmentController::class)->only(['index','create','store','show']);
 
                             // Cycle Count (Phase 6)
@@ -748,6 +782,11 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::get('integrations',                  [IntegrationsController::class, 'index'])->name('integrations.index')->middleware('hasPermission:integrations_read');
                         Route::get('integrations/{platform}/edit',  [IntegrationsController::class, 'edit'])->name('integrations.edit')->middleware('hasPermission:integrations_update');
                         Route::put('integrations/{platform}',       [IntegrationsController::class, 'update'])->name('integrations.update')->middleware('hasPermission:integrations_update');
+
+                        // Per-Salla-merchant management
+                        Route::get('integrations/salla/stores',            [\App\Http\Controllers\Backend\SallaStoresController::class, 'index'])->name('salla.stores.index')->middleware('hasPermission:integrations_read');
+                        Route::get('integrations/salla/stores/{id}/edit',  [\App\Http\Controllers\Backend\SallaStoresController::class, 'edit'])->name('salla.stores.edit')->middleware('hasPermission:integrations_update');
+                        Route::put('integrations/salla/stores/{id}',       [\App\Http\Controllers\Backend\SallaStoresController::class, 'update'])->name('salla.stores.update')->middleware('hasPermission:integrations_update');
 
                         // Countries / Cities / Areas
                         Route::get('countries',              [CountryController::class, 'index'])->name('country.index');
@@ -1147,6 +1186,18 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                             Route::get('/pdf/{merchant_id}/{invoice_id}', [MerchantInvoiceController::class, 'InvoicePdf'])->name('pdf');
                             Route::get('/csv/{merchant_id}/{invoice_id}', [MerchantInvoiceController::class, 'InvoiceCSV'])->name('csv');
                         });
+
+                        // ZATCA — merchant-panel surface (settings + invoice journal)
+                        Route::prefix('zatca')->name('merchant.panel.zatca.')->group(function () {
+                            Route::get('settings',                       [MerchantZatcaSettingsController::class, 'index'])->name('settings.index');
+                            Route::put('settings',                       [MerchantZatcaSettingsController::class, 'update'])->name('settings.update');
+
+                            Route::get('invoices',                       [MerchantZatcaInvoiceController::class, 'index'])->name('invoices.index');
+                            Route::get('invoices/{id}',                  [MerchantZatcaInvoiceController::class, 'show'])->whereNumber('id')->name('invoices.show');
+                            Route::post('invoices/{id}/regenerate',      [MerchantZatcaInvoiceController::class, 'regenerate'])->whereNumber('id')->name('invoices.regenerate');
+                            Route::get('invoices/{id}/pdf',              [MerchantZatcaInvoiceController::class, 'pdf'])->whereNumber('id')->name('invoices.pdf');
+                            Route::get('invoices/{id}/qr',               [MerchantZatcaInvoiceController::class, 'qr'])->whereNumber('id')->name('invoices.qr');
+                        });
                         //erchant online payment  received setup
                         Route::get('/settings/online-payment-setup',                            [MerchantOnlinePaymentSetupController::class, 'index'])->name('merchant.online.payment.setup.index');
                         Route::put('/settings/online-payment-setup/update/{paymentmethod}',     [MerchantOnlinePaymentSetupController::class, 'paymentReceivedSetupUpdate'])->name('merchant.online.payment.setup.update');
@@ -1234,3 +1285,14 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
         Route::post('/store-token', [WebNotificationController::class, 'store'])->name('notification-store.token');
     });
 });
+
+/*
+ * Salla bridge routes — kept outside the IsInstalled/XSS groups so the OAuth
+ * callback and webhook endpoints stay reachable regardless of app install
+ * state. Salla calls these on salla.rushly.tech (mapped to this app).
+ */
+Route::get('/oauth/redirect',  [\App\Salla\Http\Controllers\OAuthController::class, 'redirect'])->name('salla.oauth.redirect');
+Route::get('/oauth/callback',  [\App\Salla\Http\Controllers\OAuthController::class, 'callback'])->name('salla.oauth.callback');
+Route::post('/webhooks/salla', \App\Salla\Http\Controllers\WebhookController::class)
+    ->middleware('salla.webhook')
+    ->name('salla.webhook');

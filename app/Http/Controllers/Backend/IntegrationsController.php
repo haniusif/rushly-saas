@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Backend\City;
 use App\Models\Backend\Deliverycategory;
 use App\Models\Backend\IntegrationSetting;
+use App\Models\Backend\Merchant;
 use App\Models\Backend\Parcels_3pl;
 use App\Models\Backend\SallaOrderLink;
 use App\Models\Backend\WooCommerceOrderLink;
 use App\Models\Backend\ZidOrderLink;
+use App\Salla\Models\Merchant as SallaMerchant;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -32,10 +34,15 @@ class IntegrationsController extends Controller
             ->get()
             ->keyBy('platform');
 
-        $integrations = collect(self::PLATFORMS)->map(function (string $platform) use ($rows) {
+        $companyId = settings()->id ?? null;
+        $companyMerchantIds = $companyId
+            ? Merchant::where('company_id', $companyId)->pluck('id')->all()
+            : [];
+
+        $integrations = collect(self::PLATFORMS)->map(function (string $platform) use ($rows, $companyMerchantIds) {
             $s = $rows->get($platform) ?? IntegrationSetting::forPlatform($platform);
             $writeback = (string) ($s->writeback_token ?? '');
-            return [
+            $row = [
                 'platform'         => $s->platform,
                 'name'             => $s->displayName(),
                 'host'             => self::PLATFORM_HOSTS[$s->platform] ?? '',
@@ -51,6 +58,14 @@ class IntegrationsController extends Controller
                     'edit' => route('integrations.edit', $platform),
                 ],
             ];
+
+            if ($platform === 'salla' && Schema::hasTable('salla_merchants')) {
+                $row['stores_count']        = SallaMerchant::count();
+                $row['stores_linked_count'] = SallaMerchant::whereIn('rushly_merchant_id', $companyMerchantIds)->count();
+                $row['urls']['stores']      = route('salla.stores.index');
+            }
+
+            return $row;
         })->values();
 
         return Inertia::render('Admin/Integrations/Index', [
@@ -83,6 +98,9 @@ class IntegrationsController extends Controller
                 'configure'         => 'Configure',
                 'open_bridge'       => 'Open bridge',
                 'config_source'     => 'Config source',
+                'stores'            => 'Stores',
+                'manage_stores'     => 'Manage stores',
+                'linked'            => 'linked',
             ],
         ]);
     }
@@ -195,7 +213,7 @@ class IntegrationsController extends Controller
     private function parcelCount(string $platform): int
     {
         return match ($platform) {
-            'salla'       => Schema::hasTable('salla_orders')       ? SallaOrderLink::count()       : 0,
+            'salla'       => Schema::hasTable('salla_order_links')  ? SallaOrderLink::count()       : 0,
             'zid'         => Schema::hasTable('zid_orders')         ? ZidOrderLink::count()         : 0,
             'woocommerce' => Schema::hasTable('woocommerce_orders') ? WooCommerceOrderLink::count() : 0,
             default       => 0,

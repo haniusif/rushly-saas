@@ -16,7 +16,7 @@ use Tests\TestCase;
  *
  *   - merchants            (id, company_id) — for the Merchant::find() lookup
  *   - parcels              (the columns the external controllers fill)
- *   - salla_orders         (link table for Salla parcels)
+ *   - salla_order_links    (link table for Salla parcels)
  *   - zid_orders           (link table for Zid parcels)
  *   - woocommerce_orders   (link table for WC parcels)
  */
@@ -70,7 +70,7 @@ abstract class ExternalTestCase extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('salla_orders', function ($table) {
+        Schema::create('salla_order_links', function ($table) {
             $table->id();
             $table->unsignedBigInteger('company_id')->nullable();
             $table->unsignedBigInteger('merchant_id')->nullable();

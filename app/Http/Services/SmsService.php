@@ -16,6 +16,8 @@ class SmsService
         $smsTwilioSetting = smsSettings('twilio_status');
         $smsMsegatSetting = smsSettings('msegat_status');
         $smsTaqnyatSetting = smsSettings('taqnyat_status');
+        $smsJawaly4Setting = smsSettings('jawaly4_status');
+        $smsUnifonicSetting = smsSettings('unifonic_status');
         if($smsSetting == Status::ACTIVE){
             $this->reveSms ('otp',$userPhone,$otpCode);
         }
@@ -28,6 +30,12 @@ class SmsService
         if($smsTaqnyatSetting == Status::ACTIVE){
             $this->taqnyatSms('otp',$userPhone,$otpCode);
         }
+        if($smsJawaly4Setting == Status::ACTIVE){
+            $this->jawaly4Sms('otp',$userPhone,$otpCode);
+        }
+        if($smsUnifonicSetting == Status::ACTIVE){
+            $this->unifonicSms('otp',$userPhone,$otpCode);
+        }
 
     }
 
@@ -39,6 +47,8 @@ class SmsService
         $smsNexmoSetting  = smsSettings('nexmo_status');
         $smsMsegatSetting = smsSettings('msegat_status');
         $smsTaqnyatSetting = smsSettings('taqnyat_status');
+        $smsJawaly4Setting = smsSettings('jawaly4_status');
+        $smsUnifonicSetting = smsSettings('unifonic_status');
         if($smsSetting == Status::ACTIVE){
             $this->reveSms ('sms',$userPhone,$msg);
         }
@@ -53,6 +63,12 @@ class SmsService
         }
         if($smsTaqnyatSetting == Status::ACTIVE){
             $this->taqnyatSms('sms',$userPhone,$msg);
+        }
+        if($smsJawaly4Setting == Status::ACTIVE){
+            $this->jawaly4Sms('sms',$userPhone,$msg);
+        }
+        if($smsUnifonicSetting == Status::ACTIVE){
+            $this->unifonicSms('sms',$userPhone,$msg);
         }
 
     }
@@ -192,6 +208,100 @@ class SmsService
             $response = curl_exec($ch);
             curl_close($ch);
             return $response;
+        } catch (\Exception $exception) {
+            return $exception;
+        }
+    }
+
+    /**
+     * 4jawaly (Saudi SMS gateway) — Basic auth POST endpoint.
+     * Docs: https://github.com/4jawalycom/4jawaly.com_bulk_sms
+     */
+    private function jawaly4Sms($type, $receiverNumber, $message)
+    {
+        try {
+            $appId   = smsSettings('jawaly4_app_id');
+            $appSec  = smsSettings('jawaly4_app_sec');
+            $sender  = smsSettings('jawaly4_sender') ?: settings()->name;
+
+            if ($type === 'otp') {
+                $body = $message . ' is your ' . settings()->name . ' verification code.';
+            } else {
+                $body = $message;
+            }
+
+            $numbers = is_array($receiverNumber)
+                ? array_values(array_map(fn ($n) => (string) $n, $receiverNumber))
+                : [(string) $receiverNumber];
+
+            $payload = [
+                'messages' => [[
+                    'text'    => $body,
+                    'numbers' => $numbers,
+                    'sender'  => $sender,
+                ]],
+            ];
+
+            $ch = curl_init('https://api-sms.4jawaly.com/api/v1/account/area/sms/send');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Authorization: Basic ' . base64_encode($appId . ':' . $appSec),
+                'Content-Type: application/json',
+                'Accept: application/json',
+            ]);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            $response = curl_exec($ch);
+            curl_close($ch);
+            return $response;
+        } catch (\Exception $exception) {
+            return $exception;
+        }
+    }
+
+    /**
+     * Unifonic (Saudi/GCC SMS gateway) — form-encoded REST endpoint.
+     * Docs: https://docs.unifonic.com/
+     */
+    private function unifonicSms($type, $receiverNumber, $message)
+    {
+        try {
+            $appSid = smsSettings('unifonic_app_sid');
+            $sender = smsSettings('unifonic_sender') ?: settings()->name;
+
+            if ($type === 'otp') {
+                $body = $message . ' is your ' . settings()->name . ' verification code.';
+            } else {
+                $body = $message;
+            }
+
+            $recipients = is_array($receiverNumber) ? $receiverNumber : [$receiverNumber];
+
+            $lastResponse = null;
+            foreach ($recipients as $number) {
+                $payload = http_build_query([
+                    'AppSid'    => $appSid,
+                    'Recipient' => (string) $number,
+                    'Body'      => $body,
+                    'SenderID'  => $sender,
+                ]);
+
+                $ch = curl_init('https://el.cloud.unifonic.com/rest/SMS/messages');
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                    'Content-Type: application/x-www-form-urlencoded',
+                    'Accept: application/json',
+                ]);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+                $lastResponse = curl_exec($ch);
+                curl_close($ch);
+            }
+            return $lastResponse;
         } catch (\Exception $exception) {
             return $exception;
         }

@@ -40,6 +40,7 @@ class Kernel extends HttpKernel
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\LanguageManager::class,
+            \App\Http\Middleware\HandleInertiaRequests::class,
         ],
 
         'api' => [
@@ -79,6 +80,7 @@ class Kernel extends HttpKernel
         'IsInstalled'       =>\App\Http\Middleware\IsInstalledMiddleware::class,
         'IsNotInstalled'    =>\App\Http\Middleware\IsNotInstalledMiddleware::class,
         'subscriptionCheck'    =>\App\Http\Middleware\subscriptionCheckMiddleware::class,
+        'salla.webhook'        => \App\Salla\Http\Middleware\VerifyWebhook::class,
 
     ];
 }

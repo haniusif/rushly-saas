@@ -42,6 +42,17 @@ class StoreRequest extends FormRequest
                 'nexmo_key'                => ['required','string','max:1000'],
                 'nexmo_secret_key'         => ['required','string','max:1000'],
             ];
+        }elseif(request()->smsMethod == SmsSetup::JAWALY4) {
+            return [
+                'jawaly4_app_id'  => ['required','string','max:191'],
+                'jawaly4_app_sec' => ['required','string','max:191'],
+                'jawaly4_sender'  => ['nullable','string','max:64'],
+            ];
+        }elseif(request()->smsMethod == SmsSetup::UNIFONIC) {
+            return [
+                'unifonic_app_sid' => ['required','string','max:191'],
+                'unifonic_sender'  => ['nullable','string','max:64'],
+            ];
         }else {
             return [];
         }

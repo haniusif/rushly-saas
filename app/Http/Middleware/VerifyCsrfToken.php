@@ -31,5 +31,8 @@ class VerifyCsrfToken extends Middleware
 
         '/subscription/success',
         '/subscription/cancel',
+
+        // Salla bridge
+        '/webhooks/salla',
     ];
 }

@@ -29,6 +29,12 @@ class SmsSettingRepository implements SmsSettingInterface {
                 case SmsSetup::TAQNYAT:
                     $request['taqnyat_status'] = $request->taqnyat_status == 'on'? Status::ACTIVE:Status::INACTIVE;
                     break;
+                case SmsSetup::JAWALY4:
+                    $request['jawaly4_status'] = $request->jawaly4_status == 'on'? Status::ACTIVE:Status::INACTIVE;
+                    break;
+                case SmsSetup::UNIFONIC:
+                    $request['unifonic_status'] = $request->unifonic_status == 'on'? Status::ACTIVE:Status::INACTIVE;
+                    break;
                 default:
                     break;
             }

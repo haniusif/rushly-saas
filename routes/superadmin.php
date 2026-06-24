@@ -167,6 +167,11 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                 Route::get('integrations/{platform}/edit',  [IntegrationsController::class, 'edit'])->name('integrations.edit')->middleware('hasPermission:integrations_update');
                 Route::put('integrations/{platform}',       [IntegrationsController::class, 'update'])->name('integrations.update')->middleware('hasPermission:integrations_update');
 
+                // Per-Salla-merchant management
+                Route::get('integrations/salla/stores',            [\App\Http\Controllers\Backend\SallaStoresController::class, 'index'])->name('salla.stores.index')->middleware('hasPermission:integrations_read');
+                Route::get('integrations/salla/stores/{id}/edit',  [\App\Http\Controllers\Backend\SallaStoresController::class, 'edit'])->name('salla.stores.edit')->middleware('hasPermission:integrations_update');
+                Route::put('integrations/salla/stores/{id}',       [\App\Http\Controllers\Backend\SallaStoresController::class, 'update'])->name('salla.stores.update')->middleware('hasPermission:integrations_update');
+
 
                 //payout setup settings
                 Route::get('/settings/pay-out/setup',                            [PayoutSetupController::class, 'index'])->name('payout.setup.settings.index')->middleware('hasPermission:payout_setup_settings_read');

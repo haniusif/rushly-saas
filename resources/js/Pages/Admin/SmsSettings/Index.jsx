@@ -163,6 +163,33 @@ export default function Index({ providers = {}, permissions = {}, urls = {}, t =
                         { name: 'taqnyat_sender', labelKey: 'taqnyat_sender', placeholderKey: 'ph_taqnyat_sender', required: true },
                     ]}
                 />
+                <ProviderCard
+                    name={providers.jawaly4?.name}
+                    provider={providers.jawaly4}
+                    submitUrl={urls.submit_jawaly4}
+                    statusKey="jawaly4_status"
+                    canEdit={permissions.update}
+                    t={t}
+                    help={t.jawaly4_help}
+                    fields={[
+                        { name: 'jawaly4_app_id',  labelKey: 'jawaly4_app_id',  placeholderKey: 'ph_jawaly4_app_id',  required: true },
+                        { name: 'jawaly4_app_sec', labelKey: 'jawaly4_app_sec', placeholderKey: 'ph_jawaly4_app_sec', required: true },
+                        { name: 'jawaly4_sender',  labelKey: 'jawaly4_sender',  placeholderKey: 'ph_jawaly4_sender' },
+                    ]}
+                />
+                <ProviderCard
+                    name={providers.unifonic?.name}
+                    provider={providers.unifonic}
+                    submitUrl={urls.submit_unifonic}
+                    statusKey="unifonic_status"
+                    canEdit={permissions.update}
+                    t={t}
+                    help={t.unifonic_help}
+                    fields={[
+                        { name: 'unifonic_app_sid', labelKey: 'unifonic_app_sid', placeholderKey: 'ph_unifonic_app_sid', required: true },
+                        { name: 'unifonic_sender',  labelKey: 'unifonic_sender',  placeholderKey: 'ph_unifonic_sender' },
+                    ]}
+                />
             </div>
         </AdminLayout>
     );

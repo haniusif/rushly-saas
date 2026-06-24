@@ -21,13 +21,87 @@ class UserController extends Controller
 
     public function index(Request $request)
     {
-        $users = $this->repo->all();
-        return view('backend.user.index',compact('users','request'));
+        return $this->renderIndex($this->repo->all(), $request);
     }
     public function filter(Request $request)
     {
-        $users = $this->repo->filter($request);
-        return view('backend.user.index',compact('users','request'));
+        return $this->renderIndex($this->repo->filter($request), $request);
+    }
+
+    private function renderIndex($paginator, Request $request)
+    {
+        $rows = collect($paginator->items())->map(fn ($u) => [
+            'id'       => $u->id,
+            'name'     => $u->name,
+            'email'    => $u->email,
+            'mobile'   => $u->mobile,
+            'image'    => $u->image,
+            'hub'      => optional($u->hub)->name,
+            'role'     => optional($u->role)->name,
+            'salary'   => (float) ($u->salary ?? 0),
+            'status'   => (int) ($u->status ?? 1),
+            'is_locked'=> $u->id == 1 || (string) $u->company_owner === 'yes',
+            'urls' => [
+                'edit'        => route('users.edit', $u->id),
+                'delete'      => route('user.delete', $u->id),
+                'permissions' => route('users.edit', $u->id),
+            ],
+        ])->values();
+
+        return \Inertia\Inertia::render('Admin/User/Index', [
+            'rows'       => $rows,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'from'         => $paginator->firstItem(),
+                'to'           => $paginator->lastItem(),
+                'total'        => $paginator->total(),
+                'prev_url'     => $paginator->previousPageUrl(),
+                'next_url'     => $paginator->nextPageUrl(),
+            ],
+            'filters' => [
+                'name'  => (string) ($request->name ?? ''),
+                'email' => (string) ($request->email ?? ''),
+                'phone' => (string) ($request->phone ?? ''),
+            ],
+            'currency' => settings()->currency,
+            'permissions' => [
+                'create' => hasPermission('user_create'),
+                'update' => hasPermission('user_update'),
+                'delete' => hasPermission('user_delete'),
+            ],
+            'urls' => [
+                'index'  => route('users.index'),
+                'filter' => route('users.filter'),
+                'create' => route('users.create'),
+            ],
+            't' => [
+                'title'   => __('user.title') ?: 'Users',
+                'list'    => __('levels.list') ?: 'List',
+                'add'     => __('levels.add') ?: 'Add',
+                'edit'    => __('levels.edit') ?: 'Edit',
+                'delete'  => __('levels.delete') ?: 'Delete',
+                'actions' => __('levels.actions') ?: 'Actions',
+                'details' => __('levels.details') ?: 'Details',
+                'hub'     => __('levels.hub') ?: 'Hub',
+                'role'    => __('levels.role') ?: 'Role',
+                'salary'  => __('levels.salary') ?: 'Salary',
+                'status'  => __('levels.status') ?: 'Status',
+                'name'    => __('levels.name') ?: 'Name',
+                'email'   => __('levels.email') ?: 'Email',
+                'phone'   => __('levels.phone') ?: 'Phone',
+                'filter'  => __('levels.filter') ?: 'Filter',
+                'clear'   => __('levels.clear') ?: 'Clear',
+                'status_active'    => __('levels.active') ?: 'Active',
+                'status_inactive'  => __('levels.inactive') ?: 'Inactive',
+                'locked_hint' => 'Owner — cannot delete',
+                'no_rows'     => 'No users yet.',
+                'delete_confirm' => 'Delete this user?',
+                'prev'    => 'Prev',
+                'next'    => 'Next',
+                'showing_results' => 'Showing :from – :to of :total',
+            ],
+        ]);
     }
 
     public function create()

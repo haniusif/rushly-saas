@@ -159,9 +159,61 @@ class MerchantInvoiceController extends Controller
 
 
     public function PaidInvoice(Request $request){
-        $invoices            = $this->repo->getPaidInvoices();
-        $processInvoices     = $this->repo->getProcessInvoices();
-        $unpaidInvoices      = $this->repo->getUnpaidInvoices();
-        return view('backend.invoice.paid_invoice_list',compact('invoices','processInvoices','unpaidInvoices','request'));
+        $shape = function ($inv) {
+            return [
+                'id'              => $inv->id,
+                'merchant_name'   => optional($inv->merchant)->business_name,
+                'merchant_email'  => optional(optional($inv->merchant)->user)->email,
+                'invoice_id'      => $inv->invoice_id,
+                'invoice_date'    => $inv->invoice_date,
+                'cash_collection' => (float) ($inv->cash_collection ?? 0),
+                'total_charge'    => (float) ($inv->total_charge ?? 0),
+                'current_payable' => (float) ($inv->current_payable ?? 0),
+                'status'          => (int) $inv->status,
+                'status_label'    => trans('invoice.' . $inv->status) ?: (string) $inv->status,
+            ];
+        };
+
+        $paid    = $this->repo->getPaidInvoices();
+        $process = $this->repo->getProcessInvoices();
+        $unpaid  = $this->repo->getUnpaidInvoices();
+
+        $meta = fn ($p) => [
+            'current_page' => $p->currentPage(),
+            'last_page'    => $p->lastPage(),
+            'from'         => $p->firstItem(),
+            'to'           => $p->lastItem(),
+            'total'        => $p->total(),
+            'prev_url'     => $p->previousPageUrl(),
+            'next_url'     => $p->nextPageUrl(),
+        ];
+
+        return \Inertia\Inertia::render('Admin/PaidInvoice/Index', [
+            'tabs' => [
+                'paid'       => ['rows' => collect($paid->items())->map($shape)->values(),    'pagination' => $meta($paid)],
+                'processing' => ['rows' => collect($process->items())->map($shape)->values(), 'pagination' => $meta($process)],
+                'unpaid'     => ['rows' => collect($unpaid->items())->map($shape)->values(),  'pagination' => $meta($unpaid)],
+            ],
+            'currency' => settings()->currency,
+            'urls'     => ['index' => route('paid.invoice.index')],
+            't' => [
+                'title'           => __('parcel.paid_invoice') ?: 'Paid invoices',
+                'list'            => __('levels.list') ?: 'List',
+                'tab_paid'        => __('invoice.3') ?: 'Paid',
+                'tab_processing'  => __('invoice.2') ?: 'Processing',
+                'tab_unpaid'      => __('invoice.0') ?: 'Unpaid',
+                'merchant'        => __('merchant.title') ?: 'Merchant',
+                'invoice_id'      => (__('menus.invoice') ?: 'Invoice') . ' ' . (__('invoice.id') ?: 'ID'),
+                'invoice_date'    => (__('menus.invoice') ?: 'Invoice') . ' ' . (__('levels.date') ?: 'date'),
+                'cash_collection' => __('parcel.cash_collection') ?: 'Cash collection',
+                'total_charge'    => __('parcel.Total_Charge') ?: 'Total charge',
+                'current_payable' => __('parcel.current_payable') ?: 'Current payable',
+                'status'          => __('parcel.status') ?: 'Status',
+                'no_rows'         => 'No invoices.',
+                'prev'            => 'Prev',
+                'next'            => 'Next',
+                'showing_results' => 'Showing :from – :to of :total',
+            ],
+        ]);
     }
 }

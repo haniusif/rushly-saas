@@ -51,6 +51,11 @@ PAGES=(
   "/admin/delivery-category/create|Admin/DeliveryCategory/Form"
   "/admin/delivery-charge/index|Admin/DeliveryCharge/Index"
   "/admin/delivery-charge/create|Admin/DeliveryCharge/Form"
+  "/admin/paid/invoice|Admin/PaidInvoice/Index"
+  "/admin/payout|Admin/Payout/Index"
+  "/admin/accounts/index|Admin/Account/Index"
+  "/admin/users|Admin/User/Index"
+  "/admin/salarys|Admin/Salary/Index"
 )
 
 WORK="$(mktemp -d)"

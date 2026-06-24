@@ -22,13 +22,83 @@ class SalaryController extends Controller
         $this->accounts  = $accounts;
     }
     public function index(Request $request){
-        $salaries  = $this->repo->all();
-        return view('backend.salary.index',compact('salaries','request'));
+        return $this->renderIndex($this->repo->all(), $request);
     }
 
     public function salaryFilter(Request $request){
-        $salaries  = $this->repo->salaryFilter($request);
-        return view('backend.salary.index',compact('salaries','request'));
+        return $this->renderIndex($this->repo->salaryFilter($request), $request);
+    }
+
+    private function renderIndex($paginator, Request $request)
+    {
+        $rows = collect($paginator->items())->map(fn ($s) => [
+            'id'           => $s->id,
+            'user_name'    => optional($s->user)->name,
+            'user_email'   => optional($s->user)->email,
+            'user_image'   => optional($s->user)->image,
+            'from_account' => optional($s->account)->account_holder_name,
+            'month'        => (string) $s->month,
+            'date'         => $s->date ? dateFormat($s->date) : null,
+            'note'         => $s->note,
+            'amount'       => (float) ($s->amount ?? 0),
+            'urls' => [
+                'edit'     => route('salary.edit', $s->id),
+                'delete'   => route('salary.delete', $s->id),
+                'pay_slip' => route('salary.pay.slip', $s->id),
+            ],
+        ])->values();
+
+        return \Inertia\Inertia::render('Admin/Salary/Index', [
+            'rows'       => $rows,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'from'         => $paginator->firstItem(),
+                'to'           => $paginator->lastItem(),
+                'total'        => $paginator->total(),
+                'prev_url'     => $paginator->previousPageUrl(),
+                'next_url'     => $paginator->nextPageUrl(),
+            ],
+            'filters' => [
+                'user_id' => (string) ($request->user_id ?? ''),
+                'month'   => (string) ($request->month ?? date('Y-m')),
+            ],
+            'currency' => settings()->currency,
+            'permissions' => [
+                'create' => hasPermission('salary_create'),
+                'update' => hasPermission('salary_update'),
+                'delete' => hasPermission('salary_delete'),
+            ],
+            'urls' => [
+                'index'       => route('salary.index'),
+                'filter'      => route('salary.filter'),
+                'create'      => route('salary.create'),
+                'user_search' => route('salary.users'),
+            ],
+            't' => [
+                'title'        => __('salary.title') ?: 'Salaries',
+                'list'         => __('levels.list') ?: 'List',
+                'add'          => __('levels.add') ?: 'Add',
+                'edit'         => __('levels.edit') ?: 'Edit',
+                'delete'       => __('levels.delete') ?: 'Delete',
+                'actions'      => __('levels.actions') ?: 'Actions',
+                'user'         => __('levels.user') ?: 'User',
+                'from_account' => __('levels.from_account') ?: 'From account',
+                'month'        => __('salary.month') ?: 'Month',
+                'date'         => __('levels.date') ?: 'Date',
+                'note'         => __('levels.note') ?: 'Note',
+                'amount'       => __('levels.amount') ?: 'Amount',
+                'pay_slip'     => __('salary.pay_slip') ?: 'Pay slip',
+                'filter'       => __('levels.filter') ?: 'Filter',
+                'clear'        => __('levels.clear') ?: 'Clear',
+                'select_user'  => (__('menus.select') ?: 'Select') . ' ' . (__('levels.user') ?: 'user'),
+                'no_rows'      => 'No salary entries yet.',
+                'delete_confirm' => 'Delete this salary entry?',
+                'prev'         => 'Prev',
+                'next'         => 'Next',
+                'showing_results' => 'Showing :from – :to of :total',
+            ],
+        ]);
     }
 
     public function create(){

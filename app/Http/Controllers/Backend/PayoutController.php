@@ -34,9 +34,47 @@ class PayoutController extends Controller
 
     //start stripe payment gateway
     public function index(){
-        $oPayments        = $this->MOPRModel->orderByDesc('id')->paginate(10);
+        $paginator = $this->MOPRModel->with(['merchant.user','account'])->orderByDesc('id')->paginate(10);
 
-        return view('backend.payout.payment_list',compact('oPayments'));
+        $rows = collect($paginator->items())->map(fn ($p) => [
+            'id'             => $p->id,
+            'card_type'      => $p->card_type,
+            'merchant_name'  => optional($p->merchant)->business_name,
+            'merchant_email' => optional(optional($p->merchant)->user)->email,
+            'from_account'   => optional($p->account)->account_holder_name,
+            'from_account_no'=> optional($p->account)->account_no,
+            'transaction_id' => $p->transaction_id,
+            'amount'         => (float) ($p->amount ?? 0),
+            'created_at'     => optional($p->created_at)->format('Y-m-d H:i'),
+        ])->values();
+
+        return \Inertia\Inertia::render('Admin/Payout/Index', [
+            'rows'       => $rows,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'from'         => $paginator->firstItem(),
+                'to'           => $paginator->lastItem(),
+                'total'        => $paginator->total(),
+                'prev_url'     => $paginator->previousPageUrl(),
+                'next_url'     => $paginator->nextPageUrl(),
+            ],
+            'currency' => settings()->currency,
+            't' => [
+                'title'          => __('menus.payout') ?: 'Payout',
+                'list'           => __('levels.list') ?: 'List',
+                'card_type'      => __('levels.card_type') ?: 'Method',
+                'merchant'       => __('merchant.title') ?: 'Merchant',
+                'from_account'   => __('levels.from_account') ?: 'From account',
+                'transaction_id' => __('levels.transaction_id') ?: 'Transaction ID',
+                'amount'         => __('levels.amount') ?: 'Amount',
+                'when'           => __('levels.created_at') ?: 'When',
+                'no_rows'        => 'No payouts yet.',
+                'prev'           => 'Prev',
+                'next'           => 'Next',
+                'showing_results'=> 'Showing :from – :to of :total',
+            ],
+        ]);
     }
 
     public function merchantPayout(Request $request){

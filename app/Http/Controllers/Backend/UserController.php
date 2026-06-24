@@ -106,11 +106,53 @@ class UserController extends Controller
 
     public function create()
     {
-        $hubs         = $this->repo->hubs();
-        $departments  = $this->repo->departments();
-        $designations = $this->repo->designations();
-        $roles        = $this->role->getRole();
-        return view('backend.user.create',compact('hubs','departments','designations','roles'));
+        return \Inertia\Inertia::render('Admin/User/Form', [
+            'mode'   => 'create',
+            'entity' => null,
+            'lookups' => [
+                'hubs'         => collect($this->repo->hubs())->map(fn ($h) => ['value' => (string) $h->id, 'label' => $h->name])->values(),
+                'departments'  => collect($this->repo->departments())->map(fn ($d) => ['value' => (string) $d->id, 'label' => $d->title])->values(),
+                'designations' => collect($this->repo->designations())->map(fn ($d) => ['value' => (string) $d->id, 'label' => $d->title])->values(),
+                'roles'        => collect($this->role->getRole())->map(fn ($r) => ['value' => (string) $r->id, 'label' => $r->name])->values(),
+                'statuses'     => collect((array) trans('status'))->map(fn ($v, $k) => ['value' => (string) $k, 'label' => (string) $v])->values(),
+            ],
+            'flags' => [
+                'is_super_admin' => isSuperadmin(),
+            ],
+            'urls' => [
+                'submit' => route('users.store'),
+                'cancel' => route('users.index'),
+            ],
+            't' => [
+                'title'      => __('user.create_user') ?: 'Create user',
+                'list_title' => __('user.title') ?: 'Users',
+                'name'       => __('levels.name') ?: 'Name',
+                'phone'      => __('levels.phone') ?: 'Phone',
+                'address'    => __('levels.address') ?: 'Address',
+                'designation'=> __('levels.designation') ?: 'Designation',
+                'department' => __('levels.department') ?: 'Department',
+                'role'       => __('levels.role') ?: 'Role',
+                'status'     => __('levels.status') ?: 'Status',
+                'email'      => __('levels.email') ?: 'Email',
+                'password'   => __('levels.password') ?: 'Password',
+                'nid'        => __('levels.nid') ?: 'NID',
+                'joining_date'=> __('levels.joining_date') ?: 'Joining date',
+                'hub'        => __('levels.hub') ?: 'Hub',
+                'salary'     => __('levels.salary') ?: 'Salary',
+                'image'      => __('levels.image') ?: 'Image',
+                'save'       => __('levels.save') ?: 'Save',
+                'cancel'     => __('levels.cancel') ?: 'Cancel',
+                'back'       => __('levels.back') ?: 'Back',
+                'none'       => 'None',
+                'placeholder_name'   => __('placeholder.Enter_name') ?: 'Enter name',
+                'placeholder_mobile' => __('placeholder.Enter_mobile') ?: 'Enter mobile',
+                'placeholder_address'=> __('placeholder.Enter_address') ?: 'Enter address',
+                'placeholder_email'  => __('placeholder.enter_email') ?: 'Enter email',
+                'placeholder_password'=> __('placeholder.Enter_password') ?: 'Enter password',
+                'placeholder_nid'    => __('placeholder.Enter_nid_number') ?: 'Enter NID',
+                'placeholder_salary' => __('salary.title') ?: 'Salary',
+            ],
+        ]);
     }
 
     public function store(StoreUserRequest $request)

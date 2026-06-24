@@ -56,6 +56,7 @@ PAGES=(
   "/admin/accounts/index|Admin/Account/Index"
   "/admin/accounts/create|Admin/Account/Form"
   "/admin/users|Admin/User/Index"
+  "/admin/users/create|Admin/User/Form"
   "/admin/salarys|Admin/Salary/Index"
 )
 

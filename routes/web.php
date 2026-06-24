@@ -236,7 +236,8 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
 
             // Public API docs — no auth, no apiKey. Anyone (a merchant
             // integrating against the platform) can read the endpoint list.
-            Route::get('/api-docs/merchant', [ApiDocsController::class, 'merchantPublic'])->name('api-docs.merchant.public');
+            Route::get('/api-docs/merchant',      [ApiDocsController::class, 'merchantPublic'])->name('api-docs.merchant.public');
+            Route::get('/api-docs/merchant.json', [ApiDocsController::class, 'merchantOpenApi'])->name('api-docs.merchant.openapi');
 
             Route::group(['middleware' => 'auth'], function () {
                 

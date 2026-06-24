@@ -60,6 +60,8 @@ PAGES=(
   "/admin/salarys|Admin/Salary/Index"
   "/admin/salarys/create|Admin/Salary/Form"
   "/admin/delivery-type/index|Admin/DeliveryType/Index"
+  "/admin/liquid-fragile/index|Admin/LiquidFragile/Index"
+  "/admin/liquid-fragile/edit|Admin/LiquidFragile/Index"
 )
 
 WORK="$(mktemp -d)"

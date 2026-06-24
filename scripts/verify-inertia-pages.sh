@@ -45,6 +45,8 @@ PAGES=(
   "/admin/assets/create|Admin/Asset/Form"
   "/admin/wallet-request|Admin/Wallet/Index"
   "/admin/general-settings/index|Admin/GeneralSettings/Index"
+  "/admin/integrations|Admin/Integrations/Index"
+  "/admin/integrations/salla/edit|Admin/Integrations/Edit"
 )
 
 WORK="$(mktemp -d)"

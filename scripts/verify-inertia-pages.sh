@@ -58,6 +58,7 @@ PAGES=(
   "/admin/users|Admin/User/Index"
   "/admin/users/create|Admin/User/Form"
   "/admin/salarys|Admin/Salary/Index"
+  "/admin/salarys/create|Admin/Salary/Form"
 )
 
 WORK="$(mktemp -d)"

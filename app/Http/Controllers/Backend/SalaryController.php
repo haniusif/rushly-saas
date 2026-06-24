@@ -102,8 +102,56 @@ class SalaryController extends Controller
     }
 
     public function create(){
-        $accounts    = $this->accounts->all();
-        return view('backend.salary.create',compact('accounts'));
+        $accounts = $this->accounts->all();
+        // Mirror the legacy view's filter: only admin-type accounts; build a
+        // user-friendly label per gateway.
+        $accountOptions = collect($accounts->items() ?? $accounts)
+            ->filter(fn ($a) => (int) $a->type === \App\Enums\AccountType::ADMIN)
+            ->map(function ($a) {
+                $label = match ((int) $a->gateway) {
+                    1       => optional($a->user)->name . ' (Cash)',
+                    3       => 'bKash · ' . $a->account_holder_name . ' (' . $a->account_no . ' ' . $a->mobile . ')',
+                    4       => 'Rocket · ' . $a->account_holder_name . ' (' . $a->account_no . ' ' . $a->mobile . ')',
+                    5       => 'Nagad · ' . $a->account_holder_name . ' (' . $a->account_no . ' ' . $a->mobile . ')',
+                    default => $a->account_holder_name . ' (' . $a->account_no . ' ' . $a->branch_name . ')',
+                };
+                return [
+                    'value'   => (string) $a->id,
+                    'label'   => $label,
+                    'balance' => (float) ($a->balance ?? 0),
+                ];
+            })->values();
+
+        return \Inertia\Inertia::render('Admin/Salary/Form', [
+            'mode'    => 'create',
+            'entity'  => null,
+            'lookups' => ['accounts' => $accountOptions],
+            'currency' => settings()->currency,
+            'urls' => [
+                'submit'       => route('salary.store'),
+                'cancel'       => route('salary.index'),
+                'user_search'  => route('salary.users'),
+            ],
+            't' => [
+                'title'       => (__('levels.create') ?: 'Create') . ' ' . (__('salary.title') ?: 'salary'),
+                'list_title'  => __('salary.title') ?: 'Salaries',
+                'month'       => __('salary.month') ?: 'Month',
+                'user'        => __('levels.user') ?: 'User',
+                'date'        => __('levels.date') ?: 'Date',
+                'from_account'=> __('levels.from_account') ?: 'From account',
+                'amount'      => __('levels.amount') ?: 'Amount',
+                'note'        => __('levels.note') ?: 'Note',
+                'select_user' => (__('menus.select') ?: 'Select') . ' ' . (__('user.title') ?: 'user'),
+                'select_account' => (__('menus.select') ?: 'Select') . ' ' . (__('levels.from_account') ?: 'account'),
+                'balance_label'  => 'Account balance',
+                'not_enough_balance' => __('salary.not_enough_balance') ?: 'Amount exceeds account balance.',
+                'placeholder_amount' => __('placeholder.Enter_Amount') ?: 'Enter amount',
+                'placeholder_desc'   => __('placeholder.Enter_description') ?: 'Note',
+                'save'        => __('levels.save') ?: 'Save',
+                'cancel'      => __('levels.cancel') ?: 'Cancel',
+                'back'        => __('levels.back') ?: 'Back',
+            ],
+        ]);
     }
 
     public function store(StoreRequest $request){

@@ -215,6 +215,48 @@ function ThreePlCard({ p, t }) {
     );
 }
 
+function PaymentsCard({ p, t }) {
+    let pill;
+    if (p.ready)        pill = <StatusPill kind="ok"    label={t.connected} />;
+    else if (p.enabled) pill = <StatusPill kind="warn"  label={t.needs_config} />;
+    else                pill = <StatusPill kind="muted" label={t.needs_config} />;
+    return (
+        <Card className="flex flex-col h-full">
+            <CardContent className="p-5 flex flex-col h-full">
+                <div className="flex items-center gap-3 mb-4">
+                    <LogoBox name={p.name} brandKey={p.key} Icon={iconFor(p.key, Receipt)} />
+                    <div className="flex-1 min-w-0">
+                        <h3 className="text-base font-semibold">{p.name}</h3>
+                        <p className="text-xs text-muted-foreground">{p.host}</p>
+                    </div>
+                    {pill}
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                    <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-medium text-sky-700">
+                        {p.region}
+                    </span>
+                    {(p.methods || []).map((m) => (
+                        <span key={m} className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-700">
+                            {m}
+                        </span>
+                    ))}
+                </div>
+                {p.note && (
+                    <p className="text-[11px] text-muted-foreground italic mb-3">{p.note}</p>
+                )}
+                <div className="mt-auto flex flex-wrap gap-2 pt-3 border-t border-border">
+                    <a href={p.urls.settings} className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+                        <Settings className="h-3.5 w-3.5 me-1" /> {t.configure}
+                    </a>
+                    <a href={p.urls.docs} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-muted/40">
+                        <ExternalLink className="h-3.5 w-3.5 me-1" /> {t.api_docs}
+                    </a>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
 function AccountingCard({ a, t, fallbackIcon = Calculator }) {
     let pill;
     if (a.ready)         pill = <StatusPill kind="ok"    label={t.connected} />;
@@ -244,7 +286,7 @@ function AccountingCard({ a, t, fallbackIcon = Calculator }) {
     );
 }
 
-export default function Index({ integrations = [], three_pls = [], accounting = [], erp = [], permissions = {}, t = {} }) {
+export default function Index({ integrations = [], three_pls = [], accounting = [], erp = [], payments = [], permissions = {}, t = {} }) {
     return (
         <AdminLayout title={t.title} breadcrumbs={[t.breadcrumb_settings, t.title]}>
             <Head title={t.title} />
@@ -311,6 +353,23 @@ export default function Index({ integrations = [], three_pls = [], accounting = 
                     </Card>
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                         {erp.map((e) => <AccountingCard key={e.key} a={e} t={t} fallbackIcon={Network} />)}
+                    </div>
+                </>
+            )}
+
+            {payments.length > 0 && (
+                <>
+                    <Card className="mb-4 mt-6">
+                        <CardContent className="p-5">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Receipt className="h-5 w-5 text-primary" />
+                                <h2 className="text-lg font-semibold">{t.payments_title}</h2>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{t.payments_help}</p>
+                        </CardContent>
+                    </Card>
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {payments.map((p) => <PaymentsCard key={p.key} p={p} t={t} />)}
                     </div>
                 </>
             )}

@@ -75,6 +75,7 @@ class IntegrationsController extends Controller
                 ->all(),
             'accounting'   => $this->buildAccounting($companyId),
             'erp'          => $this->buildErp($companyId),
+            'payments'     => $this->buildPayments($companyId),
             'permissions'  => [
                 'update' => hasPermission('integrations_update'),
             ],
@@ -109,6 +110,11 @@ class IntegrationsController extends Controller
                 'accounting_help'   => 'Push Rushly invoices, payments and courier bills to your accounting system of record.',
                 'erp_title'         => 'ERP',
                 'erp_help'          => 'Push Rushly merchants, invoices, payments and courier bills into a full ERP. Best for tenants that already manage operations end-to-end in one system.',
+                'payments_title'    => 'Payment Integrations',
+                'payments_help'     => 'Accept online payments on merchant invoices and the public checkout. Credentials are per-tenant — each tenant configures its own gateway accounts.',
+                'methods_label'     => 'Methods',
+                'region_label'      => 'Region',
+                'api_docs'          => 'API docs',
             ],
         ]);
     }
@@ -127,6 +133,89 @@ class IntegrationsController extends Controller
                 'docs'     => 'https://www.odoo.com/documentation/17.0/developer/reference/external_api.html',
             ],
         ]];
+    }
+
+    /**
+     * Payment gateways. Credentials live in the per-tenant Setting table
+     * (key/value, scoped by company_id) — same place Stripe already stores
+     * stripe_secret_key. Each card surfaces:
+     *  - whether the gateway is configured (ready) and enabled
+     *  - the country/region it operates in
+     *  - the methods it brokers (Mada, Apple Pay, STC Pay, card, etc.)
+     *  - configure URL + external API docs URL.
+     *
+     * STC Pay is offered as a method by Moyasar / HyperPay / ClickPay rather
+     * than as a standalone gateway in most setups — its card therefore links
+     * to the Moyasar config and explains the relationship.
+     */
+    private function buildPayments(?int $companyId): array
+    {
+        $payoutSetup = route('payout.setup.settings.index');
+
+        $stripeReady   = filled(globalSettings('stripe_secret_key'));
+        $stripeOn      = globalSettings('stripe_status') == \App\Enums\Status::ACTIVE;
+
+        $moyasarReady  = filled(globalSettings('moyasar_secret_key'));
+        $moyasarOn     = globalSettings('moyasar_status') == \App\Enums\Status::ACTIVE;
+
+        $clickpayReady = filled(globalSettings('clickpay_server_key')) && filled(globalSettings('clickpay_profile_id'));
+        $clickpayOn    = globalSettings('clickpay_status') == \App\Enums\Status::ACTIVE;
+
+        return [
+            [
+                'key'     => 'moyasar',
+                'name'    => 'Moyasar',
+                'host'    => 'moyasar.com',
+                'region'  => 'Saudi Arabia',
+                'methods' => ['Mada', 'STC Pay', 'Apple Pay', 'Card'],
+                'enabled' => $moyasarOn,
+                'ready'   => $moyasarReady,
+                'urls'    => [
+                    'settings' => $payoutSetup,
+                    'docs'     => 'https://docs.moyasar.com/api/api-introduction',
+                ],
+            ],
+            [
+                'key'     => 'stripe',
+                'name'    => 'Stripe',
+                'host'    => 'stripe.com',
+                'region'  => 'Global',
+                'methods' => ['Card', 'Apple Pay', 'Google Pay'],
+                'enabled' => $stripeOn,
+                'ready'   => $stripeReady,
+                'urls'    => [
+                    'settings' => $payoutSetup,
+                    'docs'     => 'https://stripe.com/docs/api',
+                ],
+            ],
+            [
+                'key'     => 'clickpay',
+                'name'    => 'ClickPay',
+                'host'    => 'clickpay.com.sa',
+                'region'  => 'Saudi Arabia',
+                'methods' => ['Mada', 'STC Pay', 'Apple Pay', 'Card'],
+                'enabled' => $clickpayOn,
+                'ready'   => $clickpayReady,
+                'urls'    => [
+                    'settings' => $payoutSetup,
+                    'docs'     => 'https://docs.clickpay.com.sa/api',
+                ],
+            ],
+            [
+                'key'     => 'stcpay',
+                'name'    => 'STC Pay',
+                'host'    => 'stcpay.com.sa',
+                'region'  => 'Saudi Arabia',
+                'methods' => ['STC Pay wallet'],
+                'enabled' => $moyasarOn || $clickpayOn, // brokered by Moyasar/ClickPay
+                'ready'   => $moyasarReady || $clickpayReady,
+                'note'    => 'Offered as a method via Moyasar or ClickPay. Enable one of those above to accept STC Pay.',
+                'urls'    => [
+                    'settings' => $payoutSetup,
+                    'docs'     => 'https://stcpay.com.sa/business',
+                ],
+            ],
+        ];
     }
 
     private function buildAccounting(?int $companyId): array

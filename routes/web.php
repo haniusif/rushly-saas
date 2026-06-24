@@ -234,6 +234,10 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
             Route::get('/facebook/login',                 [SocialLoginController::class, 'authFacebookLogin']); // facebook login, need url add in your facebook app
             //end social authentication
 
+            // Public API docs — no auth, no apiKey. Anyone (a merchant
+            // integrating against the platform) can read the endpoint list.
+            Route::get('/api-docs/merchant', [ApiDocsController::class, 'merchantPublic'])->name('api-docs.merchant.public');
+
             Route::group(['middleware' => 'auth'], function () {
                 
     

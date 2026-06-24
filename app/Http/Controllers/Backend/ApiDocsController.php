@@ -14,6 +14,20 @@ class ApiDocsController extends Controller
      */
     public function merchant()
     {
+        return $this->renderMerchant(false);
+    }
+
+    /**
+     * Public version of the merchant docs — same content, no auth, no admin
+     * chrome. Useful as a shareable link for integrators evaluating the API.
+     */
+    public function merchantPublic()
+    {
+        return $this->renderMerchant(true);
+    }
+
+    private function renderMerchant(bool $public)
+    {
         $apiBase = rtrim(url('/api/v10'), '/');
 
         $sections = [
@@ -182,6 +196,7 @@ class ApiDocsController extends Controller
         return Inertia::render('Admin/ApiDocs/Merchant', [
             'sections' => $sections,
             'api_base' => $apiBase,
+            'is_public' => $public,
             'api_key_hint' => 'Your RUSHLY_API_KEY (shared static header — same for every integration on this tenant).',
             't' => [
                 'title'             => 'Merchant API documentation',

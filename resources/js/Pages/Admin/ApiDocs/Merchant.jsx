@@ -112,7 +112,21 @@ function CodeBlock({ children }) {
     );
 }
 
-export default function Merchant({ sections = [], api_base = '', api_key_hint = '', t = {} }) {
+function PublicShell({ title, children }) {
+    return (
+        <div className="min-h-screen bg-background text-foreground">
+            <header className="border-b border-border bg-card">
+                <div className="max-w-5xl mx-auto px-5 py-4 flex items-center gap-3">
+                    <BookOpen className="h-6 w-6 text-primary" />
+                    <h1 className="text-base font-semibold">{title}</h1>
+                </div>
+            </header>
+            <main className="max-w-5xl mx-auto px-5 py-6">{children}</main>
+        </div>
+    );
+}
+
+export default function Merchant({ sections = [], api_base = '', api_key_hint = '', is_public = false, t = {} }) {
     const [filter, setFilter] = React.useState('');
     const visibleCount = React.useMemo(() => {
         if (!filter) return sections.reduce((s, sec) => s + sec.endpoints.length, 0);
@@ -136,10 +150,8 @@ echo $u->createToken("merchant-app")->plainTextToken . PHP_EOL;
   -H 'Authorization: Bearer {token}' \\
   -H 'Accept: application/json'`;
 
-    return (
-        <AdminLayout title={t.title} breadcrumbs={[t.breadcrumb_settings, t.title]}>
-            <Head title={t.title} />
-
+    const content = (
+        <>
             <Card className="mb-4">
                 <CardContent className="p-5">
                     <div className="flex items-start gap-3">
@@ -223,6 +235,22 @@ Authorization: Bearer {token}`}</CodeBlock>
                     </Card>
                 )
                 : sections.map((s) => <Section key={s.key} section={s} apiBase={api_base} filter={filter} />)}
+        </>
+    );
+
+    if (is_public) {
+        return (
+            <PublicShell title={t.title}>
+                <Head title={t.title} />
+                {content}
+            </PublicShell>
+        );
+    }
+
+    return (
+        <AdminLayout title={t.title} breadcrumbs={[t.breadcrumb_settings, t.title]}>
+            <Head title={t.title} />
+            {content}
         </AdminLayout>
     );
 }

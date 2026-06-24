@@ -1,6 +1,47 @@
 import * as React from 'react';
 import { Head } from '@inertiajs/react';
-import { Plug, Settings, ExternalLink, Truck, Info, Store } from 'lucide-react';
+import {
+    Plug, Settings, ExternalLink, Truck, Info, Store, Calculator, Network,
+    ShoppingBag, ShoppingCart, PackageOpen, Package2, Plane, Rocket, Boxes, Package,
+    Receipt, BookOpen, LayoutGrid,
+} from 'lucide-react';
+
+// Brand key → Lucide icon. Used as final fallback when no real logo is available.
+const BRAND_ICONS = {
+    salla:       ShoppingBag,
+    zid:         Store,
+    shopify:     ShoppingCart,
+    woocommerce: ShoppingCart,
+    panda:       PackageOpen,
+    zajel:       Package2,
+    aramex:      Plane,
+    jet:         Rocket,
+    logestechs:  Boxes,
+    imile:       Package,
+    qoyod:       Receipt,
+    daftra:      BookOpen,
+    odoo:        LayoutGrid,
+};
+
+// Brands available via the simple-icons CDN (CC0). Verified at build time.
+const SIMPLE_ICONS_SLUGS = new Set(['salla', 'shopify', 'woocommerce', 'odoo', 'jet']);
+
+function iconFor(key, fallback) {
+    return BRAND_ICONS[String(key || '').toLowerCase()] || fallback;
+}
+
+function brandLogoUrl(key) {
+    const k = String(key || '').toLowerCase();
+    if (! k) return null;
+    // 1. User-supplied logo in /public/integrations/{key}.{svg,png}
+    //    (LogoBox tries these via <img onError> chain below.)
+    return `/integrations/${k}.svg`;
+}
+
+function brandCdnUrl(key) {
+    const k = String(key || '').toLowerCase();
+    return SIMPLE_ICONS_SLUGS.has(k) ? `https://cdn.simpleicons.org/${k}` : null;
+}
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { Button } from '@/Components/ui/Button';
@@ -18,12 +59,36 @@ function StatusPill({ kind, label }) {
     );
 }
 
-function LogoBox({ src, name }) {
+function LogoBox({ src, name, brandKey, Icon }) {
+    // Build an ordered fallback chain. <img onError> walks down it; once
+    // exhausted, we render the Lucide icon (or a letter monogram).
+    const chain = React.useMemo(() => {
+        const urls = [];
+        if (src) urls.push(src);
+        const local = brandLogoUrl(brandKey);
+        if (local) urls.push(local);
+        const cdn = brandCdnUrl(brandKey);
+        if (cdn) urls.push(cdn);
+        return urls;
+    }, [src, brandKey]);
+
+    const [idx, setIdx] = React.useState(0);
+    React.useEffect(() => { setIdx(0); }, [chain.length, chain[0]]);
+
+    const current = chain[idx];
+
     return (
-        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-muted/40 shrink-0">
-            {src
-                ? <img src={src} alt={name} className="max-h-12 max-w-12 object-contain" />
-                : <span className="text-xl font-bold text-foreground">{(name || '?').slice(0, 1).toUpperCase()}</span>}
+        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-muted/40 shrink-0 overflow-hidden">
+            {current
+                ? <img
+                    src={current}
+                    alt={name}
+                    className="max-h-12 max-w-12 object-contain"
+                    onError={() => setIdx((i) => i + 1)}
+                  />
+                : Icon
+                    ? <Icon className="h-7 w-7 text-primary" />
+                    : <span className="text-xl font-bold text-foreground">{(name || '?').slice(0, 1).toUpperCase()}</span>}
         </div>
     );
 }
@@ -51,7 +116,7 @@ function EcommerceCard({ i, permissions, t }) {
         <Card className="flex flex-col h-full">
             <CardContent className="p-5 flex flex-col h-full">
                 <div className="flex items-center gap-3 mb-4">
-                    <LogoBox src={i.logo_url} name={i.name} />
+                    <LogoBox src={i.logo_url} name={i.name} brandKey={i.platform} Icon={iconFor(i.platform, ShoppingBag)} />
                     <div className="flex-1 min-w-0">
                         <h3 className="text-base font-semibold">{i.name}</h3>
                         <p className="text-xs text-muted-foreground">{i.host}</p>
@@ -111,7 +176,7 @@ function ThreePlCard({ p, t }) {
         <Card className="flex flex-col h-full">
             <CardContent className="p-5 flex flex-col h-full">
                 <div className="flex items-center gap-3 mb-4">
-                    <LogoBox name={p.name} />
+                    <LogoBox src={p.logo_url} name={p.name} brandKey={p.key} Icon={iconFor(p.key, Truck)} />
                     <div className="flex-1 min-w-0">
                         <h3 className="text-base font-semibold">{p.name}</h3>
                         <p className="text-xs text-muted-foreground">{p.host}</p>
@@ -150,7 +215,36 @@ function ThreePlCard({ p, t }) {
     );
 }
 
-export default function Index({ integrations = [], three_pls = [], permissions = {}, t = {} }) {
+function AccountingCard({ a, t, fallbackIcon = Calculator }) {
+    let pill;
+    if (a.ready)         pill = <StatusPill kind="ok"    label={t.connected} />;
+    else if (a.enabled)  pill = <StatusPill kind="warn"  label={t.needs_config} />;
+    else                 pill = <StatusPill kind="muted" label={t.disabled} />;
+    return (
+        <Card className="flex flex-col h-full">
+            <CardContent className="p-5 flex flex-col h-full">
+                <div className="flex items-center gap-3 mb-4">
+                    <LogoBox name={a.name} brandKey={a.key} Icon={iconFor(a.key, fallbackIcon)} />
+                    <div className="flex-1 min-w-0">
+                        <h3 className="text-base font-semibold">{a.name}</h3>
+                        <p className="text-xs text-muted-foreground">{a.host}</p>
+                    </div>
+                    {pill}
+                </div>
+                <div className="mt-auto flex flex-wrap gap-2 pt-3 border-t border-border">
+                    <a href={a.urls.settings} className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+                        <Settings className="h-3.5 w-3.5 me-1" /> {t.configure}
+                    </a>
+                    <a href={a.urls.docs} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-muted/40">
+                        <ExternalLink className="h-3.5 w-3.5 me-1" /> API docs
+                    </a>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+export default function Index({ integrations = [], three_pls = [], accounting = [], erp = [], permissions = {}, t = {} }) {
     return (
         <AdminLayout title={t.title} breadcrumbs={[t.breadcrumb_settings, t.title]}>
             <Head title={t.title} />
@@ -186,6 +280,40 @@ export default function Index({ integrations = [], three_pls = [], permissions =
                     <ThreePlCard key={p.key} p={p} t={t} />
                 ))}
             </div>
+
+            {accounting.length > 0 && (
+                <>
+                    <Card className="mb-4 mt-6">
+                        <CardContent className="p-5">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Calculator className="h-5 w-5 text-primary" />
+                                <h2 className="text-lg font-semibold">{t.accounting_title}</h2>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{t.accounting_help}</p>
+                        </CardContent>
+                    </Card>
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {accounting.map((a) => <AccountingCard key={a.key} a={a} t={t} />)}
+                    </div>
+                </>
+            )}
+
+            {erp.length > 0 && (
+                <>
+                    <Card className="mb-4 mt-6">
+                        <CardContent className="p-5">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Network className="h-5 w-5 text-primary" />
+                                <h2 className="text-lg font-semibold">{t.erp_title}</h2>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{t.erp_help}</p>
+                        </CardContent>
+                    </Card>
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {erp.map((e) => <AccountingCard key={e.key} a={e} t={t} fallbackIcon={Network} />)}
+                    </div>
+                </>
+            )}
         </AdminLayout>
     );
 }

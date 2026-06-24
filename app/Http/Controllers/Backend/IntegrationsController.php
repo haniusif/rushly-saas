@@ -70,7 +70,11 @@ class IntegrationsController extends Controller
 
         return Inertia::render('Admin/Integrations/Index', [
             'integrations' => $integrations,
-            'three_pls'    => $this->buildThreePls(),
+            'three_pls'    => collect($this->buildThreePls())
+                ->map(fn ($p) => array_merge($p, ['logo_url' => $this->partnerLogoUrl($p['key'])]))
+                ->all(),
+            'accounting'   => $this->buildAccounting($companyId),
+            'erp'          => $this->buildErp($companyId),
             'permissions'  => [
                 'update' => hasPermission('integrations_update'),
             ],
@@ -101,8 +105,58 @@ class IntegrationsController extends Controller
                 'stores'            => 'Stores',
                 'manage_stores'     => 'Manage stores',
                 'linked'            => 'linked',
+                'accounting_title'  => 'Accounting',
+                'accounting_help'   => 'Push Rushly invoices, payments and courier bills to your accounting system of record.',
+                'erp_title'         => 'ERP',
+                'erp_help'          => 'Push Rushly merchants, invoices, payments and courier bills into a full ERP. Best for tenants that already manage operations end-to-end in one system.',
             ],
         ]);
+    }
+
+    private function buildErp(?int $companyId): array
+    {
+        $odoo = \App\Odoo\Models\Settings::where('company_id', $companyId)->first();
+        return [[
+            'key'     => 'odoo',
+            'name'    => 'Odoo',
+            'host'    => 'odoo.com',
+            'enabled' => (bool) ($odoo->enabled ?? false),
+            'ready'   => $odoo && $odoo->isReady(),
+            'urls'    => [
+                'settings' => route('odoo.settings.index'),
+                'docs'     => 'https://www.odoo.com/documentation/17.0/developer/reference/external_api.html',
+            ],
+        ]];
+    }
+
+    private function buildAccounting(?int $companyId): array
+    {
+        $qoyod  = \App\Qoyod\Models\Settings::where('company_id', $companyId)->first();
+        $daftra = \App\Daftra\Models\Settings::where('company_id', $companyId)->first();
+        return [
+            [
+                'key'     => 'qoyod',
+                'name'    => 'Qoyod',
+                'host'    => 'qoyod.com',
+                'enabled' => (bool) ($qoyod->enabled ?? false),
+                'ready'   => $qoyod && $qoyod->isReady(),
+                'urls'    => [
+                    'settings' => route('qoyod.settings.index'),
+                    'docs'     => 'https://apidoc.qoyod.com/',
+                ],
+            ],
+            [
+                'key'     => 'daftra',
+                'name'    => 'Daftra',
+                'host'    => 'daftra.com',
+                'enabled' => (bool) ($daftra->enabled ?? false),
+                'ready'   => $daftra && $daftra->isReady(),
+                'urls'    => [
+                    'settings' => route('daftra.settings.index'),
+                    'docs'     => 'https://docs.daftara.dev/',
+                ],
+            ],
+        ];
     }
 
     public function edit(string $platform)
@@ -226,6 +280,22 @@ class IntegrationsController extends Controller
         return Parcels_3pl::where('parcel_3pl_name', $key)
             ->whereHas('parcel', fn ($q) => $q->where('company_id', settings()->id))
             ->count();
+    }
+
+    /**
+     * Resolve a partner logo URL by walking public/images/partners/{key}.{ext}.
+     * Mirrors IntegrationSetting::logoUrl() so 3PL cards pick up files like
+     * aramex.webp / imile.webp / jet.webp / zid.png without needing the
+     * IntegrationSetting Eloquent row.
+     */
+    private function partnerLogoUrl(string $key): ?string
+    {
+        foreach (['svg', 'png', 'webp', 'jpg'] as $ext) {
+            if (file_exists(public_path("images/partners/{$key}.{$ext}"))) {
+                return asset("images/partners/{$key}.{$ext}");
+            }
+        }
+        return null;
     }
 
     private function buildThreePls(): array

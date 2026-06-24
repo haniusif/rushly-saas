@@ -47,6 +47,8 @@ PAGES=(
   "/admin/general-settings/index|Admin/GeneralSettings/Index"
   "/admin/integrations|Admin/Integrations/Index"
   "/admin/integrations/salla/edit|Admin/Integrations/Edit"
+  "/admin/delivery-category/index|Admin/DeliveryCategory/Index"
+  "/admin/delivery-category/create|Admin/DeliveryCategory/Form"
 )
 
 WORK="$(mktemp -d)"

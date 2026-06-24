@@ -62,6 +62,7 @@ PAGES=(
   "/admin/delivery-type/index|Admin/DeliveryType/Index"
   "/admin/liquid-fragile/index|Admin/LiquidFragile/Index"
   "/admin/liquid-fragile/edit|Admin/LiquidFragile/Index"
+  "/admin/sms-settings/index|Admin/SmsSettings/Index"
 )
 
 WORK="$(mktemp -d)"

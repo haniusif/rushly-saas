@@ -2,35 +2,98 @@
 
 namespace App\Http\Controllers\Backend;
 
+use App\Enums\SmsSetup;
 use App\Enums\Status;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SmsSetting\StoreRequest;
-use App\Models\Backend\SmsSetting;
-use App\Models\Config;
 use App\Repositories\SmsSetting\SmsSettingInterface;
-use Illuminate\Http\Request;
 use Brian2694\Toastr\Facades\Toastr;
+use Inertia\Inertia;
+
 class SmsSettingsController extends Controller
 {
     protected $repo;
+
     public function __construct(SmsSettingInterface $repo)
     {
-        $this->repo  = $repo;
-    }
-    public function index(){
-        return view('backend.setting.sms.index');
+        $this->repo = $repo;
     }
 
-    public function update(StoreRequest $request,$smsMethod){
-        if($this->repo->update($smsMethod,$request)):
-            Toastr::success(__('smsSettings.update_msg'),__('message.success'));
+    public function index()
+    {
+        return Inertia::render('Admin/SmsSettings/Index', [
+            'providers' => [
+                'reve' => [
+                    'method' => SmsSetup::REVE,
+                    'name'   => 'REVE SMS',
+                    'fields' => [
+                        'reve_api_key'       => smsSettings('reve_api_key'),
+                        'reve_secret_key'    => smsSettings('reve_secret_key'),
+                        'reve_api_url'       => smsSettings('reve_api_url'),
+                        'reve_username'      => smsSettings('reve_username'),
+                        'reve_user_password' => smsSettings('reve_user_password'),
+                    ],
+                    'active' => smsSettings('reve_status') == Status::ACTIVE,
+                ],
+                'twilio' => [
+                    'method' => SmsSetup::TWILIO,
+                    'name'   => 'TWILIO SMS',
+                    'fields' => [
+                        'twilio_sid'   => smsSettings('twilio_sid'),
+                        'twilio_token' => smsSettings('twilio_token'),
+                        'twilio_from'  => smsSettings('twilio_from'),
+                    ],
+                    'active' => smsSettings('twilio_status') == Status::ACTIVE,
+                ],
+                'nexmo' => [
+                    'method' => SmsSetup::NEXMO,
+                    'name'   => 'NEXMO SMS',
+                    'fields' => [
+                        'nexmo_key'        => smsSettings('nexmo_key'),
+                        'nexmo_secret_key' => smsSettings('nexmo_secret_key'),
+                    ],
+                    'active' => smsSettings('nexmo_status') == Status::ACTIVE,
+                ],
+            ],
+            'permissions' => [
+                'update' => hasPermission('sms_settings_update') || hasPermission('sms_settings_create'),
+            ],
+            'urls' => [
+                'submit_reve'   => route('sms-settings.update', SmsSetup::REVE),
+                'submit_twilio' => route('sms-settings.update', SmsSetup::TWILIO),
+                'submit_nexmo'  => route('sms-settings.update', SmsSetup::NEXMO),
+            ],
+            't' => [
+                'title'        => __('smsSettings.title') ?: 'SMS settings',
+                'list'         => __('levels.list') ?: 'List',
+                'status'       => __('levels.status') ?: 'Status',
+                'save'         => __('levels.save_change') ?: 'Save changes',
+                'api_key'      => __('smsSettings.api_key') ?: 'API key',
+                'secret_key'   => __('smsSettings.secret_key') ?: 'Secret key',
+                'api_url'      => __('smsSettings.api_url') ?: 'API URL',
+                'username'     => __('smsSettings.username') ?: 'Username',
+                'user_password'=> __('smsSettings.user_password') ?: 'User password',
+                'twilio_sid'   => __('levels.twilio_sid') ?: 'Twilio SID',
+                'twilio_token' => __('levels.twilio_token') ?: 'Twilio token',
+                'twilio_from'  => __('levels.twilio_from') ?: 'Twilio from',
+                'nexmo_key'    => __('levels.nexmo_key') ?: 'Nexmo key',
+                'nexmo_secret_key' => __('levels.nexmo_secret_key') ?: 'Nexmo secret key',
+                'ph_api_key'       => __('placeholder.Enter_api_key') ?: 'Enter API key',
+                'ph_secret_key'    => __('placeholder.Enter_secret_key') ?: 'Enter secret key',
+                'ph_api_url'       => __('placeholder.Enter_api_url') ?: 'Enter API URL',
+                'ph_username'      => __('placeholder.Enter_username') ?: 'Enter username',
+                'ph_user_password' => __('placeholder.Enter_user_password') ?: 'Enter user password',
+            ],
+        ]);
+    }
+
+    public function update(StoreRequest $request, $smsMethod)
+    {
+        if ($this->repo->update($smsMethod, $request)) {
+            Toastr::success(__('smsSettings.update_msg'), __('message.success'));
             return redirect()->route('sms-settings.index');
-        else:
-            Toastr::error(__('smsSettings.error_msg'),__('message.error'));
-            return redirect()->back();
-        endif;
+        }
+        Toastr::error(__('smsSettings.error_msg'), __('message.error'));
+        return redirect()->back();
     }
-
-
-
 }

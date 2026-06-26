@@ -945,6 +945,67 @@ if (!function_exists('singleUser')) {
         }
     }
 
+    if (!function_exists('qoyodSettings')) {
+        /**
+         * Read a column from the current tenant's qoyod_settings row.
+         * Falls back to null if the tenant has no row yet.
+         */
+        function qoyodSettings($key){
+            $companyId = settings()->id ?? null;
+            if (! $companyId) return null;
+            $row = \App\Qoyod\Models\Settings::where('company_id', $companyId)->first();
+            return $row?->{$key};
+        }
+    }
+
+    if (!function_exists('daftraSettings')) {
+        function daftraSettings($key){
+            $companyId = settings()->id ?? null;
+            if (! $companyId) return null;
+            $row = \App\Daftra\Models\Settings::where('company_id', $companyId)->first();
+            return $row?->{$key};
+        }
+    }
+
+    if (!function_exists('odooSettings')) {
+        function odooSettings($key){
+            $companyId = settings()->id ?? null;
+            if (! $companyId) return null;
+            $row = \App\Odoo\Models\Settings::where('company_id', $companyId)->first();
+            return $row?->{$key};
+        }
+    }
+
+    if (!function_exists('integrationSettings')) {
+        /**
+         * Read the current tenant's integration_settings row for a platform.
+         * Returns the full row (stdClass) or null if no row exists yet.
+         */
+        function integrationSettings(string $platform){
+            $companyId = settings()->id ?? null;
+            if (! $companyId) return null;
+            return \Illuminate\Support\Facades\DB::table('integration_settings')
+                ->where('company_id', $companyId)
+                ->where('platform', $platform)
+                ->first();
+        }
+    }
+
+    if (!function_exists('sallaCreds')) {
+        /**
+         * Read a Salla credential for the current tenant from
+         * integration_settings.meta (JSON). Each tenant manages their own
+         * Salla Partner app; this is the source of truth, replacing the old
+         * .env-based config('salla.oauth.*') reads.
+         */
+        function sallaCreds(string $key){
+            $row = integrationSettings('salla');
+            if (! $row || ! $row->meta) return null;
+            $meta = json_decode($row->meta, true);
+            return $meta[$key] ?? null;
+        }
+    }
+
     if (!function_exists('MerchantSettings')) {
         function MerchantSettings($key){
                 $settings   = MerchantSetting::where(['merchant_id'=>Auth::user()->merchant->id,'key'=>$key])->first();

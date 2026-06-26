@@ -310,6 +310,8 @@ class IntegrationsController extends Controller
             4 => 'outside_City',
         ];
 
+        $meta = (array) ($setting->meta ?? []);
+
         return Inertia::render('Admin/Integrations/Edit', [
             'setting' => [
                 'platform'                 => $setting->platform,
@@ -322,7 +324,23 @@ class IntegrationsController extends Controller
                 'default_city_id'          => $setting->default_city_id ? (string) $setting->default_city_id : '',
                 'default_category_id'      => $setting->default_category_id ? (string) $setting->default_category_id : '',
                 'default_delivery_type_id' => $setting->default_delivery_type_id ? (string) $setting->default_delivery_type_id : '',
+                // Platform-specific credentials live in `meta` so the table
+                // stays generic. Only Salla uses these fields today.
+                'oauth_client_id'          => (string) ($meta['oauth_client_id'] ?? ''),
+                'oauth_client_secret'      => (string) ($meta['oauth_client_secret'] ?? ''),
+                'oauth_redirect_uri'       => (string) ($meta['oauth_redirect_uri'] ?? ''),
+                'webhook_secret'           => (string) ($meta['webhook_secret'] ?? ''),
+                'app_id'                   => (string) ($meta['app_id'] ?? ''),
+                'authorization_mode'       => (string) ($meta['authorization_mode'] ?? 'easy'),
             ],
+            'salla' => $platform === 'salla' ? [
+                // The exact strings the tenant pastes into their Salla Partner
+                // app config — derived from the tenant's own subdomain so
+                // multiple tenants on the same install don't collide.
+                'default_redirect_uri' => url('/integrations/salla/oauth/callback'),
+                'webhook_url'          => url('/integrations/salla/webhook'),
+                'partner_portal_url'   => 'https://salla.partners/',
+            ] : null,
             'lookups' => [
                 'cities'         => $cities->map(fn ($c) => ['value' => (string) $c->id, 'label' => $c->name])->values(),
                 'categories'     => $categories->map(fn ($c) => ['value' => (string) $c->id, 'label' => $c->title])->values(),
@@ -372,6 +390,20 @@ class IntegrationsController extends Controller
                 'save'                   => __('levels.save') ?: 'Save',
                 'cancel'                 => __('levels.cancel') ?: 'Cancel',
                 'back'                   => __('levels.back') ?: 'Back',
+                // Salla Partner app section
+                'salla_app_section'      => 'Salla Partner app credentials',
+                'salla_app_help'         => 'Each tenant registers their own app on the Salla Partner portal. Paste the values from your app here. The callback + webhook URLs below must be pasted INTO your Salla app so Salla knows where to deliver events.',
+                'salla_client_id'        => 'OAuth Client ID',
+                'salla_client_secret'    => 'OAuth Client Secret',
+                'salla_app_id'           => 'App ID',
+                'salla_webhook_secret'   => 'Webhook Secret',
+                'salla_redirect_uri'     => 'OAuth Redirect URI (optional override)',
+                'salla_redirect_hint'    => 'Defaults to your tenant subdomain callback. Override only if you need a different URL.',
+                'salla_authorization_mode' => 'Authorization mode',
+                'salla_paste_section'    => 'Paste these into your Salla Partner app',
+                'salla_callback_label'   => 'Callback URL',
+                'salla_webhook_label'    => 'Webhook URL',
+                'salla_open_partners'    => 'Open Salla Partner portal',
             ],
         ]);
     }
@@ -388,11 +420,36 @@ class IntegrationsController extends Controller
             'default_city_id'          => ['nullable', 'integer', 'exists:cities,id'],
             'default_category_id'      => ['nullable', 'integer', 'exists:deliverycategories,id'],
             'default_delivery_type_id' => ['nullable', 'integer'],
+            // Salla-only credential fields — stored in `meta` JSON. Ignored
+            // for non-Salla platforms.
+            'oauth_client_id'          => ['nullable', 'string', 'max:191'],
+            'oauth_client_secret'      => ['nullable', 'string', 'max:255'],
+            'oauth_redirect_uri'       => ['nullable', 'url', 'max:255'],
+            'webhook_secret'           => ['nullable', 'string', 'max:255'],
+            'app_id'                   => ['nullable', 'string', 'max:64'],
+            'authorization_mode'       => ['nullable', 'in:easy,full'],
         ]);
 
         $data['is_enabled'] = (bool) ($data['is_enabled'] ?? false);
 
         $setting = IntegrationSetting::forPlatform($platform);
+
+        if ($platform === 'salla') {
+            $meta = (array) ($setting->meta ?? []);
+            foreach (['oauth_client_id', 'oauth_client_secret', 'oauth_redirect_uri', 'webhook_secret', 'app_id', 'authorization_mode'] as $k) {
+                if (array_key_exists($k, $data)) {
+                    $meta[$k] = $data[$k];
+                }
+                unset($data[$k]);
+            }
+            $setting->meta = $meta;
+        } else {
+            // Strip Salla-only keys so they never land on Zid/Shopify rows.
+            foreach (['oauth_client_id', 'oauth_client_secret', 'oauth_redirect_uri', 'webhook_secret', 'app_id', 'authorization_mode'] as $k) {
+                unset($data[$k]);
+            }
+        }
+
         $setting->fill($data)->save();
 
         Toastr::success($setting->displayName() . ' integration saved.', __('message.success'));

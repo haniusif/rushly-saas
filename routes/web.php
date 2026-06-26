@@ -239,6 +239,18 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
             Route::get('/api-docs/merchant',      [ApiDocsController::class, 'merchantPublic'])->name('api-docs.merchant.public');
             Route::get('/api-docs/merchant.json', [ApiDocsController::class, 'merchantOpenApi'])->name('api-docs.merchant.openapi');
 
+            // Tenant-scoped Salla OAuth + webhook endpoints. Each tenant
+            // registers their OWN Salla Partner app and pastes these
+            // tenant-subdomain URLs as the callback / webhook in the Partner
+            // portal. Because they live inside the tenant-init group, the
+            // controller and middleware see the right tenant context when
+            // they call sallaCreds().
+            Route::get('/integrations/salla/oauth/redirect',  [\App\Salla\Http\Controllers\OAuthController::class, 'redirect'])->name('tenant.salla.oauth.redirect');
+            Route::get('/integrations/salla/oauth/callback',  [\App\Salla\Http\Controllers\OAuthController::class, 'callback'])->name('tenant.salla.oauth.callback');
+            Route::post('/integrations/salla/webhook', \App\Salla\Http\Controllers\WebhookController::class)
+                ->middleware('salla.webhook')
+                ->name('tenant.salla.webhook');
+
             Route::group(['middleware' => 'auth'], function () {
                 
     
@@ -1316,9 +1328,11 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
 });
 
 /*
- * Salla bridge routes — kept outside the IsInstalled/XSS groups so the OAuth
- * callback and webhook endpoints stay reachable regardless of app install
- * state. Salla calls these on salla.rushly.tech (mapped to this app).
+ * DEPRECATED global Salla bridge routes on salla.rushly.tech — left only so
+ * external links don't 404. Per-tenant Salla is now the supported model:
+ * each tenant pastes their own tenant-subdomain callback / webhook URL into
+ * their Salla Partner app. These global routes have no tenant context, so
+ * sallaCreds() returns null and they 503 with a clear message.
  */
 Route::get('/oauth/redirect',  [\App\Salla\Http\Controllers\OAuthController::class, 'redirect'])->name('salla.oauth.redirect');
 Route::get('/oauth/callback',  [\App\Salla\Http\Controllers\OAuthController::class, 'callback'])->name('salla.oauth.callback');

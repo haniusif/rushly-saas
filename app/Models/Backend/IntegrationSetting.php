@@ -9,6 +9,7 @@ class IntegrationSetting extends Model
     protected $table = 'integration_settings';
 
     protected $fillable = [
+        'company_id',
         'platform',
         'is_enabled',
         'app_url',
@@ -27,7 +28,10 @@ class IntegrationSetting extends Model
 
     public static function forPlatform(string $platform): self
     {
-        return static::firstOrCreate(['platform' => $platform]);
+        $companyId = settings()->id ?? null;
+        return static::firstOrCreate(
+            ['company_id' => $companyId, 'platform' => $platform],
+        );
     }
 
     public function logoUrl(): string

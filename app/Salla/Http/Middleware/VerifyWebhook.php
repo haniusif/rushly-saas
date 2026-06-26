@@ -24,10 +24,13 @@ class VerifyWebhook
             'ip'       => $request->ip(),
         ]);
 
-        $secret = (string) config('salla.webhook_secret');
+        // Per-tenant webhook secret: this route lives under the tenant
+        // subdomain, so tenancy middleware has already initialized the right
+        // tenant context before we run.
+        $secret = (string) (sallaCreds('webhook_secret') ?: '');
         if ($secret === '') {
             $this->persist($request, $payload, $strategy, $event, WebhookLog::STATUS_REJECTED, false, 'missing_secret');
-            abort(500, 'Salla webhook secret not configured');
+            abort(500, 'Salla webhook secret not configured for this tenant');
         }
 
         $rejection = null;

@@ -23,7 +23,7 @@ class OAuthController extends Controller
 
         Log::info('salla.oauth.redirect', [
             'state'        => $provider->getState(),
-            'redirect_uri' => config('salla.oauth.redirect_uri'),
+            'redirect_uri' => $this->redirectUri(),
         ]);
 
         return redirect($url);
@@ -45,7 +45,7 @@ class OAuthController extends Controller
         // it with code+state (when initiated from a session) or with no params at
         // all (direct install from the app marketplace). Either way, skip the
         // CSRF/state check and route the user to the dashboard.
-        if (config('salla.authorization_mode') === 'easy') {
+        if ($this->authorizationMode() === 'easy') {
             Log::info('salla.oauth.callback.easy_mode_landing', $request->query());
             $request->session()->forget('oauth2state');
             return redirect($this->landingUrl())->with('status',
@@ -119,16 +119,35 @@ class OAuthController extends Controller
 
     private function provider(): Salla
     {
+        $clientId     = sallaCreds('oauth_client_id');
+        $clientSecret = sallaCreds('oauth_client_secret');
+        if (! $clientId || ! $clientSecret) {
+            abort(503, 'Salla is not configured for this tenant. An admin must set the OAuth Client ID / Secret in Admin → Integrations → Salla.');
+        }
         return new Salla([
-            'clientId'     => config('salla.oauth.client_id'),
-            'clientSecret' => config('salla.oauth.client_secret'),
-            'redirectUri'  => config('salla.oauth.redirect_uri'),
+            'clientId'     => $clientId,
+            'clientSecret' => $clientSecret,
+            'redirectUri'  => $this->redirectUri(),
         ]);
+    }
+
+    private function redirectUri(): string
+    {
+        // Each tenant pastes their own subdomain callback URL into their Salla
+        // Partner app. Default to the tenant-scoped route on the current host;
+        // an explicit override in integration_settings.meta wins if set.
+        return (string) (sallaCreds('oauth_redirect_uri')
+            ?: url('/integrations/salla/oauth/callback'));
+    }
+
+    private function authorizationMode(): string
+    {
+        return (string) (sallaCreds('authorization_mode') ?: 'easy');
     }
 
     private function landingUrl(): string
     {
-        return (string) (config('salla.landing_url') ?: url('/'));
+        return (string) (sallaCreds('landing_url') ?: url('/admin/integrations/salla/stores'));
     }
 
     private function fail(string $message, array $context, int $status)

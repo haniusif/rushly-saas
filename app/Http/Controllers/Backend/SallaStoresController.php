@@ -109,7 +109,7 @@ class SallaStoresController extends Controller
 
         $merchants = Merchant::where('company_id', $companyId)
             ->orderBy('business_name')
-            ->get(['id', 'business_name', 'title']);
+            ->get(['id', 'business_name']);
 
         $shops = $store->rushly_merchant_id
             ? MerchantShops::where('merchant_id', $store->rushly_merchant_id)

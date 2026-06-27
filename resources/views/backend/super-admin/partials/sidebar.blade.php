@@ -127,8 +127,8 @@
                     @endif
                     @if (hasPermission('why_courier_read') == true)
                         <li class="nav-item ">
-                            <a class="nav-link {{ request()->is('admin/front-web/why-courier*') ? 'active' : '' }}"
-                                href="{{ route('why.courier.index') }}">{{ __('levels.why_courier') }}</a>
+                            <a class="nav-link {{ request()->is('admin/front-web/why-rushly*') ? 'active' : '' }}"
+                                href="{{ route('why.rushly.index') }}">{{ __('levels.why_courier') }}</a>
                         </li>
                     @endif
                     @if (hasPermission('faq_read') == true)

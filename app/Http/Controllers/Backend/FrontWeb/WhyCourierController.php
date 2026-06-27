@@ -32,7 +32,7 @@ class WhyCourierController extends Controller
     {
         if ($this->repo->store($request)) :
             Toastr::success(__('levels.why_courier_added'), __('message.success'));
-            return redirect()->route('why.courier.index');
+            return redirect()->route('why.rushly.index');
         else :
             Toastr::error(__('parcel.error_msg'), __('message.error'));
             return redirect()->back()->withInput($request->all());
@@ -49,7 +49,7 @@ class WhyCourierController extends Controller
     {
         if ($this->repo->update($id, $request)) :
             Toastr::success(__('levels.why_courier_updated'), __('message.success'));
-            return redirect()->route('why.courier.index');
+            return redirect()->route('why.rushly.index');
         else :
             Toastr::error(__('parcel.error_msg'), __('message.error'));
             return redirect()->back()->withInput($request->all());

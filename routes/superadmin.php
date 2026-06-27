@@ -172,6 +172,28 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                 Route::get('integrations/salla/stores/{id}/edit',  [\App\Http\Controllers\Backend\SallaStoresController::class, 'edit'])->name('salla.stores.edit')->middleware('hasPermission:integrations_update');
                 Route::put('integrations/salla/stores/{id}',       [\App\Http\Controllers\Backend\SallaStoresController::class, 'update'])->name('salla.stores.update')->middleware('hasPermission:integrations_update');
 
+                // Qoyod accounting integration
+                Route::get('integrations/qoyod',                    [\App\Http\Controllers\Backend\QoyodSettingsController::class, 'index'])->name('qoyod.settings.index')->middleware('hasPermission:integrations_read');
+                Route::put('integrations/qoyod',                    [\App\Http\Controllers\Backend\QoyodSettingsController::class, 'update'])->name('qoyod.settings.update')->middleware('hasPermission:integrations_update');
+                Route::post('integrations/qoyod/test',              [\App\Http\Controllers\Backend\QoyodSettingsController::class, 'test'])->name('qoyod.settings.test')->middleware('hasPermission:integrations_update');
+                Route::post('integrations/qoyod/resync-all',        [\App\Http\Controllers\Backend\QoyodSettingsController::class, 'resyncAll'])->name('qoyod.settings.resync_all')->middleware('hasPermission:integrations_update');
+                Route::post('integrations/qoyod/vendors',           [\App\Http\Controllers\Backend\QoyodSettingsController::class, 'storeVendor'])->name('qoyod.vendors.store')->middleware('hasPermission:integrations_update');
+                Route::post('integrations/qoyod/vendors/{id}/sync', [\App\Http\Controllers\Backend\QoyodSettingsController::class, 'syncVendor'])->name('qoyod.vendors.sync')->middleware('hasPermission:integrations_update');
+
+                // Daftra accounting integration
+                Route::get('integrations/daftra',             [\App\Http\Controllers\Backend\DaftraSettingsController::class, 'index'])->name('daftra.settings.index')->middleware('hasPermission:integrations_read');
+                Route::put('integrations/daftra',             [\App\Http\Controllers\Backend\DaftraSettingsController::class, 'update'])->name('daftra.settings.update')->middleware('hasPermission:integrations_update');
+                Route::post('integrations/daftra/test',       [\App\Http\Controllers\Backend\DaftraSettingsController::class, 'test'])->name('daftra.settings.test')->middleware('hasPermission:integrations_update');
+                Route::post('integrations/daftra/resync-all', [\App\Http\Controllers\Backend\DaftraSettingsController::class, 'resyncAll'])->name('daftra.settings.resync_all')->middleware('hasPermission:integrations_update');
+
+                // Odoo ERP integration
+                Route::get('integrations/odoo',                    [\App\Http\Controllers\Backend\OdooSettingsController::class, 'index'])->name('odoo.settings.index')->middleware('hasPermission:integrations_read');
+                Route::put('integrations/odoo',                    [\App\Http\Controllers\Backend\OdooSettingsController::class, 'update'])->name('odoo.settings.update')->middleware('hasPermission:integrations_update');
+                Route::post('integrations/odoo/test',              [\App\Http\Controllers\Backend\OdooSettingsController::class, 'test'])->name('odoo.settings.test')->middleware('hasPermission:integrations_update');
+                Route::post('integrations/odoo/resync-all',        [\App\Http\Controllers\Backend\OdooSettingsController::class, 'resyncAll'])->name('odoo.settings.resync_all')->middleware('hasPermission:integrations_update');
+                Route::post('integrations/odoo/vendors',           [\App\Http\Controllers\Backend\OdooSettingsController::class, 'storeVendor'])->name('odoo.vendors.store')->middleware('hasPermission:integrations_update');
+                Route::post('integrations/odoo/vendors/{id}/sync', [\App\Http\Controllers\Backend\OdooSettingsController::class, 'syncVendor'])->name('odoo.vendors.sync')->middleware('hasPermission:integrations_update');
+
 
                 //payout setup settings
                 Route::get('/settings/pay-out/setup',                            [PayoutSetupController::class, 'index'])->name('payout.setup.settings.index')->middleware('hasPermission:payout_setup_settings_read');
@@ -223,9 +245,9 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                             Route::delete('delete/{id}', 'delete')->name('delete')->middleware('hasPermission:service_delete');
                         });
 
-                    //why courier
-                    Route::prefix('why-courier')
-                        ->name('why.courier.')
+                    //why rushly (formerly why-courier)
+                    Route::prefix('why-rushly')
+                        ->name('why.rushly.')
                         ->controller(WhyCourierController::class)
                         ->group(function () {
                             Route::get('/',              'index')->name('index')->middleware('hasPermission:why_courier_read');

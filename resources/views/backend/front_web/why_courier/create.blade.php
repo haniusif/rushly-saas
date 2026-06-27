@@ -9,7 +9,7 @@
             <nav class="tw-flex tw-items-center tw-gap-2 tw-text-xs tw-text-gray-500 tw-mb-4">
                 <span class="tw-text-gray-700">{{ __('levels.front_web') }}</span>
                 <i class="fa fa-angle-right tw-text-[10px] tw-text-gray-400 tw-rtl-flip"></i>
-                <a href="{{ route('why.courier.index') }}" class="hover:tw-text-brand-600 tw-no-underline">{{ __('levels.why_courier') }}</a>
+                <a href="{{ route('why.rushly.index') }}" class="hover:tw-text-brand-600 tw-no-underline">{{ __('levels.why_courier') }}</a>
                 <i class="fa fa-angle-right tw-text-[10px] tw-text-gray-400 tw-rtl-flip"></i>
                 <span class="tw-text-gray-700 tw-font-medium">{{ __('levels.create') }}</span>
             </nav>
@@ -18,7 +18,7 @@
                 <div class="tw-px-6 tw-py-5 tw-border-b tw-border-gray-100">
                     <h1 class="tw-text-lg tw-font-semibold tw-text-gray-900 tw-m-0">{{ __('levels.why_courier') }} {{ __('levels.add') }}</h1>
                 </div>
-                <form action="{{ route('why.courier.store') }}" method="POST" enctype="multipart/form-data" id="basicform">
+                <form action="{{ route('why.rushly.store') }}" method="POST" enctype="multipart/form-data" id="basicform">
                     @csrf
                     <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-5 tw-p-6">
                         <div>
@@ -53,7 +53,7 @@
                         </div>
                     </div>
                     <div class="tw-flex tw-items-center tw-justify-end tw-gap-2 tw-px-6 tw-py-4 tw-border-t tw-border-gray-100 tw-bg-gray-50">
-                        <a href="{{ route('why.courier.index') }}" class="tw-inline-flex tw-items-center tw-h-10 tw-px-4 tw-text-sm tw-font-medium tw-text-gray-700 tw-bg-white hover:tw-bg-gray-100 tw-border tw-border-gray-200 tw-rounded-lg tw-no-underline">{{ __('levels.cancel') }}</a>
+                        <a href="{{ route('why.rushly.index') }}" class="tw-inline-flex tw-items-center tw-h-10 tw-px-4 tw-text-sm tw-font-medium tw-text-gray-700 tw-bg-white hover:tw-bg-gray-100 tw-border tw-border-gray-200 tw-rounded-lg tw-no-underline">{{ __('levels.cancel') }}</a>
                         <button type="submit" class="tw-inline-flex tw-items-center tw-h-10 tw-px-5 tw-text-sm tw-font-medium tw-text-white tw-bg-brand-600 hover:tw-bg-brand-700 tw-rounded-lg tw-border-0">{{ __('levels.save') }}</button>
                     </div>
                 </form>

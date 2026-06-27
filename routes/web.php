@@ -1058,9 +1058,9 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                                     Route::delete('delete/{id}', 'delete')->name('delete')->middleware('hasPermission:service_delete');
                                 });
 
-                            //why courier
-                            Route::prefix('why-courier')
-                                ->name('why.courier.')
+                            //why rushly (formerly why-courier)
+                            Route::prefix('why-rushly')
+                                ->name('why.rushly.')
                                 ->controller(WhyCourierController::class)
                                 ->group(function () {
                                     Route::get('/',              'index')->name('index')->middleware('hasPermission:why_courier_read');

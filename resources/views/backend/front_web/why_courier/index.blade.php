@@ -19,7 +19,7 @@
                         <p class="tw-text-xs tw-text-gray-500 tw-mt-1 tw-m-0">{{ @$whycouriers->total() ?? count($whycouriers) }} {{ __('Showing') }}</p>
                     </div>
                     @if (hasPermission('why_courier_create'))
-                        <a href="{{ route('why.courier.create') }}"
+                        <a href="{{ route('why.rushly.create') }}"
                            class="tw-inline-flex tw-items-center tw-gap-2 tw-h-10 tw-px-4 tw-text-sm tw-font-medium tw-text-white tw-bg-brand-600 hover:tw-bg-brand-700 tw-rounded-lg tw-no-underline">
                             <i class="fa fa-plus tw-text-xs"></i> {{ __('levels.add') }}
                         </a>
@@ -61,12 +61,12 @@
                                                 </button>
                                                 <div class="dropdown-menu dropdown-menu-right">
                                                     @if (hasPermission('why_courier_update'))
-                                                        <a href="{{ route('why.courier.edit', $whycourier->id) }}" class="dropdown-item">
+                                                        <a href="{{ route('why.rushly.edit', $whycourier->id) }}" class="dropdown-item">
                                                             <i class="fas fa-edit"></i> {{ __('levels.edit') }}
                                                         </a>
                                                     @endif
                                                     @if (hasPermission('why_courier_delete'))
-                                                        <form id="delete" action="{{ route('why.courier.delete', $whycourier->id) }}" method="POST" data-title="{{ __('Do you want to delete why courier ?') }}">
+                                                        <form id="delete" action="{{ route('why.rushly.delete', $whycourier->id) }}" method="POST" data-title="{{ __('Do you want to delete why courier ?') }}">
                                                             @method('DELETE')
                                                             @csrf
                                                             <button type="submit" class="dropdown-item tw-text-red-600">

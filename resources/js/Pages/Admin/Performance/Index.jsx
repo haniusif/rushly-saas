@@ -15,14 +15,16 @@ import FilterBar from './Components/FilterBar';
 import ScoreBadge from './Components/ScoreBadge';
 import { LineSeries, BarSeries, Donut } from './Components/Charts';
 
-const TABS = [
-    { id: 'executive', label: 'Executive', icon: BarChart3 },
-    { id: 'drivers',   label: 'Drivers',   icon: Truck },
-    { id: 'customers', label: 'Customers', icon: Users },
-    { id: 'branches',  label: 'Branches',  icon: Building2 },
-    { id: 'companies', label: 'Companies', icon: Network },
-    { id: 'insights',  label: 'AI Insights', icon: Sparkles },
-];
+function makeTabs(t) {
+    return [
+        { id: 'executive', label: t.tab_executive, icon: BarChart3 },
+        { id: 'drivers',   label: t.tab_drivers,   icon: Truck },
+        { id: 'customers', label: t.tab_customers, icon: Users },
+        { id: 'branches',  label: t.tab_branches,  icon: Building2 },
+        { id: 'companies', label: t.tab_companies, icon: Network },
+        { id: 'insights',  label: t.tab_insights,  icon: Sparkles },
+    ];
+}
 
 export default function Index({
     filters: initialFilters,
@@ -32,7 +34,7 @@ export default function Index({
     hubs: initialHubs,
     companies: initialCompanies,
     insights: initialInsights,
-    options, urls,
+    options, urls, t = {},
 }) {
     const [tab, setTab] = React.useState('executive');
     const [filters, setFilters] = React.useState(initialFilters);
@@ -75,23 +77,24 @@ export default function Index({
     }, [autoRefresh, refresh]);
 
     return (
-        <AdminLayout title="Performance" breadcrumbs={['Performance']}>
-            <Head title="Performance Dashboard" />
+        <AdminLayout title={t.title} breadcrumbs={[t.title]}>
+            <Head title={t.title} />
 
             <div className="space-y-4">
                 {/* Header */}
                 <div className="flex flex-wrap items-end justify-between gap-3">
                     <div>
-                        <h1 className="text-2xl font-semibold">Performance Dashboard</h1>
+                        <h1 className="text-2xl font-semibold">{t.title}</h1>
                         <p className="text-xs text-muted-foreground mt-1">
-                            Executive insights · Driver, Customer, Branch &amp; Operating-Company analytics.
-                            <span className="ml-2">Last refresh: <span className="tabular-nums">{lastRefresh.toLocaleTimeString()}</span></span>
+                            {t.subtitle}
+                            <span className="ml-2">{t.last_refresh}: <span className="tabular-nums">{lastRefresh.toLocaleTimeString()}</span></span>
                         </p>
                     </div>
                 </div>
 
                 {/* Filters & controls */}
                 <FilterBar
+                    t={t}
                     filters={filters}
                     options={options}
                     urls={urls}
@@ -103,7 +106,7 @@ export default function Index({
 
                 {/* Tab nav */}
                 <div className="flex items-center gap-1 border-b border-border">
-                    {TABS.map(({ id, label, icon: Icon }) => (
+                    {makeTabs(t).map(({ id, label, icon: Icon }) => (
                         <button
                             key={id} type="button" onClick={() => setTab(id)}
                             className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
@@ -117,12 +120,12 @@ export default function Index({
                     ))}
                 </div>
 
-                {tab === 'executive' && <ExecutiveView kpi={kpi} />}
-                {tab === 'drivers'   && <DriversView drivers={drivers} />}
-                {tab === 'customers' && <CustomersView customers={customers} />}
-                {tab === 'branches'  && <BranchesView hubs={hubs} />}
-                {tab === 'companies' && <CompaniesView companies={companies} />}
-                {tab === 'insights'  && <InsightsView insights={insights} />}
+                {tab === 'executive' && <ExecutiveView kpi={kpi} t={t} />}
+                {tab === 'drivers'   && <DriversView drivers={drivers} t={t} />}
+                {tab === 'customers' && <CustomersView customers={customers} t={t} />}
+                {tab === 'branches'  && <BranchesView hubs={hubs} t={t} />}
+                {tab === 'companies' && <CompaniesView companies={companies} t={t} />}
+                {tab === 'insights'  && <InsightsView insights={insights} t={t} />}
             </div>
         </AdminLayout>
     );
@@ -130,112 +133,112 @@ export default function Index({
 
 /* ------------------------------- Executive view ------------------------------- */
 
-function ExecutiveView({ kpi }) {
+function ExecutiveView({ kpi, t }) {
     const { orders, financial, activity, service } = kpi;
     return (
         <div className="space-y-4">
 
             {/* Orders */}
-            <SectionTitle title="Orders" />
+            <SectionTitle title={t.sec_orders} />
             <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-                <KpiTile label="Total Orders" value={orders.total} icon={Package} accent="info"
-                         trend={orders.growth_rate} sub={`vs prev ${orders.previous_total}`} />
-                <KpiTile label="Completed" value={orders.completed} icon={CheckCircle2} accent="good"
-                         sub={`${(orders.completion_rate * 100).toFixed(1)}% rate`} />
-                <KpiTile label="Pending" value={orders.pending} icon={Clock} accent="warn" />
-                <KpiTile label="Cancelled" value={orders.cancelled} icon={XCircle} accent="bad" />
-                <KpiTile label="Growth Rate" value={orders.growth_rate} fmt="pct" icon={TrendingUp}
-                         accent={orders.growth_rate >= 0 ? 'good' : 'bad'} />
+                <KpiTile label={t.kpi_total_orders} value={orders.total} icon={Package} accent="info"
+                         trend={orders.growth_rate} sub={`${t.sub_vs_prev} ${orders.previous_total}`}  t={t} />
+                <KpiTile label={t.kpi_completed} value={orders.completed} icon={CheckCircle2} accent="good"
+                         sub={`${(orders.completion_rate * 100).toFixed(1)}% ${t.sub_rate_suffix}`}  t={t} />
+                <KpiTile label={t.kpi_pending} value={orders.pending} icon={Clock} accent="warn"  t={t} />
+                <KpiTile label={t.kpi_cancelled} value={orders.cancelled} icon={XCircle} accent="bad"  t={t} />
+                <KpiTile label={t.kpi_growth_rate} value={orders.growth_rate} fmt="pct" icon={TrendingUp}
+                         accent={orders.growth_rate >= 0 ? 'good' : 'bad'} t={t}  />
             </div>
 
             {/* Financial */}
-            <SectionTitle title="Financial" />
+            <SectionTitle title={t.sec_financial} />
             <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-3">
-                <KpiTile label="Revenue" value={financial.revenue} fmt="money" icon={DollarSign} accent="good"
-                         sub={financial.currency} />
-                <KpiTile label="Expenses" value={financial.expenses} fmt="money" icon={Wallet} accent="warn" />
-                <KpiTile label="Profit" value={financial.profit} fmt="money" icon={TrendingUp}
-                         accent={financial.profit >= 0 ? 'good' : 'bad'} />
+                <KpiTile label={t.kpi_revenue} value={financial.revenue} fmt="money" icon={DollarSign} accent="good"
+                         sub={financial.currency}  t={t} />
+                <KpiTile label={t.kpi_expenses} value={financial.expenses} fmt="money" icon={Wallet} accent="warn"  t={t} />
+                <KpiTile label={t.kpi_profit} value={financial.profit} fmt="money" icon={TrendingUp}
+                         accent={financial.profit >= 0 ? 'good' : 'bad'} t={t}  />
             </div>
 
             {/* Activity */}
-            <SectionTitle title="Activity" />
+            <SectionTitle title={t.sec_activity} />
             <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-                <KpiTile label="Active Drivers" value={activity.active_drivers} icon={Truck} accent="info"
-                         sub={`of ${activity.total_drivers}`} />
-                <KpiTile label="Active Customers" value={activity.active_customers} icon={Users} accent="info"
-                         sub={`of ${activity.total_customers}`} />
-                <KpiTile label="Active Companies" value={activity.active_companies} icon={Network} accent="info"
-                         sub="3PL operating co." />
-                <KpiTile label="Active Branches" value={activity.active_branches} icon={Building2} accent="info"
-                         sub={`of ${activity.total_branches}`} />
-                <KpiTile label="Avg. Delivery Time"
+                <KpiTile label={t.kpi_active_drivers} value={activity.active_drivers} icon={Truck} accent="info"
+                         sub={`${t.sub_of} ${activity.total_drivers}`}  t={t} />
+                <KpiTile label={t.kpi_active_customers} value={activity.active_customers} icon={Users} accent="info"
+                         sub={`${t.sub_of} ${activity.total_customers}`}  t={t} />
+                <KpiTile label={t.kpi_active_companies} value={activity.active_companies} icon={Network} accent="info"
+                         sub={t.sub_3pl_operating}  t={t} />
+                <KpiTile label={t.kpi_active_branches} value={activity.active_branches} icon={Building2} accent="info"
+                         sub={`${t.sub_of} ${activity.total_branches}`}  t={t} />
+                <KpiTile label={t.kpi_avg_delivery_time}
                          value={service.avg_delivery_hours != null ? `${service.avg_delivery_hours} h` : '—'}
-                         icon={Timer} />
+                         icon={Timer}  t={t} />
             </div>
 
             <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-                <KpiTile label="Avg. Distance"
+                <KpiTile label={t.kpi_avg_distance}
                          value={service.avg_distance_km != null ? `${service.avg_distance_km} km` : '—'}
                          icon={Route}
-                         sub="straight-line pickup → drop-off" />
+                         sub={t.sub_pickup_dropoff}  t={t} />
             </div>
 
             {/* Service quality */}
-            <SectionTitle title="Service quality" />
+            <SectionTitle title={t.sec_service_q} />
             <div className="grid gap-3 grid-cols-1 md:grid-cols-3">
                 <Card>
                     <CardContent className="p-4 flex items-center gap-4">
-                        <Donut value={service.sla_compliance ?? 0} label="SLA" />
+                        <Donut value={service.sla_compliance ?? 0} label={t.donut_sla}  t={t} />
                         <div className="min-w-0">
-                            <div className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">SLA Compliance</div>
+                            <div className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">{t.kpi_sla_compliance}</div>
                             <div className="text-2xl font-semibold tabular-nums">
                                 {service.sla_compliance != null ? `${(service.sla_compliance * 100).toFixed(1)}%` : '—'}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1">
-                                {service.abnormal_open} open abnormal
+                                {service.abnormal_open} {t.sub_open_abnormal}
                             </div>
                         </div>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardContent className="p-4 flex items-center gap-4">
-                        <Donut value={service.on_time_rate ?? 0} label="On-time" color="#10b981" />
+                        <Donut value={service.on_time_rate ?? 0} label={t.donut_on_time} color="#10b981"  t={t} />
                         <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                                <div className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">On-Time Delivery</div>
+                                <div className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">{t.kpi_on_time_delivery}</div>
                                 {service.on_time_is_real
-                                    ? <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200" title={service.proxies?.on_time_rate}>real</span>
-                                    : <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-amber-50 text-amber-700 border border-amber-200" title={service.proxies?.on_time_rate}>proxy</span>}
+                                    ? <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200" title={service.proxies?.on_time_rate}>{t.real_label}</span>
+                                    : <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-amber-50 text-amber-700 border border-amber-200" title={service.proxies?.on_time_rate}>{t.proxy_label}</span>}
                             </div>
                             <div className="text-2xl font-semibold tabular-nums">
                                 {service.on_time_rate != null ? `${(service.on_time_rate * 100).toFixed(1)}%` : '—'}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1">
                                 {service.on_time_is_real
-                                    ? 'delivery ≤ expected'
-                                    : 'Δ vs delivery-type SLA hours'}
+                                    ? t.sub_delivery_lte_expected
+                                    : t.sub_delta_sla_hours}
                             </div>
                         </div>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardContent className="p-4 flex items-center gap-4">
-                        <Donut value={service.satisfaction ?? 0} label="Sat" color="#6366f1" />
+                        <Donut value={service.satisfaction ?? 0} label={t.donut_sat} color="#6366f1"  t={t} />
                         <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                                <div className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">Customer Satisfaction</div>
+                                <div className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">{t.kpi_customer_satisfaction}</div>
                                 {service.satisfaction_is_real
-                                    ? <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200" title={service.proxies?.satisfaction}>real</span>
-                                    : <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-amber-50 text-amber-700 border border-amber-200" title={service.proxies?.satisfaction}>proxy</span>}
+                                    ? <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200" title={service.proxies?.satisfaction}>{t.real_label}</span>
+                                    : <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-amber-50 text-amber-700 border border-amber-200" title={service.proxies?.satisfaction}>{t.proxy_label}</span>}
                             </div>
                             <div className="text-2xl font-semibold tabular-nums">
                                 {service.satisfaction != null ? `${(service.satisfaction * 100).toFixed(1)}%` : '—'}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1">
                                 {service.satisfaction_is_real
-                                    ? `${service.ratings_count} ratings`
-                                    : `${service.support_tickets} tickets in range`}
+                                    ? `${service.ratings_count} ${t.sub_ratings_count}`
+                                    : `${service.support_tickets} ${t.sub_tickets_in_range}`}
                             </div>
                         </div>
                     </CardContent>
@@ -247,42 +250,42 @@ function ExecutiveView({ kpi }) {
 
 /* -------------------------------- Drivers view -------------------------------- */
 
-function DriversView({ drivers }) {
+function DriversView({ drivers, t }) {
     const { kpi, ranking, time_series, rating_distribution } = drivers;
     return (
         <div className="space-y-4">
 
             {/* Driver KPIs */}
-            <SectionTitle title="Driver KPIs" />
+            <SectionTitle title={t.sec_driver_kpi} />
             <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-                <KpiTile label="Total Drivers"        value={kpi.total_drivers}         icon={Truck} />
-                <KpiTile label="Active"               value={kpi.active_drivers}        icon={Truck} accent="good" />
-                <KpiTile label={kpi.online_is_real ? 'Online (now)' : 'Online (24h)'}
+                <KpiTile label={t.kpi_total_drivers}        value={kpi.total_drivers}         icon={Truck}  t={t} />
+                <KpiTile label={t.kpi_active}               value={kpi.active_drivers}        icon={Truck} accent="good"  t={t} />
+                <KpiTile label={kpi.online_is_real ? t.kpi_online_now : t.kpi_online_24h}
                          value={kpi.online_drivers} icon={Radio} accent="info"
-                         proxy={!kpi.online_is_real} />
-                <KpiTile label="Completed Deliveries" value={kpi.completed_deliveries}  icon={CheckCircle2} accent="good" />
-                <KpiTile label="Cancelled"            value={kpi.cancelled_deliveries}  icon={XCircle} accent="bad" />
+                         proxy={!kpi.online_is_real}  t={t} />
+                <KpiTile label={t.kpi_completed_deliveries} value={kpi.completed_deliveries}  icon={CheckCircle2} accent="good"  t={t} />
+                <KpiTile label={t.kpi_cancelled}            value={kpi.cancelled_deliveries}  icon={XCircle} accent="bad"  t={t} />
 
-                <KpiTile label="Acceptance Rate"   value={kpi.acceptance_rate}  fmt="pct" icon={ShieldCheck} accent="good" />
-                <KpiTile label="Rejection Rate"    value={kpi.rejection_rate}   fmt="pct" icon={XCircle} accent="warn" />
-                <KpiTile label="Avg. Pickup Time"  value={kpi.avg_pickup_hours  != null ? `${kpi.avg_pickup_hours} h`  : '—'} icon={Timer} />
-                <KpiTile label="Avg. Delivery Time"value={kpi.avg_delivery_hours!= null ? `${kpi.avg_delivery_hours} h`: '—'} icon={Timer} />
-                <KpiTile label="Distance Covered"  value={kpi.distance_km != null ? `${kpi.distance_km} km` : '—'} icon={Route} accent="info" />
-                <KpiTile label="Revenue / Driver"  value={kpi.revenue_per_driver} fmt="money" icon={DollarSign} accent="good" />
+                <KpiTile label={t.kpi_acceptance_rate}   value={kpi.acceptance_rate}  fmt="pct" icon={ShieldCheck} accent="good"  t={t} />
+                <KpiTile label={t.kpi_rejection_rate}    value={kpi.rejection_rate}   fmt="pct" icon={XCircle} accent="warn"  t={t} />
+                <KpiTile label={t.kpi_avg_pickup_time}  value={kpi.avg_pickup_hours  != null ? `${kpi.avg_pickup_hours} h`  : '—'} icon={Timer}  t={t} />
+                <KpiTile label={t.kpi_avg_delivery_time}value={kpi.avg_delivery_hours!= null ? `${kpi.avg_delivery_hours} h`: '—'} icon={Timer}  t={t} />
+                <KpiTile label={t.kpi_distance_covered}  value={kpi.distance_km != null ? `${kpi.distance_km} km` : '—'} icon={Route} accent="info"  t={t} />
+                <KpiTile label={t.kpi_revenue_per_driver}  value={kpi.revenue_per_driver} fmt="money" icon={DollarSign} accent="good"  t={t} />
 
-                <KpiTile label="Complaints" value={kpi.complaints} icon={AlertTriangle} accent="warn"
+                <KpiTile label={t.kpi_complaints} value={kpi.complaints} icon={AlertTriangle} accent="warn"
                          proxy={!kpi.complaints_is_real}
-                         sub={kpi.complaints_is_real ? 'driver-linked tickets' : 'all tickets (no driver link)'} />
-                <KpiTile label="Customer Rating"
+                         sub={kpi.complaints_is_real ? t.sub_driver_linked_tickets : t.sub_all_tickets}  t={t} />
+                <KpiTile label={t.kpi_customer_rating}
                          value={kpi.customer_rating != null ? `${kpi.customer_rating} / 5` : '—'}
                          icon={Star}
                          accent={kpi.customer_rating != null ? (kpi.customer_rating >= 4.5 ? 'good' : kpi.customer_rating >= 3.5 ? 'info' : 'warn') : undefined}
-                         sub={`${kpi.customer_rating_count ?? 0} ratings`} />
+                         sub={`${kpi.customer_rating_count ?? 0} ${t.sub_ratings_count}`} t={t}  />
                 <Card>
                     <CardContent className="p-4">
-                        <div className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">Cohort Score</div>
+                        <div className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">{t.kpi_cohort_score}</div>
                         <div className="mt-2">
-                            <ScoreBadge score={kpi.cohort_score} band={kpi.cohort_band} size="md" />
+                            <ScoreBadge score={kpi.cohort_score} band={kpi.cohort_band} size="md"  t={t} />
                         </div>
                     </CardContent>
                 </Card>
@@ -293,20 +296,20 @@ function DriversView({ drivers }) {
                 <Card className="lg:col-span-2">
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-sm font-semibold">Daily performance</h3>
-                            <p className="text-xs text-muted-foreground">Delivered vs assigned (in range)</p>
+                            <h3 className="text-sm font-semibold">{t.chart_daily_performance}</h3>
+                            <p className="text-xs text-muted-foreground">{t.chart_delivered_vs_assigned}</p>
                         </div>
-                        <LineSeries data={time_series} />
+                        <LineSeries data={time_series}  t={t} />
                     </CardContent>
                 </Card>
                 <Card>
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-sm font-semibold">Rating distribution</h3>
-                            <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-amber-50 text-amber-700 border border-amber-200">proxy</span>
+                            <h3 className="text-sm font-semibold">{t.chart_rating_distribution}</h3>
+                            <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-amber-50 text-amber-700 border border-amber-200">{t.proxy_label}</span>
                         </div>
-                        <BarSeries data={rating_distribution} />
-                        <p className="text-[11px] text-muted-foreground mt-2">Bucketed by completion-rate band (≥0.95=5★, ≥0.85=4★, ≥0.70=3★, ≥0.50=2★).</p>
+                        <BarSeries data={rating_distribution}  t={t} />
+                        <p className="text-[11px] text-muted-foreground mt-2">{t.chart_rating_buckets_note}</p>
                     </CardContent>
                 </Card>
             </div>
@@ -316,28 +319,28 @@ function DriversView({ drivers }) {
                 <CardContent className="p-0">
                     <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                         <h3 className="text-sm font-semibold flex items-center gap-2">
-                            <Crown className="h-4 w-4 text-amber-500" /> Driver leaderboard
+                            <Crown className="h-4 w-4 text-amber-500" /> {t.lb_driver_title}
                         </h3>
-                        <span className="text-xs text-muted-foreground">{ranking.length} drivers in window</span>
+                        <span className="text-xs text-muted-foreground">{ranking.length} {t.lb_drivers_in_win}</span>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead className="bg-muted/40">
                                 <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
                                     <th className="px-4 py-2 font-medium w-10">#</th>
-                                    <th className="px-4 py-2 font-medium">Driver</th>
-                                    <th className="px-4 py-2 font-medium text-right">Delivered</th>
-                                    <th className="px-4 py-2 font-medium text-right">Handled</th>
-                                    <th className="px-4 py-2 font-medium text-right">Completion</th>
-                                    <th className="px-4 py-2 font-medium text-right">On-time</th>
-                                    <th className="px-4 py-2 font-medium text-right">Rating</th>
-                                    <th className="px-4 py-2 font-medium text-right">Revenue</th>
-                                    <th className="px-4 py-2 font-medium">Score</th>
+                                    <th className="px-4 py-2 font-medium">{t.tbl_driver}</th>
+                                    <th className="px-4 py-2 font-medium text-right">{t.tbl_delivered}</th>
+                                    <th className="px-4 py-2 font-medium text-right">{t.tbl_handled}</th>
+                                    <th className="px-4 py-2 font-medium text-right">{t.tbl_completion}</th>
+                                    <th className="px-4 py-2 font-medium text-right">{t.tbl_on_time}</th>
+                                    <th className="px-4 py-2 font-medium text-right">{t.tbl_rating}</th>
+                                    <th className="px-4 py-2 font-medium text-right">{t.tbl_revenue}</th>
+                                    <th className="px-4 py-2 font-medium">{t.tbl_score}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
                                 {ranking.length === 0 && (
-                                    <tr><td colSpan={9} className="px-4 py-10 text-center text-sm text-muted-foreground">No driver activity in this range.</td></tr>
+                                    <tr><td colSpan={9} className="px-4 py-10 text-center text-sm text-muted-foreground">{t.no_driver_activity}</td></tr>
                                 )}
                                 {ranking.map((row, i) => (
                                     <tr key={row.driver_id} className="hover:bg-muted/30">
@@ -353,7 +356,7 @@ function DriversView({ drivers }) {
                                                 : <span className="text-muted-foreground">—</span>}
                                         </td>
                                         <td className="px-4 py-2 text-right tabular-nums">{row.revenue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
-                                        <td className="px-4 py-2"><ScoreBadge score={row.score} band={row.band} /></td>
+                                        <td className="px-4 py-2"><ScoreBadge score={row.score} band={row.band}  t={t} /></td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -376,7 +379,7 @@ function SectionTitle({ title }) {
 
 /* ------------------------------- Customers view ------------------------------- */
 
-function CustomersView({ customers }) {
+function CustomersView({ customers, t }) {
     if (!customers) return null;
     const { kpi, top, segments, growth, churn } = customers;
     const growthSeries = (growth ?? []).map((d) => ({
@@ -385,26 +388,26 @@ function CustomersView({ customers }) {
 
     return (
         <div className="space-y-4">
-            <SectionTitle title="Customer KPIs" />
+            <SectionTitle title={t.sec_customer_kpi} />
             <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-                <KpiTile label="Total Customers"     value={kpi.total_customers}      icon={Users} />
-                <KpiTile label="Active"              value={kpi.active_customers}     icon={Users} accent="good" />
-                <KpiTile label="New (in range)"      value={kpi.new_customers}        icon={UserPlus} accent="info" />
-                <KpiTile label="Returning"           value={kpi.returning_customers}  icon={Repeat} accent="info" />
-                <KpiTile label="Lost / Churn"        value={kpi.lost_customers}       icon={UserMinus} accent="bad" />
+                <KpiTile label={t.kpi_total_customers}     value={kpi.total_customers}      icon={Users}  t={t} />
+                <KpiTile label={t.kpi_active}              value={kpi.active_customers}     icon={Users} accent="good"  t={t} />
+                <KpiTile label={t.kpi_new_in_range}      value={kpi.new_customers}        icon={UserPlus} accent="info"  t={t} />
+                <KpiTile label={t.kpi_returning}           value={kpi.returning_customers}  icon={Repeat} accent="info"  t={t} />
+                <KpiTile label={t.kpi_lost_churn}        value={kpi.lost_customers}       icon={UserMinus} accent="bad"  t={t} />
 
-                <KpiTile label="Avg Lifetime Value"  value={kpi.lifetime_value}       fmt="money" icon={DollarSign} accent="good" proxy />
-                <KpiTile label="Avg Order Value"     value={kpi.avg_order_value}      fmt="money" icon={DollarSign} />
-                <KpiTile label="Total Spending"      value={kpi.total_spending}       fmt="money" icon={Wallet} />
-                <KpiTile label="Order Frequency"     value={`${kpi.order_frequency} /d`} icon={Gauge} sub="orders / customer / day" />
-                <KpiTile label="Cancellation Rate"   value={kpi.cancellation_rate}    fmt="pct" icon={XCircle} accent="warn" />
+                <KpiTile label={t.kpi_avg_ltv}  value={kpi.lifetime_value}       fmt="money" icon={DollarSign} accent="good" proxy  t={t} />
+                <KpiTile label={t.kpi_avg_order_value}     value={kpi.avg_order_value}      fmt="money" icon={DollarSign}  t={t} />
+                <KpiTile label={t.kpi_total_spending}      value={kpi.total_spending}       fmt="money" icon={Wallet}  t={t} />
+                <KpiTile label={t.kpi_order_frequency}     value={`${kpi.order_frequency} /d`} icon={Gauge} sub={t.sub_order_freq}  t={t} />
+                <KpiTile label={t.kpi_cancellation_rate}   value={kpi.cancellation_rate}    fmt="pct" icon={XCircle} accent="warn"  t={t} />
 
-                <KpiTile label="Retention Rate"      value={kpi.retention_rate}       fmt="pct" icon={RotateCcw} accent="info" proxy />
-                <KpiTile label="Satisfaction"        value={kpi.satisfaction}         fmt="pct" icon={Smile} accent="info" proxy />
+                <KpiTile label={t.kpi_retention_rate}      value={kpi.retention_rate}       fmt="pct" icon={RotateCcw} accent="info" proxy  t={t} />
+                <KpiTile label={t.kpi_satisfaction}        value={kpi.satisfaction}         fmt="pct" icon={Smile} accent="info" proxy  t={t} />
                 <Card>
                     <CardContent className="p-4">
-                        <div className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">Cohort Score</div>
-                        <div className="mt-2"><ScoreBadge score={kpi.cohort_score} band={kpi.cohort_band} size="md" /></div>
+                        <div className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">{t.kpi_cohort_score}</div>
+                        <div className="mt-2"><ScoreBadge score={kpi.cohort_score} band={kpi.cohort_band} size="md"  t={t} /></div>
                     </CardContent>
                 </Card>
             </div>
@@ -413,19 +416,19 @@ function CustomersView({ customers }) {
                 <Card className="lg:col-span-2">
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-sm font-semibold">Customer growth</h3>
-                            <p className="text-xs text-muted-foreground">Active (delivered) vs new signups (assigned)</p>
+                            <h3 className="text-sm font-semibold">{t.chart_customer_growth}</h3>
+                            <p className="text-xs text-muted-foreground">{t.chart_active_vs_new}</p>
                         </div>
-                        <LineSeries data={growthSeries} />
+                        <LineSeries data={growthSeries}  t={t} />
                     </CardContent>
                 </Card>
                 <Card>
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-sm font-semibold">Customer segments</h3>
-                            <p className="text-xs text-muted-foreground">by delivered spend</p>
+                            <h3 className="text-sm font-semibold">{t.chart_customer_segments}</h3>
+                            <p className="text-xs text-muted-foreground">{t.chart_by_delivered_spend}</p>
                         </div>
-                        <BarSeries data={segments} />
+                        <BarSeries data={segments}  t={t} />
                     </CardContent>
                 </Card>
             </div>
@@ -433,14 +436,14 @@ function CustomersView({ customers }) {
             <div className="grid gap-3 grid-cols-1 lg:grid-cols-3">
                 <Card>
                     <CardContent className="p-4 flex items-center gap-4">
-                        <Donut value={churn?.churn_rate ?? 0} label="Churn" color="#f43f5e" />
+                        <Donut value={churn?.churn_rate ?? 0} label={t.donut_churn} color="#f43f5e"  t={t} />
                         <div className="min-w-0">
-                            <div className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">Churn</div>
+                            <div className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">{t.donut_churn}</div>
                             <div className="text-2xl font-semibold tabular-nums">
                                 {churn?.churn_rate != null ? `${(churn.churn_rate * 100).toFixed(1)}%` : '—'}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1">
-                                {churn?.churned} of {churn?.prior_customers} prior customers
+                                {churn?.churned} {t.sub_of} {churn?.prior_customers} {t.sub_churn_of_prior}
                             </div>
                         </div>
                     </CardContent>
@@ -448,23 +451,23 @@ function CustomersView({ customers }) {
                 <Card className="lg:col-span-2">
                     <CardContent className="p-4">
                         <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                            <Crown className="h-4 w-4 text-amber-500" /> Top customers
+                            <Crown className="h-4 w-4 text-amber-500" /> {t.lb_top_customers}
                         </h3>
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead className="bg-muted/40">
                                     <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
                                         <th className="px-3 py-2 font-medium w-8">#</th>
-                                        <th className="px-3 py-2 font-medium">Customer</th>
-                                        <th className="px-3 py-2 font-medium text-right">Orders</th>
-                                        <th className="px-3 py-2 font-medium text-right">Revenue</th>
-                                        <th className="px-3 py-2 font-medium text-right">AOV</th>
-                                        <th className="px-3 py-2 font-medium">Score</th>
+                                        <th className="px-3 py-2 font-medium">{t.tbl_customer}</th>
+                                        <th className="px-3 py-2 font-medium text-right">{t.tbl_orders}</th>
+                                        <th className="px-3 py-2 font-medium text-right">{t.tbl_revenue}</th>
+                                        <th className="px-3 py-2 font-medium text-right">{t.tbl_aov}</th>
+                                        <th className="px-3 py-2 font-medium">{t.tbl_score}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border">
                                     {top.length === 0 && (
-                                        <tr><td colSpan={6} className="px-3 py-8 text-center text-sm text-muted-foreground">No customer activity in this range.</td></tr>
+                                        <tr><td colSpan={6} className="px-3 py-8 text-center text-sm text-muted-foreground">{t.no_customer_activity}</td></tr>
                                     )}
                                     {top.map((row, i) => (
                                         <tr key={row.merchant_id} className="hover:bg-muted/30">
@@ -473,7 +476,7 @@ function CustomersView({ customers }) {
                                             <td className="px-3 py-2 text-right tabular-nums">{row.orders}</td>
                                             <td className="px-3 py-2 text-right tabular-nums">{row.revenue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
                                             <td className="px-3 py-2 text-right tabular-nums">{row.aov.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
-                                            <td className="px-3 py-2"><ScoreBadge score={row.score} band={row.band} /></td>
+                                            <td className="px-3 py-2"><ScoreBadge score={row.score} band={row.band}  t={t} /></td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -488,35 +491,35 @@ function CustomersView({ customers }) {
 
 /* ------------------------------- Companies view ------------------------------- */
 
-function CompaniesView({ companies }) {
+function CompaniesView({ companies, t }) {
     if (!companies) return null;
     const { kpi, ranking, compare } = companies;
     const compareSeries = (compare ?? []).map((d) => ({ label: d.label, delivered: d.revenue, assigned: d.orders }));
 
     return (
         <div className="space-y-4">
-            <SectionTitle title="Operating-company KPIs (3PL)" />
+            <SectionTitle title={t.sec_company_kpi} />
             <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-                <KpiTile label="Total Companies"   value={kpi.total_companies}  icon={Network} />
-                <KpiTile label="Active"            value={kpi.active_companies} icon={Network} accent="good" />
-                <KpiTile label="Fleet Size"        value={kpi.fleet_size}       icon={Truck} accent="info" />
-                <KpiTile label="Handled"           value={kpi.handled}          icon={Package} />
-                <KpiTile label="Completed"         value={kpi.completed}        icon={CheckCircle2} accent="good" />
+                <KpiTile label={t.kpi_total_companies}   value={kpi.total_companies}  icon={Network}  t={t} />
+                <KpiTile label={t.kpi_active}            value={kpi.active_companies} icon={Network} accent="good"  t={t} />
+                <KpiTile label={t.kpi_fleet_size}        value={kpi.fleet_size}       icon={Truck} accent="info"  t={t} />
+                <KpiTile label={t.kpi_handled}           value={kpi.handled}          icon={Package}  t={t} />
+                <KpiTile label={t.kpi_completed}         value={kpi.completed}        icon={CheckCircle2} accent="good"  t={t} />
 
-                <KpiTile label="Revenue"           value={kpi.revenue}          fmt="money" icon={DollarSign} accent="good" />
-                <KpiTile label="Expenses"          value={kpi.expenses}         fmt="money" icon={Wallet} accent="warn" />
-                <KpiTile label="Profit"            value={kpi.profit}           fmt="money" icon={TrendingUp}
-                         accent={kpi.profit >= 0 ? 'good' : 'bad'} />
-                <KpiTile label="Avg Delivery"      value={kpi.avg_delivery_hours != null ? `${kpi.avg_delivery_hours} h` : '—'} icon={Timer} />
-                <KpiTile label="Fleet Utilization" value={kpi.fleet_utilization} fmt="pct" icon={Gauge} accent="info" proxy />
+                <KpiTile label={t.kpi_revenue}           value={kpi.revenue}          fmt="money" icon={DollarSign} accent="good"  t={t} />
+                <KpiTile label={t.kpi_expenses}          value={kpi.expenses}         fmt="money" icon={Wallet} accent="warn"  t={t} />
+                <KpiTile label={t.kpi_profit}            value={kpi.profit}           fmt="money" icon={TrendingUp}
+                         accent={kpi.profit >= 0 ? 'good' : 'bad'} t={t}  />
+                <KpiTile label={t.kpi_avg_delivery}      value={kpi.avg_delivery_hours != null ? `${kpi.avg_delivery_hours} h` : '—'} icon={Timer}  t={t} />
+                <KpiTile label={t.kpi_fleet_utilization} value={kpi.fleet_utilization} fmt="pct" icon={Gauge} accent="info" proxy  t={t} />
 
-                <KpiTile label="Success Rate"      value={kpi.success_rate}    fmt="pct" icon={CheckCircle2} accent="good" />
-                <KpiTile label="SLA Compliance"    value={kpi.sla_compliance}  fmt="pct" icon={ShieldCheck} accent="info" proxy />
-                <KpiTile label="Satisfaction"     value={kpi.satisfaction}    fmt="pct" icon={Smile} accent="info" proxy />
+                <KpiTile label={t.kpi_success_rate}      value={kpi.success_rate}    fmt="pct" icon={CheckCircle2} accent="good"  t={t} />
+                <KpiTile label={t.kpi_sla_compliance}    value={kpi.sla_compliance}  fmt="pct" icon={ShieldCheck} accent="info" proxy  t={t} />
+                <KpiTile label={t.kpi_satisfaction}     value={kpi.satisfaction}    fmt="pct" icon={Smile} accent="info" proxy  t={t} />
                 <Card>
                     <CardContent className="p-4">
-                        <div className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">Cohort Score</div>
-                        <div className="mt-2"><ScoreBadge score={kpi.cohort_score} band={kpi.cohort_band} size="md" /></div>
+                        <div className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">{t.kpi_cohort_score}</div>
+                        <div className="mt-2"><ScoreBadge score={kpi.cohort_score} band={kpi.cohort_band} size="md"  t={t} /></div>
                     </CardContent>
                 </Card>
             </div>
@@ -524,10 +527,10 @@ function CompaniesView({ companies }) {
             <Card>
                 <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-sm font-semibold">Revenue vs orders (weekly)</h3>
-                        <p className="text-xs text-muted-foreground">Revenue (green) · Orders (brand)</p>
+                        <h3 className="text-sm font-semibold">{t.chart_revenue_vs_orders}</h3>
+                        <p className="text-xs text-muted-foreground">{t.chart_revenue_orders_legend}</p>
                     </div>
-                    <LineSeries data={compareSeries} />
+                    <LineSeries data={compareSeries}  t={t} />
                 </CardContent>
             </Card>
 
@@ -535,28 +538,28 @@ function CompaniesView({ companies }) {
                 <CardContent className="p-0">
                     <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                         <h3 className="text-sm font-semibold flex items-center gap-2">
-                            <Crown className="h-4 w-4 text-amber-500" /> Operating-company leaderboard
+                            <Crown className="h-4 w-4 text-amber-500" /> {t.lb_company_title}
                         </h3>
-                        <span className="text-xs text-muted-foreground">{ranking.length} companies in window</span>
+                        <span className="text-xs text-muted-foreground">{ranking.length} {t.lb_companies_in_win}</span>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead className="bg-muted/40">
                                 <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
                                     <th className="px-4 py-2 font-medium w-10">#</th>
-                                    <th className="px-4 py-2 font-medium">Company</th>
-                                    <th className="px-4 py-2 font-medium text-right">Fleet</th>
-                                    <th className="px-4 py-2 font-medium text-right">Handled</th>
-                                    <th className="px-4 py-2 font-medium text-right">Success</th>
-                                    <th className="px-4 py-2 font-medium text-right">Revenue</th>
-                                    <th className="px-4 py-2 font-medium text-right">Profit</th>
-                                    <th className="px-4 py-2 font-medium text-right">Avg. h</th>
-                                    <th className="px-4 py-2 font-medium">Score</th>
+                                    <th className="px-4 py-2 font-medium">{t.tbl_company}</th>
+                                    <th className="px-4 py-2 font-medium text-right">{t.tbl_fleet}</th>
+                                    <th className="px-4 py-2 font-medium text-right">{t.tbl_handled}</th>
+                                    <th className="px-4 py-2 font-medium text-right">{t.tbl_success}</th>
+                                    <th className="px-4 py-2 font-medium text-right">{t.tbl_revenue}</th>
+                                    <th className="px-4 py-2 font-medium text-right">{t.tbl_profit}</th>
+                                    <th className="px-4 py-2 font-medium text-right">{t.tbl_avg_h}</th>
+                                    <th className="px-4 py-2 font-medium">{t.tbl_score}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
                                 {ranking.length === 0 && (
-                                    <tr><td colSpan={9} className="px-4 py-10 text-center text-sm text-muted-foreground">No operating-company activity in this range.</td></tr>
+                                    <tr><td colSpan={9} className="px-4 py-10 text-center text-sm text-muted-foreground">{t.no_company_activity}</td></tr>
                                 )}
                                 {ranking.map((r, i) => (
                                     <tr key={r.company_id} className="hover:bg-muted/30">
@@ -570,7 +573,7 @@ function CompaniesView({ companies }) {
                                             {r.profit.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                                         </td>
                                         <td className="px-4 py-2 text-right tabular-nums">{r.avg_hours ?? '—'}</td>
-                                        <td className="px-4 py-2"><ScoreBadge score={r.score} band={r.band} /></td>
+                                        <td className="px-4 py-2"><ScoreBadge score={r.score} band={r.band}  t={t} /></td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -584,7 +587,7 @@ function CompaniesView({ companies }) {
 
 /* ------------------------------- Insights view ------------------------------- */
 
-function InsightsView({ insights }) {
+function InsightsView({ insights, t }) {
     if (!insights) return null;
     const { highlights, risks, churn_watch, bottlenecks, forecast, suggestions } = insights;
 
@@ -598,7 +601,7 @@ function InsightsView({ insights }) {
                     </div>
                     <div className="mt-2 font-semibold truncate">{item.name}</div>
                     {item.score != null && (
-                        <div className="mt-2"><ScoreBadge score={item.score} band={item.band} /></div>
+                        <div className="mt-2"><ScoreBadge score={item.score} band={item.band}  t={t} /></div>
                     )}
                 </CardContent>
             </Card>
@@ -616,7 +619,7 @@ function InsightsView({ insights }) {
     return (
         <div className="space-y-4">
 
-            <SectionTitle title="Highlights" />
+            <SectionTitle title={t.sec_highlights} />
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                 <HighlightCard ic={Crown}        color="text-amber-500"  item={highlights.best_driver} />
                 <HighlightCard ic={Crown}        color="text-amber-500"  item={highlights.best_customer} />
@@ -629,7 +632,7 @@ function InsightsView({ insights }) {
 
             {risks?.length > 0 && (
                 <>
-                    <SectionTitle title="Risks" />
+                    <SectionTitle title={t.sec_risks} />
                     <div className="space-y-2">
                         {risks.map((r, i) => (
                             <Card key={i} className={
@@ -642,7 +645,7 @@ function InsightsView({ insights }) {
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-2">
                                             <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-medium rounded-full ${r.level === 'high' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-800'}`}>
-                                                {r.level.toUpperCase()}
+                                                {r.level === 'high' ? t.risk_high : t.risk_medium}
                                             </span>
                                             <span className="text-xs text-muted-foreground">{r.kind}</span>
                                         </div>
@@ -661,26 +664,26 @@ function InsightsView({ insights }) {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between mb-2">
                             <h3 className="text-sm font-semibold flex items-center gap-2">
-                                <Target className="h-4 w-4 text-primary" /> Revenue forecast
+                                <Target className="h-4 w-4 text-primary" /> {t.fc_revenue_forecast}
                             </h3>
                             {forecast?.confidence != null && (
                                 <span className="text-[11px] text-muted-foreground">
-                                    R² {forecast.confidence}
+                                    {t.fc_r2} {forecast.confidence}
                                 </span>
                             )}
                         </div>
                         {allWeeks.length >= 2
-                            ? <LineSeries data={forecastSeries} />
-                            : <div className="text-xs text-muted-foreground py-8 text-center">{forecast?.note ?? 'Not enough data to project.'}</div>}
+                            ? <LineSeries data={forecastSeries}  t={t} />
+                            : <div className="text-xs text-muted-foreground py-8 text-center">{forecast?.note ?? t.fc_not_enough}</div>}
                         {forecast?.note && allWeeks.length >= 2 && (
                             <div className="text-[11px] text-muted-foreground mt-2">{forecast.note}</div>
                         )}
                         <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-2">
                             <span className="inline-flex items-center gap-1.5">
-                                <span className="h-2 w-2 rounded-full" style={{ background: '#10b981' }} /> History
+                                <span className="h-2 w-2 rounded-full" style={{ background: '#10b981' }} /> {t.fc_history}
                             </span>
                             <span className="inline-flex items-center gap-1.5">
-                                <span className="h-2 w-2 rounded-full" style={{ background: '#a21f5c' }} /> Projected
+                                <span className="h-2 w-2 rounded-full" style={{ background: '#a21f5c' }} /> {t.fc_projected}
                             </span>
                         </div>
                     </CardContent>
@@ -689,8 +692,8 @@ function InsightsView({ insights }) {
                 <Card>
                     <CardContent className="p-4">
                         <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
-                            <UserMinus className="h-4 w-4 text-rose-500" /> Churn watchlist
-                            <span className="text-xs text-muted-foreground font-normal">(no orders in last 30 days)</span>
+                            <UserMinus className="h-4 w-4 text-rose-500" /> {t.churn_watchlist}
+                            <span className="text-xs text-muted-foreground font-normal">{t.churn_watchlist_sub}</span>
                         </h3>
                         {churn_watch?.length > 0 ? (
                             <div className="space-y-1">
@@ -698,13 +701,13 @@ function InsightsView({ insights }) {
                                     <div key={c.merchant_id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-md hover:bg-muted/30">
                                         <span className="truncate font-medium">{c.name}</span>
                                         <span className="text-xs text-muted-foreground tabular-nums">
-                                            {c.days_idle != null ? `${c.days_idle}d idle` : 'no orders'}
+                                            {c.days_idle != null ? `${c.days_idle}${t.sub_d_idle}` : t.sub_no_orders}
                                         </span>
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <div className="text-xs text-muted-foreground py-8 text-center">No churn-risk customers.</div>
+                            <div className="text-xs text-muted-foreground py-8 text-center">{t.no_churn_risk}</div>
                         )}
                     </CardContent>
                 </Card>
@@ -716,7 +719,7 @@ function InsightsView({ insights }) {
                         <Card>
                             <CardContent className="p-4">
                                 <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
-                                    <Timer className="h-4 w-4 text-amber-600" /> Bottlenecks
+                                    <Timer className="h-4 w-4 text-amber-600" /> {t.bottlenecks}
                                 </h3>
                                 <div className="space-y-2">
                                     {bottlenecks.map((b, i) => (
@@ -734,7 +737,7 @@ function InsightsView({ insights }) {
                         <Card>
                             <CardContent className="p-4">
                                 <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
-                                    <Lightbulb className="h-4 w-4 text-amber-500" /> Suggested improvements
+                                    <Lightbulb className="h-4 w-4 text-amber-500" /> {t.suggested_improvements}
                                 </h3>
                                 <ul className="space-y-2">
                                     {suggestions.map((s, i) => (
@@ -755,7 +758,7 @@ function InsightsView({ insights }) {
 
 /* ------------------------------- Branches view ------------------------------- */
 
-function BranchesView({ hubs }) {
+function BranchesView({ hubs, t }) {
     if (!hubs) return null;
     const { kpi, ranking, trend } = hubs;
     // Repurpose LineSeries: delivered = revenue, assigned = profit
@@ -763,28 +766,28 @@ function BranchesView({ hubs }) {
 
     return (
         <div className="space-y-4">
-            <SectionTitle title="Branch KPIs" />
+            <SectionTitle title={t.sec_branch_kpi} />
             <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-                <KpiTile label="Total Branches"   value={kpi.total_branches}  icon={Building2} />
-                <KpiTile label="Active"           value={kpi.active_branches} icon={Building2} accent="good" />
-                <KpiTile label="Orders"           value={kpi.orders}          icon={Package} accent="info" />
-                <KpiTile label="Employees"        value={kpi.employees}       icon={Briefcase} />
-                <KpiTile label="Vehicles"         value={kpi.vehicles}        icon={Car} />
+                <KpiTile label={t.kpi_total_branches}   value={kpi.total_branches}  icon={Building2}  t={t} />
+                <KpiTile label={t.kpi_active}           value={kpi.active_branches} icon={Building2} accent="good"  t={t} />
+                <KpiTile label={t.kpi_orders}           value={kpi.orders}          icon={Package} accent="info"  t={t} />
+                <KpiTile label={t.kpi_employees}        value={kpi.employees}       icon={Briefcase}  t={t} />
+                <KpiTile label={t.kpi_vehicles}         value={kpi.vehicles}        icon={Car}  t={t} />
 
-                <KpiTile label="Revenue"          value={kpi.revenue}  fmt="money" icon={DollarSign} accent="good" />
-                <KpiTile label="Expenses"         value={kpi.expenses} fmt="money" icon={Wallet} accent="warn" />
-                <KpiTile label="Profit"           value={kpi.profit}   fmt="money" icon={TrendingUp}
-                         accent={kpi.profit >= 0 ? 'good' : 'bad'} />
-                <KpiTile label="Success Rate"     value={kpi.success_rate} fmt="pct" icon={CheckCircle2} accent="good" />
-                <KpiTile label="Avg Processing"   value={kpi.avg_processing_hours != null ? `${kpi.avg_processing_hours} h` : '—'}
-                         icon={Timer} />
+                <KpiTile label={t.kpi_revenue}          value={kpi.revenue}  fmt="money" icon={DollarSign} accent="good"  t={t} />
+                <KpiTile label={t.kpi_expenses}         value={kpi.expenses} fmt="money" icon={Wallet} accent="warn"  t={t} />
+                <KpiTile label={t.kpi_profit}           value={kpi.profit}   fmt="money" icon={TrendingUp}
+                         accent={kpi.profit >= 0 ? 'good' : 'bad'} t={t}  />
+                <KpiTile label={t.kpi_success_rate}     value={kpi.success_rate} fmt="pct" icon={CheckCircle2} accent="good"  t={t} />
+                <KpiTile label={t.kpi_avg_processing}   value={kpi.avg_processing_hours != null ? `${kpi.avg_processing_hours} h` : '—'}
+                         icon={Timer}  t={t} />
 
-                <KpiTile label="SLA Compliance"   value={kpi.sla_compliance}  fmt="pct" icon={ShieldCheck} accent="info" proxy />
-                <KpiTile label="Satisfaction"     value={kpi.satisfaction}    fmt="pct" icon={Smile} accent="info" proxy />
+                <KpiTile label={t.kpi_sla_compliance}   value={kpi.sla_compliance}  fmt="pct" icon={ShieldCheck} accent="info" proxy  t={t} />
+                <KpiTile label={t.kpi_satisfaction}     value={kpi.satisfaction}    fmt="pct" icon={Smile} accent="info" proxy  t={t} />
                 <Card>
                     <CardContent className="p-4">
-                        <div className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">Cohort Score</div>
-                        <div className="mt-2"><ScoreBadge score={kpi.cohort_score} band={kpi.cohort_band} size="md" /></div>
+                        <div className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">{t.kpi_cohort_score}</div>
+                        <div className="mt-2"><ScoreBadge score={kpi.cohort_score} band={kpi.cohort_band} size="md"  t={t} /></div>
                     </CardContent>
                 </Card>
             </div>
@@ -792,10 +795,10 @@ function BranchesView({ hubs }) {
             <Card>
                 <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-sm font-semibold">Performance trend (monthly)</h3>
-                        <p className="text-xs text-muted-foreground">Revenue (green) · Profit (brand)</p>
+                        <h3 className="text-sm font-semibold">{t.chart_perf_trend_monthly}</h3>
+                        <p className="text-xs text-muted-foreground">{t.chart_revenue_profit_legend}</p>
                     </div>
-                    <LineSeries data={trendData} />
+                    <LineSeries data={trendData}  t={t} />
                 </CardContent>
             </Card>
 
@@ -803,28 +806,28 @@ function BranchesView({ hubs }) {
                 <CardContent className="p-0">
                     <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                         <h3 className="text-sm font-semibold flex items-center gap-2">
-                            <Crown className="h-4 w-4 text-amber-500" /> Branch leaderboard
+                            <Crown className="h-4 w-4 text-amber-500" /> {t.lb_branch_title}
                         </h3>
-                        <span className="text-xs text-muted-foreground">{ranking.length} branches in window</span>
+                        <span className="text-xs text-muted-foreground">{ranking.length} {t.lb_branches_in_win}</span>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead className="bg-muted/40">
                                 <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
                                     <th className="px-4 py-2 font-medium w-10">#</th>
-                                    <th className="px-4 py-2 font-medium">Branch</th>
-                                    <th className="px-4 py-2 font-medium text-right">Orders</th>
-                                    <th className="px-4 py-2 font-medium text-right">Success</th>
-                                    <th className="px-4 py-2 font-medium text-right">Revenue</th>
-                                    <th className="px-4 py-2 font-medium text-right">Expense</th>
-                                    <th className="px-4 py-2 font-medium text-right">Profit</th>
-                                    <th className="px-4 py-2 font-medium text-right">Avg. h</th>
-                                    <th className="px-4 py-2 font-medium">Score</th>
+                                    <th className="px-4 py-2 font-medium">{t.tbl_branch}</th>
+                                    <th className="px-4 py-2 font-medium text-right">{t.tbl_orders}</th>
+                                    <th className="px-4 py-2 font-medium text-right">{t.tbl_success}</th>
+                                    <th className="px-4 py-2 font-medium text-right">{t.tbl_revenue}</th>
+                                    <th className="px-4 py-2 font-medium text-right">{t.tbl_expense}</th>
+                                    <th className="px-4 py-2 font-medium text-right">{t.tbl_profit}</th>
+                                    <th className="px-4 py-2 font-medium text-right">{t.tbl_avg_h}</th>
+                                    <th className="px-4 py-2 font-medium">{t.tbl_score}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
                                 {ranking.length === 0 && (
-                                    <tr><td colSpan={9} className="px-4 py-10 text-center text-sm text-muted-foreground">No branch activity in this range.</td></tr>
+                                    <tr><td colSpan={9} className="px-4 py-10 text-center text-sm text-muted-foreground">{t.no_branch_activity}</td></tr>
                                 )}
                                 {ranking.map((r, i) => (
                                     <tr key={r.hub_id} className="hover:bg-muted/30">
@@ -838,7 +841,7 @@ function BranchesView({ hubs }) {
                                             {r.profit.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                                         </td>
                                         <td className="px-4 py-2 text-right tabular-nums">{r.avg_hours ?? '—'}</td>
-                                        <td className="px-4 py-2"><ScoreBadge score={r.score} band={r.band} /></td>
+                                        <td className="px-4 py-2"><ScoreBadge score={r.score} band={r.band}  t={t} /></td>
                                     </tr>
                                 ))}
                             </tbody>

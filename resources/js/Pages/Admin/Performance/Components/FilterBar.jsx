@@ -6,13 +6,15 @@ import { Button } from '@/Components/ui/Button';
 import { Input } from '@/Components/ui/Input';
 import { Select } from '@/Components/ui/Select';
 
-const PRESETS = [
-    { id: 'today',  label: 'Today',   days: 0 },
-    { id: '7d',     label: '7 days',  days: 6 },
-    { id: '30d',    label: '30 days', days: 29 },
-    { id: '90d',    label: '90 days', days: 89 },
-    { id: 'ytd',    label: 'YTD',     days: 'ytd' },
-];
+function makePresets(t) {
+    return [
+        { id: 'today',  label: t.preset_today, days: 0 },
+        { id: '7d',     label: t.preset_7d,    days: 6 },
+        { id: '30d',    label: t.preset_30d,   days: 29 },
+        { id: '90d',    label: t.preset_90d,   days: 89 },
+        { id: 'ytd',    label: t.preset_ytd,   days: 'ytd' },
+    ];
+}
 
 function isoDaysAgo(n) {
     const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10);
@@ -20,7 +22,7 @@ function isoDaysAgo(n) {
 function todayIso() { return new Date().toISOString().slice(0, 10); }
 
 export default function FilterBar({
-    filters, options, urls, onRefresh, autoRefresh, setAutoRefresh, isRefreshing,
+    filters, options, urls, onRefresh, autoRefresh, setAutoRefresh, isRefreshing, t = {},
 }) {
     const [from, setFrom] = React.useState(filters.from);
     const [to, setTo]     = React.useState(filters.to);
@@ -64,7 +66,7 @@ export default function FilterBar({
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-2 text-sm font-medium">
                         <Filter className="h-4 w-4 text-primary" />
-                        Filters
+                        {t.filters}
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                         <label className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -73,30 +75,30 @@ export default function FilterBar({
                                 checked={autoRefresh}
                                 onChange={(e) => setAutoRefresh(e.target.checked)}
                             />
-                            Auto-refresh (60s)
+                            {t.auto_refresh}
                         </label>
                         <Button variant="outline" size="sm" onClick={onRefresh} disabled={isRefreshing}>
-                            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} /> Refresh
+                            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} /> {t.refresh}
                         </Button>
                         <a href={exportUrl('export_excel')} target="_blank" rel="noopener">
                             <Button variant="outline" size="sm" type="button">
-                                <Download className="h-4 w-4" /> Excel
+                                <Download className="h-4 w-4" /> {t.excel}
                             </Button>
                         </a>
                         <a href={exportUrl('export_pdf')} target="_blank" rel="noopener">
                             <Button variant="outline" size="sm" type="button">
-                                <FileText className="h-4 w-4" /> PDF
+                                <FileText className="h-4 w-4" /> {t.pdf}
                             </Button>
                         </a>
                         <Button variant="outline" size="sm" type="button" onClick={() => window.print()}>
-                            <Printer className="h-4 w-4" /> Print
+                            <Printer className="h-4 w-4" /> {t.print}
                         </Button>
                     </div>
                 </div>
 
                 {/* Presets */}
                 <div className="flex items-center gap-1.5 flex-wrap">
-                    {PRESETS.map((p) => (
+                    {makePresets(t).map((p) => (
                         <button
                             key={p.id} type="button" onClick={() => applyPreset(p)}
                             className="px-2.5 py-1 text-xs font-medium rounded-md border border-border bg-muted/30 hover:bg-muted text-muted-foreground transition-colors"
@@ -109,52 +111,52 @@ export default function FilterBar({
                 {/* Inputs */}
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                     <div>
-                        <label className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground block mb-1">From</label>
+                        <label className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground block mb-1">{t.from}</label>
                         <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
                     </div>
                     <div>
-                        <label className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground block mb-1">To</label>
+                        <label className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground block mb-1">{t.to}</label>
                         <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
                     </div>
                     <div>
-                        <label className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground block mb-1">Driver</label>
+                        <label className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground block mb-1">{t.driver}</label>
                         <Select value={driverId} onChange={(e) => setDriverId(e.target.value)}>
-                            <option value="">All</option>
+                            <option value="">{t.all}</option>
                             {options.drivers.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                         </Select>
                     </div>
                     <div>
-                        <label className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground block mb-1">Branch (Hub)</label>
+                        <label className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground block mb-1">{t.branch_hub}</label>
                         <Select value={hubId} onChange={(e) => setHubId(e.target.value)}>
-                            <option value="">All</option>
+                            <option value="">{t.all}</option>
                             {options.hubs.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
                         </Select>
                     </div>
                     <div>
-                        <label className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground block mb-1">Customer</label>
+                        <label className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground block mb-1">{t.customer}</label>
                         <Select value={merchantId} onChange={(e) => setMerchantId(e.target.value)}>
-                            <option value="">All</option>
+                            <option value="">{t.all}</option>
                             {options.merchants.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                         </Select>
                     </div>
                     <div>
-                        <label className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground block mb-1">Operating Co.</label>
+                        <label className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground block mb-1">{t.operating_co}</label>
                         <Select value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
-                            <option value="">All</option>
+                            <option value="">{t.all}</option>
                             {options.supplier_companies.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </Select>
                     </div>
                     <div>
-                        <label className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground block mb-1">Service Type</label>
+                        <label className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground block mb-1">{t.service_type}</label>
                         <Select value={deliveryTypeId} onChange={(e) => setDeliveryTypeId(e.target.value)}>
-                            <option value="">All</option>
+                            <option value="">{t.all}</option>
                             {options.delivery_types.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                         </Select>
                     </div>
                 </div>
 
                 <div className="flex justify-end">
-                    <Button size="sm" onClick={apply}>Apply</Button>
+                    <Button size="sm" onClick={apply}>{t.apply}</Button>
                 </div>
             </CardContent>
         </Card>

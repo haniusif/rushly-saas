@@ -18,10 +18,10 @@ const BAND_COLORS = {
     accent:    '#6366f1',
 };
 
-export function LineSeries({ data, height = 220 }) {
+export function LineSeries({ data, height = 220, t }) {
     const w = 720;
     const pad = { top: 12, right: 12, bottom: 28, left: 32 };
-    if (!data?.length) return <EmptyChart height={height} />;
+    if (!data?.length) return <EmptyChart height={height} t={t} />;
 
     const maxY = Math.max(1, ...data.map((d) => Math.max(d.delivered ?? 0, d.assigned ?? 0)));
     const innerW = w - pad.left - pad.right;
@@ -65,18 +65,18 @@ export function LineSeries({ data, height = 220 }) {
             </svg>
             <div className="flex items-center gap-4 text-xs text-muted-foreground px-2">
                 <span className="inline-flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full" style={{ background: BAND_COLORS.delivered }} /> Delivered
+                    <span className="h-2 w-2 rounded-full" style={{ background: BAND_COLORS.delivered }} /> {t?.chart_delivered || 'Delivered'}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full" style={{ background: BAND_COLORS.assigned }} /> Assigned
+                    <span className="h-2 w-2 rounded-full" style={{ background: BAND_COLORS.assigned }} /> {t?.chart_assigned || 'Assigned'}
                 </span>
             </div>
         </div>
     );
 }
 
-export function BarSeries({ data, accent = BAND_COLORS.primary }) {
-    if (!data?.length) return <EmptyChart height={140} />;
+export function BarSeries({ data, accent = BAND_COLORS.primary, t }) {
+    if (!data?.length) return <EmptyChart height={140} t={t} />;
     const max = Math.max(1, ...data.map((d) => d.count ?? 0));
     return (
         <div className="space-y-2">
@@ -117,10 +117,10 @@ export function Donut({ value, label, size = 96, stroke = 10, color = BAND_COLOR
     );
 }
 
-function EmptyChart({ height }) {
+function EmptyChart({ height, t }) {
     return (
         <div className="flex items-center justify-center text-xs text-muted-foreground" style={{ height }}>
-            No data for this range.
+            {t?.chart_no_data || 'No data for this range.'}
         </div>
     );
 }

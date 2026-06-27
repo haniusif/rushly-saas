@@ -14,7 +14,7 @@ import { Card, CardContent } from '@/Components/ui/Card';
  * substitute data (e.g. on-time rate derived from delivery-type assumed SLA).
  */
 export default function KpiTile({
-    label, value, sub, icon: Icon, accent, proxy, trend, fmt,
+    label, value, sub, icon: Icon, accent, proxy, trend, fmt, t,
 }) {
     const display = fmt === 'pct' && typeof value === 'number'
         ? `${(value * 100).toFixed(1)}%`
@@ -71,9 +71,9 @@ export default function KpiTile({
                     {proxy && (
                         <span
                             className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-amber-50 text-amber-700 border border-amber-200"
-                            title="Computed from substitute data — see tooltip on the metric for the formula."
+                            title={t?.proxy_title || "Computed from substitute data — see tooltip on the metric for the formula."}
                         >
-                            proxy
+                            {t?.proxy_label || "proxy"}
                         </span>
                     )}
                 </div>

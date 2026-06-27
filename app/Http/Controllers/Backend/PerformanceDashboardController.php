@@ -47,6 +47,7 @@ class PerformanceDashboardController extends Controller
                 'export_excel' => route('performance.export.excel'),
                 'export_pdf'   => route('performance.export.pdf'),
             ],
+            't' => trans('performance'),
         ]);
     }
 

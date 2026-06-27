@@ -64,6 +64,7 @@ use App\Http\Controllers\Backend\Wms\WmsAdjustmentController;
 use App\Http\Controllers\Backend\Wms\WmsCycleCountController;
 use App\Http\Controllers\Backend\Wms\WmsDamageController;
 use App\Http\Controllers\Backend\Wms\WmsDashboardController;
+use App\Http\Controllers\Backend\Wms\WmsKnowledgeBaseController;
 use App\Http\Controllers\Backend\AccountController;
 use App\Http\Controllers\Backend\AccountHeadsController;
 use App\Http\Controllers\Backend\AdminAamarpayController;
@@ -721,6 +722,9 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                             // Dashboard (Phase 7)
                             Route::get('/',           [WmsDashboardController::class, 'index'])->name('dashboard');
                             Route::get('/dashboard',  [WmsDashboardController::class, 'index'])->name('dashboard.alias');
+
+                            // Knowledge base — operator handbook
+                            Route::get('knowledge-base', [WmsKnowledgeBaseController::class, 'index'])->name('knowledge-base');
 
                             // Products
                             Route::get('products/{product}/barcode', [WmsProductController::class, 'barcode'])->name('products.barcode');

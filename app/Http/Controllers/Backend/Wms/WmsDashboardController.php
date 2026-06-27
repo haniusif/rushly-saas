@@ -14,6 +14,7 @@ use App\Repositories\Wms\WmsFulfillmentRepositoryInterface;
 use App\Repositories\Wms\WmsProductRepositoryInterface;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class WmsDashboardController extends Controller
 {
@@ -80,8 +81,61 @@ class WmsDashboardController extends Controller
             ->get();
         $slaBreached = $this->fulRepo->breachedSla()->take(8);
 
-        return view('backend.wms.dashboard.index', compact(
-            'kpi', 'movement', 'fulChart', 'lowStockProducts', 'expiringSoon', 'slaBreached'
-        ));
+        return Inertia::render('Admin/Wms/Dashboard/Index', [
+            'kpi'      => array_map('intval', $kpi),
+            'movement' => $movement,
+            'fulChart' => $fulChart,
+            'low_stock' => collect($lowStockProducts)->map(fn ($p) => [
+                'id'       => $p->id,
+                'sku'      => $p->sku,
+                'name'     => $p->name,
+                'on_hand'  => (int) ($p->stocks?->sum('quantity') ?? 0),
+                'reorder'  => (int) ($p->reorder_point ?? 0),
+                'url'      => route('wms.products.show', $p->id),
+            ])->values(),
+            'expiring' => collect($expiringSoon)->map(fn ($s) => [
+                'id'      => $s->id,
+                'sku'     => optional($s->product)->sku,
+                'product' => optional($s->product)->name,
+                'location'=> optional($s->location)->code,
+                'qty'     => (int) $s->quantity,
+                'expiry'  => optional($s->expiry_date)->format('Y-m-d'),
+            ])->values(),
+            'sla_breached' => collect($slaBreached)->map(fn ($f) => [
+                'id'       => $f->id,
+                'number'   => $f->fulfillment_number,
+                'parcel'   => optional($f->parcel)->tracking_id ?? ('#' . $f->parcel_id),
+                'deadline' => optional($f->sla_deadline)->diffForHumans(),
+                'url'      => route('wms.fulfillment.show', $f->id),
+            ])->values(),
+            'urls' => [
+                'products'       => route('wms.products.index'),
+                'fulfillment'    => route('wms.fulfillment.index'),
+                'adjustments'    => route('wms.adjustments.index'),
+                'stock'          => route('wms.stock.index'),
+                'grn'            => route('wms.grn.index'),
+                'damage'         => route('wms.damage.index'),
+                'knowledge_base' => route('wms.knowledge-base'),
+            ],
+            't' => [
+                'title'              => 'WMS Dashboard',
+                'total_skus'         => 'Total SKUs',
+                'total_units'        => 'Total units',
+                'pending_fulfillments'=> 'Pending fulfillments',
+                'grns_today'         => 'GRNs today',
+                'low_stock'          => 'Low stock',
+                'damage_month'       => 'Damage this month',
+                'sla_breached'       => 'SLA breached',
+                'pending_adjustments'=> 'Pending adjustments',
+                'movement'           => 'Stock movement (7 days)',
+                'ful_chart'          => 'Fulfillment status',
+                'low_stock_panel'    => 'Low stock alerts',
+                'expiring_panel'     => 'Expiring soon',
+                'sla_panel'          => 'SLA breached',
+                'view'               => 'View',
+                'no_data'            => 'Nothing to show',
+                'knowledge_base'     => 'Knowledge base',
+            ],
+        ]);
     }
 }

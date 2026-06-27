@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Inertia\Inertia;
 
@@ -76,6 +77,12 @@ class AdminKnowledgeBaseController extends Controller
 
     private const SHOT_DIR = 'images/kb';
 
+    private function canUpdate(): bool
+    {
+        $user = Auth::user();
+        return $user && in_array('knowledge_base_update', (array) ($user->permissions ?? []), true);
+    }
+
     public function index()
     {
         $sections = collect(self::SECTIONS)->map(function ($def, $slug) {
@@ -92,7 +99,8 @@ class AdminKnowledgeBaseController extends Controller
         })->values();
 
         return Inertia::render('Admin/KnowledgeBase/Hub', [
-            'sections' => $sections,
+            'sections'   => $sections,
+            'can_update' => $this->canUpdate(),
             't' => [
                 'title'         => __('kb_chrome.title'),
                 'subtitle'      => __('kb_chrome.subtitle'),
@@ -134,6 +142,7 @@ class AdminKnowledgeBaseController extends Controller
                 'subs'     => $subs,
             ],
             'screenshots' => $screenshots,
+            'can_update'  => $this->canUpdate(),
             'urls' => [
                 'hub' => route('admin.kb.index'),
             ],

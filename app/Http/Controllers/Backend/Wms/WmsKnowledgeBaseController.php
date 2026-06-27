@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Backend\Wms;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Inertia\Inertia;
 
@@ -38,6 +39,10 @@ class WmsKnowledgeBaseController extends Controller
                 $path = public_path(self::SHOT_DIR . '/' . $slug . '.png');
                 return [$slug => is_file($path) ? filemtime($path) : null];
             })->all(),
+            'can_update' => (function () {
+                $user = Auth::user();
+                return $user && in_array('knowledge_base_update', (array) ($user->permissions ?? []), true);
+            })(),
         ]);
     }
 

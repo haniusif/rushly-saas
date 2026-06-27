@@ -436,6 +436,36 @@ class PermissionSeeder extends Seeder
                 'reports'      => 'wms_reports',
             ],
 
+            // ZATCA (Saudi e-invoicing) Phase 1 module
+            'zatca' => [
+                'manage'     => 'zatca_manage',
+                'read'       => 'zatca_read',
+                'settings'   => 'zatca_settings',
+                'regenerate' => 'zatca_regenerate',
+            ],
+
+            // Knowledge Base — gates the per-sub-page screenshot upload/delete
+            // (and the WMS KB equivalents). Read remains open to any logged-in
+            // admin; only writes are permission-gated.
+            'knowledge_base' => [
+                'update' => 'knowledge_base_update',
+            ],
+
+            // Shipping label templates
+            'label_template' => [
+                'manage' => 'label_template_manage',
+            ],
+
+            // Performance Dashboard — executive insights & analytics
+            'performance_dashboard' => [
+                'read'            => 'performance_dashboard_read',
+                'export'          => 'performance_dashboard_export',
+                'drivers_view'    => 'performance_dashboard_drivers_view',
+                'customers_view'  => 'performance_dashboard_customers_view',
+                'hubs_view'       => 'performance_dashboard_hubs_view',
+                'companies_view'  => 'performance_dashboard_companies_view',
+            ],
+
         ];
  
         foreach ($attributes as $key => $value) {
@@ -465,6 +495,10 @@ class PermissionSeeder extends Seeder
             'integrations'      => [
                 'read'   => 'integrations_read',
                 'update' => 'integrations_update',
+            ],
+
+            'knowledge_base' => [
+                'update' => 'knowledge_base_update',
             ],
 
             'database_backup'       => [

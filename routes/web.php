@@ -193,6 +193,13 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                 ->name('merchant.impersonate.stop');
 
             //frontend
+            // Public parcel-rating capture (signed URL, no auth required).
+            // Customer clicks the link from SMS/email after delivery → rates 1..5.
+            Route::get('/r/parcel/{id}/rate',  [\App\Http\Controllers\Backend\ParcelRatingController::class, 'show'])
+                ->whereNumber('id')->name('parcel.rating.show');
+            Route::post('/r/parcel/{id}/rate', [\App\Http\Controllers\Backend\ParcelRatingController::class, 'store'])
+                ->whereNumber('id')->name('parcel.rating.store');
+
             Route::controller(FrontendController::class)->group(function () {
                 Route::get('/',                      'index')->name('home');
                 Route::get('/tracking',              'tracking')->name('tracking.index');
@@ -283,12 +290,14 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         // Topbar global search (parcel / driver / client / product / ticket)
                         Route::get('global-search', [\App\Http\Controllers\Backend\GlobalSearchController::class, 'search'])->name('global.search');
 
-                        // Central admin Knowledge Base (per-section operator handbooks)
+                        // Central admin Knowledge Base (per-section operator handbooks).
+                        // Reading is open to any logged-in admin; only screenshot
+                        // upload/delete requires the knowledge_base_update permission.
                         Route::prefix('knowledge-base')->name('admin.kb.')->group(function () {
                             Route::get('/',                                          [AdminKnowledgeBaseController::class, 'index'])->name('index');
                             Route::get('{section}',                                  [AdminKnowledgeBaseController::class, 'show'])->name('show');
-                            Route::post('{section}/screenshot/{sub}',                [AdminKnowledgeBaseController::class, 'uploadScreenshot'])->name('screenshot.upload');
-                            Route::delete('{section}/screenshot/{sub}',              [AdminKnowledgeBaseController::class, 'deleteScreenshot'])->name('screenshot.delete');
+                            Route::post('{section}/screenshot/{sub}',                [AdminKnowledgeBaseController::class, 'uploadScreenshot'])->name('screenshot.upload')->middleware('hasPermission:knowledge_base_update');
+                            Route::delete('{section}/screenshot/{sub}',              [AdminKnowledgeBaseController::class, 'deleteScreenshot'])->name('screenshot.delete')->middleware('hasPermission:knowledge_base_update');
                         });
 
                         Route::resource('addons', AddonController::class);
@@ -726,16 +735,26 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                             Route::get('invoices/{id}/qr',                  [ZatcaInvoiceController::class, 'qr'])->whereNumber('id')->name('invoices.qr');
                         });
 
+                        // Performance Dashboard — executive insights & analytics (Phase 1: executive + driver perf)
+                        Route::prefix('performance')->name('performance.')->middleware('hasPermission:performance_dashboard_read')->group(function () {
+                            Route::get('/',          [\App\Http\Controllers\Backend\PerformanceDashboardController::class, 'index'])->name('index');
+                            Route::get('/data',      [\App\Http\Controllers\Backend\PerformanceDashboardController::class, 'data'])->name('data');
+                            Route::get('/export/excel', [\App\Http\Controllers\Backend\PerformanceDashboardController::class, 'exportExcel'])->name('export.excel')->middleware('hasPermission:performance_dashboard_export');
+                            Route::get('/export/pdf',   [\App\Http\Controllers\Backend\PerformanceDashboardController::class, 'exportPdf'])->name('export.pdf')->middleware('hasPermission:performance_dashboard_export');
+                        });
+
                         // WMS module — Phase 2 (Products + Locations + Stock)
                         Route::prefix('wms')->name('wms.')->middleware('hasPermission:wms_manage')->group(function () {
                             // Dashboard (Phase 7)
                             Route::get('/',           [WmsDashboardController::class, 'index'])->name('dashboard');
                             Route::get('/dashboard',  [WmsDashboardController::class, 'index'])->name('dashboard.alias');
 
-                            // Knowledge base — operator handbook
+                            // Knowledge base — operator handbook. Read is gated by the
+                            // parent wms_manage permission; screenshot writes additionally
+                            // require knowledge_base_update.
                             Route::get('knowledge-base',                            [WmsKnowledgeBaseController::class, 'index'])->name('knowledge-base');
-                            Route::post('knowledge-base/screenshot/{slug}',         [WmsKnowledgeBaseController::class, 'uploadScreenshot'])->name('knowledge-base.screenshot.upload');
-                            Route::delete('knowledge-base/screenshot/{slug}',       [WmsKnowledgeBaseController::class, 'deleteScreenshot'])->name('knowledge-base.screenshot.delete');
+                            Route::post('knowledge-base/screenshot/{slug}',         [WmsKnowledgeBaseController::class, 'uploadScreenshot'])->name('knowledge-base.screenshot.upload')->middleware('hasPermission:knowledge_base_update');
+                            Route::delete('knowledge-base/screenshot/{slug}',       [WmsKnowledgeBaseController::class, 'deleteScreenshot'])->name('knowledge-base.screenshot.delete')->middleware('hasPermission:knowledge_base_update');
 
                             // Products
                             Route::get('products/{product}/barcode', [WmsProductController::class, 'barcode'])->name('products.barcode');

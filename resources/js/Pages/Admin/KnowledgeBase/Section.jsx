@@ -58,7 +58,7 @@ function Lightbox({ src, alt, onClose }) {
     );
 }
 
-function Screenshot({ section, sub, label, icon: Icon, version }) {
+function Screenshot({ section, sub, label, icon: Icon, version, canUpdate = true }) {
     const src = version ? `${SHOT_DIR}/${section}/${sub}.png?v=${version}` : `${SHOT_DIR}/${section}/${sub}.png`;
     const exists = !!version;
     const [open, setOpen] = React.useState(false);
@@ -109,21 +109,23 @@ function Screenshot({ section, sub, label, icon: Icon, version }) {
                         <span className="pointer-events-auto inline-flex items-center gap-1 rounded bg-black/60 px-2 py-1 text-[11px] font-medium text-white">
                             <Maximize2 className="h-3 w-3" /> Zoom
                         </span>
-                        <div className="pointer-events-auto flex items-center gap-1">
-                            <button type="button" onClick={trigger} disabled={uploading}
-                                    className="inline-flex items-center gap-1 rounded bg-white/90 px-2 py-1 text-[11px] font-medium text-foreground hover:bg-white disabled:opacity-60">
-                                {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
-                                Replace
-                            </button>
-                            <button type="button" onClick={handleDelete} disabled={uploading}
-                                    className="inline-flex items-center gap-1 rounded bg-rose-600/90 px-2 py-1 text-[11px] font-medium text-white hover:bg-rose-600 disabled:opacity-60">
-                                <Trash2 className="h-3 w-3" /> Delete
-                            </button>
-                        </div>
+                        {canUpdate ? (
+                            <div className="pointer-events-auto flex items-center gap-1">
+                                <button type="button" onClick={trigger} disabled={uploading}
+                                        className="inline-flex items-center gap-1 rounded bg-white/90 px-2 py-1 text-[11px] font-medium text-foreground hover:bg-white disabled:opacity-60">
+                                    {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                                    Replace
+                                </button>
+                                <button type="button" onClick={handleDelete} disabled={uploading}
+                                        className="inline-flex items-center gap-1 rounded bg-rose-600/90 px-2 py-1 text-[11px] font-medium text-white hover:bg-rose-600 disabled:opacity-60">
+                                    <Trash2 className="h-3 w-3" /> Delete
+                                </button>
+                            </div>
+                        ) : null}
                     </div>
                 </div>
                 {error ? <div className="mt-2 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">{error}</div> : null}
-                {hiddenInput}
+                {canUpdate ? hiddenInput : null}
                 {open ? <Lightbox src={src} alt={label} onClose={() => setOpen(false)} /> : null}
             </div>
         );
@@ -138,17 +140,21 @@ function Screenshot({ section, sub, label, icon: Icon, version }) {
                 <div className="min-w-0 flex-1">
                     <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Screenshot — {label}</div>
                     <div className="mt-1 text-xs text-muted-foreground">
-                        Drop image at <code className="rounded bg-background px-1.5 py-0.5 font-mono text-[11px] border border-border">{SHOT_DIR}/{section}/{sub}.png</code>
+                        {canUpdate
+                            ? <>Drop image at <code className="rounded bg-background px-1.5 py-0.5 font-mono text-[11px] border border-border">{SHOT_DIR}/{section}/{sub}.png</code></>
+                            : <>No screenshot uploaded yet.</>}
                     </div>
                 </div>
-                <button type="button" onClick={trigger} disabled={uploading}
-                        className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted/60 disabled:opacity-60">
-                    {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-                    {uploading ? 'Uploading…' : 'Upload screenshot'}
-                </button>
+                {canUpdate ? (
+                    <button type="button" onClick={trigger} disabled={uploading}
+                            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted/60 disabled:opacity-60">
+                        {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                        {uploading ? 'Uploading…' : 'Upload screenshot'}
+                    </button>
+                ) : null}
             </div>
             {error ? <div className="mt-2 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">{error}</div> : null}
-            {hiddenInput}
+            {canUpdate ? hiddenInput : null}
         </div>
     );
 }
@@ -198,7 +204,7 @@ function PageList({ items, label }) {
     );
 }
 
-function SubSection({ section, sub, t }) {
+function SubSection({ section, sub, t, canUpdate }) {
     const SubIcon = ICONS[sub.icon] || BookOpen;
     return (
         <section id={sub.slug} className="scroll-mt-20">
@@ -220,6 +226,7 @@ function SubSection({ section, sub, t }) {
                         label={sub.label || sub.slug}
                         icon={SubIcon}
                         version={sub.version}
+                        canUpdate={canUpdate}
                     />
 
                     {!sub.purpose && !sub.pages && !sub.fields && !sub.status_flow ? (
@@ -284,7 +291,7 @@ function Toc({ section, t }) {
     );
 }
 
-export default function SectionPage({ section, screenshots = {}, urls = {}, t = {} }) {
+export default function SectionPage({ section, screenshots = {}, urls = {}, t = {}, can_update = false }) {
     const Icon = ICONS[section.icon] || BookOpen;
     const subs = (section.subs || []).map((s) => ({ ...s, version: screenshots[s.slug] || null }));
 
@@ -312,7 +319,7 @@ export default function SectionPage({ section, screenshots = {}, urls = {}, t = 
                             <CardContent className="p-6 text-sm text-muted-foreground italic">{t.pending}</CardContent>
                         </Card>
                     ) : subs.map((sub) => (
-                        <SubSection key={sub.slug} section={section} sub={sub} t={t} />
+                        <SubSection key={sub.slug} section={section} sub={sub} t={t} canUpdate={can_update} />
                     ))}
                 </div>
             </div>

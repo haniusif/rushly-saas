@@ -104,7 +104,7 @@ function Lightbox({ src, alt, onClose }) {
     );
 }
 
-function Screenshot({ slug, label, icon: Icon, t, version }) {
+function Screenshot({ slug, label, icon: Icon, t, version, canUpdate = true }) {
     const src = version ? `${SHOT_DIR}/${slug}.png?v=${version}` : `${SHOT_DIR}/${slug}.png`;
     const exists = !!version;
 
@@ -179,28 +179,30 @@ function Screenshot({ slug, label, icon: Icon, t, version }) {
                         <span className="pointer-events-auto inline-flex items-center gap-1 rounded bg-black/60 px-2 py-1 text-[11px] font-medium text-white">
                             <Maximize2 className="h-3 w-3" /> {t('wms_kb_screenshot_zoom')}
                         </span>
-                        <div className="pointer-events-auto flex items-center gap-1">
-                            <button
-                                type="button"
-                                onClick={triggerPicker}
-                                disabled={uploading}
-                                className="inline-flex items-center gap-1 rounded bg-white/90 px-2 py-1 text-[11px] font-medium text-foreground hover:bg-white disabled:opacity-60"
-                            >
-                                {uploading
-                                    ? <Loader2 className="h-3 w-3 animate-spin" />
-                                    : <Upload className="h-3 w-3" />}
-                                {t('wms_kb_screenshot_replace')}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={handleDelete}
-                                disabled={uploading}
-                                className="inline-flex items-center gap-1 rounded bg-rose-600/90 px-2 py-1 text-[11px] font-medium text-white hover:bg-rose-600 disabled:opacity-60"
-                            >
-                                <Trash2 className="h-3 w-3" />
-                                {t('wms_kb_screenshot_delete')}
-                            </button>
-                        </div>
+                        {canUpdate ? (
+                            <div className="pointer-events-auto flex items-center gap-1">
+                                <button
+                                    type="button"
+                                    onClick={triggerPicker}
+                                    disabled={uploading}
+                                    className="inline-flex items-center gap-1 rounded bg-white/90 px-2 py-1 text-[11px] font-medium text-foreground hover:bg-white disabled:opacity-60"
+                                >
+                                    {uploading
+                                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                                        : <Upload className="h-3 w-3" />}
+                                    {t('wms_kb_screenshot_replace')}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleDelete}
+                                    disabled={uploading}
+                                    className="inline-flex items-center gap-1 rounded bg-rose-600/90 px-2 py-1 text-[11px] font-medium text-white hover:bg-rose-600 disabled:opacity-60"
+                                >
+                                    <Trash2 className="h-3 w-3" />
+                                    {t('wms_kb_screenshot_delete')}
+                                </button>
+                            </div>
+                        ) : null}
                     </div>
                 </div>
 
@@ -210,7 +212,7 @@ function Screenshot({ slug, label, icon: Icon, t, version }) {
                     </div>
                 ) : null}
 
-                {hiddenInput}
+                {canUpdate ? hiddenInput : null}
                 {open ? <Lightbox src={src} alt={label} onClose={() => setOpen(false)} /> : null}
             </div>
         );
@@ -228,23 +230,31 @@ function Screenshot({ slug, label, icon: Icon, t, version }) {
                         {t('wms_kb_screenshot_label')} — {label}
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">
-                        {t('wms_kb_screenshot_placeholder_hint')}{' '}
-                        <code className="rounded bg-background px-1.5 py-0.5 font-mono text-[11px] border border-border">
-                            {SHOT_DIR}/{slug}.png
-                        </code>
+                        {canUpdate ? (
+                            <>
+                                {t('wms_kb_screenshot_placeholder_hint')}{' '}
+                                <code className="rounded bg-background px-1.5 py-0.5 font-mono text-[11px] border border-border">
+                                    {SHOT_DIR}/{slug}.png
+                                </code>
+                            </>
+                        ) : (
+                            <>{t('wms_kb_screenshot_no_image') || 'No screenshot uploaded yet.'}</>
+                        )}
                     </div>
                 </div>
-                <button
-                    type="button"
-                    onClick={triggerPicker}
-                    disabled={uploading}
-                    className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted/60 disabled:opacity-60"
-                >
-                    {uploading
-                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        : <Upload className="h-3.5 w-3.5" />}
-                    {uploading ? t('wms_kb_screenshot_uploading') : t('wms_kb_screenshot_upload')}
-                </button>
+                {canUpdate ? (
+                    <button
+                        type="button"
+                        onClick={triggerPicker}
+                        disabled={uploading}
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted/60 disabled:opacity-60"
+                    >
+                        {uploading
+                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            : <Upload className="h-3.5 w-3.5" />}
+                        {uploading ? t('wms_kb_screenshot_uploading') : t('wms_kb_screenshot_upload')}
+                    </button>
+                ) : null}
             </div>
 
             {error ? (
@@ -253,12 +263,12 @@ function Screenshot({ slug, label, icon: Icon, t, version }) {
                 </div>
             ) : null}
 
-            {hiddenInput}
+            {canUpdate ? hiddenInput : null}
         </div>
     );
 }
 
-function Section({ id, icon: Icon, title, subtitle, openUrl, shot, t, children }) {
+function Section({ id, icon: Icon, title, subtitle, openUrl, shot, t, canUpdate, children }) {
     return (
         <section id={id} className="scroll-mt-20">
             <Card>
@@ -289,6 +299,7 @@ function Section({ id, icon: Icon, title, subtitle, openUrl, shot, t, children }
                             label={shot.label}
                             icon={Icon}
                             version={shot.version}
+                            canUpdate={canUpdate}
                             t={t}
                         />
                     ) : null}
@@ -363,7 +374,7 @@ function StatusFlow({ steps }) {
     );
 }
 
-export default function Index({ urls = {}, screenshots = {} }) {
+export default function Index({ urls = {}, screenshots = {}, can_update = false }) {
     const t = useT();
     const shotFor = (slug, label) => ({ slug, label, version: screenshots[slug] || null });
 
@@ -383,7 +394,7 @@ export default function Index({ urls = {}, screenshots = {} }) {
 
                 <div className="space-y-6">
                     {/* OVERVIEW */}
-                    <Section id="overview" icon={BookOpen} t={t}
+                    <Section id="overview" icon={BookOpen} t={t} canUpdate={can_update}
                         title={t('wms_kb_sec_overview')}
                         subtitle={t('wms_kb_sub_overview')}>
                         <p>{t('wms_kb_overview_body')}</p>
@@ -397,7 +408,7 @@ export default function Index({ urls = {}, screenshots = {} }) {
                     </Section>
 
                     {/* FLOW */}
-                    <Section id="flow" icon={Workflow} t={t}
+                    <Section id="flow" icon={Workflow} t={t} canUpdate={can_update}
                         title={t('wms_kb_sec_flow')}>
                         <div className="space-y-3">
                             <div>
@@ -454,7 +465,7 @@ export default function Index({ urls = {}, screenshots = {} }) {
                     </Section>
 
                     {/* DASHBOARD */}
-                    <Section id="dashboard" icon={LayoutDashboard} t={t}
+                    <Section id="dashboard" icon={LayoutDashboard} t={t} canUpdate={can_update}
                         title={t('wms_kb_sec_dashboard')} openUrl={urls.dashboard}
                         subtitle={t('wms_kb_sub_dashboard')}
                         shot={shotFor('dashboard', t('wms_kb_sec_dashboard'))}>
@@ -466,7 +477,7 @@ export default function Index({ urls = {}, screenshots = {} }) {
                     </Section>
 
                     {/* PRODUCTS */}
-                    <Section id="products" icon={Boxes} t={t}
+                    <Section id="products" icon={Boxes} t={t} canUpdate={can_update}
                         title={t('wms_kb_sec_products')} openUrl={urls.products}
                         subtitle={t('wms_kb_sub_products')}
                         shot={shotFor('products', t('wms_kb_sec_products'))}>
@@ -480,7 +491,7 @@ export default function Index({ urls = {}, screenshots = {} }) {
                     </Section>
 
                     {/* LOCATIONS */}
-                    <Section id="locations" icon={MapPin} t={t}
+                    <Section id="locations" icon={MapPin} t={t} canUpdate={can_update}
                         title={t('wms_kb_sec_locations')} openUrl={urls.locations}
                         subtitle={t('wms_kb_sub_locations')}
                         shot={shotFor('locations', t('wms_kb_sec_locations'))}>
@@ -494,7 +505,7 @@ export default function Index({ urls = {}, screenshots = {} }) {
                     </Section>
 
                     {/* STOCK */}
-                    <Section id="stock" icon={ClipboardList} t={t}
+                    <Section id="stock" icon={ClipboardList} t={t} canUpdate={can_update}
                         title={t('wms_kb_sec_stock')} openUrl={urls.stock}
                         subtitle={t('wms_kb_sub_stock')}
                         shot={shotFor('stock', t('wms_kb_sec_stock'))}>
@@ -507,7 +518,7 @@ export default function Index({ urls = {}, screenshots = {} }) {
                     </Section>
 
                     {/* GRN */}
-                    <Section id="grn" icon={Inbox} t={t}
+                    <Section id="grn" icon={Inbox} t={t} canUpdate={can_update}
                         title={t('wms_kb_sec_grn')} openUrl={urls.grn}
                         subtitle={t('wms_kb_sub_grn')}
                         shot={shotFor('grn', t('wms_kb_sec_grn'))}>
@@ -529,7 +540,7 @@ export default function Index({ urls = {}, screenshots = {} }) {
                     </Section>
 
                     {/* ADJUSTMENTS */}
-                    <Section id="adjustments" icon={ArrowRightLeft} t={t}
+                    <Section id="adjustments" icon={ArrowRightLeft} t={t} canUpdate={can_update}
                         title={t('wms_kb_sec_adjustments')} openUrl={urls.adjustments}
                         subtitle={t('wms_kb_sub_adjustments')}
                         shot={shotFor('adjustments', t('wms_kb_sec_adjustments'))}>
@@ -552,7 +563,7 @@ export default function Index({ urls = {}, screenshots = {} }) {
                     </Section>
 
                     {/* CYCLE COUNTS */}
-                    <Section id="cycle" icon={CheckSquare} t={t}
+                    <Section id="cycle" icon={CheckSquare} t={t} canUpdate={can_update}
                         title={t('wms_kb_sec_cycle')} openUrl={urls.cycle_counts}
                         subtitle={t('wms_kb_sub_cycle')}
                         shot={shotFor('cycle-counts', t('wms_kb_sec_cycle'))}>
@@ -572,7 +583,7 @@ export default function Index({ urls = {}, screenshots = {} }) {
                     </Section>
 
                     {/* DAMAGE */}
-                    <Section id="damage" icon={Bug} t={t}
+                    <Section id="damage" icon={Bug} t={t} canUpdate={can_update}
                         title={t('wms_kb_sec_damage')} openUrl={urls.damage}
                         subtitle={t('wms_kb_sub_damage')}
                         shot={shotFor('damage', t('wms_kb_sec_damage'))}>
@@ -584,7 +595,7 @@ export default function Index({ urls = {}, screenshots = {} }) {
                     </Section>
 
                     {/* FULFILLMENT */}
-                    <Section id="fulfillment" icon={Package} t={t}
+                    <Section id="fulfillment" icon={Package} t={t} canUpdate={can_update}
                         title={t('wms_kb_sec_fulfillment')} openUrl={urls.fulfillment}
                         subtitle={t('wms_kb_sub_fulfillment')}
                         shot={shotFor('fulfillment', t('wms_kb_sec_fulfillment'))}>
@@ -611,7 +622,7 @@ export default function Index({ urls = {}, screenshots = {} }) {
                     </Section>
 
                     {/* OUTBOUND */}
-                    <Section id="outbound" icon={Send} t={t}
+                    <Section id="outbound" icon={Send} t={t} canUpdate={can_update}
                         title={t('wms_kb_sec_outbound')} openUrl={urls.outbound}
                         subtitle={t('wms_kb_sub_outbound')}
                         shot={shotFor('outbound', t('wms_kb_sec_outbound'))}>
@@ -641,7 +652,7 @@ export default function Index({ urls = {}, screenshots = {} }) {
                     </Section>
 
                     {/* JOBS */}
-                    <Section id="jobs" icon={Timer} t={t}
+                    <Section id="jobs" icon={Timer} t={t} canUpdate={can_update}
                         title={t('wms_kb_sec_jobs')}
                         subtitle={t('wms_kb_sub_jobs')}>
                         <PageList items={[
@@ -653,7 +664,7 @@ export default function Index({ urls = {}, screenshots = {} }) {
                     </Section>
 
                     {/* ACCESS */}
-                    <Section id="access" icon={ShieldCheck} t={t}
+                    <Section id="access" icon={ShieldCheck} t={t} canUpdate={can_update}
                         title={t('wms_kb_sec_access')}>
                         <ul className="list-disc ps-5 space-y-1">
                             <li>{t('wms_kb_access_b1')}</li>

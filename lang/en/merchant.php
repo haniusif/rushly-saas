@@ -241,4 +241,26 @@ return array (
   'delivery_charge_empty_cta'      => 'Create a rate card',
   'delivery_charge_empty_view_all' => 'View all rate cards',
 
+  // Merchant View page (/admin/merchant/{id}/view, rendered by
+  // Admin/Merchant/View.jsx) — section headers, field labels and
+  // sub-page link tiles that were previously hardcoded English.
+  'view_title'              => 'Merchant',
+  'view_title_index'        => 'Merchants',
+  'view_email'              => 'Email',
+  'view_mobile'             => 'Mobile',
+  'view_finance'            => 'Finance',
+  'view_coverage'           => 'Coverage',
+  'view_services'           => 'Services',
+  'view_manage'             => 'Manage',
+  'view_kyc_documents'      => 'KYC documents',
+  'view_computed_balance'   => 'Computed balance',
+  'view_shops'              => 'Shops',
+  'view_payments'           => 'Payment accounts',
+  'view_invoices'           => 'Invoices',
+  'view_delivery'           => 'Delivery charges',
+  'view_default'            => 'Default',
+  'view_no_shops'           => 'No shops registered.',
+  'view_service_last_mile'   => 'Last mile',
+  'view_service_fulfillment' => 'Fulfillment',
+  'view_service_storage'     => 'Storage',
 );

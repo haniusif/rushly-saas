@@ -1,9 +1,10 @@
 import * as React from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import {
     BookOpen, LayoutDashboard, Boxes, MapPin, ClipboardList, Inbox,
     ArrowRightLeft, CheckSquare, Bug, Package, Send, Workflow,
     Timer, ShieldCheck, ExternalLink, ImageIcon, X as XIcon, Maximize2,
+    Upload, Trash2, Loader2,
 } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
@@ -103,60 +104,156 @@ function Lightbox({ src, alt, onClose }) {
     );
 }
 
-function Screenshot({ slug, label, icon: Icon, t }) {
-    const src = `${SHOT_DIR}/${slug}.png`;
-    const [loaded, setLoaded] = React.useState(null); // null = unknown, true/false after probe
+function Screenshot({ slug, label, icon: Icon, t, version }) {
+    const src = version ? `${SHOT_DIR}/${slug}.png?v=${version}` : `${SHOT_DIR}/${slug}.png`;
+    const exists = !!version;
+
     const [open, setOpen] = React.useState(false);
+    const [uploading, setUploading] = React.useState(false);
+    const [error, setError] = React.useState(null);
+    const fileInputRef = React.useRef(null);
 
-    React.useEffect(() => {
-        let alive = true;
-        const img = new Image();
-        img.onload  = () => { if (alive) setLoaded(true); };
-        img.onerror = () => { if (alive) setLoaded(false); };
-        img.src = src;
-        return () => { alive = false; };
-    }, [src]);
+    const triggerPicker = () => fileInputRef.current?.click();
 
-    if (loaded === true) {
+    const handleFile = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setError(null);
+        setUploading(true);
+        router.post(
+            route('wms.knowledge-base.screenshot.upload', { slug }),
+            { screenshot: file },
+            {
+                forceFormData: true,
+                preserveScroll: true,
+                onError: (errors) => {
+                    setError(errors.screenshot || t('wms_kb_screenshot_upload_failed'));
+                },
+                onFinish: () => {
+                    setUploading(false);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                },
+            }
+        );
+    };
+
+    const handleDelete = () => {
+        if (!window.confirm(t('wms_kb_screenshot_delete_confirm'))) return;
+        setError(null);
+        setUploading(true);
+        router.delete(route('wms.knowledge-base.screenshot.delete', { slug }), {
+            preserveScroll: true,
+            onError: () => setError(t('wms_kb_screenshot_delete_failed')),
+            onFinish: () => setUploading(false),
+        });
+    };
+
+    // Hidden file input — shared between Upload and Replace buttons.
+    const hiddenInput = (
+        <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={handleFile}
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden="true"
+        />
+    );
+
+    if (exists) {
         return (
-            <>
-                <button
-                    type="button"
-                    onClick={() => setOpen(true)}
-                    className="group mt-3 block w-full overflow-hidden rounded-lg border border-border bg-muted/30 hover:border-primary/50 transition-colors"
-                    title={t('wms_kb_screenshot_zoom')}
-                >
-                    <div className="relative">
+            <div className="mt-3">
+                <div className="group relative overflow-hidden rounded-lg border border-border bg-muted/30">
+                    <button
+                        type="button"
+                        onClick={() => setOpen(true)}
+                        className="block w-full"
+                        title={t('wms_kb_screenshot_zoom')}
+                    >
                         <img src={src} alt={label} className="block max-h-[420px] w-full object-cover" />
-                        <div className="absolute inset-0 flex items-end justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <span className="inline-flex items-center gap-1 rounded bg-black/60 px-2 py-1 text-[11px] font-medium text-white">
-                                <Maximize2 className="h-3 w-3" /> {t('wms_kb_screenshot_zoom')}
-                            </span>
+                    </button>
+
+                    {/* Hover overlay — zoom hint + action buttons */}
+                    <div className="pointer-events-none absolute inset-0 flex items-start justify-between p-2 opacity-0 transition-opacity group-hover:opacity-100">
+                        <span className="pointer-events-auto inline-flex items-center gap-1 rounded bg-black/60 px-2 py-1 text-[11px] font-medium text-white">
+                            <Maximize2 className="h-3 w-3" /> {t('wms_kb_screenshot_zoom')}
+                        </span>
+                        <div className="pointer-events-auto flex items-center gap-1">
+                            <button
+                                type="button"
+                                onClick={triggerPicker}
+                                disabled={uploading}
+                                className="inline-flex items-center gap-1 rounded bg-white/90 px-2 py-1 text-[11px] font-medium text-foreground hover:bg-white disabled:opacity-60"
+                            >
+                                {uploading
+                                    ? <Loader2 className="h-3 w-3 animate-spin" />
+                                    : <Upload className="h-3 w-3" />}
+                                {t('wms_kb_screenshot_replace')}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleDelete}
+                                disabled={uploading}
+                                className="inline-flex items-center gap-1 rounded bg-rose-600/90 px-2 py-1 text-[11px] font-medium text-white hover:bg-rose-600 disabled:opacity-60"
+                            >
+                                <Trash2 className="h-3 w-3" />
+                                {t('wms_kb_screenshot_delete')}
+                            </button>
                         </div>
                     </div>
-                </button>
+                </div>
+
+                {error ? (
+                    <div className="mt-2 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
+                        {error}
+                    </div>
+                ) : null}
+
+                {hiddenInput}
                 {open ? <Lightbox src={src} alt={label} onClose={() => setOpen(false)} /> : null}
-            </>
+            </div>
         );
     }
 
-    // Placeholder — shown both while probing and on 404
+    // Placeholder — also the upload affordance when no screenshot exists yet.
     return (
-        <div className="mt-3 flex items-center gap-4 rounded-lg border border-dashed border-border bg-muted/20 p-4">
-            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
-                {Icon ? <Icon className="h-6 w-6" /> : <ImageIcon className="h-6 w-6" />}
-            </div>
-            <div className="min-w-0 flex-1">
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {t('wms_kb_screenshot_label')} — {label}
+        <div className="mt-3">
+            <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border bg-muted/20 p-4 sm:flex-row sm:items-center">
+                <div className="grid h-14 w-14 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
+                    {Icon ? <Icon className="h-6 w-6" /> : <ImageIcon className="h-6 w-6" />}
                 </div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                    {t('wms_kb_screenshot_placeholder_hint')}{' '}
-                    <code className="rounded bg-background px-1.5 py-0.5 font-mono text-[11px] border border-border">
-                        {SHOT_DIR}/{slug}.png
-                    </code>
+                <div className="min-w-0 flex-1">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {t('wms_kb_screenshot_label')} — {label}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                        {t('wms_kb_screenshot_placeholder_hint')}{' '}
+                        <code className="rounded bg-background px-1.5 py-0.5 font-mono text-[11px] border border-border">
+                            {SHOT_DIR}/{slug}.png
+                        </code>
+                    </div>
                 </div>
+                <button
+                    type="button"
+                    onClick={triggerPicker}
+                    disabled={uploading}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted/60 disabled:opacity-60"
+                >
+                    {uploading
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <Upload className="h-3.5 w-3.5" />}
+                    {uploading ? t('wms_kb_screenshot_uploading') : t('wms_kb_screenshot_upload')}
+                </button>
             </div>
+
+            {error ? (
+                <div className="mt-2 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
+                    {error}
+                </div>
+            ) : null}
+
+            {hiddenInput}
         </div>
     );
 }
@@ -186,7 +283,15 @@ function Section({ id, icon: Icon, title, subtitle, openUrl, shot, t, children }
                         ) : null}
                     </div>
 
-                    {shot ? <Screenshot slug={shot.slug} label={shot.label} icon={Icon} t={t} /> : null}
+                    {shot ? (
+                        <Screenshot
+                            slug={shot.slug}
+                            label={shot.label}
+                            icon={Icon}
+                            version={shot.version}
+                            t={t}
+                        />
+                    ) : null}
 
                     <div className="prose-sm max-w-none text-sm leading-relaxed mt-3">{children}</div>
                 </CardContent>
@@ -258,8 +363,9 @@ function StatusFlow({ steps }) {
     );
 }
 
-export default function Index({ urls = {} }) {
+export default function Index({ urls = {}, screenshots = {} }) {
     const t = useT();
+    const shotFor = (slug, label) => ({ slug, label, version: screenshots[slug] || null });
 
     return (
         <AdminLayout title={t('wms_kb_title')}>
@@ -351,7 +457,7 @@ export default function Index({ urls = {} }) {
                     <Section id="dashboard" icon={LayoutDashboard} t={t}
                         title={t('wms_kb_sec_dashboard')} openUrl={urls.dashboard}
                         subtitle={t('wms_kb_sub_dashboard')}
-                        shot={{ slug: 'dashboard', label: t('wms_kb_sec_dashboard') }}>
+                        shot={shotFor('dashboard', t('wms_kb_sec_dashboard'))}>
                         <p>{t('wms_kb_dashboard_body')}</p>
                         <PageList items={[
                             { path: 'GET /admin/wms',           desc: t('wms_kb_dashboard_page_main') },
@@ -363,7 +469,7 @@ export default function Index({ urls = {} }) {
                     <Section id="products" icon={Boxes} t={t}
                         title={t('wms_kb_sec_products')} openUrl={urls.products}
                         subtitle={t('wms_kb_sub_products')}
-                        shot={{ slug: 'products', label: t('wms_kb_sec_products') }}>
+                        shot={shotFor('products', t('wms_kb_sec_products'))}>
                         <p>{t('wms_kb_products_body')}</p>
                         <PageList items={[
                             { path: 'Index',         desc: t('wms_kb_products_page_index') },
@@ -377,7 +483,7 @@ export default function Index({ urls = {} }) {
                     <Section id="locations" icon={MapPin} t={t}
                         title={t('wms_kb_sec_locations')} openUrl={urls.locations}
                         subtitle={t('wms_kb_sub_locations')}
-                        shot={{ slug: 'locations', label: t('wms_kb_sec_locations') }}>
+                        shot={shotFor('locations', t('wms_kb_sec_locations'))}>
                         <p>{t('wms_kb_locations_body')}</p>
                         <PageList items={[
                             { path: 'Index',         desc: t('wms_kb_locations_page_index') },
@@ -391,7 +497,7 @@ export default function Index({ urls = {} }) {
                     <Section id="stock" icon={ClipboardList} t={t}
                         title={t('wms_kb_sec_stock')} openUrl={urls.stock}
                         subtitle={t('wms_kb_sub_stock')}
-                        shot={{ slug: 'stock', label: t('wms_kb_sec_stock') }}>
+                        shot={shotFor('stock', t('wms_kb_sec_stock'))}>
                         <p>{t('wms_kb_stock_body')}</p>
                         <PageList items={[
                             { path: 'Index',  desc: t('wms_kb_stock_page_index') },
@@ -404,7 +510,7 @@ export default function Index({ urls = {} }) {
                     <Section id="grn" icon={Inbox} t={t}
                         title={t('wms_kb_sec_grn')} openUrl={urls.grn}
                         subtitle={t('wms_kb_sub_grn')}
-                        shot={{ slug: 'grn', label: t('wms_kb_sec_grn') }}>
+                        shot={shotFor('grn', t('wms_kb_sec_grn'))}>
                         <p>{t('wms_kb_grn_body')}</p>
                         <div className="mt-2">
                             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('wms_kb_status_flow')}</div>
@@ -426,7 +532,7 @@ export default function Index({ urls = {} }) {
                     <Section id="adjustments" icon={ArrowRightLeft} t={t}
                         title={t('wms_kb_sec_adjustments')} openUrl={urls.adjustments}
                         subtitle={t('wms_kb_sub_adjustments')}
-                        shot={{ slug: 'adjustments', label: t('wms_kb_sec_adjustments') }}>
+                        shot={shotFor('adjustments', t('wms_kb_sec_adjustments'))}>
                         <p>{t('wms_kb_adjustments_body')}</p>
                         <div className="mt-2">
                             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('wms_kb_status_flow')}</div>
@@ -449,7 +555,7 @@ export default function Index({ urls = {} }) {
                     <Section id="cycle" icon={CheckSquare} t={t}
                         title={t('wms_kb_sec_cycle')} openUrl={urls.cycle_counts}
                         subtitle={t('wms_kb_sub_cycle')}
-                        shot={{ slug: 'cycle-counts', label: t('wms_kb_sec_cycle') }}>
+                        shot={shotFor('cycle-counts', t('wms_kb_sec_cycle'))}>
                         <p>{t('wms_kb_cycle_body')}</p>
                         <div className="mt-2">
                             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('wms_kb_status_flow')}</div>
@@ -469,7 +575,7 @@ export default function Index({ urls = {} }) {
                     <Section id="damage" icon={Bug} t={t}
                         title={t('wms_kb_sec_damage')} openUrl={urls.damage}
                         subtitle={t('wms_kb_sub_damage')}
-                        shot={{ slug: 'damage', label: t('wms_kb_sec_damage') }}>
+                        shot={shotFor('damage', t('wms_kb_sec_damage'))}>
                         <p>{t('wms_kb_damage_body')}</p>
                         <PageList items={[
                             { path: 'Index / Create / Show', desc: t('wms_kb_damage_page_crud') },
@@ -481,7 +587,7 @@ export default function Index({ urls = {} }) {
                     <Section id="fulfillment" icon={Package} t={t}
                         title={t('wms_kb_sec_fulfillment')} openUrl={urls.fulfillment}
                         subtitle={t('wms_kb_sub_fulfillment')}
-                        shot={{ slug: 'fulfillment', label: t('wms_kb_sec_fulfillment') }}>
+                        shot={shotFor('fulfillment', t('wms_kb_sec_fulfillment'))}>
                         <p>{t('wms_kb_fulfillment_body')}</p>
                         <div className="mt-2">
                             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('wms_kb_status_flow')}</div>
@@ -508,7 +614,7 @@ export default function Index({ urls = {} }) {
                     <Section id="outbound" icon={Send} t={t}
                         title={t('wms_kb_sec_outbound')} openUrl={urls.outbound}
                         subtitle={t('wms_kb_sub_outbound')}
-                        shot={{ slug: 'outbound', label: t('wms_kb_sec_outbound') }}>
+                        shot={shotFor('outbound', t('wms_kb_sec_outbound'))}>
                         <p>{t('wms_kb_outbound_body')}</p>
                         <div className="mt-2">
                             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('wms_kb_types')}</div>

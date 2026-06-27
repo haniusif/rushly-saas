@@ -65,6 +65,7 @@ use App\Http\Controllers\Backend\Wms\WmsCycleCountController;
 use App\Http\Controllers\Backend\Wms\WmsDamageController;
 use App\Http\Controllers\Backend\Wms\WmsDashboardController;
 use App\Http\Controllers\Backend\Wms\WmsKnowledgeBaseController;
+use App\Http\Controllers\Backend\AdminKnowledgeBaseController;
 use App\Http\Controllers\Backend\AccountController;
 use App\Http\Controllers\Backend\AccountHeadsController;
 use App\Http\Controllers\Backend\AdminAamarpayController;
@@ -281,6 +282,14 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
 
                         // Topbar global search (parcel / driver / client / product / ticket)
                         Route::get('global-search', [\App\Http\Controllers\Backend\GlobalSearchController::class, 'search'])->name('global.search');
+
+                        // Central admin Knowledge Base (per-section operator handbooks)
+                        Route::prefix('knowledge-base')->name('admin.kb.')->group(function () {
+                            Route::get('/',                                          [AdminKnowledgeBaseController::class, 'index'])->name('index');
+                            Route::get('{section}',                                  [AdminKnowledgeBaseController::class, 'show'])->name('show');
+                            Route::post('{section}/screenshot/{sub}',                [AdminKnowledgeBaseController::class, 'uploadScreenshot'])->name('screenshot.upload');
+                            Route::delete('{section}/screenshot/{sub}',              [AdminKnowledgeBaseController::class, 'deleteScreenshot'])->name('screenshot.delete');
+                        });
 
                         Route::resource('addons', AddonController::class);
                         Route::post('/addons/activation', [AddonController::class, 'activation'])->name('addons.activation');
@@ -724,7 +733,9 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                             Route::get('/dashboard',  [WmsDashboardController::class, 'index'])->name('dashboard.alias');
 
                             // Knowledge base — operator handbook
-                            Route::get('knowledge-base', [WmsKnowledgeBaseController::class, 'index'])->name('knowledge-base');
+                            Route::get('knowledge-base',                            [WmsKnowledgeBaseController::class, 'index'])->name('knowledge-base');
+                            Route::post('knowledge-base/screenshot/{slug}',         [WmsKnowledgeBaseController::class, 'uploadScreenshot'])->name('knowledge-base.screenshot.upload');
+                            Route::delete('knowledge-base/screenshot/{slug}',       [WmsKnowledgeBaseController::class, 'deleteScreenshot'])->name('knowledge-base.screenshot.delete');
 
                             // Products
                             Route::get('products/{product}/barcode', [WmsProductController::class, 'barcode'])->name('products.barcode');

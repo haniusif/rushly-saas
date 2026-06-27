@@ -9,7 +9,7 @@ import {
     BarChart3, AlertTriangle, Hourglass, Wand2, ListChecks,
     Wallet, ShieldAlert, DollarSign, CreditCard, BadgeDollarSign,
     UserCog, HardDrive, Briefcase, Tags, BellRing, KeyRound,
-    Plug, MapPinned, Layout, ScrollText, Sliders,
+    Plug, MapPinned, Layout, ScrollText, Sliders, BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/Components/ui/Button';
@@ -23,7 +23,8 @@ import { useT, useLocale, SUPPORTED_LOCALES } from '@/lib/i18n';
 
 const NAV = [
     { group: 'menu_main', items: [
-        { tKey: 'menu_dashboard', icon: LayoutDashboard, route: 'dashboard.index', match: ['admin/dashboard', 'dashboard'] },
+        { tKey: 'menu_dashboard',     icon: LayoutDashboard, route: 'dashboard.index',  match: ['admin/dashboard', 'dashboard'] },
+        { tKey: 'menu_knowledge_base', icon: BookOpen,       route: 'admin.kb.index',   match: ['admin/knowledge-base'] },
     ]},
     { group: 'menu_parcels', items: [
         { tKey: 'menu_parcel',      icon: Package,        route: 'parcel.index',       match: ['admin/parcel'] },

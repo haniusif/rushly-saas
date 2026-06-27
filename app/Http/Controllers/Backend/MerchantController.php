@@ -14,6 +14,7 @@ use App\Repositories\Invoice\InvoiceInterface;
 use App\Repositories\Merchant\MerchantInterface;
 use Illuminate\Support\Facades\Mail;
 use Brian2694\Toastr\Facades\Toastr;
+use Inertia\Inertia;
  
 class MerchantController extends Controller
 {
@@ -25,13 +26,105 @@ class MerchantController extends Controller
         $this->invoiceRepo = $invoiceRepo;
     }
 
-    public function index()
+    public function index(Request $request)
     {
-       
-        $merchants = $this->repo->all();
-        
-        
-        return view('backend.merchant.index',compact('merchants'));
+        $paginator = $this->repo->all();
+        return $this->renderMerchantIndex($paginator, $request);
+    }
+
+    private function renderMerchantIndex($paginator, Request $request)
+    {
+        $rows = collect($paginator->items())->map(function ($m) {
+            $countries = collect($m->countries ?? []);
+            $cityCount = $m->cities?->count() ?? 0;
+            return [
+                'id'              => $m->id,
+                'unique_id'       => optional($m->user)->unique_id,
+                'name'            => optional($m->user)->name,
+                'email'           => optional($m->user)->email,
+                'image'           => optional($m->user)->image,
+                'mobile'          => optional($m->user)->mobile,
+                'business_name'   => $m->business_name,
+                'hub_name'        => optional(optional($m->user)->hub)->name,
+                'countries'       => $countries->take(3)->map(fn ($c) => [
+                    'code' => $c->code,
+                    'name' => $c->en_name ?: $c->name,
+                ])->values(),
+                'countries_more'  => max(0, $countries->count() - 3),
+                'covers_all_cities' => (bool) $m->covers_all_cities,
+                'city_count'      => $cityCount,
+                'services'        => is_array($m->services) ? $m->services : [],
+                'status'          => (int) optional($m->user)->status,
+                'wallet_active'   => (int) $m->wallet_use_activation === 1,
+                'current_balance' => (float) ($m->current_balance ?? 0),
+                'computed_balance'=> (float) ($m->computed_balance ?? 0),
+                'urls' => [
+                    'view'        => route('merchant.view', $m->id),
+                    'edit'        => route('merchant.edit', $m->id),
+                    'invoice'     => route('merchant.invoice.generate', $m->id),
+                    'impersonate' => route('merchant.impersonate', $m->id),
+                ],
+                'impersonate_name'=> $m->business_name ?: (optional($m->user)->name ?: 'merchant'),
+            ];
+        })->values();
+
+        return Inertia::render('Admin/Merchant/Index', [
+            'rows'        => $rows,
+            'pagination'  => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'from'         => $paginator->firstItem(),
+                'to'           => $paginator->lastItem(),
+                'total'        => $paginator->total(),
+                'prev_url'     => $paginator->previousPageUrl(),
+                'next_url'     => $paginator->nextPageUrl(),
+            ],
+            'permissions' => [
+                'create' => hasPermission('merchant_create'),
+                'view'   => hasPermission('merchant_view'),
+                'update' => hasPermission('merchant_update'),
+                'delete' => hasPermission('merchant_delete'),
+            ],
+            'currency' => settings()->currency,
+            'urls' => [
+                'index'  => route('merchant.index'),
+                'create' => route('merchant.create'),
+                'apply'  => route('merchant.apply'),
+            ],
+            't' => [
+                'title'            => __('merchant.title') ?: 'Merchants',
+                'list'             => __('levels.list') ?: 'List',
+                'add'              => __('levels.add') ?: 'Add',
+                'edit'             => __('levels.edit') ?: 'Edit',
+                'view'             => __('levels.view') ?: 'View',
+                'delete'           => __('levels.delete') ?: 'Delete',
+                'actions'          => __('levels.actions') ?: 'Actions',
+                'unique_id'        => __('levels.unique_id') ?: 'ID',
+                'business_name'    => __('levels.business_name') ?: 'Business',
+                'hub'              => __('levels.hub') ?: 'Hub',
+                'phone'            => __('levels.phone') ?: 'Phone',
+                'status'           => __('levels.status') ?: 'Status',
+                'status_active'    => __('status.1') ?: 'Active',
+                'status_inactive'  => __('status.0') ?: 'Inactive',
+                'wallet_on'        => 'Wallet active',
+                'wallet_off'       => 'Wallet off',
+                'current_balance'  => __('levels.current_balance') ?: 'Balance',
+                'computed_balance' => 'Computed',
+                'geography'        => __('merchant.geography') ?: 'Coverage',
+                'covers_all_cities'=> __('merchant.covers_all_cities') ?: 'All cities',
+                'cities_covered'   => __('merchant.cities_covered') ?: 'cities',
+                'card_view'        => __('merchant.card_view') ?: 'Card view',
+                'list_view'        => __('merchant.list_view') ?: 'List view',
+                'copy_apply_link'  => __('merchant.copy_apply_link') ?: 'Copy apply link',
+                'copied'           => __('levels.copied') ?: 'Copied',
+                'impersonate'      => __('merchant.impersonate') ?: 'View as',
+                'invoice_generate' => 'Invoice',
+                'search'           => 'Search…',
+                'no_rows'          => __('levels.no_data_found') ?: 'No merchants found',
+                'showing_results'  => 'Showing :from – :to of :total',
+                'services_label'   => 'Services',
+            ],
+        ]);
     }
 
     /**
@@ -43,7 +136,55 @@ class MerchantController extends Controller
     {
         $hubs = $this->repo->all_hubs();
 
-        return view('backend.merchant.create', compact('hubs'));
+        return Inertia::render('Admin/Merchant/Create', [
+            'lookups' => $this->merchantFormLookups($hubs),
+            'urls' => [
+                'submit' => route('merchant.store'),
+                'cancel' => route('merchant.index'),
+            ],
+            't' => $this->merchantFormLabels('create'),
+        ]);
+    }
+
+    /**
+     * Shared lookup arrays for the merchant create/edit Inertia form.
+     * `countries` / `cities` are only passed in by the edit method (the create
+     * form will refetch them lazily when geography is touched), so we merge
+     * them in there directly.
+     */
+    private function merchantFormLookups(iterable $hubs): array
+    {
+        return [
+            'hubs' => collect($hubs)->map(fn ($h) => ['id' => $h->id, 'name' => $h->name])->values(),
+            'statuses' => [
+                ['value' => 1, 'label' => __('merchant_form.status_active')],
+                ['value' => 0, 'label' => __('merchant_form.status_inactive')],
+            ],
+            'services' => \App\Models\Backend\Merchant::SERVICE_KEYS,
+            'cod_areas' => [
+                ['key' => 'inside_city',  'label' => __('merchant_form.cod_inside_city')],
+                ['key' => 'sub_city',     'label' => __('merchant_form.cod_sub_city')],
+                ['key' => 'outside_city', 'label' => __('merchant_form.cod_outside_city')],
+            ],
+        ];
+    }
+
+    /**
+     * Label dictionary for the merchant create/edit form. The 'mode' arg
+     * picks the right page title; everything else is shared.
+     */
+    private function merchantFormLabels(string $mode): array
+    {
+        $base = trans('merchant_form');
+        $base['title']        = $mode === 'edit' ? $base['title_edit'] : $base['title_create'];
+        // Service labels keyed by SERVICE_KEYS — the frontend looks these
+        // up to translate the chip text (last_mile, fulfillment, storage).
+        $base['service_labels'] = [
+            'last_mile'   => $base['service_last_mile'],
+            'fulfillment' => $base['service_fulfillment'],
+            'storage'     => $base['service_storage'],
+        ];
+        return $base;
     }
 
     public function signUp(Request $request)
@@ -166,12 +307,93 @@ class MerchantController extends Controller
      */
     public function view($id)
     {
-        $singleMerchant = $this->repo->get($id);
-        $merchant_shops =$this->repo->merchant_shops_get($id);
-        if(blank($singleMerchant)){
-            abort(404);
-        }
-        return view('backend.merchant.merchant-details',compact('singleMerchant','merchant_shops'));
+        $m = $this->repo->get($id);
+        if(blank($m)){ abort(404); }
+        $m->loadMissing(['user.hub', 'countries', 'cities']);
+        $shops = $this->repo->merchant_shops_get($id);
+
+        return Inertia::render('Admin/Merchant/View', [
+            'merchant' => [
+                'id'               => $m->id,
+                'business_name'    => $m->business_name,
+                'unique_id'        => $m->merchant_unique_id,
+                'opening_balance'  => (float) $m->opening_balance,
+                'current_balance'  => (float) $m->current_balance,
+                'computed_balance' => (float) ($m->computed_balance ?? 0),
+                'vat'              => (float) ($m->vat ?? 0),
+                'cod_charges'      => $m->my_cod_charges,
+                'payment_period'   => $m->payment_period,
+                'covers_all_cities'=> (bool) $m->covers_all_cities,
+                'city_count'       => $m->cities?->count() ?? 0,
+                'countries'        => collect($m->countries ?? [])->map(fn ($c) => [
+                    'code' => $c->code, 'name' => $c->en_name ?: $c->name,
+                ])->values(),
+                'services'         => is_array($m->services) ? $m->services : [],
+                'nid_url'          => $m->nid,
+                'trade_url'        => $m->trade,
+                'status'           => (int) optional($m->user)->status,
+                'user' => [
+                    'name'    => optional($m->user)->name,
+                    'email'   => optional($m->user)->email,
+                    'mobile'  => optional($m->user)->mobile,
+                    'image'   => optional($m->user)->image,
+                    'hub'     => optional(optional($m->user)->hub)->name,
+                    'address' => optional($m->user)->address,
+                ],
+            ],
+            'shops' => collect($shops)->map(fn ($s) => [
+                'id'         => $s->id,
+                'name'       => $s->name ?? $s->title ?? null,
+                'address'    => $s->address ?? null,
+                'is_default' => (bool) ($s->default_shop ?? 0),
+            ])->values(),
+            'currency' => settings()->currency,
+            'permissions' => [
+                'edit'        => hasPermission('merchant_update'),
+                'impersonate' => hasPermission('merchant_update'),
+            ],
+            'urls' => [
+                'index'        => route('merchant.index'),
+                'edit'         => route('merchant.edit', $m->id),
+                'impersonate'  => route('merchant.impersonate', $m->id),
+                'shops'        => route('merchant.shops.index', $m->id),
+                'payments'     => route('merchant.paymentaccount.index', $m->id),
+                'invoices'     => route('merchant.invoice.index', $m->id),
+                'delivery'     => route('merchant.deliveryCharge.index', $m->id),
+            ],
+            't' => [
+                'title'           => 'Merchant',
+                'title_index'     => 'Merchants',
+                'business_name'   => __('levels.business_name') ?: 'Business',
+                'hub'             => __('levels.hub') ?: 'Hub',
+                'unique_id'       => __('levels.unique_id') ?: 'Unique ID',
+                'opening_balance' => __('merchant.opening_balance') ?: 'Opening balance',
+                'current_balance' => __('levels.current_balance') ?: 'Current balance',
+                'computed_balance'=> 'Computed balance',
+                'vat'             => __('merchant.vat') ?: 'VAT',
+                'cod_charges'     => __('merchant.cod_charges') ?: 'COD charges',
+                'nid'             => __('levels.nid') ?: 'NID',
+                'trade'           => __('levels.trade_license') ?: 'Trade license',
+                'address'         => __('levels.address') ?: 'Address',
+                'payment_period'  => __('levels.payment_period') ?: 'Payment period',
+                'status'          => __('levels.status') ?: 'Status',
+                'active'          => __('status.1') ?: 'Active',
+                'inactive'        => __('status.0') ?: 'Inactive',
+                'edit'            => __('levels.edit') ?: 'Edit',
+                'impersonate'     => __('merchant.impersonate') ?: 'Impersonate',
+                'impersonate_confirm' => __('merchant.impersonate_confirm', ['name' => $m->business_name]) ?: 'Continue as merchant?',
+                'shops'           => 'Shops',
+                'payments'        => 'Payment accounts',
+                'invoices'        => 'Invoices',
+                'delivery'        => 'Delivery charges',
+                'coverage'        => 'Coverage',
+                'covers_all_cities'=> __('merchant.covers_all_cities') ?: 'All cities',
+                'cities_covered'  => __('merchant.cities_covered') ?: 'cities',
+                'services'        => 'Services',
+                'default'         => 'Default',
+                'no_shops'        => 'No shops registered.',
+            ],
+        ]);
     }
 
     /**
@@ -184,17 +406,67 @@ class MerchantController extends Controller
     {
         $hubs     = $this->repo->all_hubs();
         $merchant = $this->repo->get($id);
-        if(blank($merchant)){
+        if (blank($merchant)) {
             abort(404);
         }
-        // Eager-load for the Geography block so coverageSummary() and the
-        // pre-selected options don't trigger separate lookups in the view.
-        $merchant->load(['countries:id,name,en_name,code', 'cities:id,country_id,name,en_name']);
+
+        // Eager-load relations the form pre-selects from.
+        $merchant->load([
+            'user',
+            'countries:id,name,en_name,code',
+            'cities:id,country_id,name,en_name',
+        ]);
+
         $countries = \App\Models\Backend\Country::where('is_active', true)
             ->orderBy('sorting')->orderBy('name')->get(['id', 'name', 'en_name', 'code']);
-        $cities = \App\Models\Backend\City::where('is_active', 1)
+        $cities    = \App\Models\Backend\City::where('is_active', 1)
             ->orderBy('sorting')->orderBy('name')->get(['id', 'country_id', 'name', 'en_name']);
-        return view('backend.merchant.edit', compact('merchant', 'hubs', 'countries', 'cities'));
+
+        $codCharges = (array) ($merchant->cod_charges ?? []);
+
+        return Inertia::render('Admin/Merchant/Create', [
+            'mode' => 'edit',
+            'merchant' => [
+                'id'                    => $merchant->id,
+                'name'                  => optional($merchant->user)->name,
+                'mobile'                => optional($merchant->user)->mobile,
+                'email'                 => optional($merchant->user)->email,
+                'business_name'         => $merchant->business_name,
+                'address'               => $merchant->address ?? optional($merchant->user)->address,
+                'hub'                   => optional($merchant->user)->hub_id ?? $merchant->hub_id,
+                'status'                => optional($merchant->user)->status ?? $merchant->status,
+                'opening_balance'       => $merchant->opening_balance,
+                'vat'                   => $merchant->vat,
+                'payment_period'        => $merchant->payment_period,
+                'return_charges'        => $merchant->return_charges,
+                'wallet_use_activation' => (int) ($merchant->wallet_use_activation ?? 0),
+                'reference_name'        => $merchant->reference_name,
+                'reference_phone'       => $merchant->reference_phone,
+                'cod_charges'           => $codCharges,
+                'services'              => (array) ($merchant->services ?? []),
+                'covers_all_cities'     => (bool) ($merchant->covers_all_cities ?? false),
+                'country_ids'           => $merchant->countries->pluck('id')->values(),
+                'city_ids'              => $merchant->cities->pluck('id')->values(),
+                'image'                 => optional($merchant->user)->image,
+            ],
+            'lookups' => $this->merchantFormLookups($hubs) + [
+                'countries' => $countries->map(fn ($c) => [
+                    'id'   => $c->id,
+                    'name' => $c->en_name ?: $c->name,
+                    'code' => $c->code,
+                ])->values(),
+                'cities' => $cities->map(fn ($c) => [
+                    'id'         => $c->id,
+                    'name'       => $c->en_name ?: $c->name,
+                    'country_id' => $c->country_id,
+                ])->values(),
+            ],
+            'urls' => [
+                'submit' => route('merchant.update', $merchant->id),
+                'cancel' => route('merchant.view', $merchant->id),
+            ],
+            't' => $this->merchantFormLabels('edit'),
+        ]);
     }
 
     /**

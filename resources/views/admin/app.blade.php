@@ -56,13 +56,18 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700|cairo:400,500,600,700|tajawal:400,500,700|roboto:400,500,700&display=swap" rel="stylesheet">
 
-    {{-- Apply Cairo globally — covers Latin + Arabic glyphs. Tailwind's
-         `font-sans` is also extended to Cairo, this is the pre-hydration
-         baseline. --}}
+    {{-- Apply Cairo globally — covers Latin + Arabic glyphs and matches the
+         legacy backend font convention. The Tailwind config also extends
+         `font-sans` to Cairo, but this baseline rule fires before any
+         Tailwind utility classes hydrate (e.g. initial paint, elements
+         that bypass utilities, third-party widgets). --}}
     <style>
         :root, html, body {
             font-family: 'Cairo', 'Tajawal', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
         }
+        /* Arabic typography is usually a hair larger than Latin at the same
+           px size — bump the RTL line-height slightly so Arabic renders less
+           cramped, especially in dense KPI tiles. */
         html[dir="rtl"] body { line-height: 1.6; }
     </style>
 

@@ -39,7 +39,8 @@ use App\Repositories\Dashboard\DashboardInterface;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
- 
+use Inertia\Inertia;
+
 class DashbordController extends Controller
 {
     /**
@@ -272,8 +273,134 @@ class DashbordController extends Controller
             $data['courier_income']         = $this->repo->courierIncome($fromTo);
             $data['courier_expense']         = $this->repo->courierExpense($fromTo);
 
-            return view('backend.dashboard', compact('c_income','c_expense','d_income','d_expense','m_income','m_expense','v_income','v_expense','b_income','b_expense','h_income','h_expense','data','request'));
+            return Inertia::render('Admin/Dashboard/Index', [
+                'currency' => settings()->currency,
+                'ledgers'  => [
+                    [ 'key' => 'courier',     'label' => 'Courier',     'income' => (float) $c_income, 'expense' => (float) $c_expense ],
+                    [ 'key' => 'deliveryman', 'label' => 'Couriers',    'income' => (float) $d_income, 'expense' => (float) $d_expense ],
+                    [ 'key' => 'merchant',    'label' => 'Merchants',   'income' => (float) $m_income, 'expense' => (float) $m_expense ],
+                    [ 'key' => 'vat',         'label' => 'VAT',         'income' => (float) $v_income, 'expense' => (float) $v_expense ],
+                    [ 'key' => 'bank',        'label' => 'Bank',        'income' => (float) $b_income, 'expense' => (float) $b_expense ],
+                    [ 'key' => 'hub',         'label' => 'Hubs',        'income' => (float) $h_income, 'expense' => (float) $h_expense ],
+                ],
+                'kpis' => [
+                    'parcels'       => (int) $data['total_parcel'],
+                    'users'         => (int) $data['total_user'],
+                    'merchants'     => (int) $data['total_merchant'],
+                    'deliverymen'   => (int) $data['total_delivery_man'],
+                    'hubs'          => (int) $data['total_hubs'],
+                    'accounts'      => (int) $data['total_accounts'],
+                ],
+                'pipeline' => [
+                    'assigned'        => (int) $data['total_deliveryman_assigned'],
+                    'partial_delivered' => (int) $data['total_partial_deliverd'],
+                    'delivered'       => (int) $data['total_deliverd'],
+                ],
+                'hub_parcels' => collect($data['hub_parcels'])->map(fn ($h) => [
+                    'id'           => $h->id,
+                    'name'         => $h->name,
+                    'parcels_count'=> $h->parcels?->count() ?? 0,
+                ])->values(),
+                'recent_parcels' => collect($data['recent_parcels'])->map(fn ($p) => [
+                    'id'              => $p->id,
+                    'tracking_id'     => $p->tracking_id ?? $p->code ?? '—',
+                    'merchant_name'   => optional($p->merchant)->business_name ?? optional($p->merchant)->title,
+                    'status'          => (int) $p->status,
+                    'cash_collection' => (float) ($p->cash_collection ?? 0),
+                    'created_at'      => optional($p->created_at)->toDateString(),
+                ])->values(),
+                'series' => [
+                    'dates'              => $dates,
+                    'income'             => $this->asSeries($data['income']             ?? null),
+                    'expense'            => $this->asSeries($data['expense']            ?? null),
+                    'merchantIncome'     => $this->asSeries($data['merchantIncome']     ?? null),
+                    'merchantExpense'    => $this->asSeries($data['merchantExpense']    ?? null),
+                    'deliverymanIncome'  => $this->asSeries($data['deliverymanIncome']  ?? null),
+                    'deliverymanExpense' => $this->asSeries($data['deliverymanExpense'] ?? null),
+                ],
+                'totals' => [
+                    'income'             => $this->asScalar($data['income']             ?? null),
+                    'expense'            => $this->asScalar($data['expense']            ?? null),
+                    'merchantIncome'     => $this->asScalar($data['merchantIncome']     ?? null),
+                    'merchantExpense'    => $this->asScalar($data['merchantExpense']    ?? null),
+                    'deliverymanIncome'  => $this->asScalar($data['deliverymanIncome']  ?? null),
+                    'deliverymanExpense' => $this->asScalar($data['deliverymanExpense'] ?? null),
+                ],
+                't' => $this->adminDashboardLabels(),
+            ]);
         }
+    }
+
+    /**
+     * Whatever the repo hands back — array (chart series), Collection, or a
+     * scalar sum — return a clean numeric list for the React sparkline. A
+     * scalar collapses to a single-point series of zeros so the chart card
+     * stays empty rather than crashing.
+     */
+    private function asSeries($v): array
+    {
+        if (is_array($v))            return array_values(array_map('floatval', $v));
+        if ($v instanceof \Illuminate\Support\Collection) {
+            return $v->values()->map(fn ($x) => (float) $x)->all();
+        }
+        return [];
+    }
+
+    private function asScalar($v): float
+    {
+        if (is_numeric($v))          return (float) $v;
+        if (is_array($v))            return (float) array_sum($v);
+        if ($v instanceof \Illuminate\Support\Collection) return (float) $v->sum();
+        return 0.0;
+    }
+
+    /**
+     * Flat translation map for the admin dashboard. Falls back to inline English
+     * when the lang key is missing so the JSX never renders a raw key.
+     */
+    private function adminDashboardLabels(): array
+    {
+        // Reusable shared strings live in levels.* / menus.* (they appear on
+        // many pages). Dashboard-specific copy lives in dashboard.* so the
+        // wording can be tuned without affecting other screens.
+        return [
+            'dashboard'              => __('levels.dashboard'),
+            'parcels'                => __('menus.parcel'),
+            'users'                  => __('levels.users') ?: 'Users',
+            'merchants'              => __('menus.merchants') ?: 'Merchants',
+            'deliverymen'            => __('menus.deliveryman') ?: 'Couriers',
+            'hubs'                   => __('menus.hubs') ?: 'Hubs',
+            'accounts'               => __('menus.accounts') ?: 'Accounts',
+            'income'                 => __('levels.income') ?: 'Income',
+            'expense'                => __('levels.expense') ?: 'Expense',
+            'merchant'               => __('levels.merchant') ?: 'Merchant',
+            'status'                 => __('levels.status') ?: 'Status',
+            'cash'                   => __('levels.cash_collection') ?: 'Cash',
+            'created_at'             => __('levels.created_at') ?: 'Created',
+            'no_data'                => __('levels.no_data_found') ?: 'No data',
+            'parcels_label'          => __('menus.parcel'),
+
+            'ledger_summary'         => __('dashboard.ledger_summary'),
+            'recent_parcels'         => __('dashboard.recent_parcels'),
+            'hub_parcels_title'      => __('dashboard.hub_parcels_title'),
+            'pipeline_title'         => __('dashboard.pipeline_title'),
+            'pipeline_assigned'      => __('dashboard.pipeline_assigned'),
+            'pipeline_partial'       => __('dashboard.pipeline_partial'),
+            'pipeline_delivered'     => __('dashboard.pipeline_delivered'),
+            'tracking_id'            => __('dashboard.tracking_id'),
+            'income_vs_expense'      => __('dashboard.income_vs_expense'),
+            'merchant_revenue'       => __('dashboard.merchant_revenue'),
+            'courier_revenue'        => __('dashboard.courier_revenue'),
+
+            'status_pending'          => __('dashboard.status_pending'),
+            'status_picked'           => __('dashboard.status_picked'),
+            'status_in_transit'       => __('dashboard.status_in_transit'),
+            'status_at_hub'           => __('dashboard.status_at_hub'),
+            'status_assigned'         => __('dashboard.status_assigned'),
+            'status_out_for_delivery' => __('dashboard.status_out_for_delivery'),
+            'status_delivered'        => __('dashboard.status_delivered'),
+            'status_partial'          => __('dashboard.status_partial'),
+        ];
     }
 
     public function searchCharts(Request $request){

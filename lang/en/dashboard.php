@@ -98,4 +98,28 @@ return [
     'today_ndrs'                   => "Today's NDRs",
     'open_abnormal'                => 'Open abnormal',
     'critical'                     => 'Critical',
+
+    // Inertia admin dashboard (Admin/Dashboard/Index.jsx) — labels passed
+    // as the `t` prop by DashbordController::adminDashboardLabels().
+    'ledger_summary'               => 'Ledger summary',
+    'recent_parcels'               => 'Recent parcels',
+    'hub_parcels_title'            => 'Top hubs',
+    'pipeline_title'               => 'Parcel pipeline',
+    'pipeline_assigned'            => 'Assigned to courier',
+    'pipeline_partial'             => 'Partial delivery',
+    'pipeline_delivered'           => 'Delivered',
+    'tracking_id'                  => 'Tracking',
+    'income_vs_expense'            => 'Income vs expense (last 7 days)',
+    'merchant_revenue'             => 'Merchant revenue (last 7 days)',
+    'courier_revenue'              => 'Courier revenue (last 7 days)',
+
+    // StatusPill — parcel status labels rendered next to each row
+    'status_pending'               => 'Pending',
+    'status_picked'                => 'Picked',
+    'status_in_transit'            => 'In transit',
+    'status_at_hub'                => 'At hub',
+    'status_assigned'              => 'Assigned',
+    'status_out_for_delivery'      => 'Out for delivery',
+    'status_delivered'             => 'Delivered',
+    'status_partial'               => 'Partial',
 ];

@@ -99,4 +99,27 @@ return [
     'today_ndrs'                   => 'بلاغات اليوم',
     'open_abnormal'                => 'الشحنات غير الطبيعية المفتوحة',
     'critical'                     => 'حرجة',
+
+    // لوحة الإدارة الـ Inertia (Admin/Dashboard/Index.jsx)
+    'ledger_summary'               => 'ملخّص الدفتر',
+    'recent_parcels'               => 'الشحنات الأخيرة',
+    'hub_parcels_title'            => 'أعلى الفروع',
+    'pipeline_title'               => 'مسار الشحنات',
+    'pipeline_assigned'            => 'مُسنَدة إلى مندوب',
+    'pipeline_partial'             => 'تسليم جزئي',
+    'pipeline_delivered'           => 'مُسلَّمة',
+    'tracking_id'                  => 'رقم التتبع',
+    'income_vs_expense'            => 'الإيرادات مقابل المصروفات (آخر 7 أيام)',
+    'merchant_revenue'             => 'إيرادات التجار (آخر 7 أيام)',
+    'courier_revenue'              => 'إيرادات المندوبين (آخر 7 أيام)',
+
+    // شارات حالة الشحنة في الجدول
+    'status_pending'               => 'قيد الانتظار',
+    'status_picked'                => 'تم الالتقاط',
+    'status_in_transit'            => 'قيد النقل',
+    'status_at_hub'                => 'في الفرع',
+    'status_assigned'              => 'مُسنَدة',
+    'status_out_for_delivery'      => 'خارج للتسليم',
+    'status_delivered'             => 'مُسلَّمة',
+    'status_partial'               => 'جزئي',
 ];

@@ -14,6 +14,7 @@ const DICTIONARY = {
     en: {
         nav_overview: 'Overview',
         nav_dashboard: 'Dashboard',
+        nav_knowledge_base: 'Knowledge Base',
         nav_operations: 'Operations',
         nav_parcels: 'Parcels',
         nav_parcel_bank: 'Parcel Bank',
@@ -252,6 +253,7 @@ const DICTIONARY = {
     ar: {
         nav_overview: 'نظرة عامة',
         nav_dashboard: 'لوحة التحكم',
+        nav_knowledge_base: 'قاعدة المعرفة',
         nav_operations: 'العمليات',
         nav_parcels: 'الشحنات',
         nav_parcel_bank: 'بنك الشحنات',

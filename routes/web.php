@@ -120,6 +120,7 @@ use App\Http\Controllers\Backend\MerchantPanel\MerchantReportsController;
 use App\Http\Controllers\Backend\MerchantPanel\OnlinePaymentController;
 use App\Http\Controllers\Backend\MerchantPanel\PickupRequestController as MerchantPanelPickupRequestController;
 use App\Http\Controllers\Backend\MerchantPanel\WalletController;
+use App\Http\Controllers\Backend\MerchantPanel\MerchantKnowledgeBaseController;
 use App\Http\Controllers\Backend\PayoutController;
 use App\Http\Controllers\Backend\PayoutSetupController;
 use App\Http\Controllers\Backend\PickupRequestController;
@@ -1136,8 +1137,18 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
 
                     // Merchant panel Routes
                     Route::group(['prefix' => 'merchant'], function () {
-                       
-                 
+
+                        // Merchant Knowledge Base — operator handbook for the
+                        // merchant panel. Reads are open to any logged-in merchant;
+                        // screenshot writes are gated by knowledge_base_update so
+                        // help content is curated centrally (admins).
+                        Route::prefix('knowledge-base')->name('merchant-panel.kb.')->group(function () {
+                            Route::get('/',                                          [MerchantKnowledgeBaseController::class, 'index'])->name('index');
+                            Route::get('{section}',                                  [MerchantKnowledgeBaseController::class, 'show'])->name('show');
+                            Route::post('{section}/screenshot/{sub}',                [MerchantKnowledgeBaseController::class, 'uploadScreenshot'])->name('screenshot.upload')->middleware('hasPermission:knowledge_base_update');
+                            Route::delete('{section}/screenshot/{sub}',              [MerchantKnowledgeBaseController::class, 'deleteScreenshot'])->name('screenshot.delete')->middleware('hasPermission:knowledge_base_update');
+                        });
+
                         Route::get('/exports/shipment-template', [ShipmentExportController::class, 'download'])->name('exports.shipment-template');
                         Route::get('/exports/shipment-template-single', [ShipmentExportController::class, 'downloadSingle'])->name('exports.shipment-template.single');
 

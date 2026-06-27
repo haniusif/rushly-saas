@@ -4,6 +4,7 @@ import {
     LayoutDashboard, Package, Wallet, FileText, MessageCircle, Store,
     Banknote, Settings, BarChart3, Receipt, Menu, X, Sun, Moon,
     LogOut, ChevronDown, Bell, Search, PiggyBank, Globe, Check, User,
+    BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/Components/ui/Button';
@@ -16,7 +17,8 @@ import { useT, useLocale, SUPPORTED_LOCALES } from '@/lib/i18n';
 
 const NAV = [
     { group: 'nav_overview', items: [
-        { tKey: 'nav_dashboard', icon: LayoutDashboard, route: 'dashboard.index', match: ['dashboard'] },
+        { tKey: 'nav_dashboard',      icon: LayoutDashboard, route: 'dashboard.index',          match: ['dashboard'] },
+        { tKey: 'nav_knowledge_base', icon: BookOpen,        route: 'merchant-panel.kb.index',  match: ['merchant/knowledge-base'] },
     ]},
     { group: 'nav_operations', items: [
         { tKey: 'nav_parcels',      icon: Package,       route: 'merchant-panel.parcel.index',      match: ['merchant/parcel'] },

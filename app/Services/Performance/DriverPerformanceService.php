@@ -48,6 +48,7 @@ class DriverPerformanceService
         $onlineIsReal = $online > 0;
         if (! $onlineIsReal) {
             $online = DB::table('parcel_events')
+                ->whereIn('parcel_id', $this->tenantParcelIds())
                 ->where('created_at', '>=', now()->subDay())
                 ->whereNotNull('delivery_man_id')
                 ->distinct()
@@ -55,6 +56,7 @@ class DriverPerformanceService
         }
 
         $events = DB::table('parcel_events')
+            ->whereIn('parcel_id', $this->tenantParcelIds())
             ->whereBetween('created_at', [$f->from, $f->to])
             ->whereNotNull('delivery_man_id');
         if ($f->hubId)    $events->where('hub_id', $f->hubId);
@@ -129,6 +131,7 @@ class DriverPerformanceService
 
         // Total distance covered (km) — Phase 4 real metric
         $distanceM = (float) DB::table('parcels')
+            ->where('parcels.company_id', settings()->id)
             ->join('parcel_events', 'parcel_events.parcel_id', '=', 'parcels.id')
             ->whereBetween('parcels.delivery_date', [$f->from, $f->to])
             ->where('parcels.status', ParcelStatus::DELIVERED)
@@ -175,6 +178,7 @@ class DriverPerformanceService
         // Cohort tops for normalization
         $cohort = DB::table('parcel_events')
             ->join('delivery_man', 'parcel_events.delivery_man_id', '=', 'delivery_man.id')
+            ->whereIn('parcel_events.parcel_id', $this->tenantParcelIds())
             ->whereBetween('parcel_events.created_at', [$f->from, $f->to])
             ->selectRaw(
                 'delivery_man.id AS id,
@@ -265,6 +269,7 @@ class DriverPerformanceService
 
         // For each (delivery_type_id), how many of this driver's DELIVERED parcels arrived on time
         $rows = DB::table('parcels')
+            ->where('parcels.company_id', settings()->id)
             ->join('parcel_events', function ($j) {
                 $j->on('parcel_events.parcel_id', '=', 'parcels.id')
                   ->where('parcel_events.parcel_status', '=', ParcelStatus::DELIVERED);
@@ -306,6 +311,7 @@ class DriverPerformanceService
     private function dailySeries(PerformanceFilters $f): array
     {
         $rows = DB::table('parcel_events')
+            ->whereIn('parcel_id', $this->tenantParcelIds())
             ->whereBetween('created_at', [$f->from, $f->to])
             ->whereNotNull('delivery_man_id')
             ->selectRaw('DATE(created_at) AS day,
@@ -342,6 +348,7 @@ class DriverPerformanceService
     private function ratingDistributionProxy(PerformanceFilters $f): array
     {
         $perDriver = DB::table('parcel_events')
+            ->whereIn('parcel_id', $this->tenantParcelIds())
             ->whereBetween('created_at', [$f->from, $f->to])
             ->whereNotNull('delivery_man_id')
             ->selectRaw('delivery_man_id,
@@ -372,6 +379,7 @@ class DriverPerformanceService
     private function avgHoursBetween(PerformanceFilters $f, int $fromStatus, int $toStatus): ?float
     {
         $row = DB::table('parcels AS p')
+            ->where('p.company_id', settings()->id)
             ->join('parcel_events AS e_start', function ($j) use ($fromStatus) {
                 $j->on('e_start.parcel_id', '=', 'p.id')
                   ->where('e_start.parcel_status', '=', $fromStatus);
@@ -393,6 +401,7 @@ class DriverPerformanceService
     {
         // Real metric when expected_delivery_at is set, proxy otherwise — one query.
         $row = DB::table('parcels')
+            ->where('parcels.company_id', settings()->id)
             ->join('parcel_events', function ($j) {
                 $j->on('parcel_events.parcel_id', '=', 'parcels.id')
                   ->where('parcel_events.parcel_status', '=', ParcelStatus::DELIVERED);
@@ -414,5 +423,17 @@ class DriverPerformanceService
             ->first();
         if (! $row || ! $row->total) return null;
         return round((int) $row->ontime / (int) $row->total, 4);
+    }
+
+    /**
+     * Subquery returning the IDs of parcels owned by the current tenant.
+     * Used inline as `whereIn('parcel_id', $this->tenantParcelIds())` on
+     * raw `DB::table('parcel_events')` queries — those bypass the Parcel
+     * global scope, so without this filter milejet would see other tenants'
+     * events. MySQL collapses this into a semi-join automatically.
+     */
+    private function tenantParcelIds()
+    {
+        return DB::table('parcels')->select('id')->where('company_id', settings()->id);
     }
 }

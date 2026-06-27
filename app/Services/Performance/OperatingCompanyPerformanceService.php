@@ -47,8 +47,13 @@ class OperatingCompanyPerformanceService
         $totalDrivers = DeliveryMan::companywise()->whereNotNull('supplier_company_id')->count();
         $totalVehicles = 0; // not modelled at supplier-company level
 
-        // All parcels with delivery_man assigned to a supplier_company driver, in window
+        // All parcels with delivery_man assigned to a supplier_company driver, in window.
+        // parcel_events has no company_id column — scope via the parcel_id subquery
+        // so we never count events from sibling tenants.
+        $tenantParcelIds = DB::table('parcels')->select('id')->where('company_id', settings()->id);
+
         $handled = DB::table('parcel_events')
+            ->whereIn('parcel_events.parcel_id', $tenantParcelIds)
             ->join('delivery_man', 'parcel_events.delivery_man_id', '=', 'delivery_man.id')
             ->whereBetween('parcel_events.created_at', [$f->from, $f->to])
             ->whereNotNull('delivery_man.supplier_company_id')
@@ -57,6 +62,7 @@ class OperatingCompanyPerformanceService
             ->count('parcel_events.parcel_id');
 
         $delivered = DB::table('parcel_events')
+            ->whereIn('parcel_events.parcel_id', $tenantParcelIds)
             ->join('delivery_man', 'parcel_events.delivery_man_id', '=', 'delivery_man.id')
             ->whereBetween('parcel_events.created_at', [$f->from, $f->to])
             ->whereNotNull('delivery_man.supplier_company_id')
@@ -66,6 +72,7 @@ class OperatingCompanyPerformanceService
             ->count('parcel_events.parcel_id');
 
         $financialJoin = DB::table('parcels')
+            ->where('parcels.company_id', settings()->id)
             ->join('parcel_events', 'parcel_events.parcel_id', '=', 'parcels.id')
             ->join('delivery_man',  'parcel_events.delivery_man_id', '=', 'delivery_man.id')
             ->where('parcels.status', ParcelStatus::DELIVERED)

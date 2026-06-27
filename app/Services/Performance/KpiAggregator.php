@@ -112,8 +112,11 @@ class KpiAggregator
 
     private function activity(PerformanceFilters $f): array
     {
-        // "Active drivers" = drivers that appear in parcel_events in the window
+        // "Active drivers" = drivers that appear in parcel_events in the window.
+        // parcel_events has no company_id column; filter via the parcel_id
+        // subquery so we don't pull events from sibling tenants.
         $activeDrivers = DB::table('parcel_events')
+            ->whereIn('parcel_id', DB::table('parcels')->select('id')->where('company_id', settings()->id))
             ->whereBetween('created_at', [$f->from, $f->to])
             ->whereNotNull('delivery_man_id')
             ->distinct()

@@ -94,11 +94,11 @@ if (!function_exists('SmsSendSettingHelper')) {
 //permission
 if(!function_exists('hasPermission')){
     function hasPermission($permission=null){
-
-        if(in_array($permission,Auth::user()->permissions)){
-            return true;
-        }
-        return false;
+        // Defensive: a user row may have permissions = NULL (newly provisioned
+        // user, or a column that was never written). Don't 500 — just deny.
+        $user  = \Illuminate\Support\Facades\Auth::user();
+        $perms = $user ? $user->permissions : null;
+        return is_array($perms) && in_array($permission, $perms, true);
     }
 }
 

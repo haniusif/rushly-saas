@@ -16,13 +16,15 @@ class PermissionCheckMiddleware
      * @param  \Closure(\Illuminate\Http\Request): (\Illuminate\Http\Response|\Illuminate\Http\RedirectResponse)  $next
      * @return \Illuminate\Http\Response|\Illuminate\Http\RedirectResponse
      */
-    public function handle(Request $request, Closure $next,$permission=null)
+    public function handle(Request $request, Closure $next, $permission = null)
     {
-        if( Auth::check() && in_array($permission,Auth::user()->permissions)){
+        // Treat users with no permissions column (NULL or non-array) as unauthorised,
+        // not a 500. Previously this fired in_array(..., null) → TypeError on every
+        // gated route for newly-provisioned users.
+        $perms = Auth::check() ? Auth::user()->permissions : null;
+        if (is_array($perms) && in_array($permission, $perms, true)) {
             return $next($request);
-        }else{
-            return redirect('/');
-            abort('403');
         }
+        return redirect('/');
     }
 }

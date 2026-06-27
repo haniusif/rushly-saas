@@ -1,81 +1,66 @@
 @extends('backend.partials.master')
 @section('title')
-   {{ __('levels.faq') }} {{ __('levels.add') }}
+    {{ __('levels.faq') }} {{ __('levels.add') }}
 @endsection
 @section('maincontent')
-<div class="container-fluid  dashboard-content">
-    <div class="row">
-        <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12">
-            <div class="page-header">
-                <div class="page-breadcrumb">
-                    <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb"> 
-                            <li class="breadcrumb-item"><a href="#" class="breadcrumb-link">{{__('levels.front_web')}}</a></li>
-                            <li class="breadcrumb-item"><a href="{{ route('faq.index') }}" class="breadcrumb-link">{{ __('levels.faq') }}</a></li>
-                            <li class="breadcrumb-item"><a href="" class="breadcrumb-link active">{{ __('levels.create') }}</a></li>
-                        </ol>
-                    </nav>
+    <div class="container-fluid dashboard-content">
+        <div class="tw-px-1 tw-pt-4 sm:tw-px-2">
+
+            <nav class="tw-flex tw-items-center tw-gap-2 tw-text-xs tw-text-gray-500 tw-mb-4">
+                <span class="tw-text-gray-700">{{ __('levels.front_web') }}</span>
+                <i class="fa fa-angle-right tw-text-[10px] tw-text-gray-400 tw-rtl-flip"></i>
+                <a href="{{ route('faq.index') }}" class="hover:tw-text-brand-600 tw-no-underline">{{ __('levels.faq') }}</a>
+                <i class="fa fa-angle-right tw-text-[10px] tw-text-gray-400 tw-rtl-flip"></i>
+                <span class="tw-text-gray-700 tw-font-medium">{{ __('levels.create') }}</span>
+            </nav>
+
+            <div class="tw-bg-white tw-border tw-border-gray-100 tw-rounded-xl tw-shadow-card tw-overflow-hidden">
+                <div class="tw-px-6 tw-py-5 tw-border-b tw-border-gray-100">
+                    <h1 class="tw-text-lg tw-font-semibold tw-text-gray-900 tw-m-0">{{ __('levels.faq') }} {{ __('levels.add') }}</h1>
                 </div>
-            </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="  col-sm-12 col-12">
-            <div class="card">
-                <div class="card-body">
-                    <h2 class="pageheader-title">{{ __('levels.faq') }} {{ __('levels.add') }}</h2>
-                    <form action="{{route('faq.store')}}"  method="POST" enctype="multipart/form-data" id="basicform">
-                        @csrf
-                        <div class="row">
-                            
-                            <div class="form-group col-md-12">
-                                <label for="question">{{ __('levels.question') }}</label> <span class="text-danger">*</span>
-                                <input id="question" type="text" name="question" data-parsley-trigger="change" placeholder="{{ __('levels.Enter_question') }}" autocomplete="off" class="form-control @error('question') is-invalid @enderror" value="{{old('question')}}" require>
-                                @error('question')
-                                    <small class="text-danger mt-2">{{ $message }}</small>
-                                @enderror
+                <form action="{{ route('faq.store') }}" method="POST" enctype="multipart/form-data" id="basicform">
+                    @csrf
+                    <div class="tw-p-6 tw-space-y-5">
+                        <div>
+                            <label for="question" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">{{ __('levels.question') }} <span class="tw-text-red-500">*</span></label>
+                            <input id="question" type="text" name="question" placeholder="{{ __('levels.Enter_question') }}" autocomplete="off"
+                                   class="tw-input tw-w-full tw-h-10 tw-px-3 tw-text-sm tw-bg-white tw-border tw-rounded-lg @error('question') tw-border-red-300 @else tw-border-gray-200 @enderror"
+                                   value="{{ old('question') }}" required>
+                            @error('question')<small class="tw-block tw-text-xs tw-text-red-500 tw-mt-1">{{ $message }}</small>@enderror
+                        </div>
+                        <div>
+                            <label for="summernote" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">{{ __('levels.answer') }} <span class="tw-text-red-500">*</span></label>
+                            <textarea class="form-control @error('answer') is-invalid @enderror" name="answer" id="summernote" rows="12"></textarea>
+                            @error('answer')<small class="tw-block tw-text-xs tw-text-red-500 tw-mt-1">{{ $message }}</small>@enderror
+                        </div>
+                        <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-5">
+                            <div>
+                                <label for="position" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">{{ __('levels.position') }}</label>
+                                <input id="position" type="text" name="position" placeholder="{{ __('placeholder.Enter_Position') }}" autocomplete="off"
+                                       class="tw-input tw-w-full tw-h-10 tw-px-3 tw-text-sm tw-bg-white tw-border tw-rounded-lg @error('position') tw-border-red-300 @else tw-border-gray-200 @enderror"
+                                       value="{{ old('position') }}">
+                                @error('position')<small class="tw-block tw-text-xs tw-text-red-500 tw-mt-1">{{ $message }}</small>@enderror
                             </div>
-                          
-                            <div class="form-group col-md-12"> 
-                                <label for="summernote">{{ __('levels.answer') }} <span class="text-danger">*</span></label>
-                                <textarea  class="form-control  @error('answer') is-invalid @enderror" name="answer" id="summernote" rows="12"></textarea>
-                                @error('answer')
-                                    <small class="text-danger mt-2">{{ $message }}</small>
-                                @enderror 
-                            </div>
- 
-                            <div class="form-group    col-md-6">
-                                <label for="position">{{ __('levels.position') }}</label>
-                                <input id="position" type="text" name="position" data-parsley-trigger="change" placeholder="{{ __('placeholder.Enter_Position') }}" autocomplete="off" class="form-control @error('position') is-invalid @enderror" value="{{old('position')}}" >
-                                @error('position')
-                                    <small class="text-danger mt-2">{{ $message }}</small>
-                                @enderror
-                            </div>
-                            <div class="form-group  col-md-6">
-                                <label for="status">{{ __('levels.status') }}</label> <span class="text-danger">*</span>
-                                <select name="status" class="form-control @error('status') is-invalid @enderror">
-                                    @foreach(trans('status') as $key => $status)
-                                        <option value="{{ $key }}" {{ (old('status',\App\Enums\Status::ACTIVE) == $key) ? 'selected' : '' }}>{{ $status }}</option>
+                            <div>
+                                <label for="status" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">{{ __('levels.status') }} <span class="tw-text-red-500">*</span></label>
+                                <select name="status"
+                                        class="tw-select tw-w-full tw-h-10 tw-px-3 tw-text-sm tw-bg-white tw-border tw-rounded-lg @error('status') tw-border-red-300 @else tw-border-gray-200 @enderror">
+                                    @foreach (trans('status') as $key => $status)
+                                        <option value="{{ $key }}" {{ old('status', \App\Enums\Status::ACTIVE) == $key ? 'selected' : '' }}>{{ $status }}</option>
                                     @endforeach
                                 </select>
-                                @error('status')
-                                <small class="text-danger mt-2">{{ $message }}</small>
-                                @enderror
-                            </div>
- 
-                        </div>
-                        <div class="row">
-                            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12  text-right">
-                                <button type="submit" class="btn btn-space btn-primary">{{ __('levels.save') }}</button>
-                                <a href="{{ route('faq.index') }}" class="btn btn-space btn-secondary">{{ __('levels.cancel') }}</a>
+                                @error('status')<small class="tw-block tw-text-xs tw-text-red-500 tw-mt-1">{{ $message }}</small>@enderror
                             </div>
                         </div>
-                    </form>
-                </div>
+                    </div>
+                    <div class="tw-flex tw-items-center tw-justify-end tw-gap-2 tw-px-6 tw-py-4 tw-border-t tw-border-gray-100 tw-bg-gray-50">
+                        <a href="{{ route('faq.index') }}" class="tw-inline-flex tw-items-center tw-h-10 tw-px-4 tw-text-sm tw-font-medium tw-text-gray-700 tw-bg-white hover:tw-bg-gray-100 tw-border tw-border-gray-200 tw-rounded-lg tw-no-underline">{{ __('levels.cancel') }}</a>
+                        <button type="submit" class="tw-inline-flex tw-items-center tw-h-10 tw-px-5 tw-text-sm tw-font-medium tw-text-white tw-bg-brand-600 hover:tw-bg-brand-700 tw-rounded-lg tw-border-0">{{ __('levels.save') }}</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
-</div>
 @endsection
 
 @push('styles')
@@ -88,7 +73,7 @@
         $(document).ready(function() {
             $('#summernote').summernote({
                 placeholder: '{{ __('placeholder.Enter_description') }}',
-                height: 182
+                height: 220
             });
         });
     </script>

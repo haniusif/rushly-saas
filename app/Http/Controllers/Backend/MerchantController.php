@@ -92,7 +92,7 @@ class MerchantController extends Controller
                 'apply'  => route('merchant.apply'),
             ],
             't' => [
-                'title'            => __('merchant.title') ?: 'Merchants',
+                'title'            => __('merchant.index_title'),
                 'list'             => __('levels.list') ?: 'List',
                 'add'              => __('levels.add') ?: 'Add',
                 'edit'             => __('levels.edit') ?: 'Edit',
@@ -106,10 +106,10 @@ class MerchantController extends Controller
                 'status'           => __('levels.status') ?: 'Status',
                 'status_active'    => __('status.1') ?: 'Active',
                 'status_inactive'  => __('status.0') ?: 'Inactive',
-                'wallet_on'        => 'Wallet active',
-                'wallet_off'       => 'Wallet off',
+                'wallet_on'        => __('merchant.index_wallet_active'),
+                'wallet_off'       => __('merchant.index_wallet_off'),
                 'current_balance'  => __('levels.current_balance') ?: 'Balance',
-                'computed_balance' => 'Computed',
+                'computed_balance' => __('merchant.index_computed_balance'),
                 'geography'        => __('merchant.geography') ?: 'Coverage',
                 'covers_all_cities'=> __('merchant.covers_all_cities') ?: 'All cities',
                 'cities_covered'   => __('merchant.cities_covered') ?: 'cities',
@@ -118,11 +118,16 @@ class MerchantController extends Controller
                 'copy_apply_link'  => __('merchant.copy_apply_link') ?: 'Copy apply link',
                 'copied'           => __('levels.copied') ?: 'Copied',
                 'impersonate'      => __('merchant.impersonate') ?: 'View as',
-                'invoice_generate' => 'Invoice',
-                'search'           => 'Search…',
+                // String template — placeholder is substituted client-side
+                // per row (the row carries impersonate_name).
+                'impersonate_confirm' => __('merchant.index_impersonate_confirm'),
+                'invoice_generate' => __('merchant.index_invoice_generate'),
+                'search'           => __('merchant.index_search_placeholder'),
                 'no_rows'          => __('levels.no_data_found') ?: 'No merchants found',
-                'showing_results'  => 'Showing :from – :to of :total',
-                'services_label'   => 'Services',
+                'showing_results'  => __('merchant.index_showing_results'),
+                'services_label'   => __('merchant.index_services'),
+                'prev'             => __('merchant.index_prev'),
+                'next'             => __('merchant.index_next'),
             ],
         ]);
     }

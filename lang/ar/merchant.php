@@ -240,6 +240,19 @@ return array (
   'delivery_charge_empty_cta'      => 'إنشاء فئة رسوم',
   'delivery_charge_empty_view_all' => 'عرض جميع فئات الرسوم',
 
+  // صفحة قائمة التجار — تسميات كانت مكتوبة بالإنجليزية مباشرةً
+  'index_title'              => 'التجار',
+  'index_search_placeholder' => 'بحث…',
+  'index_showing_results'    => 'عرض :from – :to من أصل :total',
+  'index_wallet_active'      => 'المحفظة مفعّلة',
+  'index_wallet_off'         => 'المحفظة معطّلة',
+  'index_computed_balance'   => 'مُحتسَب',
+  'index_invoice_generate'   => 'فاتورة',
+  'index_services'           => 'الخدمات',
+  'index_prev'               => 'السابق',
+  'index_next'               => 'التالي',
+  'index_impersonate_confirm'=> 'الدخول كحساب :name؟',
+
   // صفحة عرض التاجر — رؤوس الأقسام وتسميات الحقول وروابط الصفحات الفرعية
   'view_title'              => 'التاجر',
   'view_title_index'        => 'التجار',

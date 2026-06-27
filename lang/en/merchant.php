@@ -241,6 +241,20 @@ return array (
   'delivery_charge_empty_cta'      => 'Create a rate card',
   'delivery_charge_empty_view_all' => 'View all rate cards',
 
+  // Merchant Index page (/admin/merchant, rendered by Admin/Merchant/Index.jsx)
+  // — labels that were previously hardcoded English in the controller's t array.
+  'index_title'              => 'Merchants',
+  'index_search_placeholder' => 'Search…',
+  'index_showing_results'    => 'Showing :from – :to of :total',
+  'index_wallet_active'      => 'Wallet active',
+  'index_wallet_off'         => 'Wallet off',
+  'index_computed_balance'   => 'Computed',
+  'index_invoice_generate'   => 'Invoice',
+  'index_services'           => 'Services',
+  'index_prev'               => 'Prev',
+  'index_next'               => 'Next',
+  'index_impersonate_confirm'=> 'Continue as :name?',
+
   // Merchant View page (/admin/merchant/{id}/view, rendered by
   // Admin/Merchant/View.jsx) — section headers, field labels and
   // sub-page link tiles that were previously hardcoded English.

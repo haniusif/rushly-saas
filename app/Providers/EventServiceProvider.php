@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Backend\Parcel;
+use App\Observers\ParcelInstrumentationObserver;
 use App\Observers\ParcelSallaObserver;
 use App\Observers\ParcelWooCommerceObserver;
 use App\Observers\ParcelZidObserver;
@@ -34,6 +35,10 @@ class EventServiceProvider extends ServiceProvider
         Parcel::observe(ParcelSallaObserver::class);
         Parcel::observe(ParcelZidObserver::class);
         Parcel::observe(ParcelWooCommerceObserver::class);
+
+        // Performance Dashboard Phase 4 instrumentation:
+        // auto-stamp expected_delivery_at + distance_m on parcel create.
+        Parcel::observe(ParcelInstrumentationObserver::class);
     }
 
     /**

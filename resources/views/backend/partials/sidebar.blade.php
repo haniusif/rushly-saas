@@ -11,6 +11,13 @@
                         class="ti ti-home"></i>{{ __('menus.dashboard') }}</a>
             @endif
         </li>
+        @if (hasPermission('performance_dashboard_read') == true)
+            <li class="nav-item">
+                <a class="nav-link {{ request()->is('admin/performance*') ? 'active' : '' }}" href="{{ route('performance.index') }}">
+                    <i class="ti ti-chart-bar"></i>{{ __('menus.performance') ?: 'Performance' }}
+                </a>
+            </li>
+        @endif
         
         
                @if (hasPermission('parcel_read') == true)
@@ -370,13 +377,15 @@
         @if (hasPermission('account_read') == true ||
                 hasPermission('fund_transfer_read') == true ||
                 hasPermission('cash_received_from_delivery_man_read') == true ||
+                hasPermission('zatca_manage') == true ||
+                hasPermission('zatca_read') == true ||
                 auth()->user()->hub_id)
             <li class="nav-item">
-                <a class="nav-link {{ request()->is('admin/accounts*', 'admin/fund-transfer*', 'admin/account-head*', 'admin/bank-transaction*', 'admin/hub/cash-received-deliveryman*', 'admin/hub/payment-request*', 'admin/paid/invoice*') ? 'active' : '' }} "
+                <a class="nav-link {{ request()->is('admin/accounts*', 'admin/fund-transfer*', 'admin/account-head*', 'admin/bank-transaction*', 'admin/hub/cash-received-deliveryman*', 'admin/hub/payment-request*', 'admin/paid/invoice*', 'admin/zatca/invoices*') ? 'active' : '' }} "
                     href="#" data-toggle="collapse" aria-expanded="false" data-target="#account"
                     aria-controls="account"><i class="ti ti-user"></i>{{ __('menus.accounts') }}</a>
                 <div id="account"
-                    class="{{ request()->is('admin/accounts*', 'admin/fund-transfer*', 'admin/expense*', 'admin/income*', 'admin/account-head*', 'admin/bank-transaction*', 'admin/hub/cash-received-deliveryman*', 'admin/hub/payment-request*', 'admin/paid/invoice*') ? '' : 'collapse' }} submenu">
+                    class="{{ request()->is('admin/accounts*', 'admin/fund-transfer*', 'admin/expense*', 'admin/income*', 'admin/account-head*', 'admin/bank-transaction*', 'admin/hub/cash-received-deliveryman*', 'admin/hub/payment-request*', 'admin/paid/invoice*', 'admin/zatca/invoices*') ? '' : 'collapse' }} submenu">
                     <ul class="nav flex-column">
                         @if (hasPermission('account_heads_read') == true)
                             <li class="nav-item">
@@ -440,6 +449,13 @@
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->is('admin/paid/invoice*') ? 'active' : '' }}"
                                     href="{{ route('paid.invoice.index') }}">{{ __('invoice.paid_invoice') }}</a>
+                            </li>
+                        @endif
+
+                        @if (hasPermission('zatca_manage') == true || hasPermission('zatca_read') == true)
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->is('admin/zatca/invoices*') ? 'active' : '' }}"
+                                    href="{{ route('zatca.invoices.index') }}">{{ __('menus.menu_zatca_invoices') }}</a>
                             </li>
                         @endif
 
@@ -666,15 +682,23 @@
                 hasPermission('delivery_type_read') == true ||
                 hasPermission('liquid_fragile_read') == true ||
                 hasPermission('integrations_read') == true ||
-                hasPermission('packaging_read') == true)
+                hasPermission('packaging_read') == true ||
+                hasPermission('zatca_manage') == true ||
+                hasPermission('zatca_read') == true ||
+                hasPermission('label_template_manage') == true)
             <!---for setting--->
             <li class="nav-item">
-                <a class="nav-link {{ request()->is('admin/database-backup*', 'admin/delivery-category*', 'admin/delivery-category*', 'admin/delivery-charge*', 'admin/packaging*', 'admin/delivery-type*', 'admin/liquid-fragile*', 'admin/sms-settings*', 'admin/sms-send-settings*', 'admin/general-settings*', 'admin/notification-settings*', 'admin/googlemap-settings*', 'admin/asset-category*', 'admin/social-login-setting*', 'admin/pay-out/setup*', 'admin/settings/pay-out/setup*', 'admin/settings/invoice-generate-menually*', 'admin/currency*', 'admin/integrations*') ? 'active' : '' }} "
+                <a class="nav-link {{ request()->is('admin/database-backup*', 'admin/delivery-category*', 'admin/delivery-category*', 'admin/delivery-charge*', 'admin/packaging*', 'admin/delivery-type*', 'admin/liquid-fragile*', 'admin/sms-settings*', 'admin/sms-send-settings*', 'admin/general-settings*', 'admin/notification-settings*', 'admin/googlemap-settings*', 'admin/asset-category*', 'admin/social-login-setting*', 'admin/pay-out/setup*', 'admin/settings/pay-out/setup*', 'admin/settings/invoice-generate-menually*', 'admin/currency*', 'admin/integrations*', 'admin/zatca*', 'admin/settings/label-templates*', 'admin/settings') ? 'active' : '' }} "
                     href="#" data-toggle="collapse" aria-expanded="false" data-target="#submenu-0"
                     aria-controls="submenu-0"><i class="ti ti-settings"></i> {{ __('menus.settings') }}</a>
-                <div class="{{ request()->is('admin/database-backup*', 'admin/delivery-category*', 'admin/delivery-charge*', 'admin/packaging*', 'admin/delivery-type*', 'admin/liquid-fragile*', 'admin/sms-settings*', 'admin/sms-send-settings*', 'admin/general-settings*', 'admin/notification-settings*', 'admin/googlemap-settings*', 'admin/asset-category*', 'admin/social-login-setting*', 'admin/pay-out/setup*', 'admin/settings/pay-out/setup*', 'admin/settings/invoice-generate-menually*', 'admin/currency*', 'admin/integrations*') ? '' : 'collapse' }} submenu"
+                <div class="{{ request()->is('admin/database-backup*', 'admin/delivery-category*', 'admin/delivery-charge*', 'admin/packaging*', 'admin/delivery-type*', 'admin/liquid-fragile*', 'admin/sms-settings*', 'admin/sms-send-settings*', 'admin/general-settings*', 'admin/notification-settings*', 'admin/googlemap-settings*', 'admin/asset-category*', 'admin/social-login-setting*', 'admin/pay-out/setup*', 'admin/settings/pay-out/setup*', 'admin/settings/invoice-generate-menually*', 'admin/currency*', 'admin/integrations*', 'admin/zatca*', 'admin/settings/label-templates*', 'admin/settings') ? '' : 'collapse' }} submenu"
                     id="submenu-0" class="collapse submenu">
                     <ul class="nav flex-column">
+
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->is('admin/settings') ? 'active' : '' }}"
+                                href="{{ route('settings.index') }}"><strong>{{ __('settings_hub.title') }}</strong></a>
+                        </li>
 
                         @if (hasPermission('general_settings_read') == true)
                             <li class="nav-item">
@@ -788,6 +812,20 @@
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->is('admin/settings/invoice-generate-menually*') ? 'active' : '' }}"
                                     href="{{ route('invoice.generate.menually.index') }}">{{ __('menus.invoice_generate_menually') }}</a>
+                            </li>
+                        @endif
+
+                        @if (hasPermission('zatca_manage') == true || hasPermission('zatca_read') == true)
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->is('admin/zatca*') ? 'active' : '' }}"
+                                    href="{{ route('zatca.settings.index') }}">{{ __('menus.menu_zatca_settings') }}</a>
+                            </li>
+                        @endif
+
+                        @if (hasPermission('label_template_manage') == true)
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->is('admin/settings/label-templates*') ? 'active' : '' }}"
+                                    href="{{ route('label-templates.index') }}">{{ __('menus.menu_label_templates') }}</a>
                             </li>
                         @endif
 

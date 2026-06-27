@@ -23,11 +23,59 @@
     <link rel="stylesheet" href="{{static_asset('backend')}}/libs/css/datepicker.min.css">
     <link rel="stylesheet" href="{{static_asset('backend')}}/libs/css/custom.css">
     <link rel="stylesheet" href="{{static_asset('backend')}}/css/custom.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/6.5.1/css/flag-icons.min.css" /> 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/6.5.1/css/flag-icons.min.css" />
     <link rel="stylesheet" href="{{ static_asset('backend/vendor') }}/toastr/toastr.min.css">
+
+    {{-- Tailwind Play CDN, namespaced under `tw-` so utilities don't collide with the
+         globally-loaded Bootstrap 4/5 classes used elsewhere on these legacy pages. --}}
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script>
+        tailwind.config = {
+            prefix: 'tw-',
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Cairo', 'Inter', 'system-ui', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50:  '#fdf2f8',
+                            100: '#fce7f3',
+                            200: '#fbcfe8',
+                            300: '#f9a8d4',
+                            400: '#ec4899',
+                            500: '#d43782',
+                            600: '#a21f5c',
+                            700: '#831d4d',
+                            800: '#6b1640',
+                            900: '#4a0e2c',
+                        },
+                    },
+                    boxShadow: {
+                        'card': '0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 3px 0 rgb(0 0 0 / 0.06)',
+                        'card-hover': '0 4px 12px -2px rgb(0 0 0 / 0.08), 0 2px 4px 0 rgb(0 0 0 / 0.06)',
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        /* Modern surface tokens for redesigned pages */
+        .tw-surface { background:#fff; border:1px solid #eef0f3; border-radius:12px; }
+        .tw-surface-muted { background:#fafafa; border:1px solid #eef0f3; border-radius:12px; }
+        .tw-divider { border-top:1px solid #eef0f3; }
+        /* RTL-safe utility helpers */
+        [dir="rtl"] .tw-rtl-flip { transform:scaleX(-1); }
+        /* Smooth focus rings on Tailwind-styled inputs without affecting Bootstrap ones */
+        .tw-input:focus, .tw-select:focus, .tw-textarea:focus {
+            outline:none;
+            border-color:#a21f5c;
+            box-shadow:0 0 0 3px rgba(162,31,92,.15);
+        }
+    </style>
+
     <!-- push target to head -->
     @stack('styles')
-     
+
       <style>
       html , body , *   {
         font-family: 'Cairo';

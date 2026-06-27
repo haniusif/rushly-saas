@@ -41,6 +41,7 @@ class Kernel extends HttpKernel
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\LanguageManager::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
+            \App\Http\Middleware\TrackDriverLastSeen::class,
         ],
 
         'api' => [
@@ -48,7 +49,7 @@ class Kernel extends HttpKernel
             \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\APIlog::class,
-
+            \App\Http\Middleware\TrackDriverLastSeen::class,
         ],
     ];
 

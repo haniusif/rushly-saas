@@ -17,6 +17,7 @@ class Support extends Model
 
     protected $fillable = [
         'user_id',
+        'driver_id',         // Performance Dashboard Phase 4b: link complaint → driver
         'department_id',
         'service',
         'priority',

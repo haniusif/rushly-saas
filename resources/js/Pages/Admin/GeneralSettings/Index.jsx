@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import {
     Save, AlertCircle, Tag, Phone, Globe, Palette, Image as ImageIcon,
+    UploadCloud, X as XIcon, RotateCcw,
 } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
@@ -13,11 +14,11 @@ import { Textarea } from '@/Components/ui/Textarea';
 import { cn } from '@/lib/utils';
 
 const SECTIONS = [
-    { key: 'brand',   icon: Tag,     labelKey: 'nav_brand' },
-    { key: 'contact', icon: Phone,   labelKey: 'nav_contact' },
-    { key: 'locale',  icon: Globe,   labelKey: 'nav_locale' },
-    { key: 'theme',   icon: Palette, labelKey: 'nav_theme' },
+    { key: 'brand',   icon: Tag,       labelKey: 'nav_brand' },
+    { key: 'contact', icon: Phone,     labelKey: 'nav_contact' },
+    { key: 'locale',  icon: Globe,     labelKey: 'nav_locale' },
     { key: 'logos',   icon: ImageIcon, labelKey: 'nav_logos' },
+    { key: 'theme',   icon: Palette,   labelKey: 'nav_theme' },
 ];
 
 function Field({ label, required, error, hint, children }) {
@@ -80,33 +81,146 @@ function ToggleField({ label, description, value, onChange }) {
     );
 }
 
-function FilePreviewField({ label, currentUrl, error, onPick, dark = false, smallPreview = false }) {
+function formatBytes(bytes) {
+    if (!bytes && bytes !== 0) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+}
+
+function LogoUploadCard({ label, hint, recommended, currentUrl, error, onPick, dark = false, favicon = false }) {
+    const [file, setFile] = React.useState(null);
     const [preview, setPreview] = React.useState(null);
+    const [dragging, setDragging] = React.useState(false);
+    const inputRef = React.useRef(null);
+
     React.useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
-    const handle = (e) => {
-        const f = e.target.files?.[0] || null;
+
+    const apply = (f) => {
+        if (!f || !f.type?.startsWith('image/')) return;
         onPick(f);
+        setFile(f);
         if (preview) URL.revokeObjectURL(preview);
-        setPreview(f ? URL.createObjectURL(f) : null);
+        setPreview(URL.createObjectURL(f));
     };
-    const src = preview || currentUrl;
+
+    const clear = (e) => {
+        e?.stopPropagation();
+        onPick(null);
+        setFile(null);
+        if (preview) URL.revokeObjectURL(preview);
+        setPreview(null);
+        if (inputRef.current) inputRef.current.value = '';
+    };
+
+    const onDrop = (e) => {
+        e.preventDefault(); e.stopPropagation();
+        setDragging(false);
+        apply(e.dataTransfer.files?.[0] || null);
+    };
+
+    const previewSrc = preview || currentUrl;
+    const hasNew = !!file;
+
     return (
-        <Field label={label} error={error}>
-            <div className={cn(
-                'flex items-center gap-3 rounded-md border border-dashed border-border p-3',
-                dark && 'bg-slate-900'
-            )}>
-                {src && (
-                    <img
-                        src={src}
-                        alt=""
-                        className={cn(
-                            'object-contain rounded',
-                            smallPreview ? 'max-h-8 max-w-8' : 'max-h-12 max-w-32'
-                        )}
-                    />
+        <Field label={label} hint={hint} error={error}>
+            <div
+                role="button"
+                tabIndex={0}
+                onClick={() => inputRef.current?.click()}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current?.click(); } }}
+                onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+                onDragLeave={(e) => { e.preventDefault(); setDragging(false); }}
+                onDrop={onDrop}
+                className={cn(
+                    'group relative flex flex-col sm:flex-row items-stretch gap-4 rounded-lg border-2 border-dashed p-4 cursor-pointer transition-all',
+                    dragging
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-primary/60 hover:bg-muted/30',
                 )}
-                <Input type="file" accept="image/*" onChange={handle} className="flex-1" />
+            >
+                {/* Preview tile */}
+                <div className={cn(
+                    'shrink-0 flex items-center justify-center rounded-md border border-border overflow-hidden',
+                    favicon ? 'h-24 w-24' : 'h-24 w-40 sm:w-48',
+                    dark ? 'bg-slate-900' : 'bg-muted/40',
+                )}>
+                    {previewSrc ? (
+                        <img
+                            src={previewSrc}
+                            alt=""
+                            className={cn(
+                                'object-contain',
+                                favicon ? 'max-h-12 max-w-12' : 'max-h-20 max-w-full p-2',
+                            )}
+                        />
+                    ) : (
+                        <ImageIcon className={cn('text-muted-foreground/40', favicon ? 'h-8 w-8' : 'h-10 w-10')} />
+                    )}
+                </div>
+
+                {/* Right column: text + actions */}
+                <div className="flex-1 min-w-0 flex flex-col justify-between gap-2">
+                    <div>
+                        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                            <UploadCloud className="h-4 w-4 text-primary" />
+                            <span>Drop image here, or <span className="text-primary">browse</span></span>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                            {recommended && <span>Recommended: <span className="font-medium text-foreground/80">{recommended}</span></span>}
+                            <span>PNG · JPG · SVG · WebP</span>
+                        </div>
+                    </div>
+
+                    {hasNew && (
+                        <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[11px] font-medium">
+                                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                                New
+                            </span>
+                            <span className="text-xs text-muted-foreground truncate">
+                                {file.name} <span className="text-muted-foreground/70">· {formatBytes(file.size)}</span>
+                            </span>
+                            <button
+                                type="button"
+                                onClick={clear}
+                                className="ms-auto inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                                aria-label="Revert"
+                            >
+                                <RotateCcw className="h-3 w-3" /> Revert
+                            </button>
+                        </div>
+                    )}
+
+                    {!hasNew && currentUrl && (
+                        <div className="text-[11px] text-muted-foreground">
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted text-muted-foreground px-2 py-0.5 font-medium">
+                                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />
+                                Current
+                            </span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Floating clear button when there's a new file (covers preview tile corner) */}
+                {hasNew && (
+                    <button
+                        type="button"
+                        onClick={clear}
+                        className="absolute top-2 end-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-background/90 backdrop-blur border border-border text-muted-foreground hover:text-destructive hover:border-destructive transition-colors"
+                        aria-label="Remove selected"
+                    >
+                        <XIcon className="h-3.5 w-3.5" />
+                    </button>
+                )}
+
+                <input
+                    ref={inputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => apply(e.target.files?.[0] || null)}
+                    className="hidden"
+                />
             </div>
         </Field>
     );
@@ -261,6 +375,14 @@ export default function Index({ settings = {}, lookups = {}, theme_fallbacks = {
                                         <div>
                                             <h2 className="text-base font-semibold">{t.nav_theme}</h2>
                                         </div>
+                                        <LogoUploadCard
+                                            label={t.logo}
+                                            recommended="240×60 px"
+                                            hint="Shown alongside your brand colors. Manage all logos in the Logos tab."
+                                            currentUrl={settings.logo_image}
+                                            error={form.errors.logo}
+                                            onPick={(f) => form.setData('logo', f)}
+                                        />
                                         <div className="grid gap-4 md:grid-cols-2">
                                             <ColorField label={t.primary_color} value={form.data.primary_color} onChange={(v) => form.setData('primary_color', v)} error={form.errors.primary_color} />
                                             <ColorField label={t.text_color} value={form.data.text_color} onChange={(v) => form.setData('text_color', v)} error={form.errors.text_color} />
@@ -331,29 +453,36 @@ export default function Index({ settings = {}, lookups = {}, theme_fallbacks = {
 
                         {active === 'logos' && (
                             <Card>
-                                <CardContent className="p-6 space-y-4">
+                                <CardContent className="p-6 space-y-5">
                                     <div>
                                         <h2 className="text-base font-semibold">{t.nav_logos}</h2>
+                                        <p className="text-xs text-muted-foreground mt-1">Drag and drop, or click any tile to upload.</p>
                                     </div>
-                                    <FilePreviewField
+                                    <LogoUploadCard
                                         label={t.logo}
+                                        recommended="240×60 px"
+                                        hint="Primary logo shown on light backgrounds (header, login, invoices)."
                                         currentUrl={settings.logo_image}
                                         error={form.errors.logo}
                                         onPick={(f) => form.setData('logo', f)}
                                     />
-                                    <FilePreviewField
+                                    <LogoUploadCard
                                         label={t.light_logo}
+                                        recommended="240×60 px"
+                                        hint="Variant for dark backgrounds (dark sidebar, dark theme)."
                                         currentUrl={settings.light_logo_image}
                                         error={form.errors.light_logo}
                                         onPick={(f) => form.setData('light_logo', f)}
                                         dark
                                     />
-                                    <FilePreviewField
+                                    <LogoUploadCard
                                         label={t.favicon}
+                                        recommended="32×32 px (square)"
+                                        hint="Browser tab icon. Square PNG or ICO."
                                         currentUrl={settings.favicon_image}
                                         error={form.errors.favicon}
                                         onPick={(f) => form.setData('favicon', f)}
-                                        smallPreview
+                                        favicon
                                     />
                                 </CardContent>
                             </Card>

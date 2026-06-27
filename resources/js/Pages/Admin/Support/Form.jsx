@@ -28,6 +28,7 @@ export default function Form({ mode = 'create', entity = null, lookups = {}, url
         service: entity?.service ?? '',
         priority: entity?.priority ?? '',
         department_id: entity?.department_id ?? '',
+        driver_id: entity?.driver_id ?? '',
         subject: entity?.subject ?? '',
         description: entity?.description ?? '',
         date: entity?.date ?? new Date().toISOString().slice(0, 10),
@@ -69,6 +70,14 @@ export default function Form({ mode = 'create', entity = null, lookups = {}, url
                                     {(lookups.departments || []).map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
                                 </Select>
                             </Field>
+                            {(lookups.drivers || []).length > 0 && (
+                                <Field label="Driver (optional)" error={form.errors.driver_id}>
+                                    <Select value={form.data.driver_id} onChange={(e) => form.setData('driver_id', e.target.value)}>
+                                        <option value="">—</option>
+                                        {(lookups.drivers || []).map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+                                    </Select>
+                                </Field>
+                            )}
                         </div>
                         <div className="grid gap-4 mt-4">
                             <Field label={t.subject} required error={form.errors.subject}>

@@ -3,303 +3,256 @@
     {{ __('levels.company') }} {{ __('levels.edit') }}
 @endsection
 @section('maincontent')
-    <div class="container-fluid  dashboard-content">
-        <div class="row">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12">
-                <div class="page-header">
-                    <div class="page-breadcrumb">
-                        <nav aria-label="breadcrumb">
-                            <ol class="breadcrumb">
-                                <li class="breadcrumb-item"><a href="{{ route('dashboard.index') }}" class="breadcrumb-link">{{ __('levels.dashboard') }}</a></li>
-                                <li class="breadcrumb-item"><a href="#" class="breadcrumb-link">{{ __('menus.company') }}</a></li>
-                                <li class="breadcrumb-item"><a href="javascript:void(0)" class="breadcrumb-link active">{{ __('levels.edit') }}</a></li>
-                            </ol>
-                        </nav>
+    <div class="container-fluid dashboard-content">
+        <div class="tw-px-1 tw-pt-4 sm:tw-px-2">
+
+            <nav class="tw-flex tw-items-center tw-gap-2 tw-text-xs tw-text-gray-500 tw-mb-4">
+                <a href="{{ route('dashboard.index') }}" class="hover:tw-text-brand-600 tw-no-underline">{{ __('levels.dashboard') }}</a>
+                <i class="fa fa-angle-right tw-text-[10px] tw-text-gray-400 tw-rtl-flip"></i>
+                <a href="{{ route('company.index') }}" class="hover:tw-text-brand-600 tw-no-underline">{{ __('menus.company') }}</a>
+                <i class="fa fa-angle-right tw-text-[10px] tw-text-gray-400 tw-rtl-flip"></i>
+                <span class="tw-text-gray-700 tw-font-medium">{{ __('levels.edit') }}</span>
+            </nav>
+
+            <form action="{{ route('company.update', ['id' => $company->id]) }}" method="POST" enctype="multipart/form-data" id="basicform" class="tw-space-y-4">
+                @csrf
+                @method('put')
+
+                {{-- Company section --}}
+                <div class="tw-bg-white tw-border tw-border-gray-100 tw-rounded-xl tw-shadow-card tw-overflow-hidden">
+                    <div class="tw-px-6 tw-py-5 tw-border-b tw-border-gray-100 tw-flex tw-items-center tw-gap-3">
+                        <span class="tw-shrink-0 tw-w-9 tw-h-9 tw-rounded-lg tw-bg-brand-50 tw-text-brand-600 tw-flex tw-items-center tw-justify-center">
+                            <i class="fa fa-building"></i>
+                        </span>
+                        <div>
+                            <h2 class="tw-text-base tw-font-semibold tw-text-gray-900 tw-m-0">{{ __('levels.company') }} {{ __('levels.information') }}</h2>
+                            <p class="tw-text-xs tw-text-gray-500 tw-mt-0.5 tw-m-0">{{ @$company->company->name }}</p>
+                        </div>
+                    </div>
+                    <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-5 tw-p-6">
+
+                        <div>
+                            <label for="company_name" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">
+                                {{ __('levels.company') }} {{ __('levels.name') }} <span class="tw-text-red-500">*</span>
+                            </label>
+                            <input id="company_name" type="text" name="company_name" autocomplete="off"
+                                   placeholder="{{ __('placeholder.Enter_company_name') }}"
+                                   class="tw-input tw-w-full tw-h-10 tw-px-3 tw-text-sm tw-bg-white tw-border tw-rounded-lg @error('company_name') tw-border-red-300 @else tw-border-gray-200 @enderror"
+                                   value="{{ old('company_name', @$company->company->name) }}" required>
+                            @error('company_name')<small class="tw-block tw-text-xs tw-text-red-500 tw-mt-1">{{ $message }}</small>@enderror
+                        </div>
+
+                        <div>
+                            <label for="domain" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">
+                                {{ __('levels.domain') }} <span class="tw-text-red-500">*</span>
+                            </label>
+                            <div class="tw-flex tw-items-stretch tw-h-10 tw-bg-white tw-border tw-border-gray-200 tw-rounded-lg tw-overflow-hidden focus-within:tw-border-brand-600 focus-within:tw-ring-2 focus-within:tw-ring-brand-100">
+                                <span class="tw-inline-flex tw-items-center tw-px-3 tw-text-xs tw-bg-gray-50 tw-text-gray-500 tw-border-r tw-border-gray-200">{{ scheme_name() }}</span>
+                                <input id="domain" type="text" name="domain"
+                                       placeholder="{{ __('placeholder.Enter_domain') }}" autocomplete="off"
+                                       class="tw-flex-1 tw-h-full tw-px-3 tw-text-sm tw-border-0 tw-outline-none focus:tw-ring-0"
+                                       value="{{ old('domain', $company->tenantDetails->domains[0]->domain_name) }}" required>
+                                <span class="tw-inline-flex tw-items-center tw-px-3 tw-text-xs tw-bg-gray-50 tw-text-gray-500 tw-border-l tw-border-gray-200">{{ '.' . request()->getHost() }}</span>
+                            </div>
+                            <input type="hidden" value="{{ @$company->tenantDetails->domains[0]->id }}" name="domain_id"/>
+                            @error('domain')<small class="tw-block tw-text-xs tw-text-red-500 tw-mt-1">{{ $message }}</small>@enderror
+                        </div>
+
+                        <div>
+                            <label for="currency" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">{{ __('levels.currency') }}</label>
+                            <select class="select2 tw-select tw-w-full tw-h-10 tw-px-3 tw-text-sm tw-bg-white tw-border tw-rounded-lg @error('currency') tw-border-red-300 @else tw-border-gray-200 @enderror" id="currency" name="currency" required>
+                                <option value="" disabled>Select Currency</option>
+                                @forelse ($currencies as $currency)
+                                    <option value="{{ $currency->symbol }}" @if ($company->company->currency == $currency->symbol) selected @endif>{{ @$currency->name }} {{ @$currency->symbol }}</option>
+                                @empty
+                                    <option value="&#36;" selected>Dollar &#36;</option>
+                                @endforelse
+                            </select>
+                            @error('currency')<small class="tw-block tw-text-xs tw-text-red-500 tw-mt-1">{{ $message }}</small>@enderror
+                        </div>
+
+                        <div>
+                            <label for="plan_id" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">
+                                {{ __('levels.plan') }} <span class="tw-text-red-500">*</span>
+                            </label>
+                            <select class="tw-select tw-w-full tw-h-10 tw-px-3 tw-text-sm tw-bg-white tw-border tw-rounded-lg @error('plan_id') tw-border-red-300 @else tw-border-gray-200 @enderror" name="plan_id" required>
+                                @foreach ($plans as $plan)
+                                    <option value="{{ $plan->id }}" @if ($company->company->plan_id == $plan->id) selected @endif>{{ $plan->name }}</option>
+                                @endforeach
+                            </select>
+                            @error('plan_id')<small class="tw-block tw-text-xs tw-text-red-500 tw-mt-1">{{ $message }}</small>@enderror
+                        </div>
+
+                        <div>
+                            <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">{{ __('settings.parcel_tracking') }} {{ __('levels.prefix') }}</label>
+                            <input type="text" name="par_track_prefix" class="tw-input tw-w-full tw-h-10 tw-px-3 tw-text-sm tw-bg-white tw-border tw-border-gray-200 tw-rounded-lg" placeholder="Enter Parcel Tracking Prefix" value="{{ @$company->company->par_track_prefix }}"/>
+                        </div>
+
+                        <div>
+                            <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">{{ __('invoice.invoice') }} {{ __('levels.prefix') }}</label>
+                            <input type="text" name="invoice_prefix" class="tw-input tw-w-full tw-h-10 tw-px-3 tw-text-sm tw-bg-white tw-border tw-border-gray-200 tw-rounded-lg" placeholder="Enter Invoice Prefix" value="{{ @$company->company->invoice_prefix }}" />
+                        </div>
+
+                        <div class="md:tw-col-span-2">
+                            <label for="logo" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">{{ __('levels.logo') }}</label>
+                            <input id="logo" type="file" name="logo"
+                                   class="tw-input tw-w-full tw-h-10 tw-text-sm tw-bg-white tw-border tw-rounded-lg @error('logo') tw-border-red-300 @else tw-border-gray-200 @enderror">
+                            @error('logo')<small class="tw-block tw-text-xs tw-text-red-500 tw-mt-1">{{ $message }}</small>@enderror
+                        </div>
+
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="row">
-        
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-body">
-                        <h2 class="pageheader-title">{{ __('levels.edit') }} {{ __('levels.company') }}</h2>
-                        <form action="{{ route('company.update',['id'=>$company->id]) }}" method="POST" enctype="multipart/form-data"
-                            id="basicform">
-                            @csrf
-                            @method('put')
-                            <h4>{{ __('levels.company') }} {{ __('levels.information') }}</h4>
-                            <div class="row">
 
-                                <div class="col-12 col-md-6">
-                                    <div class="form-group">
-                                        <label for="company_name">{{ __('levels.company') }}
-                                            {{ __('levels.name') }}</label> <span class="text-danger">*</span>
-                                        <input id="company_name" type="text" name="company_name"
-                                            data-parsley-trigger="change"
-                                            placeholder="{{ __('placeholder.Enter_company_name') }}" autocomplete="off"
-                                            class="form-control @error('company_name') is-invalid @enderror"
-                                            value="{{ old('company_name', @$company->company->name) }}" require>
-                                        @error('company_name')
-                                            <small class="text-danger mt-2">{{ $message }}</small>
-                                        @enderror
-                                    </div>
-                                </div>
+                {{-- User section --}}
+                <div class="tw-bg-white tw-border tw-border-gray-100 tw-rounded-xl tw-shadow-card tw-overflow-hidden">
+                    <div class="tw-px-6 tw-py-5 tw-border-b tw-border-gray-100 tw-flex tw-items-center tw-gap-3">
+                        <span class="tw-shrink-0 tw-w-9 tw-h-9 tw-rounded-lg tw-bg-indigo-50 tw-text-indigo-600 tw-flex tw-items-center tw-justify-center">
+                            <i class="fa fa-user"></i>
+                        </span>
+                        <div>
+                            <h2 class="tw-text-base tw-font-semibold tw-text-gray-900 tw-m-0">{{ __('levels.user') }} {{ __('levels.information') }}</h2>
+                        </div>
+                    </div>
+                    <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-5 tw-p-6">
 
-                                <div class="col-12 col-md-6">
-                                    <label for="domain">{{ __('levels.domain') }}  </label> <span class="text-danger">*</span>
-                                    <div class="input-group  ">
-                                        <span class="input-group-text start-domain" >{{ scheme_name() }}</span>
-                                        <input id="domain" type="text" name="domain"
-                                        data-parsley-trigger="change"
-                                        placeholder="{{ __('placeholder.Enter_domain') }}" autocomplete="off"
-                                        class="form-control @error('domain') is-invalid @enderror"
-                                        value="{{ old('domain',$company->tenantDetails->domains[0]->domain_name) }}" require>
-                                        <span class="input-group-text end-domain" >{{ '.'.request()->getHost() }}</span>
-                                      </div>  
-                                      <input type="hidden" value="{{@$company->tenantDetails->domains[0]->id}}" name="domain_id"/>
-                                    @error('domain')
-                                        <small class="text-danger mt-2">{{ $message }}</small>
-                                    @enderror 
-                                </div>
-                                 
-                                <div class="col-12 col-md-6">
-                                    <div class="form-group">
-                                        <label for="currency">{{ __('levels.currency') }}</label>
-                                        <select class="form-control select2 @error('currency') is-invalid @enderror" id="currency"
-                                            name="currency" required>
-                                            <option value="" selected disabled>Select Currency</option>
-                                            @forelse ($currencies as $currency)
-                                                <option value="{{ $currency->symbol }}"  @if ($company->company->currency == $currency->symbol) selected  @endif>{{ @$currency->name }}  {{ @$currency->symbol }}</option>
-                                            @empty
-                                                <option value="&#36;" selected>Dollar &#36;</option>
-                                            @endforelse
-                                        </select>
-                                        @error('currency')
-                                            <small class="text-danger mt-2">{{ $message }}</small>
-                                        @enderror
-                                    </div>
-                                </div>
-                                
-                                <div class="col-12 col-md-6">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="currency">{{ __('settings.parcel_tracking') }}
-                                                    {{ __('levels.prefix') }}</label>
-                                                <input type="text" name="par_track_prefix" class="form-control"
-                                                    placeholder="Enter Parcel Tracking Prefix" value="{{ @$company->company->par_track_prefix }}"/>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="currency">{{ __('invoice.invoice') }}
-                                                    {{ __('levels.prefix') }}</label>
-                                                <input type="text" name="invoice_prefix" class="form-control"
-                                                    placeholder="Enter Invoice Prefix" value="{{ @$company->company->invoice_prefix }}" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-12 col-md-3"> 
-                                    <div class="form-group">
-                                        <div class="row">
-                                            <div class="col-12">
-                                                <label for="logo">{{ __('levels.logo') }} </label>
-                                                <input id="logo" type="file" name="logo"
-                                                    data-parsley-trigger="change" placeholder="Enter logo" autocomplete="off"
-                                                    class="form-control @error('logo') is-invalid @enderror"
-                                                    value="{{ old('logo') }}" require>
-                                                @error('logo')
-                                                    <small class="text-danger mt-2">{{ $message }}</small>
-                                                @enderror
-                                            </div> 
-                                        </div>
-                                    </div> 
-                                </div>
+                        <div>
+                            <label for="name" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">
+                                {{ __('levels.name') }} <span class="tw-text-red-500">*</span>
+                            </label>
+                            <input id="name" type="text" name="name" autocomplete="off"
+                                   placeholder="{{ __('placeholder.Enter_name') }}"
+                                   class="tw-input tw-w-full tw-h-10 tw-px-3 tw-text-sm tw-bg-white tw-border tw-rounded-lg @error('name') tw-border-red-300 @else tw-border-gray-200 @enderror"
+                                   value="{{ old('name', $company->name) }}" required>
+                            @error('name')<small class="tw-block tw-text-xs tw-text-red-500 tw-mt-1">{{ $message }}</small>@enderror
+                        </div>
 
-                                <div class="col-12 col-md-3">
-                                    <div class="form-group">
-                                        <label for="input-select">{{ __('levels.plan') }}</label> <span
-                                            class="text-danger">*</span>
-                                        <select class="form-control @error('plan_id') is-invalid @enderror" name="plan_id" required>
-                                            @foreach ($plans as $plan)
-                                                <option value="{{ $plan->id }}" @if ($company->company->plan_id == $plan->id) selected @endif > {{ $plan->name }}</option>
-                                            @endforeach
-                                        </select>
-                                        @error('plan_id')
-                                            <small class="text-danger mt-2">{{ $message }}</small>
-                                        @enderror
-                                    </div>
-                                </div>
+                        <div>
+                            <label for="email" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">
+                                {{ __('levels.email') }} <span class="tw-text-red-500">*</span>
+                            </label>
+                            <input id="email" type="email" name="email" autocomplete="off"
+                                   placeholder="{{ __('placeholder.enter_email') }}"
+                                   class="tw-input tw-w-full tw-h-10 tw-px-3 tw-text-sm tw-bg-white tw-border tw-rounded-lg @error('email') tw-border-red-300 @else tw-border-gray-200 @enderror"
+                                   value="{{ old('email', $company->email) }}" required>
+                            @error('email')<small class="tw-block tw-text-xs tw-text-red-500 tw-mt-1">{{ $message }}</small>@enderror
+                        </div>
 
+                        <div>
+                            <label for="mobile" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">
+                                {{ __('levels.phone') }} <span class="tw-text-red-500">*</span>
+                            </label>
+                            <input id="mobile" type="number" name="mobile" autocomplete="off"
+                                   placeholder="{{ __('placeholder.Enter_mobile') }}"
+                                   class="tw-input tw-w-full tw-h-10 tw-px-3 tw-text-sm tw-bg-white tw-border tw-rounded-lg @error('mobile') tw-border-red-300 @else tw-border-gray-200 @enderror"
+                                   value="{{ old('mobile', $company->mobile) }}" required>
+                            @error('mobile')<small class="tw-block tw-text-xs tw-text-red-500 tw-mt-1">{{ $message }}</small>@enderror
+                        </div>
 
-                            </div>
+                        <div>
+                            <label for="password" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">
+                                {{ __('levels.password') }} <span class="tw-text-xs tw-text-gray-400 tw-font-normal">({{ __('Leave empty to keep current') }})</span>
+                            </label>
+                            <input id="password" type="password" name="password" autocomplete="off"
+                                   placeholder="{{ __('placeholder.Enter_password') }}"
+                                   class="tw-input tw-w-full tw-h-10 tw-px-3 tw-text-sm tw-bg-white tw-border tw-rounded-lg @error('password') tw-border-red-300 @else tw-border-gray-200 @enderror"
+                                   value="{{ old('password') }}">
+                            @error('password')<small class="tw-block tw-text-xs tw-text-red-500 tw-mt-1">{{ $message }}</small>@enderror
+                        </div>
 
-                            <h4>{{ __('levels.user') }} {{ __('levels.information') }}</h4>
-                            <div class="row">
-                                <div class="col-12 col-md-6">
+                        <div>
+                            <label for="address" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">
+                                {{ __('levels.address') }} <span class="tw-text-red-500">*</span>
+                            </label>
+                            <input id="address" type="text" name="address" autocomplete="off"
+                                   placeholder="{{ __('placeholder.Enter_address') }}"
+                                   class="tw-input tw-w-full tw-h-10 tw-px-3 tw-text-sm tw-bg-white tw-border tw-rounded-lg @error('address') tw-border-red-300 @else tw-border-gray-200 @enderror"
+                                   value="{{ old('address', $company->address) }}" required>
+                            @error('address')<small class="tw-block tw-text-xs tw-text-red-500 tw-mt-1">{{ $message }}</small>@enderror
+                        </div>
 
-                                    <div class="form-group">
-                                        <label for="name">{{ __('levels.name') }}</label> <span
-                                            class="text-danger">*</span>
-                                        <input id="name" type="text" name="name" data-parsley-trigger="change"
-                                            placeholder="{{ __('placeholder.Enter_name') }}" autocomplete="off"
-                                            class="form-control @error('name') is-invalid @enderror"
-                                            value="{{ old('name',$company->name) }}" require>
-                                        @error('name')
-                                            <small class="text-danger mt-2">{{ $message }}</small>
-                                        @enderror
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="mobile">{{ __('levels.phone') }}</label> <span
-                                            class="text-danger">*</span>
-                                        <input id="mobile" type="number" name="mobile" data-parsley-trigger="change"
-                                            placeholder="{{ __('placeholder.Enter_mobile') }}" autocomplete="off"
-                                            class="form-control @error('mobile') is-invalid @enderror"
-                                            value="{{ old('mobile',$company->mobile) }}" require>
-                                        @error('mobile')
-                                            <small class="text-danger mt-2">{{ $message }}</small>
-                                        @enderror
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="address">{{ __('levels.address') }}</label> <span
-                                            class="text-danger">*</span>
-                                        <input id="address" type="text" name="address"
-                                            data-parsley-trigger="change"
-                                            placeholder="{{ __('placeholder.Enter_address') }}" autocomplete="off"
-                                            class="form-control @error('address') is-invalid @enderror"
-                                            value="{{ old('address',$company->address) }}" require>
-                                        @error('address')
-                                            <small class="text-danger mt-2">{{ $message }}</small>
-                                        @enderror
-                                    </div>
+                        <div>
+                            <label for="nid_number" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">{{ __('levels.nid') }}</label>
+                            <input id="nid_number" type="number" name="nid_number" autocomplete="off"
+                                   placeholder="{{ __('placeholder.Enter_nid_number') }}"
+                                   class="tw-input tw-w-full tw-h-10 tw-px-3 tw-text-sm tw-bg-white tw-border tw-border-gray-200 tw-rounded-lg @error('nid_number') tw-border-red-300 @enderror"
+                                   value="{{ old('nid_number', $company->nid_number) }}">
+                            @error('nid_number')<small class="tw-block tw-text-xs tw-text-red-500 tw-mt-1">{{ $message }}</small>@enderror
+                        </div>
 
-                                    <div class="form-group">
-                                        <label for="input-select">{{ __('levels.designation') }}</label> <span
-                                            class="text-danger">*</span>
-                                        <select class="form-control @error('designation_id') is-invalid @enderror"
-                                            id="input-select" name="designation_id" required>
-                                            @foreach ($designations as $designation)
-                                                <option value="{{ $designation->id }}" {{ old('designation_id',@$company->designation->id) == $designation->id ? 'selected' : '' }}>
-                                                    {{ $designation->title }}</option>
-                                            @endforeach
-                                        </select>
-                                        @error('designation_id')
-                                            <small class="text-danger mt-2">{{ $message }}</small>
-                                        @enderror
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="input-select">{{ __('levels.department') }}</label> <span
-                                            class="text-danger">*</span>
-                                        <select class="form-control @error('department_id') is-invalid @enderror"
-                                            id="input-select" name="department_id" required>
-                                            @foreach ($departments as $department)
-                                                <option value="{{ $department->id }}" {{ old('department_id',@$company->department->id) == $department->id ? 'selected' : '' }}>
-                                                    {{ $department->title }}</option>
-                                            @endforeach
-                                        </select>
-                                        @error('department_id')
-                                            <small class="text-danger mt-2">{{ $message }}</small>
-                                        @enderror
-                                    </div>
+                        <div>
+                            <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">
+                                {{ __('levels.designation') }} <span class="tw-text-red-500">*</span>
+                            </label>
+                            <select class="tw-select tw-w-full tw-h-10 tw-px-3 tw-text-sm tw-bg-white tw-border tw-rounded-lg @error('designation_id') tw-border-red-300 @else tw-border-gray-200 @enderror" name="designation_id" required>
+                                @foreach ($designations as $designation)
+                                    <option value="{{ $designation->id }}" {{ old('designation_id', @$company->designation->id) == $designation->id ? 'selected' : '' }}>{{ $designation->title }}</option>
+                                @endforeach
+                            </select>
+                            @error('designation_id')<small class="tw-block tw-text-xs tw-text-red-500 tw-mt-1">{{ $message }}</small>@enderror
+                        </div>
 
-                                    <div class="form-group">
-                                        <label for="status">{{ __('levels.status') }}</label>
-                                        <select name="status" id="status"
-                                            class="form-control @error('status') is-invalid @enderror">
-                                            @foreach (trans('status') as $key => $status)
-                                                <option value="{{ $key }}"  {{ old('status', $company->status) == $key ? 'selected' : '' }}>
-                                                    {{ $status }}</option>
-                                            @endforeach
-                                        </select>
-                                        @error('status')
-                                            <small class="text-danger mt-2">{{ $message }}</small>
-                                        @enderror
-                                    </div>
+                        <div>
+                            <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">
+                                {{ __('levels.department') }} <span class="tw-text-red-500">*</span>
+                            </label>
+                            <select class="tw-select tw-w-full tw-h-10 tw-px-3 tw-text-sm tw-bg-white tw-border tw-rounded-lg @error('department_id') tw-border-red-300 @else tw-border-gray-200 @enderror" name="department_id" required>
+                                @foreach ($departments as $department)
+                                    <option value="{{ $department->id }}" {{ old('department_id', @$company->department->id) == $department->id ? 'selected' : '' }}>{{ $department->title }}</option>
+                                @endforeach
+                            </select>
+                            @error('department_id')<small class="tw-block tw-text-xs tw-text-red-500 tw-mt-1">{{ $message }}</small>@enderror
+                        </div>
 
-                                </div>
-                                <div class="col-12 col-md-6">
+                        <div>
+                            <label for="joining_date" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">
+                                {{ __('levels.opening_date') }} <span class="tw-text-red-500">*</span>
+                            </label>
+                            <input id="joining_date" type="text" readonly data-toggle="datepicker" name="joining_date"
+                                   placeholder="yyyy-mm-dd" autocomplete="off"
+                                   class="tw-input tw-w-full tw-h-10 tw-px-3 tw-text-sm tw-bg-white tw-border tw-rounded-lg @error('joining_date') tw-border-red-300 @else tw-border-gray-200 @enderror"
+                                   value="{{ old('joining_date', $company->joining_date) }}" required>
+                            @error('joining_date')<small class="tw-block tw-text-xs tw-text-red-500 tw-mt-1">{{ $message }}</small>@enderror
+                        </div>
 
-                                    <div class="form-group">
-                                        <label for="email">{{ __('levels.email') }}</label> <span
-                                            class="text-danger">*</span>
-                                        <input id="email" type="email" name="email"
-                                            data-parsley-trigger="change"
-                                            placeholder="{{ __('placeholder.enter_email') }}" autocomplete="off"
-                                            class="form-control @error('email') is-invalid @enderror"
-                                            value="{{ old('email',$company->email) }}" require>
-                                        @error('email')
-                                            <small class="text-danger mt-2">{{ $message }}</small>
-                                        @enderror
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="password">{{ __('levels.password') }}</label>  
-                                        <input id="password" type="password" name="password"
-                                            data-parsley-trigger="change"
-                                            placeholder="{{ __('placeholder.Enter_password') }}" autocomplete="off"
-                                            class="form-control @error('password') is-invalid @enderror"
-                                            value="{{ old('password') }}" require>
-                                        @error('password')
-                                            <small class="text-danger mt-2">{{ $message }}</small>
-                                        @enderror
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="nid_number">{{ __('levels.nid') }}</label>
-                                        <input id="nid_number" type="number" name="nid_number"
-                                            data-parsley-trigger="change"
-                                            placeholder="{{ __('placeholder.Enter_nid_number') }}" autocomplete="off"
-                                            class="form-control @error('nid_number') is-invalid @enderror"
-                                            value="{{ old('nid_number',$company->nid_number) }}" require>
-                                        @error('nid_number')
-                                            <small class="text-danger mt-2">{{ $message }}</small>
-                                        @enderror
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="joining_date">{{ __('levels.opening_date') }}</label> <span
-                                            class="text-danger">*</span>
-                                        <input id="joining_date" type="text" readonly="readonly"
-                                            data-toggle="datepicker" name="joining_date" data-parsley-trigger="change"
-                                            placeholder="yyyy-mm-dd" autocomplete="off"
-                                            class="form-control @error('joining_date') is-invalid @enderror"
-                                            value="{{ old('joining_date',  $company->joining_date) }}" require>
-                                        @error('joining_date')
-                                            <small class="text-danger mt-2">{{ $message }}</small>
-                                        @enderror
-                                    </div>
-                             
-                                     
-                                    <div class="form-group">
-                                        <label for="image">{{ __('levels.image') }}</label>
-                                        <input id="image" type="file" name="image"
-                                            data-parsley-trigger="change" placeholder="Enter image" autocomplete="off"
-                                            class="form-control @error('image') is-invalid @enderror"
-                                            value="{{ old('image') }}" require>
-                                        @error('image')
-                                            <small class="text-danger mt-2">{{ $message }}</small>
-                                        @enderror
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12 ">
-                                    <button type="submit"
-                                        class="btn btn-space btn-primary">{{ __('levels.save') }}</button>
-                                    <a href="{{ route('users.index') }}"
-                                        class="btn btn-space btn-secondary">{{ __('levels.cancel') }}</a>
-                                </div>
-                            </div>
-                        </form>
+                        <div>
+                            <label for="status" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">{{ __('levels.status') }}</label>
+                            <select name="status" id="status"
+                                    class="tw-select tw-w-full tw-h-10 tw-px-3 tw-text-sm tw-bg-white tw-border tw-rounded-lg @error('status') tw-border-red-300 @else tw-border-gray-200 @enderror">
+                                @foreach (trans('status') as $key => $status)
+                                    <option value="{{ $key }}" {{ old('status', $company->status) == $key ? 'selected' : '' }}>{{ $status }}</option>
+                                @endforeach
+                            </select>
+                            @error('status')<small class="tw-block tw-text-xs tw-text-red-500 tw-mt-1">{{ $message }}</small>@enderror
+                        </div>
+
+                        <div class="md:tw-col-span-2">
+                            <label for="image" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">{{ __('levels.image') }}</label>
+                            <input id="image" type="file" name="image"
+                                   class="tw-input tw-w-full tw-h-10 tw-text-sm tw-bg-white tw-border tw-rounded-lg @error('image') tw-border-red-300 @else tw-border-gray-200 @enderror">
+                            @error('image')<small class="tw-block tw-text-xs tw-text-red-500 tw-mt-1">{{ $message }}</small>@enderror
+                        </div>
+
                     </div>
                 </div>
-            </div>
+
+                <div class="tw-flex tw-items-center tw-justify-end tw-gap-2 tw-bg-white tw-border tw-border-gray-100 tw-rounded-xl tw-shadow-card tw-px-6 tw-py-4">
+                    <a href="{{ route('company.index') }}"
+                       class="tw-inline-flex tw-items-center tw-h-10 tw-px-4 tw-text-sm tw-font-medium tw-text-gray-700 tw-bg-white hover:tw-bg-gray-100 tw-border tw-border-gray-200 tw-rounded-lg tw-no-underline">
+                        {{ __('levels.cancel') }}
+                    </a>
+                    <button type="submit"
+                            class="tw-inline-flex tw-items-center tw-h-10 tw-px-5 tw-text-sm tw-font-medium tw-text-white tw-bg-brand-600 hover:tw-bg-brand-700 tw-rounded-lg tw-border-0">
+                        {{ __('levels.save') }}
+                    </button>
+                </div>
+
+            </form>
         </div>
     </div>
 @endsection()
 @push('styles')
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 @endpush
-@push('scripts') 
+@push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 @endpush

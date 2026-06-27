@@ -83,6 +83,11 @@ class SupportController extends Controller
                     'value' => (string) $d->id,
                     'label' => $d->title,
                 ])->values(),
+                'drivers' => \App\Models\Backend\DeliveryMan::companywise()
+                    ->with('user:id,name')
+                    ->get()
+                    ->map(fn ($d) => ['value' => (string) $d->id, 'label' => $d->user?->name ?? ('Driver #' . $d->id)])
+                    ->values(),
             ],
             'urls' => [
                 'submit' => route('support.store'),

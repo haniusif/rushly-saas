@@ -43,6 +43,7 @@ class SupportRepository implements SupportInterface {
 
             $support                    = new Support();
             $support->user_id           = Auth::User()->id;
+            $support->driver_id         = $request->driver_id ?: null;
             $support->department_id     = $request->department_id;
             $support->service           = $request->service;
             $support->priority          = $request->priority;
@@ -67,6 +68,7 @@ class SupportRepository implements SupportInterface {
             $support                    =  Support::find($id);
 
             $support->user_id           = Auth::User()->id;
+            $support->driver_id         = $request->driver_id ?: null;
             $support->department_id     = $request->department_id;
             $support->service           = $request->service;
             $support->priority          = $request->priority;

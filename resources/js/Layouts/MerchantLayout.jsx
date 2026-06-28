@@ -51,8 +51,19 @@ function safeRoute(name, params) {
     return '#';
 }
 
-function isActive(currentUrl, matches) {
-    return matches.some((m) => currentUrl.startsWith('/' + m));
+function isActive(currentUrl, item) {
+    const cur = (currentUrl || '').split('?')[0];
+
+    // Exact-URL match keeps section roots highlighted (e.g. /merchant/dashboard).
+    const itemUrl = safeRoute(item.route);
+    if (itemUrl && itemUrl !== '#') {
+        try {
+            const itemPath = new URL(itemUrl, 'http://x').pathname;
+            if (cur === itemPath) return true;
+        } catch (_) { /* ignore malformed URLs */ }
+    }
+
+    return (item.match || []).some((m) => cur.startsWith('/' + m));
 }
 
 function useDarkMode() {
@@ -158,7 +169,7 @@ function Sidebar({ open, onClose, currentUrl, brand, theme }) {
                             </div>
                             <ul className={cn(dense ? 'space-y-0.5' : 'space-y-1')}>
                                 {section.items.map((item) => {
-                                    const active = isActive(currentUrl, item.match);
+                                    const active = isActive(currentUrl, item);
                                     const Icon = item.icon;
                                     const activeStyle = active && theme?.primary
                                         ? { backgroundColor: theme.primary, color: theme.textOn }

@@ -115,8 +115,26 @@ function safeRoute(name, params) {
     return '#';
 }
 
-function isActive(currentUrl, matches) {
-    return matches.some((m) => currentUrl.startsWith('/' + m));
+function isActive(currentUrl, item) {
+    // Normalise — strip any query string so /admin/wms?from=X still highlights.
+    const cur = (currentUrl || '').split('?')[0];
+
+    // Exact match against the URL the entry's own route resolves to.
+    // Catches root-of-section pages like /admin/wms whose match[] was
+    // out of sync with the real URL. Cheap and self-correcting whenever
+    // a route is renamed (no need to keep match[] in sync separately).
+    const itemUrl = safeRoute(item.route);
+    if (itemUrl && itemUrl !== '#') {
+        try {
+            const itemPath = new URL(itemUrl, 'http://x').pathname;
+            if (cur === itemPath) return true;
+        } catch (_) { /* ignore malformed URLs */ }
+    }
+
+    // Prefix match against the curated match[] patterns. Used for entries
+    // whose child pages live below the route URL (e.g. /admin/parcel/bulk
+    // should still highlight Shipments which lives at /admin/parcel).
+    return (item.match || []).some((m) => cur.startsWith('/' + m));
 }
 
 function useDarkMode() {
@@ -183,7 +201,7 @@ function Sidebar({ open, onClose, currentUrl, brand }) {
                             </div>
                             <ul className="space-y-0.5">
                                 {section.items.map((item) => {
-                                    const active = isActive(currentUrl, item.match);
+                                    const active = isActive(currentUrl, item);
                                     const Icon = item.icon;
                                     return (
                                         <li key={item.tKey}>

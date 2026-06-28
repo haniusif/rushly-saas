@@ -379,7 +379,7 @@ export default function Index({ urls = {}, screenshots = {}, can_update = false 
     const shotFor = (slug, label) => ({ slug, label, version: screenshots[slug] || null });
 
     return (
-        <AdminLayout title={t('wms_kb_title')}>
+        <AdminLayout>
             <Head title={t('wms_kb_title')} />
 
             <div className="mb-6">

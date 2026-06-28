@@ -293,7 +293,7 @@ export default function SectionPage({ section, screenshots = {}, urls = {}, t = 
     const subs = (section.subs || []).map((s) => ({ ...s, version: screenshots[s.slug] || null }));
 
     return (
-        <MerchantLayout title={`${section.label} — KB`}>
+        <MerchantLayout>
             <Head title={`${section.label} — KB`} />
 
             <div className="mb-6 flex items-start gap-3">

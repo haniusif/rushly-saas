@@ -296,7 +296,7 @@ export default function SectionPage({ section, screenshots = {}, urls = {}, t = 
     const subs = (section.subs || []).map((s) => ({ ...s, version: screenshots[s.slug] || null }));
 
     return (
-        <AdminLayout title={`${section.label} — KB`}>
+        <AdminLayout>
             <Head title={`${section.label} — KB`} />
 
             <div className="mb-6 flex items-start gap-3">

@@ -55,7 +55,7 @@ function SectionCard({ section, t }) {
 
 export default function Hub({ sections = [], t = {} }) {
     return (
-        <AdminLayout title={t.title}>
+        <AdminLayout>
             <Head title={t.title} />
 
             <div className="mb-6 flex items-start gap-3">

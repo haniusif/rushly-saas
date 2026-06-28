@@ -44,7 +44,8 @@ const NAV = [
         { tKey: 'menu_adjustments',   icon: ArrowRightLeft,  route: 'wms.adjustments.index',  match: ['admin/wms/adjustments'] },
         { tKey: 'menu_cycle_counts',  icon: CheckSquare,     route: 'wms.cycle-counts.index', match: ['admin/wms/cycle-counts'] },
         { tKey: 'menu_damage',        icon: Bug,             route: 'wms.damage.index',       match: ['admin/wms/damage'] },
-        { tKey: 'menu_wms_kb',        icon: FileText,        route: 'wms.knowledge-base',     match: ['admin/wms/knowledge-base'] },
+        // WMS KB intentionally not listed here — reached via the unified
+        // Knowledge Base hub (Main → Knowledge Base → WMS card).
     ]},
     { group: 'menu_operations', items: [
         { tKey: 'menu_deliveryman',    icon: Truck,      route: 'deliveryman.index',       match: ['admin/deliveryman'] },

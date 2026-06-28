@@ -2,11 +2,10 @@ import * as React from 'react';
 import { Head } from '@inertiajs/react';
 import {
     Package, Boxes, Truck, FileInput, AlertTriangle, Bug, Clock, ArrowRightLeft,
-    ExternalLink, BarChart3, BookOpen,
+    ExternalLink, BarChart3,
 } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
-import { Button } from '@/Components/ui/Button';
 import { ucwords } from '@/Components/wms/ListPage';
 import { cn } from '@/lib/utils';
 
@@ -107,17 +106,6 @@ export default function Index({ kpi = {}, movement = [], fulChart = [], low_stoc
     return (
         <AdminLayout title={t.title}>
             <Head title={t.title} />
-
-            {urls.knowledge_base ? (
-                <div className="mb-4 flex justify-end">
-                    <Button asChild variant="outline" size="sm">
-                        <a href={urls.knowledge_base} className="inline-flex items-center gap-2">
-                            <BookOpen className="h-4 w-4" />
-                            {t.knowledge_base || 'Knowledge base'}
-                        </a>
-                    </Button>
-                </div>
-            ) : null}
 
             <div className="mb-5 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
                 <KpiCard icon={Package}        label={t.total_skus}          value={kpi.total_skus}         accent="bg-blue-100 text-blue-700" href={urls.products} />

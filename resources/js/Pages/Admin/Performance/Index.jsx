@@ -77,20 +77,15 @@ export default function Index({
     }, [autoRefresh, refresh]);
 
     return (
-        <AdminLayout title={t.title} breadcrumbs={[t.title]}>
+        <AdminLayout title={t.title}>
             <Head title={t.title} />
 
             <div className="space-y-4">
-                {/* Header */}
-                <div className="flex flex-wrap items-end justify-between gap-3">
-                    <div>
-                        <h1 className="text-2xl font-semibold">{t.title}</h1>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            {t.subtitle}
-                            <span className="ml-2">{t.last_refresh}: <span className="tabular-nums">{lastRefresh.toLocaleTimeString()}</span></span>
-                        </p>
-                    </div>
-                </div>
+                {/* Subtitle (page heading itself is rendered by AdminLayout) */}
+                <p className="-mt-4 text-xs text-muted-foreground">
+                    {t.subtitle}
+                    <span className="ms-2">{t.last_refresh}: <span className="tabular-nums">{lastRefresh.toLocaleTimeString()}</span></span>
+                </p>
 
                 {/* Filters & controls */}
                 <FilterBar

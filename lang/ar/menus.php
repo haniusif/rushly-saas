@@ -110,4 +110,17 @@ return [
    'adjustments'               => 'تعديلات المخزون',
    'cycle_counts'              => 'الجرد الدوري',
    'damage_reports'            => 'تقارير التلف',
+   'menu_zatca'                => 'الفوترة الإلكترونية (زاتكا)',
+   'menu_zatca_invoices'       => 'فواتير زاتكا',
+   'menu_zatca_settings'       => 'إعدادات زاتكا',
+   'menu_label_templates'      => 'قوالب الملصقات',
+
+   // صفحات لوحة التاجر
+   'payment_received'          => 'المدفوعات المستلمة',
+   'parcel_reports'            => 'تقارير الشحنات',
+   'reports'                   => 'التقارير',
+   'total_summery'             => 'الملخص الإجمالي',
+
+   // جولات الإرشاد
+   'tours'                     => 'الجولات التعريفية',
 ];

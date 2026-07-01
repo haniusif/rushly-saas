@@ -1,0 +1,53 @@
+{
+    "key": "admin.operations.overview",
+    "module": "operations",
+    "title": "Operations",
+    "description": "Fleet, hubs, merchants, and pickups — the moving parts of last-mile delivery.",
+    "role_scope": [1, 6],
+    "version": 1,
+    "is_active": true,
+    "auto_start": false,
+    "trigger_route": "deliveryman.index",
+    "steps": [
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_deliveryman" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Delivery men", "body": "Driver roster. Assign parcels, view runsheets, cash balances, and past performance per driver." },
+                "ar": { "title": "مندوبو التوصيل", "body": "قائمة السائقين. أسند شحنات، اعرض أوراق المسار، الأرصدة النقدية، وأداء كل مندوب." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_tms" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "TMS", "body": "Transport Management — bulk runsheets, route planning, and driver dispatch." },
+                "ar": { "title": "إدارة النقل (TMS)", "body": "أوراق المسار الجماعية، تخطيط المسارات، وإسناد المندوبين." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_hubs" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Hubs", "body": "Distribution warehouses — the physical hand-off points between pickup and delivery legs." },
+                "ar": { "title": "الفروع", "body": "مراكز التوزيع — نقاط الاستلام والتسليم الفعلية بين مراحل النقل." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_merchants" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Merchants (clients)", "body": "Your business customers. Delivery-charge overrides, payment accounts, and per-merchant settings live here." },
+                "ar": { "title": "التجار (العملاء)", "body": "عملاؤك من التجار. تخصيصات رسوم التوصيل، حسابات الدفع، والإعدادات لكل تاجر تعيش هنا." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_pickup_request" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Pickup requests", "body": "Ad-hoc pickup requests from merchants — assign a pickup man and turn them into scheduled runs." },
+                "ar": { "title": "طلبات الاستلام", "body": "طلبات استلام لحظية من التجار — أسند مندوب استلام وحوّلها إلى جولات مجدولة." }
+            }
+        }
+    ]
+}

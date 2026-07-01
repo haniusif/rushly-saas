@@ -1,0 +1,53 @@
+{
+    "key": "admin.productivity.overview",
+    "module": "productivity",
+    "title": "Productivity",
+    "description": "Tasks, support, communications, and fraud monitoring.",
+    "role_scope": [1, 6],
+    "version": 1,
+    "is_active": true,
+    "auto_start": false,
+    "trigger_route": "todo.index",
+    "steps": [
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_todo" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Todo", "body": "Team task list. Assign follow-ups without leaving the console." },
+                "ar": { "title": "المهام", "body": "قائمة مهام الفريق. أسند متابعات بدون مغادرة اللوحة." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_support" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Support tickets", "body": "Merchant tickets. Reply, close, and track SLAs — each ticket shows the merchant + related parcel." },
+                "ar": { "title": "تذاكر الدعم", "body": "تذاكر التجار. رد، أغلق، وتابع اتفاقيات الخدمة — كل تذكرة تعرض التاجر والشحنة المرتبطة." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_news" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "News & offers", "body": "In-app announcements. Show promos or maintenance notices to merchants on their dashboard." },
+                "ar": { "title": "العروض والأخبار", "body": "إعلانات داخل التطبيق. اعرض العروض الترويجية أو إشعارات الصيانة للتجار على لوحاتهم." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_push_notification" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Push notifications", "body": "Blast a push to merchants or drivers via Firebase Cloud Messaging. Segment by role or hub." },
+                "ar": { "title": "الإشعارات الفورية", "body": "أرسل إشعارًا فوريًا للتجار أو المندوبين عبر Firebase. قسّم بالدور أو الفرع." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_fraud" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Fraud check", "body": "Flagged customers or numbers. Watchlist to prevent repeat scam orders." },
+                "ar": { "title": "التحقق من الاحتيال", "body": "العملاء أو الأرقام المشبوهة. قائمة مراقبة لمنع تكرار الطلبات الاحتيالية." }
+            }
+        }
+    ]
+}

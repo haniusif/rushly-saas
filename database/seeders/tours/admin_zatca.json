@@ -1,0 +1,29 @@
+{
+    "key": "admin.zatca.overview",
+    "module": "zatca",
+    "title": "ZATCA e-invoicing",
+    "description": "Saudi Phase-2 e-invoicing — issue, sign, and clear invoices with ZATCA in real time.",
+    "role_scope": [1, 6],
+    "version": 1,
+    "is_active": true,
+    "auto_start": false,
+    "trigger_route": "zatca.invoices.index",
+    "steps": [
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_zatca_invoices" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "ZATCA invoices", "body": "Journal of every signed and cleared e-invoice — XML payload, QR code, and clearance response per row." },
+                "ar": { "title": "فواتير زاتكا", "body": "سجل كل فاتورة إلكترونية موقّعة ومعتمدة — حمولة XML، رمز QR، واستجابة الاعتماد لكل صف." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_zatca_settings" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "ZATCA settings", "body": "VAT number, CR, seller name, and the device CSID used to sign invoices. Test in sandbox before going live." },
+                "ar": { "title": "إعدادات زاتكا", "body": "الرقم الضريبي، السجل التجاري، اسم البائع، وCSID الجهاز المستخدم لتوقيع الفواتير. اختبر في بيئة تجريبية أولًا." }
+            }
+        }
+    ]
+}

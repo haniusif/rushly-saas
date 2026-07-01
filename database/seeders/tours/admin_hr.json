@@ -1,0 +1,37 @@
+{
+    "key": "admin.hr.overview",
+    "module": "hr",
+    "title": "HR & payroll",
+    "description": "Your team, their access, and their pay.",
+    "role_scope": [1, 6],
+    "version": 1,
+    "is_active": true,
+    "auto_start": false,
+    "trigger_route": "users.index",
+    "steps": [
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_users_roles" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Users & roles", "body": "Your staff accounts and what they can do. Assign a role first, tune per-user permissions if needed." },
+                "ar": { "title": "المستخدمون والأدوار", "body": "حسابات فريقك وصلاحياته. أسند دورًا أولًا، ثم عدّل الصلاحيات الفردية عند الحاجة." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_payroll" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Payroll", "body": "Monthly salary generation, pay slips, and payment history per employee." },
+                "ar": { "title": "الرواتب", "body": "إصدار الرواتب الشهرية، قسائم الدفع، وسجل الدفعات لكل موظف." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_assets" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Assets", "body": "Company assets — vehicles, scanners, phones — assigned to users and hubs." },
+                "ar": { "title": "الأصول", "body": "أصول الشركة — مركبات، ماسحات، هواتف — مسندة إلى المستخدمين والفروع." }
+            }
+        }
+    ]
+}

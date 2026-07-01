@@ -1,0 +1,21 @@
+{
+    "key": "admin.system.overview",
+    "module": "system",
+    "title": "System",
+    "description": "Activity logs — who did what, when.",
+    "role_scope": [1, 6],
+    "version": 1,
+    "is_active": true,
+    "auto_start": false,
+    "trigger_route": "logs.index",
+    "steps": [
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_logs" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Activity logs", "body": "Audit trail of every important state change — parcel status flips, permission edits, tenant switches, and admin actions." },
+                "ar": { "title": "سجلات النشاط", "body": "مسار تدقيق لكل تغيير حالة مهم — تحويلات حالة الشحنة، تعديلات الصلاحيات، وإجراءات المشرفين." }
+            }
+        }
+    ]
+}

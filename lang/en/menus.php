@@ -108,4 +108,17 @@ return [
    'adjustments'                 => 'Adjustments',
    'cycle_counts'                => 'Cycle counts',
    'damage_reports'              => 'Damage reports',
+   'menu_zatca'                  => 'ZATCA E-invoicing',
+   'menu_zatca_invoices'         => 'ZATCA invoices',
+   'menu_zatca_settings'         => 'ZATCA settings',
+   'menu_label_templates'        => 'Label templates',
+
+   // Merchant panel pages
+   'payment_received'            => 'Payments received',
+   'parcel_reports'              => 'Parcel reports',
+   'reports'                     => 'Reports',
+   'total_summery'               => 'Total summary',
+
+   // Onboarding tours
+   'tours'                       => 'Onboarding tours',
 ];

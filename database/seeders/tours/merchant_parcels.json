@@ -1,0 +1,21 @@
+{
+    "key": "merchant.parcels.overview",
+    "module": "parcels",
+    "title": "Shipments list tour",
+    "description": "Filter, export, import, and act on your shipments.",
+    "role_scope": [2],
+    "version": 1,
+    "is_active": true,
+    "auto_start": false,
+    "trigger_route": "merchant-panel.parcel.index",
+    "steps": [
+        {
+            "target": { "type": "data-tour", "value": "sidebar-nav_parcels" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Shipments list", "body": "This is where you'll spend most of your time. Every parcel you've created lives here." },
+                "ar": { "title": "قائمة الشحنات", "body": "هذا هو المكان الذي ستقضي فيه معظم وقتك. كل شحنة أنشأتها موجودة هنا." }
+            }
+        }
+    ]
+}

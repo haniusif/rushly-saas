@@ -99,14 +99,16 @@ app/
 │       ├── Payroll/         # SalaryGenerate
 │       └── Superadmin/      # Plan
 ├── Providers/               # App, Tenancy, Route, Auth, View, Event, Broadcast
-├── Repositories/            # ~47 repos behind interfaces, bound in AppServiceProvider
+├── Repositories/            # ~48 repos behind interfaces, bound in AppServiceProvider
 ├── Services/                # DeliveryPandaService (3PL integration)
 ├── Support/                 # ParcelStatusHelper (status state machine)
 └── Traits/                  # ApiReturnFormatTrait, PaymentTrait (bKash), TrackingTrait
 
 config/                      # Standard Laravel + tenancy.php
-database/migrations/         # 90 migrations → ~112 tables
+database/migrations/         # 96 migrations → ~116 tables
+database/seeders/tours/      # System onboarding tour definitions (JSON, seeder-driven)
 public/                      # Pre-compiled css/js + uploads + installer assets
+resources/js/Tour/           # Onboarding tour engine (Provider, Overlay, Popover, Launcher)
 resources/views/             # Blade (admin/, backend/, frontend/, auth/, installer/, errors/)
 routes/                      # 7 route files (below)
 ```
@@ -233,6 +235,18 @@ Grouped by domain. Each row is `Model → table`. Models in `app/Models/Backend/
 | `NewsOffer` | `news_offers` | |
 | (Spatie) | `activity_log` | All `LogsActivity`-tagged model changes |
 
+### Onboarding tours
+
+| Model | Table | Notes |
+|---|---|---|
+| `Backend/Tour` | `tours` | Tour definitions (system + per-tenant). `company_id` nullable — system template if null. `LogsActivity` + `scopeCompanywise()` merges tenant overrides on top of system rows |
+| `Backend/TourStep` | `tour_steps` | Ordered steps per tour. `target` JSON descriptor, `translations` JSON keyed by locale |
+| `Backend/UserTourProgress` | `user_tour_progress` | Per-user state, keyed by `(user_id, tour_key, tour_version)` — bumping version re-shows the tour |
+| `Backend/TourEvent` | `tour_events` | Append-only analytics stream (`started`, `step_forward/back`, `skipped`, `completed`, `element_missing`) |
+| — | `users.first_login_at` | Added column; set by `LoginController::authenticated()` on the very first sign-in. Drives the welcome-modal auto-start |
+
+Authored via `database/seeders/tours/*.json` (see the co-located `README.md` for the schema + anchor catalog) and edited per-tenant via `/admin/tours` (Inertia CRUD, gated by `tour_manage` permission). See `TOURS.md` at the repo root for the full architecture.
+
 ### Geography
 
 | Model | Table |
@@ -317,7 +331,10 @@ Admin-side: `AdminSslCommerzController`, `AdminBkashController`, `AdminSkrillCon
 Merchant-side: `SslCommerzPaymentController`, `BkashController`, `SkrillController`, `AamarpayController`.
 
 ### Backend — Operations & Settings
-`ReportsController`, `TotalSummeryReportController`, `ActiveLogController`, `TodoController`, `SupportController`, `FraudController`, `NewsOfferController`, `AssetController`, `AssetcategoryController`, `PackagingController`, `CurrencyController`, `GeneralSettingsController`, `SmsSettingsController`, `SmsSendSettingsController`, `NotificationSettingsController`, `GoogleMapSettingsController`, `PushNotificationController`, `SocialLoginController`, `WebNotificationController`, `DatabaseBackupController`, `AddonController`, `IntegrationsController` (super-admin Integrations page at `/admin/integrations`).
+`ReportsController`, `TotalSummeryReportController`, `ActiveLogController`, `TodoController`, `SupportController`, `FraudController`, `NewsOfferController`, `AssetController`, `AssetcategoryController`, `PackagingController`, `CurrencyController`, `GeneralSettingsController`, `SmsSettingsController`, `SmsSendSettingsController`, `NotificationSettingsController`, `GoogleMapSettingsController`, `PushNotificationController`, `SocialLoginController`, `WebNotificationController`, `DatabaseBackupController`, `AddonController`, `IntegrationsController` (super-admin Integrations page at `/admin/integrations`), `TourManagerController` (onboarding tour CRUD + analytics at `/admin/tours`).
+
+### Backend — Onboarding
+`Api/V10/TourController` — JSON endpoints consumed by the frontend tour engine (`GET /tours/for-me`, `POST /tours/{key}/progress`, `POST /tours/{key}/event`). Session-auth'd, mounted inside the tenant middleware group in `web.php` (not under sanctum). Companion admin CRUD lives at `Backend/TourManagerController` (above).
 
 ### Api / V10 / External
 `SallaParcelController`, `ZidParcelController`, `WooCommerceParcelController` — one per storefront bridge, all mounted at `/api/v10/external/<platform>/parcel`. Each accepts the bridge's normalised order payload, idempotently creates a `Parcel`, and writes a row in the matching link table.
@@ -371,6 +388,13 @@ All under `/api/v10/*`, gated by `CheckApiKey`. Auth flow uses Sanctum tokens.
 **Merchant infra** — shops CRUD.
 **Support & ops** — support tickets + replies, fraud reporting, news offers, push notification subscription, user settings.
 
+### Onboarding tours (session-auth'd, tenant-scoped, mounted in `web.php`)
+| Endpoint | |
+|---|---|
+| `GET /tours/for-me` | Tours applicable to the current user (role + tenant filter) + `first_login` flag |
+| `POST /tours/{key}/progress` | `{status, current_step, version}` — persists per-user state |
+| `POST /tours/{key}/event` | `{event, step_index?, duration_ms?, meta?}` — analytics stream into `tour_events` |
+
 ### Webhooks
 | Endpoint | |
 |---|---|
@@ -399,7 +423,7 @@ Plus stancl's `InitializeTenancyByDomain` and `PreventAccessFromCentralDomains`.
 
 ---
 
-## 10. Repositories (~47, in `app/Repositories/`)
+## 10. Repositories (~48, in `app/Repositories/`)
 
 Repositories are bound interface → implementation in `AppServiceProvider` (100+ bindings) and constructor-injected throughout controllers. Grouped by domain:
 
@@ -418,6 +442,7 @@ Repositories are bound interface → implementation in `AppServiceProvider` (100
 | Users / RBAC | `UserRepository`, `ProfileRepository`, `RoleRepository` |
 | Merchant Panel | `PaymentAccountRepository`, `PaymentRequestRepository`, `PickupRequestRepository` |
 | Frontend CMS | `BlogsRepository`, `PagesRepository`, `FaqRepository`, `SectionRepository`, `ServiceRepository`, `PartnerRepository`, `WhyCourierRepository`, `SocialLinkRepository` |
+| Onboarding | `Tour/TourRepository` — resolves tours applicable to `(user, role, tenant)` with per-request memoization; records `UserTourProgress` + `TourEvent` |
 
 ---
 
@@ -600,6 +625,7 @@ PATH="/opt/homebrew/opt/php@8.3/bin:$PATH" php artisan cache:clear
 | Add a permission-gated screen | Add permission key to seeder, attach `->middleware('hasPermission:my_key')` on the route, expose UI in `RoleController` edit screen |
 | Customize the marketing site | `app/Http/Controllers/Backend/FrontWeb/` (admin CRUD) + `Frontend/FrontendController` (rendering) + Blade views in `resources/views/frontend/` |
 | Add a new storefront integration | Mirror Salla/Zid/WooCommerce: migration for `<platform>_orders` + `<Platform>OrderLink` model + `<Platform>Service` (writeback) + `Parcel<Platform>Observer` (registered in `EventServiceProvider`) + `External/<Platform>ParcelController` + route under `/api/v10/external/<platform>/` + entry in `IntegrationsController::PLATFORMS`. See `../INTEGRATIONS.md` §8 for the full checklist. |
+| Add an onboarding tour | Drop a JSON file in `database/seeders/tours/*.json` (schema + anchor catalog in `database/seeders/tours/README.md`) → `php artisan db:seed --class="Database\\Seeders\\TourSeeder"`. For per-tenant tours, use `/admin/tours` (gated by `tour_manage`). Full arch in `TOURS.md`. |
 
 ---
 

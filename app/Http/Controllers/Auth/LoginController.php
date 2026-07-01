@@ -120,6 +120,20 @@ class LoginController extends Controller
     }
 
     /**
+     * Called by AuthenticatesUsers::sendLoginResponse right after a successful
+     * login. First-login stamp is what drives the onboarding tour auto-start.
+     */
+    protected function authenticated(Request $request, $user)
+    {
+        if ($user && \Illuminate\Support\Facades\Schema::hasColumn('users', 'first_login_at') && $user->first_login_at === null) {
+            // Mark AFTER the tour engine gets to see first_login=true on the
+            // very next page load; we stamp here so subsequent logins skip
+            // the welcome modal.
+            $user->forceFill(['first_login_at' => now()])->save();
+        }
+    }
+
+    /**
      * Branded login screen. Without a slug the view shows the tenant brand; with a
      * slug matching a `merchant_unique_id` it overlays that merchant's colors/logo
      * pre-auth so admins can hand out merchant-branded login URLs.

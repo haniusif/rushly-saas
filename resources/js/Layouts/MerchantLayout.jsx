@@ -3,7 +3,7 @@ import { Link, usePage, router, Head } from '@inertiajs/react';
 import {
     LayoutDashboard, Package, Wallet, FileText, MessageCircle, Store,
     Banknote, Settings, BarChart3, Receipt, Menu, X, Sun, Moon,
-    LogOut, ChevronDown, Bell, Search, PiggyBank, Globe, Check, User,
+    LogOut, ChevronDown, Bell, Search, Globe, Check, User,
     BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -14,6 +14,7 @@ import {
 } from '@/Components/ui/DropdownMenu';
 import { Input } from '@/Components/ui/Input';
 import { useT, useLocale, SUPPORTED_LOCALES } from '@/lib/i18n';
+import TourLauncher from '@/Tour/TourLauncher';
 
 const NAV = [
     { group: 'nav_overview', items: [
@@ -22,7 +23,6 @@ const NAV = [
     ]},
     { group: 'nav_operations', items: [
         { tKey: 'nav_parcels',      icon: Package,       route: 'merchant-panel.parcel.index',      match: ['merchant/parcel'] },
-        { tKey: 'nav_parcel_bank',  icon: PiggyBank,     route: 'merchant-panel.parcel-bank.index', match: ['merchant/parcel-bank'] },
         { tKey: 'nav_shops',        icon: Store,         route: 'merchant-panel.shops.index',       match: ['merchant/shops'] },
         { tKey: 'nav_support',      icon: MessageCircle, route: 'merchant-panel.support.index',     match: ['merchant/support'] },
     ]},
@@ -179,6 +179,7 @@ function Sidebar({ open, onClose, currentUrl, brand, theme }) {
                                             <Link
                                                 href={safeRoute(item.route)}
                                                 style={activeStyle}
+                                                data-tour={`sidebar-${item.tKey}`}
                                                 className={cn(
                                                     'group flex items-center gap-3 rounded-md text-sm font-medium transition-colors',
                                                     dense ? 'px-3 py-1.5' : 'px-3 py-2',
@@ -274,11 +275,12 @@ function Topbar({ onSidebarOpen, user, brand, theme }) {
             </div>
 
             <div className="ms-auto flex items-center gap-2">
+                <TourLauncher label={t('take_a_tour')} />
                 <LanguageMenu accent={theme?.accent} />
                 <Button variant="ghost" size="icon" onClick={toggleDark} aria-label={t('toggle_theme')}>
                     {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                 </Button>
-                <Button variant="ghost" size="icon" aria-label={t('notifications')}>
+                <Button variant="ghost" size="icon" aria-label={t('notifications')} data-tour="topbar-notifications">
                     <Bell className="h-4 w-4" />
                 </Button>
                 <DropdownMenu>

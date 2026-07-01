@@ -266,6 +266,13 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
     
                 // XSS Protection
                 Route::get('/dashboard',             [DashbordController::class, 'index'])->name('dashboard.index');
+
+                // Onboarding tour engine — JSON endpoints consumed by the React
+                // TourProvider. Session-auth'd, tenant-scoped. Open to any
+                // authenticated user (all roles can be assigned tours).
+                Route::get('/tours/for-me',           [\App\Http\Controllers\Api\V10\TourController::class, 'forMe'])->name('tours.for-me');
+                Route::post('/tours/{key}/progress',  [\App\Http\Controllers\Api\V10\TourController::class, 'saveProgress'])->name('tours.progress');
+                Route::post('/tours/{key}/event',     [\App\Http\Controllers\Api\V10\TourController::class, 'logEvent'])->name('tours.event');
                 Route::get('/subscription',          [PlanController::class, 'subscription'])->name('subscription.index');
 
                 Route::get('/subscription/payment',  [PlanController::class, 'subscriptionPayment'])->name('subscription.payment');
@@ -290,6 +297,19 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
 
                         // Topbar global search (parcel / driver / client / product / ticket)
                         Route::get('global-search', [\App\Http\Controllers\Backend\GlobalSearchController::class, 'search'])->name('global.search');
+
+                        // Onboarding tour manager (admin CRUD + analytics)
+                        Route::prefix('tours')->name('admin.tours.')->group(function () {
+                            Route::get('/',             [\App\Http\Controllers\Backend\TourManagerController::class, 'index'])->name('index')->middleware('hasPermission:tour_manage');
+                            Route::get('/analytics',    [\App\Http\Controllers\Backend\TourManagerController::class, 'analytics'])->name('analytics')->middleware('hasPermission:tour_manage');
+                            Route::get('/create',       [\App\Http\Controllers\Backend\TourManagerController::class, 'create'])->name('create')->middleware('hasPermission:tour_manage');
+                            Route::post('/store',       [\App\Http\Controllers\Backend\TourManagerController::class, 'store'])->name('store')->middleware('hasPermission:tour_manage');
+                            Route::get('/{id}/edit',    [\App\Http\Controllers\Backend\TourManagerController::class, 'edit'])->name('edit')->middleware('hasPermission:tour_manage');
+                            Route::put('/{id}',         [\App\Http\Controllers\Backend\TourManagerController::class, 'update'])->name('update')->middleware('hasPermission:tour_manage');
+                            Route::delete('/{id}',      [\App\Http\Controllers\Backend\TourManagerController::class, 'destroy'])->name('delete')->middleware('hasPermission:tour_manage');
+                            Route::post('/{id}/toggle', [\App\Http\Controllers\Backend\TourManagerController::class, 'toggle'])->name('toggle')->middleware('hasPermission:tour_manage');
+                            Route::get('/{id}/preview', [\App\Http\Controllers\Backend\TourManagerController::class, 'preview'])->name('preview')->middleware('hasPermission:tour_manage');
+                        });
 
                         // Central admin Knowledge Base (per-section operator handbooks).
                         // Reading is open to any logged-in admin; only screenshot
@@ -856,6 +876,77 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::post('integrations/daftra/test',       [\App\Http\Controllers\Backend\DaftraSettingsController::class, 'test'])->name('daftra.settings.test')->middleware('hasPermission:integrations_update');
                         Route::post('integrations/daftra/resync-all', [\App\Http\Controllers\Backend\DaftraSettingsController::class, 'resyncAll'])->name('daftra.settings.resync_all')->middleware('hasPermission:integrations_update');
 
+                        // Legacy Logestechs settings page — superseded by the generic
+                        // /admin/shipping/connections UI. Redirect to keep bookmarks
+                        // working; the named routes still resolve so anything that
+                        // calls route('logestechs.settings.index') lands on the new page.
+                        Route::get('integrations/logestechs', fn () => redirect()->route('shipping.connections.index'))
+                            ->name('logestechs.settings.index')
+                            ->middleware('hasPermission:integrations_read');
+
+                        // Generic shipping module — connections CRUD for all providers.
+                        // Register literal-segment routes BEFORE wildcard {provider} so the
+                        // wildcard doesn't swallow them (e.g. POST /connections/test must
+                        // hit `test`, not `store` with provider="test").
+                        Route::prefix('shipping')->name('shipping.')->group(function () {
+                            Route::get('connections',                              [\App\Http\Controllers\Backend\Shipping\ShippingConnectionsController::class, 'index'])->name('connections.index')->middleware('hasPermission:integrations_read');
+                            Route::get('connections/create',                       [\App\Http\Controllers\Backend\Shipping\ShippingConnectionsController::class, 'create'])->name('connections.create')->middleware('hasPermission:integrations_update');
+                            Route::post('connections/test',                        [\App\Http\Controllers\Backend\Shipping\ShippingConnectionsController::class, 'test'])->name('connections.test')->middleware('hasPermission:integrations_update');
+                            Route::post('connections/resolve-domain/{provider}',   [\App\Http\Controllers\Backend\Shipping\ShippingConnectionsController::class, 'resolveDomain'])->name('connections.resolve_domain')->middleware('hasPermission:integrations_update');
+                            Route::get('connections/{id}/edit',                    [\App\Http\Controllers\Backend\Shipping\ShippingConnectionsController::class, 'edit'])->whereNumber('id')->name('connections.edit')->middleware('hasPermission:integrations_update');
+                            Route::put('connections/{id}',                         [\App\Http\Controllers\Backend\Shipping\ShippingConnectionsController::class, 'update'])->whereNumber('id')->name('connections.update')->middleware('hasPermission:integrations_update');
+                            Route::delete('connections/{id}',                      [\App\Http\Controllers\Backend\Shipping\ShippingConnectionsController::class, 'destroy'])->whereNumber('id')->name('connections.destroy')->middleware('hasPermission:integrations_update');
+                            Route::post('connections/{id}/default',                [\App\Http\Controllers\Backend\Shipping\ShippingConnectionsController::class, 'setDefault'])->whereNumber('id')->name('connections.set_default')->middleware('hasPermission:integrations_update');
+                            // Last — the wildcard store. Anything not matched above falls
+                            // here: POST /connections/logestechs → store('logestechs').
+                            Route::post('connections/{provider}',                  [\App\Http\Controllers\Backend\Shipping\ShippingConnectionsController::class, 'store'])->name('connections.store')->middleware('hasPermission:integrations_update');
+                        });
+
+                        // Generic commerce module — Phase 2 connections CRUD.
+                        // Same shape as the shipping group above. Controller
+                        // gates itself on config('features.commerce_layer') so
+                        // routes 404 cleanly when the flag is off; route names
+                        // still resolve, which keeps `route('commerce.…')`
+                        // callable from other code without exception.
+                        // Permissions reuse integrations_read / _update until
+                        // Phase 9 introduces module-scoped perms.
+                        Route::prefix('commerce')->name('commerce.')->group(function () {
+                            Route::get('connections',                              [\App\Http\Controllers\Backend\Commerce\ConnectionController::class, 'index'])->name('connections.index')->middleware('hasPermission:integrations_read');
+                            Route::get('connections/create',                       [\App\Http\Controllers\Backend\Commerce\ConnectionController::class, 'create'])->name('connections.create')->middleware('hasPermission:integrations_update');
+                            Route::post('connections/test',                        [\App\Http\Controllers\Backend\Commerce\ConnectionController::class, 'test'])->name('connections.test')->middleware('hasPermission:integrations_update');
+                            Route::get('connections/{id}/edit',                    [\App\Http\Controllers\Backend\Commerce\ConnectionController::class, 'edit'])->whereNumber('id')->name('connections.edit')->middleware('hasPermission:integrations_update');
+                            Route::put('connections/{id}',                         [\App\Http\Controllers\Backend\Commerce\ConnectionController::class, 'update'])->whereNumber('id')->name('connections.update')->middleware('hasPermission:integrations_update');
+                            Route::delete('connections/{id}',                      [\App\Http\Controllers\Backend\Commerce\ConnectionController::class, 'destroy'])->whereNumber('id')->name('connections.destroy')->middleware('hasPermission:integrations_update');
+                            Route::post('connections/{id}/default',                [\App\Http\Controllers\Backend\Commerce\ConnectionController::class, 'setDefault'])->whereNumber('id')->name('connections.set_default')->middleware('hasPermission:integrations_update');
+                            // Last — wildcard store. Mirrors shipping's ordering so {provider}
+                            // doesn't swallow literal segments above.
+                            Route::post('connections/{provider}',                  [\App\Http\Controllers\Backend\Commerce\ConnectionController::class, 'store'])->name('connections.store')->middleware('hasPermission:integrations_update');
+
+                            // Phase 3 — inbound webhook events viewer + replay.
+                            Route::get('webhook-events',                           [\App\Http\Controllers\Backend\Commerce\WebhookEventController::class, 'index'])->name('webhook-events.index')->middleware('hasPermission:integrations_read');
+                            Route::get('webhook-events/{id}',                      [\App\Http\Controllers\Backend\Commerce\WebhookEventController::class, 'show'])->whereNumber('id')->name('webhook-events.show')->middleware('hasPermission:integrations_read');
+                            Route::post('webhook-events/{id}/replay',              [\App\Http\Controllers\Backend\Commerce\WebhookEventController::class, 'replay'])->whereNumber('id')->name('webhook-events.replay')->middleware('hasPermission:integrations_update');
+                        });
+
+                        // Phase 5 — OMS canonical orders viewer (read-only).
+                        // Distinct namespace from commerce.* — Commerce is the
+                        // integration edge; OMS is the merchant-side order spine
+                        // it feeds. Mutations land in Phase 6+.
+                        Route::prefix('oms')->name('oms.')->group(function () {
+                            Route::get('orders',                                   [\App\Http\Controllers\Backend\Oms\OrderController::class, 'index'])->name('orders.index')->middleware('hasPermission:integrations_read');
+                            Route::get('orders/{id}',                              [\App\Http\Controllers\Backend\Oms\OrderController::class, 'show'])->whereNumber('id')->name('orders.show')->middleware('hasPermission:integrations_read');
+                        });
+
+                        // Phase 8 — failed-jobs viewer scoped to Commerce /
+                        // Shipping / Fulfillment queues. Uses Laravel's
+                        // built-in failed_jobs table + artisan queue:retry /
+                        // queue:forget under the hood.
+                        Route::prefix('ops')->name('ops.')->group(function () {
+                            Route::get('failed-jobs',            [\App\Http\Controllers\Backend\Ops\FailedJobsController::class, 'index'])->name('failed-jobs.index')->middleware('hasPermission:integrations_read');
+                            Route::post('failed-jobs/{id}/retry', [\App\Http\Controllers\Backend\Ops\FailedJobsController::class, 'retry'])->whereNumber('id')->name('failed-jobs.retry')->middleware('hasPermission:integrations_update');
+                            Route::delete('failed-jobs/{id}',    [\App\Http\Controllers\Backend\Ops\FailedJobsController::class, 'forget'])->whereNumber('id')->name('failed-jobs.forget')->middleware('hasPermission:integrations_update');
+                        });
+
                         // Odoo ERP integration
                         Route::get('integrations/odoo',                    [\App\Http\Controllers\Backend\OdooSettingsController::class, 'index'])->name('odoo.settings.index')->middleware('hasPermission:integrations_read');
                         Route::put('integrations/odoo',                    [\App\Http\Controllers\Backend\OdooSettingsController::class, 'update'])->name('odoo.settings.update')->middleware('hasPermission:integrations_update');
@@ -1384,3 +1475,5 @@ Route::get('/oauth/callback',  [\App\Salla\Http\Controllers\OAuthController::cla
 Route::post('/webhooks/salla', \App\Salla\Http\Controllers\WebhookController::class)
     ->middleware('salla.webhook')
     ->name('salla.webhook');
+
+

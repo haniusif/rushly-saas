@@ -451,6 +451,11 @@ class PermissionSeeder extends Seeder
                 'update' => 'knowledge_base_update',
             ],
 
+            // Onboarding tour manager — full CRUD + analytics.
+            'tour' => [
+                'manage' => 'tour_manage',
+            ],
+
             // Shipping label templates
             'label_template' => [
                 'manage' => 'label_template_manage',

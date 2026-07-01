@@ -1,0 +1,45 @@
+{
+    "key": "admin.parcels.overview",
+    "module": "parcels",
+    "title": "Parcels & operations",
+    "description": "The core shipment pipeline — create, dispatch, and handle exceptions.",
+    "role_scope": [1, 6],
+    "version": 1,
+    "is_active": true,
+    "auto_start": false,
+    "trigger_route": "parcel.index",
+    "steps": [
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_parcel" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Parcels", "body": "Every shipment in the system. Filter by status, hub, date, courier — then act in bulk from the toolbar." },
+                "ar": { "title": "الشحنات", "body": "كل شحنة في النظام. صفِّ حسب الحالة أو الفرع أو التاريخ أو المندوب، ثم نفّذ إجراءات جماعية من شريط الأدوات." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_bulk_action" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Bulk actions", "body": "Assign a driver, transfer to a hub, or route through a 3PL — for many parcels at once." },
+                "ar": { "title": "الإجراءات الجماعية", "body": "أسند مندوبًا، انقل إلى فرع، أو مرّر عبر شركة شحن طرف ثالث — لعدد كبير من الشحنات دفعة واحدة." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_ndr" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "NDR", "body": "Non-Delivery Reports. Every failed attempt lands here — investigate, reschedule, or return." },
+                "ar": { "title": "بلاغات عدم التسليم", "body": "كل محاولة تسليم فاشلة تظهر هنا — حقّق، أعد الجدولة، أو أعد الشحنة." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_abnormal" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Abnormal shipments", "body": "Anything stuck too long at a status — auto-flagged so nothing falls through the cracks." },
+                "ar": { "title": "الشحنات الشاذة", "body": "أي شحنة عالقة في حالة واحدة لفترة طويلة — يتم تنبيهها تلقائيًا حتى لا يضيع شيء." }
+            }
+        }
+    ]
+}

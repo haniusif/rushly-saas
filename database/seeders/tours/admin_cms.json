@@ -1,0 +1,21 @@
+{
+    "key": "admin.cms.overview",
+    "module": "cms",
+    "title": "Front web (CMS)",
+    "description": "Your public marketing site — blog, pages, and sections.",
+    "role_scope": [1, 6],
+    "version": 1,
+    "is_active": true,
+    "auto_start": false,
+    "trigger_route": "blogs.index",
+    "steps": [
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_front_web" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Front web CMS", "body": "Everything on your public marketing site — blogs, pages, FAQs, services, partners, hero sections. Edits go live immediately." },
+                "ar": { "title": "إدارة الموقع الأمامي", "body": "كل ما يظهر على موقعك التسويقي — المقالات، الصفحات، الأسئلة الشائعة، الخدمات، الشركاء، وأقسام الواجهة. التعديلات تُنشر فورًا." }
+            }
+        }
+    ]
+}

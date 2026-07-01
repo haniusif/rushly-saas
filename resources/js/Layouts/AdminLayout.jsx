@@ -20,6 +20,7 @@ import {
 import { Input } from '@/Components/ui/Input';
 import GlobalSearch from '@/Components/GlobalSearch';
 import { useT, useLocale, SUPPORTED_LOCALES } from '@/lib/i18n';
+import TourLauncher from '@/Tour/TourLauncher';
 
 const NAV = [
     { group: 'menu_main', items: [
@@ -207,6 +208,7 @@ function Sidebar({ open, onClose, currentUrl, brand }) {
                                         <li key={item.tKey}>
                                             <a
                                                 href={safeRoute(item.route)}
+                                                data-tour={`sidebar-${item.tKey}`}
                                                 className={cn(
                                                     'group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                                                     active
@@ -276,11 +278,12 @@ function Topbar({ onSidebarOpen, user }) {
             </div>
 
             <div className="ms-auto flex items-center gap-1">
+                <TourLauncher label={t('take_a_tour')} />
                 <LanguageMenu />
                 <Button variant="ghost" size="icon" onClick={toggleDark} aria-label={t('toggle_theme')}>
                     {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                 </Button>
-                <Button variant="ghost" size="icon" aria-label={t('notifications')}>
+                <Button variant="ghost" size="icon" aria-label={t('notifications')} data-tour="topbar-notifications">
                     <Bell className="h-4 w-4" />
                 </Button>
                 <DropdownMenu>

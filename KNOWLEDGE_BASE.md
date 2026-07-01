@@ -10,6 +10,15 @@ This doc explains how to **add a new sub-page**, **add a new section**,
 or **add a new locale**. Content lives in PHP lang files so editing it
 needs no JS rebuild.
 
+> **Sibling system: onboarding tours.** The KB gives users a *static*
+> reference to browse when they want to look something up. Onboarding
+> tours (`/admin/tours`, engine at `resources/js/Tour/`) give them an
+> *interactive* spotlight walkthrough of the same modules on first login
+> or on demand from the topbar. The two are complementary — reach for KB
+> when you need a durable reference doc, reach for tours when you need
+> to guide someone through a UI flow. See `TOURS.md` and
+> `database/seeders/tours/README.md`.
+
 ---
 
 ## Where things live

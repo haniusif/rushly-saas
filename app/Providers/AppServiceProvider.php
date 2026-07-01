@@ -50,6 +50,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind('App\Repositories\SupplierCompany\SupplierCompanyInterface', 'App\Repositories\SupplierCompany\SupplierCompanyRepository');
         $this->app->bind('App\Repositories\OperationalArea\OperationalAreaInterface', 'App\Repositories\OperationalArea\OperationalAreaRepository');
         $this->app->bind('App\Repositories\Merchant\MerchantInterface', 'App\Repositories\Merchant\MerchantRepository');
+        $this->app->bind('App\Repositories\Tour\TourRepositoryInterface', 'App\Repositories\Tour\TourRepository');
         $this->app->bind('App\Repositories\MerchantShops\ShopsInterface', 'App\Repositories\MerchantShops\ShopsRepository');
         $this->app->bind('App\Repositories\MerchantDeliveryCharge\MerchantDeliveryChargeInterface', 'App\Repositories\MerchantDeliveryCharge\MerchantDeliveryChargeRepository');
         $this->app->bind('App\Repositories\DeliveryMan\DeliveryManInterface', 'App\Repositories\DeliveryMan\DeliveryManRepository');
@@ -139,5 +140,19 @@ class AppServiceProvider extends ServiceProvider
         Paginator::useBootstrapFive();
         Paginator::useBootstrapFour();
         Schema::defaultStringLength(191);
+
+        // Qoyod accounting sync — observers no-op for tenants without enabled settings.
+        \App\Models\Backend\Merchant::observe(\App\Qoyod\Observers\MerchantObserver::class);
+        \App\Models\Backend\Merchantpanel\Invoice::observe(\App\Qoyod\Observers\InvoiceObserver::class);
+        \App\Models\Backend\CourierStatement::observe(\App\Qoyod\Observers\CourierStatementObserver::class);
+
+        // Daftra accounting sync — observers no-op for tenants without enabled settings.
+        \App\Models\Backend\Merchant::observe(\App\Daftra\Observers\MerchantObserver::class);
+        \App\Models\Backend\Merchantpanel\Invoice::observe(\App\Daftra\Observers\InvoiceObserver::class);
+
+        // Odoo ERP sync — observers no-op for tenants without enabled settings.
+        \App\Models\Backend\Merchant::observe(\App\Odoo\Observers\MerchantObserver::class);
+        \App\Models\Backend\Merchantpanel\Invoice::observe(\App\Odoo\Observers\InvoiceObserver::class);
+        \App\Models\Backend\CourierStatement::observe(\App\Odoo\Observers\CourierStatementObserver::class);
     }
 }

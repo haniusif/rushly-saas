@@ -1,0 +1,37 @@
+{
+    "key": "admin.billing.overview",
+    "module": "billing",
+    "title": "Billing & reports",
+    "description": "Subscription plans, active subscription, and operational reports.",
+    "role_scope": [1, 6],
+    "version": 1,
+    "is_active": true,
+    "auto_start": false,
+    "trigger_route": "subscribe.index",
+    "steps": [
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_subscribe" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Subscribe", "body": "Available plans + your current one. Upgrade or extend from here." },
+                "ar": { "title": "الاشتراك", "body": "الباقات المتاحة وباقتك الحالية. رقّي أو مدّد من هنا." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_subscription" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Subscription details", "body": "Modules included, seat/parcel caps, expiry date, and past invoices for your subscription." },
+                "ar": { "title": "تفاصيل الاشتراك", "body": "الوحدات المشمولة، الحدود، تاريخ الانتهاء، وفواتير الاشتراك السابقة." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_reports" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Reports", "body": "Operational reports — parcel status, hub throughput, driver performance, VAT registers." },
+                "ar": { "title": "التقارير", "body": "تقارير تشغيلية — حالة الشحنات، أداء الفروع، أداء المندوبين، سجلات الضريبة." }
+            }
+        }
+    ]
+}

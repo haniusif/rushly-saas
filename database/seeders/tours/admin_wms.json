@@ -1,0 +1,93 @@
+{
+    "key": "admin.wms.overview",
+    "module": "wms",
+    "title": "Warehouse Management (WMS)",
+    "description": "Full stock lifecycle — receive, store, fulfill, adjust.",
+    "role_scope": [1, 6],
+    "version": 1,
+    "is_active": true,
+    "auto_start": false,
+    "trigger_route": "wms.dashboard",
+    "steps": [
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_wms_dashboard" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "WMS dashboard", "body": "Warehouse health at a glance — low-stock alerts, near-expiry items, and SLA breaches." },
+                "ar": { "title": "لوحة المستودع", "body": "صحة المستودع بلمحة — تنبيهات المخزون المنخفض، السلع قريبة انتهاء الصلاحية، وتجاوزات الـSLA." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_products" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Products", "body": "Catalog of SKUs per merchant. Barcode, unit, category, batch/expiry — the identity of what you hold." },
+                "ar": { "title": "المنتجات", "body": "كتالوج الأصناف لكل تاجر. الباركود، الوحدة، الفئة، الدفعة/الصلاحية — هوية ما تحتفظ به." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_stock" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Stock", "body": "Live on-hand quantities per product per location. This is what you sell against." },
+                "ar": { "title": "المخزون", "body": "الكميات المتوفرة لحظيًا لكل منتج وموقع. هذا ما تبيع منه." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_locations" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Storage locations", "body": "Bins, racks, and zones inside your warehouse — the addresses that stock lives at." },
+                "ar": { "title": "مواقع التخزين", "body": "الصناديق والرفوف والمناطق داخل المستودع — عناوين تخزين المخزون." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_grn" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Receiving (GRN)", "body": "Goods Received Notes. Log incoming shipments, count them, and put them away into locations." },
+                "ar": { "title": "الاستلام (GRN)", "body": "إيصالات استلام البضائع. سجّل الشحنات الواردة، عدّها، وخزّنها في المواقع." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_fulfillment" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Fulfillment", "body": "Pick, pack, and ship merchant orders. This is where storefront orders (Salla, Shopify, WooCommerce) become parcels." },
+                "ar": { "title": "تجهيز الطلبات", "body": "التقاط وتغليف وشحن طلبات التجار. هنا تتحوّل طلبات المتاجر (سلة، شوبيفاي، ووكوميرس) إلى شحنات." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_outbound" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Outbound", "body": "Non-order outbound movements — transfers between warehouses, damage removals, cycle-count corrections." },
+                "ar": { "title": "الإرسال للخارج", "body": "الحركات الصادرة خارج الطلبات — النقل بين المستودعات، إزالة التالف، تصحيحات الجرد." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_adjustments" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Adjustments", "body": "Manual stock corrections. Every change is audited with a reason code." },
+                "ar": { "title": "تعديلات المخزون", "body": "تصحيحات يدوية للمخزون. كل تعديل يوثَّق بسبب معتمد." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_cycle_counts" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Cycle counts", "body": "Scheduled physical counts. Discrepancies flow back into Adjustments automatically." },
+                "ar": { "title": "الجرد الدوري", "body": "جرد فعلي مجدول. أي فروقات تنتقل تلقائيًا إلى قسم تعديلات المخزون." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_damage" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Damage reports", "body": "Track damaged inventory and write-offs, with photos and reason codes." },
+                "ar": { "title": "تقارير التلف", "body": "تتبّع البضائع التالفة والمعدومة، مع صور وأسباب معتمدة." }
+            }
+        }
+    ]
+}

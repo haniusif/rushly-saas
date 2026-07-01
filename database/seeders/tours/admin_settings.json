@@ -1,0 +1,125 @@
+{
+    "key": "admin.settings.overview",
+    "module": "settings",
+    "title": "Settings tour",
+    "description": "Tenant-wide configuration — pricing, integrations, notifications, and gateways.",
+    "role_scope": [1, 6],
+    "version": 1,
+    "is_active": true,
+    "auto_start": false,
+    "trigger_route": "general-settings.index",
+    "steps": [
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_general_settings" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "General settings", "body": "Brand identity — logo, currency, favicon, theme colors, and the VAT you charge merchants." },
+                "ar": { "title": "الإعدادات العامة", "body": "هوية العلامة — الشعار، العملة، الأيقونة، ألوان الواجهة، ونسبة الضريبة على التجار." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_integrations" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Integrations", "body": "Storefront bridges (Salla, Zid, Shopify, WooCommerce) and 3PL carriers (Aramex, Zajel, J&T, etc.). One place to configure them all." },
+                "ar": { "title": "التكاملات", "body": "روابط المتاجر (سلة، زد، شوبيفاي، ووكوميرس) وشركات الشحن (أرامكس، زاجل، J&T، وغيرها). كل الإعدادات في مكان واحد." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_delivery_charge" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Delivery charges", "body": "Your global pricing matrix — per category × weight × delivery type. Merchants can override per contract." },
+                "ar": { "title": "رسوم التوصيل", "body": "مصفوفة تسعير عامة — لكل فئة × وزن × نوع توصيل. يمكن تخصيصها لكل تاجر حسب العقد." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_delivery_category" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Delivery categories", "body": "Weight tiers used across the pricing matrix (e.g., 0–1kg, 1–3kg). Add tiers as your business grows." },
+                "ar": { "title": "فئات التوصيل", "body": "شرائح الوزن المستخدمة في مصفوفة التسعير (مثل 0-1 كجم، 1-3 كجم). أضف شرائح مع نمو أعمالك." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_liquid_fragile" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Liquid / fragile fee", "body": "The surcharge automatically added when a merchant marks a parcel liquid or fragile." },
+                "ar": { "title": "رسوم السوائل / الهش", "body": "الرسم الإضافي المضاف تلقائيًا عندما يعلّم التاجر شحنته كسائل أو قابل للكسر." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_sms_setting" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "SMS gateway", "body": "Provider credentials (Twilio, Vonage, or custom HTTP). Rotate keys here without redeploying." },
+                "ar": { "title": "بوابة الرسائل", "body": "بيانات مزوّد الرسائل (Twilio أو Vonage أو مزوّد مخصص). دوّر المفاتيح هنا بدون إعادة نشر." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_sms_send_setting" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "SMS triggers", "body": "Per-status rules — which SMS template fires when a parcel changes status." },
+                "ar": { "title": "قواعد إرسال الرسائل", "body": "قواعد لكل حالة — أي قالب رسالة يُرسَل عند تغيّر حالة الشحنة." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_notification_settings" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Push notification setup", "body": "Firebase Cloud Messaging credentials for the driver + merchant mobile apps." },
+                "ar": { "title": "إعدادات الإشعارات الفورية", "body": "بيانات Firebase لتطبيقي المندوبين والتجار." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_googlemap_setting" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Google Maps key", "body": "Powers the map picker on parcel create, address autocomplete, and driver tracking." },
+                "ar": { "title": "مفتاح خرائط جوجل", "body": "يشغّل منتقي الخريطة عند إنشاء الشحنة، الإكمال التلقائي للعناوين، وتتبع المندوبين." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_social_login_settings" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Social login", "body": "Google/Facebook OAuth credentials for merchant signup + login." },
+                "ar": { "title": "تسجيل الدخول الاجتماعي", "body": "بيانات OAuth لجوجل وفيسبوك لتسجيل ودخول التجار." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_payment_gateway_setup" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Payment gateways", "body": "Stripe, PayPal, Razorpay, SSLCommerz, bKash, AamarPay — enable and key the ones you accept." },
+                "ar": { "title": "بوابات الدفع", "body": "Stripe و PayPal و Razorpay و SSLCommerz و bKash و AamarPay — فعّل التي تقبلها وأدخل مفاتيحها." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_packaging" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Packaging", "body": "Optional packaging SKUs merchants can add per parcel (box, bubble wrap, cold pack). Each has its own price." },
+                "ar": { "title": "التغليف", "body": "أنواع تغليف اختيارية يمكن للتاجر إضافتها لكل شحنة (صندوق، فقاعات، ثلج). لكل نوع سعره." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_assets_category" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Asset categories", "body": "Categorize company assets — vehicles, scanners, phones — used by the HR → Assets module." },
+                "ar": { "title": "فئات الأصول", "body": "تصنيف أصول الشركة — مركبات، ماسحات، هواتف — يُستخدم في وحدة الموارد البشرية → الأصول." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_invoice_generate" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Invoice generate", "body": "Manual invoice generation for specific merchants outside the normal billing cycle." },
+                "ar": { "title": "إصدار الفواتير", "body": "إصدار فواتير يدوي لتجار محددين خارج دورة الفوترة الاعتيادية." }
+            }
+        }
+    ]
+}

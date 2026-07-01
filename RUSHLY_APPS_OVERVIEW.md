@@ -82,16 +82,19 @@ Each tenant runs the full courier workflow: parcels, hubs, delivery men, merchan
 **Scale of the codebase**
 
 - `app/Http/Controllers/` — ~125 controllers split across `Auth/`, `Api/V10/`, `Backend/` (admin/ops, with `HubPanel/`, `MerchantPanel/`, `Superadmin/`, `FrontWeb/` sub-panels), `Frontend/`, `Admin/`.
-- `app/Models/` — 83 Eloquent models (`Backend/` holds the domain models: `Parcel`, `Merchant`, `Hub`, `Account`, `Salary`, etc.).
-- `app/Repositories/` — ~47 repositories, interface-bound in `AppServiceProvider` (100+ bindings) and constructor-injected into controllers.
+- `app/Models/` — ~87 Eloquent models (`Backend/` holds the domain models: `Parcel`, `Merchant`, `Hub`, `Account`, `Salary`, plus the new `Tour`, `TourStep`, `UserTourProgress`, `TourEvent`).
+- `app/Repositories/` — ~48 repositories, interface-bound in `AppServiceProvider` (100+ bindings) and constructor-injected into controllers.
 - `app/Services/` — `DeliveryPandaService` (3PL), `SallaService`, `ZidService`, `WooCommerceService` (these push status writebacks back to the bridge apps / plugin), `FollowupNotificationDispatcher`.
 - `app/Enums/` — 24 enums; the central one is `ParcelStatus` (34-state lifecycle, paired with `app/Support/ParcelStatusHelper` for the state machine).
-- `database/migrations/` — 84 migrations → ~108 tables across tenancy/auth, parcels & logistics, merchants & billing, accounting, settings, HR, support, geography, CMS, superadmin/plans.
-- `routes/` — 7 files (1,664 lines): `web.php` (main app), `superadmin.php` (central-only), `api.php` (v10 REST), `admin.php`, `tenant.php`, `console.php`, `channels.php`.
+- `database/migrations/` — ~96 migrations → ~116 tables across tenancy/auth, parcels & logistics, merchants & billing, accounting, settings, HR, support, geography, CMS, superadmin/plans, and onboarding tours.
+- `routes/` — 7 files: `web.php` (main app), `superadmin.php` (central-only), `api.php` (v10 REST), `admin.php`, `tenant.php`, `console.php`, `channels.php`.
+- `resources/js/Tour/` — Frontend onboarding engine (Provider, Overlay, Popover, Launcher, WelcomeModal). Mounted globally in `merchant.jsx` (shared entry for admin + merchant panels).
 
 **API v10** — All endpoints under `/api/v10/*`, gated by `CheckApiKeyMiddleware` (validates the shared `apiKey` header) plus `auth:sanctum` for protected routes. Covers merchant/driver auth, parcel ops (CRUD + status), dashboards, invoices, payments, support/ops. Also exposes the `external/{salla,zid,woocommerce}/parcel` endpoints the bridges POST to.
 
 **How the bridges plug in** — Each bridge stores a per-merchant Sanctum token (`SallaMerchant.rushly_merchant_token`, `ZidStore.rushly_merchant_token`) issued by rushly-saas to scope parcel creation to the right merchant. WooCommerce skips this and passes `merchant_id` in the JSON body instead. Status writeback (parcel → storefront) is driven from rushly-saas using link tables (`salla_orders`, `zid_orders`, `woocommerce_orders`) that live in the main DB, not in the bridge apps.
+
+**Onboarding tours** — Every logged-in user is auto-offered a role-appropriate walkthrough on first login. 18 system tours ship out of the box (12 admin + 6 merchant, covering every sidebar module). Tours are JSON-authored (`database/seeders/tours/`), tenant-overridable via `/admin/tours`, EN+AR bilingual with RTL support. Full architecture in `TOURS.md`.
 
 **Authoritative deep-dive**: `ARCHITECTURE.md` at the repo root (directory map, full table list, controller breakdown, middleware, enums, integrations).
 
@@ -322,3 +325,7 @@ For WooCommerce there is nothing to set up in this repo — work happens in the 
 - `rushly-woocommerce/WOOCOMMERCE_REFERENCE.md` — WooCommerce plugin contract (plugin itself lives in a separate repo).
 - `rushly-shopify/README.md` + `FEATURES.md` — Shopify embedded app (Rushly Express) + public tracking.
 - `ACCOUNTING.md` — accounting/ledger subsystem of the main rushly-saas app.
+- `TOURS.md` — onboarding "Take a Tour" system (backend + engine + admin manager + analytics).
+- `KNOWLEDGE_BASE.md` — admin knowledge-base handbook system (static reference docs, parallel to interactive tours).
+- `MERCHANT_DASHBOARD.md` — merchant-panel dashboard prop contract + widget anchors.
+- `database/seeders/tours/README.md` — day-to-day authoring cheatsheet for tour JSON files with the complete `data-tour` anchor catalog.

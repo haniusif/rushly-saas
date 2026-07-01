@@ -1,0 +1,45 @@
+{
+    "key": "admin.finance.overview",
+    "module": "finance",
+    "title": "Finance",
+    "description": "Money in, money out — payments, payouts, and the bank layer.",
+    "role_scope": [1, 6],
+    "version": 1,
+    "is_active": true,
+    "auto_start": false,
+    "trigger_route": "paid.invoice.index",
+    "steps": [
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_payment_received" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Payments received", "body": "Every merchant payment you've collected — cash, bank transfer, or online gateway. Ties back to invoices." },
+                "ar": { "title": "المدفوعات المستلمة", "body": "كل دفعة استلمتها من التجار — نقدًا، تحويلًا بنكيًا، أو بوابة دفع. مرتبطة بالفواتير." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_payout" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Payout", "body": "Payouts you owe merchants after cost deductions. Process by cycle or on demand." },
+                "ar": { "title": "صرف المستحقات", "body": "المستحقات الواجب صرفها للتجار بعد خصم التكاليف. اعمل صرف دوري أو عند الطلب." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_accounts" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Accounts", "body": "Your chart of bank & cash accounts. Every payment and payout hits one — this is the source of truth for balances." },
+                "ar": { "title": "الحسابات", "body": "دليل حساباتك البنكية والنقدية. كل دفعة وصرف يمرّان بأحدها — هذا مصدر الحقيقة للأرصدة." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_wallet_request" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Wallet requests", "body": "Merchant wallet top-up requests — approve or reject; approvals credit the merchant's wallet balance." },
+                "ar": { "title": "طلبات المحفظة", "body": "طلبات شحن محافظ التجار — اعتمد أو ارفض؛ الاعتماد يضيف الرصيد إلى محفظة التاجر." }
+            }
+        }
+    ]
+}

@@ -1,0 +1,29 @@
+{
+    "key": "admin.dashboard.welcome",
+    "module": "dashboard",
+    "title": "Admin dashboard tour",
+    "description": "Overview of the operations console.",
+    "role_scope": [1, 6],
+    "version": 1,
+    "is_active": true,
+    "auto_start": true,
+    "trigger_route": "dashboard.index",
+    "steps": [
+        {
+            "target": { "type": "data-tour", "value": "sidebar-menu_dashboard" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Sidebar", "page": "Operations, Parcels, WMS, Finance, HR — every module you administer sits in the left rail." },
+                "ar": { "title": "القائمة الجانبية", "body": "العمليات، الشحنات، المستودعات، المالية، الموارد البشرية — كل الوحدات في الشريط الجانبي." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "topbar-notifications" },
+            "placement": "bottom",
+            "translations": {
+                "en": { "title": "Notifications", "body": "Alerts for NDRs, abnormal shipments, and system events." },
+                "ar": { "title": "الإشعارات", "body": "تنبيهات بلاغات عدم التسليم، الشحنات غير الطبيعية، وأحداث النظام." }
+            }
+        }
+    ]
+}

@@ -1,0 +1,37 @@
+{
+    "key": "merchant.operations.overview",
+    "module": "operations",
+    "title": "Daily operations",
+    "description": "Shipments, pickup points, and support — the three you'll use every day.",
+    "role_scope": [2],
+    "version": 1,
+    "is_active": true,
+    "auto_start": false,
+    "trigger_route": "merchant-panel.parcel.index",
+    "steps": [
+        {
+            "target": { "type": "data-tour", "value": "sidebar-nav_parcels" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Shipments", "body": "Every parcel you've created. Filter by status, date, or invoice — then create new ones, import a CSV, or export what you're seeing." },
+                "ar": { "title": "الشحنات", "body": "كل شحنة أنشأتها. صفِّ حسب الحالة أو التاريخ أو الفاتورة — ثم أنشئ شحنات جديدة، استورد ملف CSV، أو صدّر ما تراه." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-nav_shops" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Pickup points", "body": "The physical addresses your parcels get picked up from. Add one per branch — you'll pick one on every shipment." },
+                "ar": { "title": "نقاط الاستلام", "body": "العناوين الفعلية التي تُستلم منها شحناتك. أضف نقطة لكل فرع — ستختار واحدة في كل شحنة." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-nav_support" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Support", "body": "Open tickets for shipment issues, billing questions, or feature requests. Include the tracking ID and we jump straight to the parcel." },
+                "ar": { "title": "الدعم", "body": "افتح تذكرة لمشاكل الشحنات، استفسارات الفوترة، أو طلبات المزايا. أدرج رقم التتبع لنصل مباشرة إلى الشحنة." }
+            }
+        }
+    ]
+}

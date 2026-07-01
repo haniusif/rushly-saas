@@ -1,0 +1,29 @@
+{
+    "key": "merchant.settings.overview",
+    "module": "settings",
+    "title": "Pricing configuration",
+    "description": "Your COD fees and delivery-charge rate cards.",
+    "role_scope": [2],
+    "version": 1,
+    "is_active": true,
+    "auto_start": false,
+    "trigger_route": "merchant.cod-charges.index",
+    "steps": [
+        {
+            "target": { "type": "data-tour", "value": "sidebar-nav_cod_charges" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "COD charges", "body": "The percentage or flat fee applied when a parcel collects cash on delivery. Set by the operator per location — read-only from your side." },
+                "ar": { "title": "رسوم الدفع عند الاستلام", "body": "النسبة أو الرسم الثابت المُطبَّق عند تحصيل المبلغ من العميل. يحدّدها المُشغِّل لكل موقع — للقراءة فقط من جهتك." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-nav_delivery_charges" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Delivery charges", "body": "Your pricing matrix — per weight and delivery type. If you need to add a category or a new weight tier, open a support ticket." },
+                "ar": { "title": "رسوم التوصيل", "body": "مصفوفة تسعيرك — لكل وزن ونوع توصيل. لإضافة فئة أو شريحة وزن جديدة، افتح تذكرة دعم." }
+            }
+        }
+    ]
+}

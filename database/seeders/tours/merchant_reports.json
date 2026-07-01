@@ -1,0 +1,29 @@
+{
+    "key": "merchant.reports.overview",
+    "module": "reports",
+    "title": "Reports",
+    "description": "Total summary and parcel-level reports for the periods that matter.",
+    "role_scope": [2],
+    "version": 1,
+    "is_active": true,
+    "auto_start": false,
+    "trigger_route": "merchant.total.summery",
+    "steps": [
+        {
+            "target": { "type": "data-tour", "value": "sidebar-nav_total_summary" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Total summary", "body": "Single-page rollup of sales, profit, accounts, and payments — for whatever date range you pick. Filter first, then read the tiles." },
+                "ar": { "title": "الملخّص الإجمالي", "body": "صفحة واحدة تجمع المبيعات والأرباح والحسابات والمدفوعات — للمدى الزمني الذي تختاره. طبّق التصفية أولًا، ثم اقرأ البطاقات." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-nav_parcel_reports" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Parcel reports", "body": "Status-level report — count and cash-collection per status for the selected range. Print-friendly." },
+                "ar": { "title": "تقارير الشحنات", "body": "تقرير على مستوى الحالة — العدد والتحصيل النقدي لكل حالة ضمن المدى المختار. جاهز للطباعة." }
+            }
+        }
+    ]
+}

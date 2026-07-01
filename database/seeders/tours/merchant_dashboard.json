@@ -1,0 +1,62 @@
+{
+    "key": "merchant.dashboard.welcome",
+    "module": "dashboard",
+    "title": "Merchant dashboard tour",
+    "description": "Get familiar with your dashboard and quick actions.",
+    "role_scope": [2],
+    "version": 1,
+    "is_active": true,
+    "auto_start": true,
+    "trigger_route": "dashboard.index",
+    "steps": [
+        {
+            "target": { "type": "data-tour", "value": "sidebar-nav_dashboard" },
+            "placement": "end",
+            "spotlight_padding": 6,
+            "translations": {
+                "en": { "title": "Sidebar navigation", "body": "Everything you need lives here — Parcels, Shops, Invoices, Reports, and Settings." },
+                "ar": { "title": "قائمة التنقل", "body": "كل ما تحتاجه موجود هنا — الشحنات، المتاجر، الفواتير، التقارير، والإعدادات." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-nav_parcels" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Shipments", "body": "Create new shipments, filter your list, and print labels — all from Shipments." },
+                "ar": { "title": "الشحنات", "body": "أنشئ شحنات جديدة، صفِّ قائمتك، واطبع الملصقات — كل ذلك من قسم الشحنات." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "dashboard-kpis" },
+            "placement": "bottom",
+            "translations": {
+                "en": { "title": "At-a-glance KPIs", "body": "Total, delivered, returned, and in-transit counters for the selected date range. Click any tile to jump to the matching list." },
+                "ar": { "title": "مؤشرات سريعة", "body": "إجمالي الشحنات والمُسلَّمة والمُرتجَعة وقيد النقل ضمن المدى الزمني المحدد. اضغط أي بطاقة للانتقال إلى القائمة المقابلة." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "dashboard-amounts" },
+            "placement": "top",
+            "translations": {
+                "en": { "title": "Money view", "body": "Active shipments amount, delivery fees, and COD totals. These respect the date filter above." },
+                "ar": { "title": "الملخص المالي", "body": "مبالغ الشحنات النشطة، رسوم التوصيل، وإجماليات الدفع عند الاستلام. تلتزم بمرشح التاريخ أعلاه." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "dashboard-charts" },
+            "placement": "top",
+            "translations": {
+                "en": { "title": "Trends and breakdown", "body": "Last 8 days of activity and a donut showing status distribution — spot slow days at a glance." },
+                "ar": { "title": "الاتجاهات والتوزيع", "body": "نشاط آخر 8 أيام ودائرة توضح توزيع الحالات — لاكتشاف الأيام البطيئة بلمحة سريعة." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "topbar-notifications" },
+            "placement": "bottom",
+            "translations": {
+                "en": { "title": "Notifications", "body": "Delivery updates, payments, and support replies land here." },
+                "ar": { "title": "الإشعارات", "body": "تُعرض هنا تحديثات التسليم والمدفوعات وردود الدعم." }
+            }
+        }
+    ]
+}

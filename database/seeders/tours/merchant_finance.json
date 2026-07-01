@@ -1,0 +1,45 @@
+{
+    "key": "merchant.finance.overview",
+    "module": "finance",
+    "title": "Finance & money flow",
+    "description": "Statements, transactions, invoices, and payments received — track what you're owed and what came in.",
+    "role_scope": [2],
+    "version": 1,
+    "is_active": true,
+    "auto_start": false,
+    "trigger_route": "merchant.accounts.statements.index",
+    "steps": [
+        {
+            "target": { "type": "data-tour", "value": "sidebar-nav_statements" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Statements", "body": "Line-by-line ledger of every charge and credit on your account. Filter by date, tracking ID, or type. The source of truth for your balance." },
+                "ar": { "title": "كشوف الحساب", "body": "دفتر بند-ببند لكل خصم وإضافة على حسابك. صفِّ حسب التاريخ أو رقم التتبع أو النوع. مصدر الحقيقة لرصيدك." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-nav_account_tx" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Account transactions", "body": "Higher-level view — deposits, withdrawals, and adjustments per account. Statements are the detail; transactions are the roll-up." },
+                "ar": { "title": "حركة الحساب", "body": "عرض على مستوى أعلى — إيداعات وسحوبات وتعديلات لكل حساب. الكشوف تفاصيل، الحركة هي التجميع." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-nav_invoices" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Invoices", "body": "Your invoices per billing cycle — every included parcel, delivery fees, VAT, and the payable to you. Export as PDF or CSV." },
+                "ar": { "title": "الفواتير", "body": "فواتيرك لكل فترة فوترة — كل شحنة مضمّنة، رسوم التوصيل، الضريبة، والمستحق لك. صدّرها PDF أو CSV." }
+            }
+        },
+        {
+            "target": { "type": "data-tour", "value": "sidebar-nav_payment_received" },
+            "placement": "end",
+            "translations": {
+                "en": { "title": "Payments received", "body": "Every payment we've credited to your account — cash from delivery, wallet top-ups, or payout requests fulfilled." },
+                "ar": { "title": "المدفوعات المستلمة", "body": "كل دفعة قيّدناها لحسابك — نقدًا من التسليم، شحن محفظة، أو طلبات صرف مستحقات مُنجَزة." }
+            }
+        }
+    ]
+}

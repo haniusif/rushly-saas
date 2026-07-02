@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 use App\Models\Backend\Parcel;
 use App\Models\Backend\Parcels_3pl;
 use Illuminate\Support\Facades\Http;
@@ -94,11 +95,14 @@ public function check(Request $request)
     // Remove prefixes like "Tracking ID(s):"
     $clean = preg_replace('/\bTracking\s*ID(?:s)?\b\s*:?\s*/iu', '', $raw);
 
-    // Extract RLxxxxxx and numeric IDs
-    preg_match_all('/^RL\d{6,}$/im', $clean, $m1);
+    // Extract tracking IDs (RL followed by optional hyphens/underscores then
+    // digits) and numeric parcel IDs. NAVIX and most tenants prefix with
+    // hyphens (e.g. RL-831416028686); older tenants use plain RL831416028686.
+    // The hyphen was quietly rejected by the previous regex.
+    preg_match_all('/^RL[-_]?\d{6,}$/im', $clean, $m1);
     $trackingIds = $m1[0] ?? [];
 
-    preg_match_all('/(?<![A-Z])\b\d+\b(?![A-Z])/i', $clean, $m2);
+    preg_match_all('/(?<![A-Z-])\b\d+\b(?![A-Z-])/i', $clean, $m2);
     $numericIds = $m2[0] ?? [];
 
     // Also split tokens by newline/commas/spaces and re-collect
@@ -106,7 +110,7 @@ public function check(Request $request)
     foreach ($tokens as $t) {
         $t = trim($t);
         if ($t === '') continue;
-        if (preg_match('/^RL\d{6,}$/i', $t)) {
+        if (preg_match('/^RL[-_]?\d{6,}$/i', $t)) {
             $trackingIds[] = $t;
         } elseif (preg_match('/^\d+$/', $t)) {
             $numericIds[] = $t;
@@ -216,23 +220,31 @@ public function apply(Request $request)
 {
     $request->validate([
         'shipment_ids'   => ['required','string'],
-        'action_type'    => ['nullable','in:change_status,assign_deliveryman,assign_3pl,cancel'],
+        // `assign_deliveryman` used to be here but the frontend has no such
+        // action_type — driver assignment is done via change_status +
+        // PICKUP_ASSIGN / DELIVERY_MAN_ASSIGN. Removing it stops the whitelist
+        // from advertising an option no branch handles.
+        'action_type'    => ['nullable','in:change_status,assign_3pl,cancel,export_excel,print_awbs,add_note,send_sms'],
+        'sms_message'    => ['nullable','string','max:480','required_if:action_type,send_sms'],
+        'bulk_note'      => ['nullable','string','max:2000','required_if:action_type,add_note'],
         'status'         => ['nullable','integer'],
         'deliveryman_id' => ['nullable','integer','exists:delivery_man,id'],
         'company'        => ['nullable','string','in:panda,zajel,aramex,jet,logestechs'],
-        'logestechs_company_id' => ['nullable','string','max:64','required_if:company,logestechs'],
-        'logestechs_email'      => ['nullable','string','max:120','required_if:company,logestechs'],
-        'logestechs_password'   => ['nullable','string','max:120','required_if:company,logestechs'],
+        // Logestechs uses the new Shipping module — connection picks the
+        // remote_company_id + email + password. Optional; if blank, the
+        // tenant's default Logestechs connection is used.
+        'connection_id'  => ['nullable','integer'],
     ]);
-    
-    // dd($request->all());
-    
-    
+
     $action = (string) $request->input('action_type', '');
     $company = (string) $request->input('company', '');
     $status = (int) $request->input('status', '');
 
-    [$trackingIds, $numericIds] = $this->splitIds($request->string('checked_ids'));
+    // The frontend posts `shipment_ids` (a textarea of RL-… or numeric IDs).
+    // Historically the code read `checked_ids` which nobody sends — every
+    // bulk action from the browser was silently landing in the empty-check
+    // branch below. Read the actual field.
+    [$trackingIds, $numericIds] = $this->splitIds($request->string('shipment_ids'));
 
     if (empty($trackingIds) && empty($numericIds)) {
         return back()->with('error', __('No matching shipments found.'));
@@ -433,6 +445,114 @@ public function apply(Request $request)
         }
         return back()->with('success', $msg);
 
+    }elseif($action == 'export_excel'){
+
+        // Single .xlsx with every selected parcel. companywise scope is
+        // already enforced by the Parcel::query() above (which obeys the
+        // tenant connection); no extra filter needed.
+        $filename = 'parcels_' . now()->format('Ymd_His') . '.xlsx';
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\ParcelBulkExport($parcels),
+            $filename,
+        );
+
+    }elseif($action == 'print_awbs'){
+
+        // Reuse the existing multiple-print-label view by redirecting to the
+        // already-working route. ?ids=tracking1,tracking2,... is the shape
+        // ParcelController::parcelMultiplePrintLabel expects.
+        $ids = $parcels->pluck('tracking_id')->filter()->implode(',');
+        if ($ids === '') {
+            return back()->with('error', __('No printable shipments found.'));
+        }
+        return redirect()->away(route('parcel.multiple.print-label', ['ids' => $ids]));
+
+    }elseif($action == 'add_note'){
+
+        // Append a note to every selected parcel + log a ParcelEvent so the
+        // timeline reflects who added what when. Existing note text is
+        // preserved with a separator.
+        $note = trim((string) $request->input('bulk_note', ''));
+        if ($note === '') {
+            return back()->with('error', __('Enter a note to add.'));
+        }
+
+        $stamp   = '[' . now()->toDateTimeString() . '] ' . $note;
+        $applied = 0;
+        $failed  = [];
+
+        foreach ($parcels as $p) {
+            try {
+                $existing = trim((string) $p->note);
+                $p->note  = $existing === '' ? $stamp : ($existing . "\n" . $stamp);
+                $p->save();
+
+                $e = new \App\Models\Backend\ParcelEvent();
+                $e->parcel_id     = $p->id;
+                $e->parcel_status = (int) $p->status;
+                $e->note          = 'Bulk note: ' . mb_substr($note, 0, 500);
+                $e->created_by    = \Illuminate\Support\Facades\Auth::id();
+                $e->save();
+
+                $applied++;
+            } catch (\Throwable $e) {
+                Log::warning('bulk add_note failed', ['parcel_id' => $p->id, 'error' => $e->getMessage()]);
+                $failed[] = $p->tracking_id ?? ('#' . $p->id);
+            }
+        }
+
+        $msg = __('Note added to :n shipment(s).', ['n' => $applied]);
+        if (! empty($failed)) {
+            return back()->with('warning', $msg)->with('errors_list', $failed);
+        }
+        return back()->with('success', $msg);
+
+    }elseif($action == 'send_sms'){
+
+        // Fan-out via the existing SmsService. Per-message templating supports
+        // {tracking_id}, {customer_name}, {invoice_no}, {cod}. Parcels without
+        // a customer_phone are skipped.
+        $tpl = trim((string) $request->input('sms_message', ''));
+        if ($tpl === '') {
+            return back()->with('error', __('Enter the SMS message.'));
+        }
+
+        $sms     = app(\App\Http\Services\SmsService::class);
+        $sent    = 0;
+        $skipped = [];
+        $failed  = [];
+
+        foreach ($parcels as $p) {
+            $phone = trim((string) $p->customer_phone);
+            if ($phone === '') {
+                $skipped[] = $p->tracking_id ?? ('#' . $p->id);
+                continue;
+            }
+            $msg = strtr($tpl, [
+                '{tracking_id}'   => (string) ($p->tracking_id ?? $p->id),
+                '{customer_name}' => (string) ($p->customer_name ?? ''),
+                '{invoice_no}'    => (string) ($p->invoice_no ?? ''),
+                '{cod}'           => (string) ($p->cash_collection ?? '0'),
+            ]);
+            try {
+                $sms->sendSms($phone, $msg);
+                $sent++;
+            } catch (\Throwable $e) {
+                Log::warning('bulk send_sms failed', ['parcel_id' => $p->id, 'error' => $e->getMessage()]);
+                $failed[] = $p->tracking_id ?? ('#' . $p->id);
+            }
+        }
+
+        $summary = __(':sent sent, :skipped skipped (no phone), :failed failed', [
+            'sent'    => $sent,
+            'skipped' => count($skipped),
+            'failed'  => count($failed),
+        ]);
+        if (! empty($failed)) {
+            return back()->with('warning', $summary)->with('errors_list', $failed);
+        }
+        return back()->with('success', $summary);
+
     }else{
 
           return back()->with('error', __('Select action type'));
@@ -610,12 +730,14 @@ public function change_status($parcels, Request $request)
         $tracking = [];
         $numeric  = [];
 
-        preg_match_all('/RL\d{6,}/i', $clean, $m1);
+        // Match RL[-_]?digits so hyphenated tenants (RL-831416028686) work
+        // alongside legacy hyphenless ones (RL831416028686).
+        preg_match_all('/RL[-_]?\d{6,}/i', $clean, $m1);
         if (!empty($m1[0])) $tracking = array_merge($tracking, $m1[0]);
 
         foreach ($tokens as $t) {
             if ($t === '') continue;
-            if (preg_match('/^RL\d{6,}$/i', $t)) {
+            if (preg_match('/^RL[-_]?\d{6,}$/i', $t)) {
                 $tracking[] = $t;
             } elseif (preg_match('/^\d+$/', $t)) {
                 $numeric[] = (int)$t;
@@ -869,79 +991,54 @@ public function change_status($parcels, Request $request)
 
 
     /**
-     * Bulk-assign the given parcels to Logestechs against a single target
-     * company_id (picked at submit time). Mirrors Zajel/Aramex/Jet shape;
-     * note the service is currently a STUB until Postman docs land.
+     * Bulk-assign parcels to Logestechs via the generic Shipping module.
+     * Picks the connection from `connection_id` if supplied, otherwise the
+     * tenant's default Logestechs connection. Each parcel becomes a queued
+     * CreateShipmentJob — the loop returns immediately with a queued summary
+     * rather than blocking on the provider for N parcels.
      */
     protected function assignLogestechsBulk($parcels, int $rwhCount, Request $request)
     {
-        if (! $this->logestechs->isConfigured()) {
-            return back()->with('error', __('Logestechs is not configured (missing LOGESTECHS_BASE_URL).'));
-        }
-        $targetCompanyId = trim((string) $request->input('logestechs_company_id'));
-        $lEmail          = trim((string) $request->input('logestechs_email'));
-        $lPassword       = (string) $request->input('logestechs_password');
-        if ($targetCompanyId === '' || $lEmail === '' || $lPassword === '') {
-            return back()->with('error', __('logestechs_company_id, logestechs_email, and logestechs_password are required.'));
-        }
         if (count($parcels) !== $rwhCount) {
             return back()->with('error', __('All selected shipment must be RECEIVED_WAREHOUSE'));
         }
 
-        $success = 0;
-        $fail    = 0;
+        $connectionId = (int) $request->input('connection_id', 0);
+        $connection   = $connectionId
+            ? \App\Shipping\Models\ShippingConnection::query()
+                ->with('provider')
+                ->where('id', $connectionId)
+                ->where('company_id', settings()->id ?? null)
+                ->first()
+            : app(\App\Shipping\Repositories\ShippingConnectionRepository::class)
+                ->defaultForCompany((int) (settings()->id ?? 0), 'logestechs');
+
+        if (! $connection) {
+            return back()->with('error', __('No active Logestechs connection. Add one at /admin/shipping/connections first.'));
+        }
+
+        $service = app(\App\Shipping\Services\ShipmentService::class);
+        $queued  = 0;
+        $skipped = 0;
         $errors  = [];
 
         foreach ($parcels as $p) {
             try {
-                // Resolve per-parcel destination village (cached by Logestechs response).
-                $villageQuery = (string) (optional($p->area)->en_name ?: optional($p->city)->en_name ?: '');
-                $village      = $villageQuery !== '' ? $this->logestechs->resolveVillage($targetCompanyId, $villageQuery) : null;
-
-                $payload  = $this->logestechs->buildCreatePayload($p, $lEmail, $lPassword, null, $village);
-                $response = $this->logestechs->createShipment($payload, $targetCompanyId);
-
-                $hasErr = ! empty($response['_error']);
-                $awb    = $response['barcode']      ?? null;
-                $label  = $response['barcodeImage'] ?? null;
-
-                Parcels_3pl::create([
-                    'parcel_id'         => $p->id,
-                    'parcel_3pl_name'   => 'logestechs',
-                    'target_company_id' => $targetCompanyId,
-                    'awb_number'        => $hasErr ? null : $awb,
-                    'awb_pdf'           => $hasErr ? null : $label,
-                    'response'          => $response,
-                ]);
-
-                if ($hasErr) {
-                    $fail++;
-                    $errors[] = __('Parcel :id failed: :msg', [
-                        'id'  => $p->id,
-                        'msg' => $response['body']['error'] ?? $response['message'] ?? 'unknown error',
-                    ]);
+                $shipment = $service->dispatchCreate($p, $connection);
+                if ($shipment->remote_shipment_id) {
+                    $skipped++;
                 } else {
-                    $success++;
+                    $queued++;
                 }
             } catch (\Throwable $e) {
-                $fail++;
-                $errors[] = __('Parcel :id failed: :msg', [
-                    'id'  => $p->id,
-                    'msg' => $e->getMessage(),
-                ]);
-                Parcels_3pl::create([
-                    'parcel_id'         => $p->id,
-                    'parcel_3pl_name'   => 'logestechs',
-                    'target_company_id' => $targetCompanyId,
-                    'awb_number'        => null,
-                    'awb_pdf'           => null,
-                    'response'          => ['exception' => $e->getMessage()],
-                ]);
+                $errors[] = __('Parcel :id failed: :msg', ['id' => $p->id, 'msg' => $e->getMessage()]);
             }
         }
 
-        $summary = __('3PL assignment finished. Success: :s, Fail: :f', ['s' => $success, 'f' => $fail]);
-        if ($fail > 0) {
+        $summary = __(':q queued, :s already shipped, :f failed', [
+            'q' => $queued, 's' => $skipped, 'f' => count($errors),
+        ]);
+        if (! empty($errors)) {
             return back()->with('warning', $summary)->with('errors_list', $errors);
         }
         return back()->with('success', $summary);
@@ -1088,9 +1185,110 @@ public function parcel_bulk_action(Request $request)
         ];
     }
 
-    return view('backend.parcel.parcel_bulk_action', compact(
-        'merchants', 'request', 'deliverymans', 'statuses', 'hubs'
-    ));
+    $merchantRows = collect($merchants instanceof \Illuminate\Pagination\AbstractPaginator
+        ? $merchants->items()
+        : $merchants)
+        ->map(fn ($m) => [
+            'id'   => $m->id,
+            'name' => $m->business_name ?? optional($m->user)->name ?? ('#' . $m->id),
+        ])
+        ->values();
+
+    $deliverymanRows = collect($deliverymans instanceof \Illuminate\Pagination\AbstractPaginator
+        ? $deliverymans->items()
+        : $deliverymans)
+        ->map(fn ($d) => [
+            'id'   => $d->id,
+            'name' => optional($d->user)->name ?? ('#' . $d->id),
+        ])
+        ->values();
+
+    $hubRows = collect($hubs instanceof \Illuminate\Pagination\AbstractPaginator
+        ? $hubs->items()
+        : $hubs)
+        ->map(fn ($h) => [
+            'id'   => $h->id,
+            'name' => $h->name ?? $h->en_name ?? ('#' . $h->id),
+        ])
+        ->values();
+
+    // Logestechs connections available to this tenant via the new Shipping
+    // module. The bulk-assign UI renders these as a picker; the picked
+    // connection_id is what assignLogestechsBulk uses to route the batch.
+    $logestechsConns = \App\Shipping\Models\ShippingConnection::query()
+        ->with('provider')
+        ->where('company_id', settings()->id ?? null)
+        ->where('status', 'active')
+        ->whereHas('provider', fn ($p) => $p->where('code', 'logestechs'))
+        ->orderByDesc('is_default')
+        ->orderBy('connection_name')
+        ->get();
+
+    return Inertia::render('Admin/Parcel/BulkAction', [
+        'statuses'    => $statuses,
+        'merchants'   => $merchantRows,
+        'deliverymen' => $deliverymanRows,
+        'hubs'        => $hubRows,
+        'companies'   => [
+            ['value' => 'panda',      'label' => 'Panda'],
+            ['value' => 'zajel',      'label' => 'Zajel'],
+            ['value' => 'aramex',     'label' => 'Aramex'],
+            ['value' => 'jet',        'label' => 'J&T (Jet)'],
+            ['value' => 'logestechs', 'label' => 'Logestechs'],
+        ],
+        'logestechs_connections' => $logestechsConns->map(fn ($c) => [
+            'id'              => $c->id,
+            'connection_name' => $c->connection_name,
+            'is_default'      => (bool) $c->is_default,
+            'remote_company_id' => $c->remote_company_id,
+            'email'           => $c->email,
+        ])->values(),
+        'logestechs_manage_url' => route('shipping.connections.index'),
+        'urls' => [
+            'apply'  => route('parcel.bulk_action_apply'),
+            'index'  => route('parcel.index'),
+        ],
+        't' => [
+            'title'              => __('parcel.bulk_action') ?: 'Bulk action',
+            'parcels'            => __('parcel.title') ?: 'Parcels',
+            'shipment_ids'       => 'Shipment IDs',
+            'shipment_ids_hint'  => 'One per line, or separated by comma / space',
+            'check'              => 'Check',
+            'clear'              => __('levels.clear') ?: 'Clear',
+            'action_type'        => 'Action type',
+            'assign_3pl'         => 'Assign to 3PL',
+            'change_status'      => 'Change Status',
+            'cancel_shipments'   => 'Cancel Shipments',
+            'cancel_hint'        => 'Only newly created shipments will be cancelled; any already past pickup are skipped.',
+            'export_excel'       => 'Export to Excel',
+            'export_hint'        => 'Downloads a single .xlsx with every selected parcel + key fields.',
+            'print_awbs'         => 'Print AWBs',
+            'print_awbs_hint'    => 'Opens the existing multi-label printer in a new tab.',
+            'add_note'           => 'Add Note',
+            'add_note_label'     => 'Note to append',
+            'add_note_hint'      => 'Appended to each parcel and logged in the timeline.',
+            'send_sms'           => 'Send SMS',
+            'sms_message_label'  => 'SMS message',
+            'sms_message_hint'   => 'Use {tracking_id} {customer_name} {invoice_no} {cod} as placeholders. Skipped for parcels without a phone.',
+            'select_status'      => 'Select Status',
+            'select_3pl_company' => 'Select 3PL Company',
+            'logestechs_connection_label' => 'Logestechs connection',
+            'logestechs_connection_hint'  => 'Picks which saved Logestechs account ships this batch. Defaults to the tenant default.',
+            'logestechs_no_connections'   => 'No Logestechs connections configured.',
+            'logestechs_manage_link'      => 'Manage connections',
+            'logestechs_default_marker'   => '(default)',
+            'select_driver'      => 'Select Driver',
+            'select_hub'         => 'Select Hub',
+            'select_merchant'    => 'Select Merchant',
+            'schedule_at'        => 'Schedule Date',
+            'note'               => __('levels.note') ?: 'Note',
+            'note_placeholder'   => 'Applied to all selected shipments',
+            'optional'           => 'optional',
+            'apply'              => 'Apply Bulk Action',
+            'apply_hint'         => 'Choose an action, then click Apply Bulk Action',
+            'back'               => 'Back to parcels',
+        ],
+    ]);
 }
 
 

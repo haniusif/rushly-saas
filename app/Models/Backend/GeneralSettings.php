@@ -55,34 +55,44 @@ class GeneralSettings extends Model
         return $this->belongsTo(Upload::class, 'favicon', 'id');
     }
 
+    /**
+     * The upload row's `original` column is a plain varchar (relative path);
+     * historically the accessors did `$this->rxlogo->original['original']`,
+     * which returned the first character in PHP 8.2 and throws TypeError on
+     * PHP 8.3+. We now read the string directly.
+     */
     public function getLogoImageAttribute()
     {
-        if (!empty($this->rxlogo->original['original']) && file_exists(public_path($this->rxlogo->original['original']))) {
-            return static_asset($this->rxlogo->original['original']);
+        $path = optional($this->rxlogo)->original;
+        if (!empty($path) && file_exists(public_path($path))) {
+            return static_asset($path);
         }
         return static_asset('images/default/logo.png');
     }
 
     public function getPLogoImageAttribute()
     {
-        if (!empty($this->rxlogo->original['original']) && file_exists(public_path($this->rxlogo->original['original']))) {
-            return public_path($this->rxlogo->original['original']);
+        $path = optional($this->rxlogo)->original;
+        if (!empty($path) && file_exists(public_path($path))) {
+            return public_path($path);
         }
         return public_path('images/default/logo.png');
     }
 
     public function getLightLogoImageAttribute()
     {
-        if (!empty($this->lightlogo->original['original']) && file_exists(public_path($this->lightlogo->original['original']))) {
-            return static_asset($this->lightlogo->original['original']);
+        $path = optional($this->lightlogo)->original;
+        if (!empty($path) && file_exists(public_path($path))) {
+            return static_asset($path);
         }
         return static_asset('images/default/light-logo.png');
     }
 
     public function getFaviconImageAttribute()
     {
-        if (!empty($this->rxfavicon->original['original']) && file_exists(public_path($this->rxfavicon->original['original']))) {
-            return static_asset($this->rxfavicon->original['original']);
+        $path = optional($this->rxfavicon)->original;
+        if (!empty($path) && file_exists(public_path($path))) {
+            return static_asset($path);
         }
         return static_asset('images/default/favicon.png');
     }

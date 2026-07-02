@@ -93,31 +93,40 @@ class GeneralSettingsRepository implements GeneralSettingsInterface{
 
     }
 
+    /**
+     * Store an uploaded logo / favicon and return the resulting upload id.
+     *
+     * Multi-tenant safety: we ALWAYS create a fresh `uploads` row per change
+     * and NEVER mutate or unlink the previous file. Historically this method
+     * did `Upload::find($id)` and overwrote the row + deleted its file, but
+     * because `general_settings.favicon` was seeded to the same upload id on
+     * every tenant, tenant A's upload would clobber every other tenant's
+     * favicon. Leaving the old row as an orphan is safe (GC can clean up
+     * later) and cheap.
+     *
+     * @param  mixed  $image_id  Kept for signature compatibility; ignored now.
+     * @param  \Illuminate\Http\UploadedFile|null $image
+     * @return int|false  New upload id on success, false on failure.
+     */
     public function file($image_id = '', $image)
     {
-         
         try {
-            $image_name = '';
-            if(!blank($image)){
-                $destinationPath       = public_path('uploads/settings');
-                $profileImage          = date('YmdHis') .random_int(1000,9999). "." . $image->getClientOriginalExtension();
-                $image->move($destinationPath, $profileImage);
-                $image_name            = 'uploads/settings/'.$profileImage;
+            if (blank($image)) return false;
+
+            $destinationPath = public_path('uploads/settings');
+            if (! is_dir($destinationPath)) {
+                @mkdir($destinationPath, 0755, true);
             }
-            if(blank($image_id)){
-                $upload           = new Upload();
-            }else{
-                $upload           = Upload::find($image_id);
-                if(file_exists($upload->original))
-                {
-                    unlink($upload->original);
-                }
-            }
-            $upload->original     = $image_name;
+            $profileImage = date('YmdHis') . random_int(1000, 9999) . '.' . $image->getClientOriginalExtension();
+            $image->move($destinationPath, $profileImage);
+
+            $upload = new Upload();
+            $upload->original = 'uploads/settings/' . $profileImage;
             $upload->save();
+
             return $upload->id;
-        }
-        catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            \Log::warning('general-settings.upload_failed', ['error' => $e->getMessage()]);
             return false;
         }
     }

@@ -10,6 +10,13 @@ class HandleInertiaRequests extends Middleware
 {
     protected $rootView = 'merchant.app';
 
+    public function rootView(Request $request): string
+    {
+        return str_starts_with(ltrim($request->path(), '/'), 'admin')
+            ? 'admin.app'
+            : $this->rootView;
+    }
+
     public function version(Request $request): ?string
     {
         return parent::version($request);
@@ -29,6 +36,12 @@ class HandleInertiaRequests extends Middleware
                     'email' => $user->email ?? null,
                     'image' => $user->image ?? null,
                 ] : null,
+                // Flat permission array — same source the server-side
+                // hasPermission() helper reads (users.permissions JSON).
+                // Sidebar/UI can filter menu entries by perm without
+                // having to hit an endpoint. Server-side middleware
+                // remains authoritative; this is UX-only.
+                'permissions' => $user && is_array($user->permissions) ? array_values($user->permissions) : [],
             ],
 
             'brand' => fn () => $this->brand(),
@@ -43,9 +56,11 @@ class HandleInertiaRequests extends Middleware
             ],
 
             'flash' => [
-                'success' => fn () => $request->session()->get('success'),
-                'error'   => fn () => $request->session()->get('error'),
-                'message' => fn () => $request->session()->get('message'),
+                'success'     => fn () => $request->session()->get('success'),
+                'error'       => fn () => $request->session()->get('error'),
+                'warning'     => fn () => $request->session()->get('warning'),
+                'message'     => fn () => $request->session()->get('message'),
+                'errors_list' => fn () => $request->session()->get('errors_list'),
             ],
 
             'ziggy' => fn () => [

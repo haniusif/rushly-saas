@@ -6,7 +6,7 @@ import {
     CheckSquare, Bug, Map, MessageCircle, Newspaper, Activity,
     Settings, History, FileText, Receipt, Menu, X, Sun, Moon,
     LogOut, ChevronDown, Bell, Search, Globe, Check, User as UserIcon,
-    BarChart3, AlertTriangle, Hourglass, Wand2, ListChecks,
+    BarChart3, AlertTriangle, Hourglass, Wand2, ListChecks, CheckCircle2, XCircle, Info,
     Wallet, ShieldAlert, DollarSign, CreditCard, BadgeDollarSign,
     UserCog, HardDrive, Briefcase, Tags, BellRing, KeyRound,
     Plug, MapPinned, Layout, ScrollText, Sliders, BookOpen,
@@ -355,6 +355,59 @@ function Topbar({ onSidebarOpen, user }) {
     );
 }
 
+function FlashBanner() {
+    const { props } = usePage();
+    const flash = props?.flash || {};
+    const errorsList = Array.isArray(flash.errors_list) ? flash.errors_list : null;
+    const entries = [
+        flash.success && { key: 'success', tone: 'success', text: flash.success },
+        flash.error   && { key: 'error',   tone: 'error',   text: flash.error },
+        flash.warning && { key: 'warning', tone: 'warning', text: flash.warning },
+        flash.message && { key: 'message', tone: 'info',    text: flash.message },
+    ].filter(Boolean);
+    const [dismissed, setDismissed] = React.useState({});
+    // Reset dismissed state when a new set of flashes appears (e.g. after a POST).
+    React.useEffect(() => { setDismissed({}); }, [flash.success, flash.error, flash.warning, flash.message]);
+    if (entries.length === 0) return null;
+    const tones = {
+        success: { bg: 'bg-emerald-50 dark:bg-emerald-950/40', text: 'text-emerald-800 dark:text-emerald-200', border: 'border-emerald-200 dark:border-emerald-900', icon: CheckCircle2 },
+        error:   { bg: 'bg-rose-50 dark:bg-rose-950/40',       text: 'text-rose-800 dark:text-rose-200',       border: 'border-rose-200 dark:border-rose-900',       icon: XCircle },
+        warning: { bg: 'bg-amber-50 dark:bg-amber-950/40',     text: 'text-amber-800 dark:text-amber-200',     border: 'border-amber-200 dark:border-amber-900',     icon: AlertTriangle },
+        info:    { bg: 'bg-sky-50 dark:bg-sky-950/40',         text: 'text-sky-800 dark:text-sky-200',         border: 'border-sky-200 dark:border-sky-900',         icon: Info },
+    };
+    return (
+        <div className="mb-4 space-y-2">
+            {entries.map(e => {
+                if (dismissed[e.key]) return null;
+                const t = tones[e.tone];
+                const Icon = t.icon;
+                return (
+                    <div key={e.key} className={cn('flex items-start gap-3 rounded-md border px-4 py-3 text-sm', t.bg, t.text, t.border)}>
+                        <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                            <div>{e.text}</div>
+                            {(e.tone === 'error' || e.tone === 'warning') && errorsList && errorsList.length > 0 && (
+                                <ul className="mt-1.5 list-disc ps-5 space-y-0.5 text-xs opacity-90">
+                                    {errorsList.slice(0, 20).map((line, i) => <li key={i}>{String(line)}</li>)}
+                                    {errorsList.length > 20 && <li>… {errorsList.length - 20} more</li>}
+                                </ul>
+                            )}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setDismissed(d => ({ ...d, [e.key]: true }))}
+                            className="opacity-60 hover:opacity-100"
+                            aria-label="Dismiss"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
 export default function AdminLayout({ title, breadcrumbs, children }) {
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
     const { url, props } = usePage();
@@ -369,6 +422,7 @@ export default function AdminLayout({ title, breadcrumbs, children }) {
             <div className="md:ps-64">
                 <Topbar onSidebarOpen={() => setSidebarOpen(true)} user={user} />
                 <main className="p-4 md:p-8">
+                    <FlashBanner />
                     {(title || breadcrumbs) && (
                         <div className="mb-6">
                             {breadcrumbs && (

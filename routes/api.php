@@ -49,22 +49,47 @@ use App\Http\Controllers\Api\V10\Admin\AdminFraudController;
 
 
 
-Route::get('/panda/schudule_tracking', [DeliveryPandaController::class, 'schudule_tracking']);
-Route::get('/panda/schudule_tracking_temp', [DeliveryPandaController::class, 'schudule_tracking_temp']);
+// Phase 9 — Panda tracking cron + delivery endpoints are now behind
+// CheckApiKey. These were previously open, letting anyone with the
+// URL create Panda shipments or scrape tracking data (3PL.md issue #1).
+Route::middleware('CheckApiKey')->group(function () {
+    Route::get('/panda/schudule_tracking',      [DeliveryPandaController::class, 'schudule_tracking']);
+    Route::get('/panda/schudule_tracking_temp', [DeliveryPandaController::class, 'schudule_tracking_temp']);
+});
+
+// Public per-tenant tracking API — authenticated by X-API-Key header
+// against the public_tracking_api_keys table. Read-only, returns a
+// limited projection. Meant to be embedded on merchants' own storefronts.
+Route::middleware('public.tracking.key')->group(function () {
+    Route::get('/public/tracking/{tracking_id}',
+        [\App\Http\Controllers\Api\PublicTrackingController::class, 'show']
+    )->name('public.tracking.show');
+
+    // CORS preflight — no-op handler, headers set by the controller
+    // response (this route just needs to answer 204 OK to OPTIONS).
+    Route::options('/public/tracking/{tracking_id}', function () {
+        return response('', 204)->withHeaders([
+            'Access-Control-Allow-Origin'  => '*',
+            'Access-Control-Allow-Methods' => 'GET, OPTIONS',
+            'Access-Control-Allow-Headers' => 'X-API-Key, Content-Type',
+            'Access-Control-Max-Age'       => '86400',
+        ]);
+    })->withoutMiddleware('public.tracking.key');
+});
 
 // Zajel posts status events here. Auth is the shared secret in X-AUTH-API-KEY,
 // validated inside the controller (config('services.zajel.webhook_secret')).
+// This one stays unauthenticated at the router level — the controller
+// enforces the shared-secret check itself.
 Route::post('/zajel/webhook', [ZajelWebhookController::class, 'handle']);
 
-
-Route::prefix('delivery')->group(function () {
-    Route::get('/test', [DeliveryPandaController::class, 'test']);
-    Route::post('/create', [DeliveryPandaController::class, 'createShipment']);
-    Route::post('/agent-create', [DeliveryPandaController::class, 'createAgentShipment']);
+// Phase 9 — /delivery/* used to be open. Now requires apiKey.
+Route::prefix('delivery')->middleware('CheckApiKey')->group(function () {
+    Route::get('/test',                  [DeliveryPandaController::class, 'test']);
+    Route::post('/create',               [DeliveryPandaController::class, 'createShipment']);
+    Route::post('/agent-create',         [DeliveryPandaController::class, 'createAgentShipment']);
     Route::post('/customer-to-customer', [DeliveryPandaController::class, 'createCustomerToCustomerShipment']);
-    Route::post('/track', [DeliveryPandaController::class, 'trackShipment']);
-    
-    
+    Route::post('/track',                [DeliveryPandaController::class, 'trackShipment']);
 });
 
 /*
@@ -93,6 +118,15 @@ Route::prefix('v10/external/zid')->middleware(['CheckApiKey'])->group(function (
 Route::prefix('v10/external/woocommerce')->middleware(['CheckApiKey'])->group(function () {
     Route::post('/parcel', [WooCommerceParcelController::class, 'store']);
 });
+
+// Phase 3 — generic commerce webhook ingest. One endpoint per provider;
+// the controller delegates to WebhookIngestService which handles HMAC
+// verification (per-connection secret), idempotency, persistence, and
+// job dispatch. No Sanctum / apiKey gate — the HMAC IS the auth. The
+// controller 404s when config('features.commerce_layer') is off so the
+// surface stays dark until rollout.
+Route::post('v10/commerce/{provider}/webhook', \App\Http\Controllers\Api\V10\Commerce\WebhookController::class)
+    ->name('commerce.webhook.ingest');
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();

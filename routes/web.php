@@ -884,6 +884,16 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                             ->name('logestechs.settings.index')
                             ->middleware('hasPermission:integrations_read');
 
+                        // Per-tenant public tracking API keys — for embedding
+                        // tracking on merchants' storefronts. See PublicTrackingApiKey model.
+                        Route::prefix('settings/public-tracking-api-keys')->name('settings.public-tracking-api-keys.')->group(function () {
+                            Route::get('/',                    [\App\Http\Controllers\Backend\Settings\PublicTrackingApiKeyController::class, 'index'])->name('index')->middleware('hasPermission:integrations_read');
+                            Route::post('/',                   [\App\Http\Controllers\Backend\Settings\PublicTrackingApiKeyController::class, 'store'])->name('store')->middleware('hasPermission:integrations_update');
+                            Route::post('/{id}/regenerate',    [\App\Http\Controllers\Backend\Settings\PublicTrackingApiKeyController::class, 'regenerate'])->whereNumber('id')->name('regenerate')->middleware('hasPermission:integrations_update');
+                            Route::post('/{id}/toggle',        [\App\Http\Controllers\Backend\Settings\PublicTrackingApiKeyController::class, 'toggle'])->whereNumber('id')->name('toggle')->middleware('hasPermission:integrations_update');
+                            Route::delete('/{id}',             [\App\Http\Controllers\Backend\Settings\PublicTrackingApiKeyController::class, 'destroy'])->whereNumber('id')->name('destroy')->middleware('hasPermission:integrations_update');
+                        });
+
                         // Generic shipping module — connections CRUD for all providers.
                         // Register literal-segment routes BEFORE wildcard {provider} so the
                         // wildcard doesn't swallow them (e.g. POST /connections/test must

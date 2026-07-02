@@ -82,6 +82,7 @@ class Kernel extends HttpKernel
         'IsNotInstalled'    =>\App\Http\Middleware\IsNotInstalledMiddleware::class,
         'subscriptionCheck'    =>\App\Http\Middleware\subscriptionCheckMiddleware::class,
         'salla.webhook'        => \App\Salla\Http\Middleware\VerifyWebhook::class,
+        'public.tracking.key'  => \App\Http\Middleware\VerifyPublicTrackingApiKey::class,
 
     ];
 }

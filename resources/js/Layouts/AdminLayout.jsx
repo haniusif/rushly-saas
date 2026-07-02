@@ -104,6 +104,8 @@ const NAV = [
         { tKey: 'menu_packaging',               icon: Boxes,         route: 'packaging.index',                match: ['admin/packaging'] },
         { tKey: 'menu_assets_category',         icon: Tags,          route: 'asset-category.index',           match: ['admin/asset-category'] },
         { tKey: 'menu_invoice_generate',        icon: FileText,      route: 'invoice.generate.menually.index', match: ['admin/settings/invoice-generate'] },
+        { tKey: 'menu_api_docs',                icon: BookOpen,      route: 'api-docs.merchant',              match: ['admin/api-docs'],           perm: 'integrations_read' },
+        { tKey: 'menu_public_tracking_api',     icon: KeyRound,      route: 'settings.public-tracking-api-keys.index', match: ['admin/settings/public-tracking-api-keys'], perm: 'integrations_read' },
     ]},
 ];
 
@@ -162,6 +164,12 @@ function useDarkMode() {
 
 function Sidebar({ open, onClose, currentUrl, brand }) {
     const t = useT();
+    const { props } = usePage();
+    // Flat permission list shared by HandleInertiaRequests.share.
+    // Server-side middleware remains authoritative — this is a UX
+    // gate so users don't see menu rows that would 403 anyway.
+    const perms = new Set(props?.auth?.permissions ?? []);
+    const canSee = (item) => ! item.perm || perms.has(item.perm);
     const brandName = brand?.name || 'Admin';
     const initial = brandName.charAt(0).toUpperCase();
     return (
@@ -195,13 +203,16 @@ function Sidebar({ open, onClose, currentUrl, brand }) {
                     </Button>
                 </div>
                 <nav className="h-[calc(100vh-4rem)] space-y-5 overflow-y-auto px-3 py-4">
-                    {NAV.map((section) => (
+                    {NAV.map((section) => {
+                        const visibleItems = section.items.filter(canSee);
+                        if (visibleItems.length === 0) return null;   // hide empty groups
+                        return (
                         <div key={section.group}>
                             <div className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
                                 {t(section.group)}
                             </div>
                             <ul className="space-y-0.5">
-                                {section.items.map((item) => {
+                                {visibleItems.map((item) => {
                                     const active = isActive(currentUrl, item);
                                     const Icon = item.icon;
                                     return (
@@ -224,7 +235,8 @@ function Sidebar({ open, onClose, currentUrl, brand }) {
                                 })}
                             </ul>
                         </div>
-                    ))}
+                        );
+                    })}
                 </nav>
             </aside>
         </>

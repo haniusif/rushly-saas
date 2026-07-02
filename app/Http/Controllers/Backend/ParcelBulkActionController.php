@@ -302,8 +302,12 @@ public function apply(Request $request)
             return $this->assignLogestechsBulk($parcels, $rwh_parcels, $request);
         }
 
+        if ($company === '') {
+            return back()->with('error', __('Select a 3PL company.'));
+        }
+
         if ($company !== 'panda') {
-            return back()->with('error', __('3PL company not supported or not selected.'));
+            return back()->with('error', __('3PL company not supported: :c', ['c' => $company]));
         }
 
         $baseUrl = rtrim(config('services.deliverypanda.base_url', env('PANDA_BASE_URL', 'https://app.deliverypanda.me')), '/');

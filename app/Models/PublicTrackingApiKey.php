@@ -21,6 +21,7 @@ class PublicTrackingApiKey extends Model
         'key_hash',
         'key_prefix',
         'allowed_origins',
+        'response_fields',
         'is_active',
         'last_used_at',
         'request_count',
@@ -29,10 +30,25 @@ class PublicTrackingApiKey extends Model
 
     protected $casts = [
         'allowed_origins' => 'array',
+        'response_fields' => 'array',
         'is_active'       => 'boolean',
         'last_used_at'    => 'datetime',
         'request_count'   => 'integer',
     ];
+
+    /**
+     * Fields the public tracking endpoint can return. `tracking_id` and
+     * `status` are always included regardless of the allow-list — they're
+     * the response identity. The rest are opt-in per key.
+     */
+    public const RESPONSE_FIELD_OPTIONS = [
+        'status_label',
+        'created_at',
+        'expected_delivery_at',
+        'events',
+    ];
+
+    public const ALWAYS_ON_RESPONSE_FIELDS = ['tracking_id', 'status'];
 
     protected $hidden = ['key_hash'];
 

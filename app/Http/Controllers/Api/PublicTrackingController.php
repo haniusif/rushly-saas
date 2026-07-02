@@ -53,16 +53,28 @@ class PublicTrackingController extends Controller
             ])
             ->values();
 
+        $full = [
+            'tracking_id'          => $parcel->tracking_id,
+            'status'               => (int) $parcel->status,
+            'status_label'         => ParcelStatusHelper::label((int) $parcel->status),
+            'created_at'           => optional($parcel->created_at)->toIso8601String(),
+            'expected_delivery_at' => optional($parcel->expected_delivery_at)->toIso8601String(),
+            'events'               => $events,
+        ];
+
+        // Apply per-key response-field allow-list. null = no filter.
+        $allow = $key->response_fields;
+        if (is_array($allow) && ! empty($allow)) {
+            $always = \App\Models\PublicTrackingApiKey::ALWAYS_ON_RESPONSE_FIELDS;
+            $keep   = array_unique(array_merge($always, $allow));
+            $data   = array_intersect_key($full, array_flip($keep));
+        } else {
+            $data = $full;
+        }
+
         return response()->json([
             'success' => true,
-            'data'    => [
-                'tracking_id'          => $parcel->tracking_id,
-                'status'               => (int) $parcel->status,
-                'status_label'         => ParcelStatusHelper::label((int) $parcel->status),
-                'created_at'           => optional($parcel->created_at)->toIso8601String(),
-                'expected_delivery_at' => optional($parcel->expected_delivery_at)->toIso8601String(),
-                'events'               => $events,
-            ],
+            'data'    => $data,
         ])->withHeaders([
             // Permissive CORS — the whole point of this endpoint is to
             // be embeddable on third-party storefronts. Origin-level

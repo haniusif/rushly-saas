@@ -43,17 +43,21 @@ class PublicTrackingApiKeyController extends Controller
         // Template URLs the client fills in per row. We can't use nested
         // closures for parameterized routes here — Inertia tries to
         // resolve them via App::call() and blows up on the `$id` param.
+        $updateTpl     = route('settings.public-tracking-api-keys.update', ['id' => '__ID__']);
         $regenerateTpl = route('settings.public-tracking-api-keys.regenerate', ['id' => '__ID__']);
         $toggleTpl     = route('settings.public-tracking-api-keys.toggle', ['id' => '__ID__']);
         $destroyTpl    = route('settings.public-tracking-api-keys.destroy', ['id' => '__ID__']);
 
         return Inertia::render('Admin/Settings/PublicTrackingApiKeys/Index', [
-            'keys'           => $keys,
-            'endpoint'       => $endpoint,
-            'sampleTracking' => $sampleTracking,
-            'flash_key'      => $request->session()->get('new_api_key_plaintext'),
-            'urls'           => [
+            'keys'                 => $keys,
+            'endpoint'             => $endpoint,
+            'sampleTracking'       => $sampleTracking,
+            'flash_key'            => $request->session()->get('new_api_key_plaintext'),
+            'responseFieldOptions' => PublicTrackingApiKey::RESPONSE_FIELD_OPTIONS,
+            'alwaysOnFields'       => PublicTrackingApiKey::ALWAYS_ON_RESPONSE_FIELDS,
+            'urls'                 => [
                 'store'          => route('settings.public-tracking-api-keys.store'),
+                'update_tpl'     => $updateTpl,
                 'regenerate_tpl' => $regenerateTpl,
                 'toggle_tpl'     => $toggleTpl,
                 'destroy_tpl'    => $destroyTpl,
@@ -63,21 +67,17 @@ class PublicTrackingApiKeyController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'name'            => ['required', 'string', 'max:191'],
-            'allowed_origins' => ['nullable', 'string', 'max:2000'],
-        ]);
+        $data = $this->validateForm($request);
 
         [$plaintext, $hash, $prefix] = PublicTrackingApiKey::generate();
-
-        $origins = $this->normalizeOrigins($data['allowed_origins'] ?? null);
 
         PublicTrackingApiKey::create([
             'company_id'      => optional(settings())->id,
             'name'            => $data['name'],
             'key_hash'        => $hash,
             'key_prefix'      => $prefix,
-            'allowed_origins' => $origins,
+            'allowed_origins' => $this->normalizeOrigins($data['allowed_origins'] ?? null),
+            'response_fields' => $this->normalizeResponseFields($data['response_fields'] ?? null),
             'is_active'       => true,
             'created_by'      => Auth::id(),
         ]);
@@ -87,6 +87,25 @@ class PublicTrackingApiKeyController extends Controller
         session()->flash('new_api_key_plaintext', $plaintext);
 
         Toastr::success('API key created. Copy it now — it will not be shown again.', 'Success');
+        return back();
+    }
+
+    /**
+     * Edit an existing key's metadata (name / origins / response fields)
+     * without rotating its secret. Rotation is a separate endpoint on
+     * purpose — changing what a key returns should not force integrations
+     * to switch to a new secret.
+     */
+    public function update(Request $request, int $id)
+    {
+        $row  = $this->find($id);
+        $data = $this->validateForm($request);
+        $row->update([
+            'name'            => $data['name'],
+            'allowed_origins' => $this->normalizeOrigins($data['allowed_origins'] ?? null),
+            'response_fields' => $this->normalizeResponseFields($data['response_fields'] ?? null),
+        ]);
+        Toastr::success('Key settings updated.', 'Success');
         return back();
     }
 
@@ -132,6 +151,16 @@ class PublicTrackingApiKeyController extends Controller
         return $row;
     }
 
+    private function validateForm(Request $request): array
+    {
+        return $request->validate([
+            'name'              => ['required', 'string', 'max:191'],
+            'allowed_origins'   => ['nullable', 'string', 'max:2000'],
+            'response_fields'   => ['nullable', 'array'],
+            'response_fields.*' => ['string', 'in:' . implode(',', PublicTrackingApiKey::RESPONSE_FIELD_OPTIONS)],
+        ]);
+    }
+
     private function normalizeOrigins(?string $raw): ?array
     {
         if ($raw === null || trim($raw) === '') return null;
@@ -144,6 +173,15 @@ class PublicTrackingApiKeyController extends Controller
         return empty($items) ? null : $items;
     }
 
+    private function normalizeResponseFields(?array $raw): ?array
+    {
+        if ($raw === null) return null;
+        $filtered = array_values(array_intersect($raw, PublicTrackingApiKey::RESPONSE_FIELD_OPTIONS));
+        // Empty array = "expose nothing beyond the always-on fields" —
+        // legitimate config (some merchants may only want status).
+        return $filtered;
+    }
+
     private function serialize(PublicTrackingApiKey $k): array
     {
         return [
@@ -151,6 +189,7 @@ class PublicTrackingApiKeyController extends Controller
             'name'            => $k->name,
             'key_prefix'      => $k->key_prefix,
             'allowed_origins' => $k->allowed_origins ?: [],
+            'response_fields' => $k->response_fields, // null = all, [] = only always-on
             'is_active'       => (bool) $k->is_active,
             'last_used_at'    => optional($k->last_used_at)->toIso8601String(),
             'request_count'   => (int) $k->request_count,

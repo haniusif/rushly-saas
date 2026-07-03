@@ -522,4 +522,22 @@ return [
     'all'                      => 'All',
     'choose'                   => 'Choose…',
     'export_to_excel'          => 'Export to Excel',
+    'confirm'                  => 'Confirm',
+    'select_file'              => 'Select Excel file',
+    'no_data_found'            => 'No data found',
+    'updating'                 => 'Updating…',
+    'created_at'               => 'Created',
+    'income'                   => 'Income',
+    'expense'                  => 'Expense',
+
+    // Merchant reports
+    'total'                    => 'Total',
+    'apply_filter'             => 'Apply a date filter to populate this report.',
+
+    // Import wizard
+    'back'                     => 'Back',
+    'import'                   => 'Import',
+
+    // Generic placeholder for empty-select options (Hub picker, area picker, …).
+    'none'                     => 'None',
 ];

@@ -168,24 +168,91 @@ class UserController extends Controller
 
     public function edit($id)
     {
-        $user         = $this->repo->get($id);
-        $hubs         = $this->repo->hubs();
-        $departments  = $this->repo->departments();
-        $designations = $this->repo->designations();
-        $roles        = $this->role->getRole();
-        return view('backend.user.edit',compact('user','hubs','departments','designations','roles'));
+        // Ported from backend.user.edit (Bootstrap 4 Blade) to Inertia so it
+        // matches the Create page + the rest of the admin panel. The Form.jsx
+        // component already handles mode === 'edit' — same lookups shape, same
+        // labels; the only new pieces are `entity` (with the current row) and
+        // `urls.submit` pointing at users.update instead of users.store.
+        $user = $this->repo->get($id);
+
+        return \Inertia\Inertia::render('Admin/User/Form', [
+            'mode'   => 'edit',
+            'entity' => [
+                'id'             => $user->id,
+                'name'           => $user->name,
+                'email'          => $user->email,
+                'mobile'         => $user->mobile,
+                'address'        => $user->address,
+                'designation_id' => $user->designation_id,
+                'department_id'  => $user->department_id,
+                'role_id'        => $user->role_id,
+                'status'         => (int) $user->status,
+                'nid_number'     => $user->nid_number,
+                'joining_date'   => $user->joining_date,
+                'hub_id'         => $user->hub_id,
+                'salary'         => $user->salary,
+                'image'          => $user->image,
+            ],
+            'lookups' => [
+                'hubs'         => collect($this->repo->hubs())->map(fn ($h) => ['value' => (string) $h->id, 'label' => $h->name])->values(),
+                'departments'  => collect($this->repo->departments())->map(fn ($d) => ['value' => (string) $d->id, 'label' => $d->title])->values(),
+                'designations' => collect($this->repo->designations())->map(fn ($d) => ['value' => (string) $d->id, 'label' => $d->title])->values(),
+                'roles'        => collect($this->role->getRole())->map(fn ($r) => ['value' => (string) $r->id, 'label' => $r->name])->values(),
+                'statuses'     => collect((array) trans('status'))->map(fn ($v, $k) => ['value' => (string) $k, 'label' => (string) $v])->values(),
+            ],
+            'flags' => [
+                'is_super_admin' => isSuperadmin(),
+                // Same rule the Blade view enforced: id=1 hides most fields.
+                'is_owner'       => (int) $user->id === 1,
+            ],
+            'urls' => [
+                'submit' => route('users.update'),
+                'cancel' => route('users.index'),
+            ],
+            't' => [
+                'title'      => __('user.edit_user') ?: 'Edit user',
+                'edit'       => __('levels.edit') ?: 'Edit',
+                'list_title' => __('user.title') ?: 'Users',
+                'name'       => __('levels.name') ?: 'Name',
+                'phone'      => __('levels.phone') ?: 'Phone',
+                'address'    => __('levels.address') ?: 'Address',
+                'designation'=> __('levels.designation') ?: 'Designation',
+                'department' => __('levels.department') ?: 'Department',
+                'role'       => __('levels.role') ?: 'Role',
+                'status'     => __('levels.status') ?: 'Status',
+                'email'      => __('levels.email') ?: 'Email',
+                'password'   => __('levels.password') ?: 'Password',
+                'nid'        => __('levels.nid') ?: 'NID',
+                'joining_date'=> __('levels.joining_date') ?: 'Joining date',
+                'hub'        => __('levels.hub') ?: 'Hub',
+                'salary'     => __('levels.salary') ?: 'Salary',
+                'image'      => __('levels.image') ?: 'Image',
+                'save'       => __('levels.save_change') ?: __('levels.save') ?: 'Save',
+                'cancel'     => __('levels.cancel') ?: 'Cancel',
+                'back'       => __('levels.back') ?: 'Back',
+                'none'       => __('levels.none') ?: 'None',
+                'placeholder_name'   => __('placeholder.Enter_name') ?: 'Enter name',
+                'placeholder_mobile' => __('placeholder.Enter_mobile') ?: 'Enter mobile',
+                'placeholder_address'=> __('placeholder.Enter_address') ?: 'Enter address',
+                'placeholder_email'  => __('placeholder.enter_email') ?: 'Enter email',
+                'placeholder_password'=> __('placeholder.Enter_password') ?: 'Leave blank to keep current password',
+                'placeholder_nid'    => __('placeholder.Enter_nid_number') ?: 'Enter NID',
+                'placeholder_salary' => __('salary.title') ?: 'Salary',
+            ],
+        ]);
     }
 
     public function update(UpdateUserRequest $request)
     {
-
-        if($this->repo->update($request->id, $request)){
-            Toastr::success('User successfully updated.',__('message.success'));
-            return redirect()->route('users.index');
-        }else{
-            Toastr::error('Something went wrong.',__('message.error'));
-            return redirect()->back();
+        // Same flash-key swap done in ParcelController::store (213f935) so the
+        // Inertia FlashBanner in AdminLayout renders the outcome. Toastr writes
+        // to a session key nothing on the frontend reads.
+        if ($this->repo->update($request->id, $request)) {
+            return redirect()->route('users.index')
+                ->with('success', __('User successfully updated.'));
         }
+        return redirect()->back()->withInput()
+            ->with('error', __('Something went wrong.'));
     }
 
     public function destroy($id)

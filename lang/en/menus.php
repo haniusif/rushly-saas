@@ -121,4 +121,13 @@ return [
 
    // Onboarding tours
    'tours'                       => 'Onboarding tours',
+
+   // Sidebar entries used by the legacy Blade sidebar. The Inertia
+   // AdminLayout resolves these via resources/js/lib/i18n.js, but any
+   // page still extending backend.partials.master falls back to __()
+   // and needs a value here to avoid rendering 'menus.performance'
+   // literal on screen.
+   'performance'                 => 'Performance',
+   'knowledge_base'              => 'Knowledge Base',
+   'users_management'            => 'Users Management',
 ];

@@ -1,0 +1,542 @@
+import * as React from 'react';
+import {
+    User, Store, Phone, MapPin, Banknote, Tag, Package, Truck,
+    StickyNote, Box, Flame, Save, ArrowLeft, Calculator,
+} from 'lucide-react';
+import { Card, CardContent } from '@/Components/ui/Card';
+import { Button } from '@/Components/ui/Button';
+import { Input } from '@/Components/ui/Input';
+import { Label } from '@/Components/ui/Label';
+import { Select } from '@/Components/ui/Select';
+import { Textarea } from '@/Components/ui/Textarea';
+import { cn } from '@/lib/utils';
+
+function Field({ label, required, error, children, className, icon: Icon }) {
+    return (
+        <div className={cn('space-y-1.5', className)}>
+            <Label className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {Icon && <Icon className="h-3 w-3" />}
+                {label}
+                {required && <span className="text-destructive">*</span>}
+            </Label>
+            {children}
+            {error && <p className="text-xs text-destructive">{error}</p>}
+        </div>
+    );
+}
+
+function SectionHeader({ title, subtitle }) {
+    return (
+        <div className="mb-4">
+            <div className="text-sm font-semibold tracking-tight">{title}</div>
+            {subtitle && <div className="mt-0.5 text-xs text-muted-foreground">{subtitle}</div>}
+        </div>
+    );
+}
+
+function Money({ value, currency }) {
+    return (
+        <span className="tabular-nums">
+            <span className="text-muted-foreground text-xs me-0.5">{currency}</span>
+            {Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </span>
+    );
+}
+
+// ── Leaflet loader shared across ParcelForm instances. Loads the CSS + JS
+// from unpkg on demand so we don't pull the library into the merchant.js
+// bundle. Once resolved every subsequent map uses the cached window.L.
+let leafletPromise = null;
+function loadLeaflet() {
+    if (typeof window === 'undefined') return Promise.resolve(null);
+    if (window.L) return Promise.resolve(window.L);
+    if (leafletPromise) return leafletPromise;
+    leafletPromise = new Promise((resolve, reject) => {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(link);
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        script.async = true;
+        script.onload = () => resolve(window.L);
+        script.onerror = () => reject(new Error('Failed to load Leaflet'));
+        document.body.appendChild(script);
+    });
+    return leafletPromise;
+}
+
+/**
+ * Click-to-pin picker over OpenStreetMap. Two markers: pickup (blue) +
+ * drop-off (red). Clicking the map places the currently-active marker,
+ * which flips based on the toggle above the map. Coordinates are written
+ * straight back into the form so the backend keeps its existing contract
+ * (pickup_lat/pickup_long, lat/long).
+ */
+function LocationPicker({ form, defaultCenter, labels }) {
+    const mapEl = React.useRef(null);
+    const mapObj = React.useRef(null);
+    const pickupMarker = React.useRef(null);
+    const dropoffMarker = React.useRef(null);
+    const [mode, setMode] = React.useState('dropoff');
+    const modeRef = React.useRef(mode);
+    modeRef.current = mode;
+
+    const pickupLat  = parseFloat(form.data.pickup_lat);
+    const pickupLong = parseFloat(form.data.pickup_long);
+    const dropLat    = parseFloat(form.data.lat);
+    const dropLong   = parseFloat(form.data.long);
+
+    React.useEffect(() => {
+        let cancelled = false;
+        loadLeaflet().then((L) => {
+            if (cancelled || !L || !mapEl.current || mapObj.current) return;
+            const initial = Number.isFinite(dropLat) && Number.isFinite(dropLong)
+                ? [dropLat, dropLong]
+                : Number.isFinite(pickupLat) && Number.isFinite(pickupLong)
+                    ? [pickupLat, pickupLong]
+                    : defaultCenter;
+            const map = L.map(mapEl.current).setView(initial, 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors',
+            }).addTo(map);
+            const pickupIcon = L.divIcon({
+                className: '', html: '<div style="background:#0284c7;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);width:16px;height:16px;border-radius:50%;transform:translate(-50%,-50%)"></div>',
+            });
+            const dropIcon = L.divIcon({
+                className: '', html: '<div style="background:#dc2626;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);width:16px;height:16px;border-radius:50%;transform:translate(-50%,-50%)"></div>',
+            });
+            if (Number.isFinite(pickupLat) && Number.isFinite(pickupLong)) {
+                pickupMarker.current = L.marker([pickupLat, pickupLong], { icon: pickupIcon, draggable: true }).addTo(map);
+                pickupMarker.current.on('dragend', (ev) => {
+                    const p = ev.target.getLatLng();
+                    form.setData((d) => ({ ...d, pickup_lat: p.lat.toFixed(6), pickup_long: p.lng.toFixed(6) }));
+                });
+            }
+            if (Number.isFinite(dropLat) && Number.isFinite(dropLong)) {
+                dropoffMarker.current = L.marker([dropLat, dropLong], { icon: dropIcon, draggable: true }).addTo(map);
+                dropoffMarker.current.on('dragend', (ev) => {
+                    const p = ev.target.getLatLng();
+                    form.setData((d) => ({ ...d, lat: p.lat.toFixed(6), long: p.lng.toFixed(6) }));
+                });
+            }
+            map.on('click', (ev) => {
+                const { lat, lng } = ev.latlng;
+                if (modeRef.current === 'pickup') {
+                    if (pickupMarker.current) {
+                        pickupMarker.current.setLatLng([lat, lng]);
+                    } else {
+                        pickupMarker.current = L.marker([lat, lng], { icon: pickupIcon, draggable: true }).addTo(map);
+                        pickupMarker.current.on('dragend', (e) => {
+                            const p = e.target.getLatLng();
+                            form.setData((d) => ({ ...d, pickup_lat: p.lat.toFixed(6), pickup_long: p.lng.toFixed(6) }));
+                        });
+                    }
+                    form.setData((d) => ({ ...d, pickup_lat: lat.toFixed(6), pickup_long: lng.toFixed(6) }));
+                } else {
+                    if (dropoffMarker.current) {
+                        dropoffMarker.current.setLatLng([lat, lng]);
+                    } else {
+                        dropoffMarker.current = L.marker([lat, lng], { icon: dropIcon, draggable: true }).addTo(map);
+                        dropoffMarker.current.on('dragend', (e) => {
+                            const p = e.target.getLatLng();
+                            form.setData((d) => ({ ...d, lat: p.lat.toFixed(6), long: p.lng.toFixed(6) }));
+                        });
+                    }
+                    form.setData((d) => ({ ...d, lat: lat.toFixed(6), long: lng.toFixed(6) }));
+                }
+            });
+            mapObj.current = map;
+        });
+        return () => {
+            cancelled = true;
+            if (mapObj.current) {
+                mapObj.current.remove();
+                mapObj.current = null;
+                pickupMarker.current = null;
+                dropoffMarker.current = null;
+            }
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Keep markers in sync if pickup coords are set from the shop picker.
+    React.useEffect(() => {
+        const map = mapObj.current;
+        if (!map || !window.L) return;
+        if (Number.isFinite(pickupLat) && Number.isFinite(pickupLong)) {
+            if (pickupMarker.current) {
+                pickupMarker.current.setLatLng([pickupLat, pickupLong]);
+            } else {
+                const L = window.L;
+                const icon = L.divIcon({ className: '', html: '<div style="background:#0284c7;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);width:16px;height:16px;border-radius:50%;transform:translate(-50%,-50%)"></div>' });
+                pickupMarker.current = L.marker([pickupLat, pickupLong], { icon, draggable: true }).addTo(map);
+                pickupMarker.current.on('dragend', (ev) => {
+                    const p = ev.target.getLatLng();
+                    form.setData((d) => ({ ...d, pickup_lat: p.lat.toFixed(6), pickup_long: p.lng.toFixed(6) }));
+                });
+            }
+        }
+    }, [pickupLat, pickupLong]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    return (
+        <div className="space-y-2">
+            <div className="flex items-center gap-2 text-xs">
+                <button
+                    type="button"
+                    onClick={() => setMode('pickup')}
+                    className={cn(
+                        'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 font-medium transition-colors',
+                        mode === 'pickup' ? 'bg-sky-600 text-white border-sky-600' : 'bg-background border-input hover:bg-accent',
+                    )}
+                >
+                    <span className="inline-block h-2 w-2 rounded-full bg-sky-500" /> {labels.pickup_pin || 'Pickup'}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setMode('dropoff')}
+                    className={cn(
+                        'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 font-medium transition-colors',
+                        mode === 'dropoff' ? 'bg-rose-600 text-white border-rose-600' : 'bg-background border-input hover:bg-accent',
+                    )}
+                >
+                    <span className="inline-block h-2 w-2 rounded-full bg-rose-500" /> {labels.dropoff_pin || 'Drop-off'}
+                </button>
+                <span className="ms-auto text-[11px] text-muted-foreground">
+                    {labels.map_hint || 'Click on the map to place the selected pin, or drag existing pins.'}
+                </span>
+            </div>
+            <div
+                ref={mapEl}
+                className="h-64 w-full rounded-md border border-input bg-muted"
+                style={{ minHeight: '256px' }}
+            />
+            <div className="grid grid-cols-2 gap-3 text-[11px] text-muted-foreground">
+                <div><span className="font-semibold text-foreground">{labels.pickup_pin || 'Pickup'}:</span> {form.data.pickup_lat && form.data.pickup_long ? `${form.data.pickup_lat}, ${form.data.pickup_long}` : '—'}</div>
+                <div><span className="font-semibold text-foreground">{labels.dropoff_pin || 'Drop-off'}:</span> {form.data.lat && form.data.long ? `${form.data.lat}, ${form.data.long}` : '—'}</div>
+            </div>
+        </div>
+    );
+}
+
+function ChargeRow({ label, value, currency, bold }) {
+    return (
+        <div className={cn(
+            'flex items-center justify-between border-b border-border py-2 last:border-0 text-sm',
+            bold && 'font-semibold',
+        )}>
+            <span className={cn('text-muted-foreground', bold && 'text-foreground')}>{label}</span>
+            <Money value={value} currency={currency} />
+        </div>
+    );
+}
+
+export default function ParcelForm({
+    form,
+    mode = 'create',
+    lookups = {},
+    settings = {},
+    urls = {},
+    t = {},
+    initialShops = [],
+    onSubmit,
+}) {
+    const {
+        merchants = [], cities = [], categories = [], packagings = [], delivery_types = [],
+    } = lookups;
+    const currency = settings.currency || '';
+    const [shops, setShops] = React.useState(initialShops);
+
+    // When merchant changes: prefill pickup, fetch shops, refresh COD config.
+    const onMerchantChange = (id) => {
+        form.setData('merchant_id', id);
+        form.setData('shop_id', '');
+        const m = merchants.find((x) => String(x.id) === String(id));
+        if (m) {
+            if (!form.data.pickup_phone)   form.setData('pickup_phone',   m.pickup_phone   || '');
+            if (!form.data.pickup_address) form.setData('pickup_address', m.pickup_address || '');
+            form.setData('vat_tex', m.vat || settings.vat_tax || 0);
+        }
+        if (!id) { setShops([]); return; }
+        const fd = new FormData();
+        fd.append('merchant_id', id);
+        fd.append('_token', document.querySelector('meta[name="csrf-token"]')?.content || '');
+        fetch(urls.merchant_shops, {
+            method: 'POST',
+            body: fd,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin',
+        })
+            .then((r) => r.ok ? r.json() : [])
+            .then((data) => setShops(Array.isArray(data) ? data : (data?.shops || [])))
+            .catch(() => setShops([]));
+    };
+
+    // Shops carry lat/long; pull them into the pickup coord fields whenever
+    // the operator changes the shop. Blank string on missing so we don't
+    // fake-out the map with "0,0".
+    React.useEffect(() => {
+        if (!form.data.shop_id) return;
+        const shop = shops.find((s) => String(s.id) === String(form.data.shop_id));
+        if (shop) {
+            form.setData((d) => ({
+                ...d,
+                pickup_phone:   shop.phone   || d.pickup_phone,
+                pickup_address: shop.address || d.pickup_address,
+                pickup_lat:     shop.lat  ? String(shop.lat)  : '',
+                pickup_long:    shop.long ? String(shop.long) : '',
+            }));
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [form.data.shop_id, shops]);
+
+    const areas = React.useMemo(() => {
+        const c = cities.find((x) => String(x.id) === String(form.data.city_id));
+        return c?.areas || [];
+    }, [form.data.city_id, cities]);
+
+    React.useEffect(() => {
+        if (form.data.area_id && !areas.find((a) => String(a.id) === String(form.data.area_id))) {
+            form.setData('area_id', '');
+        }
+    }, [form.data.city_id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Live charge computation.
+    const merchant = merchants.find((m) => String(m.id) === String(form.data.merchant_id));
+    const packaging = packagings.find((p) => String(p.id) === String(form.data.packaging_id));
+    const cashCollection = Number(form.data.cash_collection || 0);
+    const codPct = merchant?.cod_charges?.inside_city || 0;
+    const codCharge = cashCollection * (codPct / 100);
+    const liquidCharge = form.data.fragileLiquid ? Number(settings.fragile_liquid_charge || 0) : 0;
+    const packagingCharge = Number(packaging?.price || 0);
+    const deliveryCharge = 0;
+    const totalCharge = codCharge + liquidCharge + packagingCharge + deliveryCharge;
+    const vatAmount   = totalCharge * ((Number(form.data.vat_tex) || 0) / 100);
+    const netPayable  = cashCollection - totalCharge - vatAmount;
+    const currentPayable = netPayable;
+
+    React.useEffect(() => {
+        form.setData('chargeDetails', JSON.stringify({
+            totalCashCollection: cashCollection,
+            codChargeAmount: codCharge,
+            liquidFragileAmount: liquidCharge,
+            packagingAmount: packagingCharge,
+            totalDeliveryChargeAmount: totalCharge,
+            VatAmount: vatAmount,
+            netPayable,
+            currentPayable,
+        }));
+    }, [cashCollection, codCharge, liquidCharge, packagingCharge, totalCharge, vatAmount]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    return (
+        <form onSubmit={onSubmit} encType="multipart/form-data" noValidate>
+            <div className="grid gap-6 lg:grid-cols-3">
+                {/* Form */}
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Pickup */}
+                    <Card>
+                        <CardContent className="pt-6">
+                            <SectionHeader title="Pickup" subtitle="Merchant, shop, and pickup details" />
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <Field label={t.merchant} required error={form.errors.merchant_id} icon={Store}>
+                                    <Select
+                                        value={form.data.merchant_id}
+                                        onChange={(e) => onMerchantChange(e.target.value)}
+                                        disabled={mode === 'edit'}
+                                    >
+                                        <option value="">{t.select_merchant}</option>
+                                        {merchants.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                                    </Select>
+                                </Field>
+                                <Field label={t.shop} error={form.errors.shop_id} icon={Store}>
+                                    <Select value={form.data.shop_id} onChange={(e) => form.setData('shop_id', e.target.value)} disabled={!form.data.merchant_id}>
+                                        <option value="">—</option>
+                                        {shops.map((s) => <option key={s.id} value={s.id}>{s.name || s.title}</option>)}
+                                    </Select>
+                                </Field>
+                                <Field label={t.pickup_phone} required error={form.errors.pickup_phone} icon={Phone}>
+                                    <Input value={form.data.pickup_phone} onChange={(e) => form.setData('pickup_phone', e.target.value)} inputMode="tel" />
+                                </Field>
+                                <Field label={t.pickup_address} required error={form.errors.pickup_address} icon={MapPin}>
+                                    <Input value={form.data.pickup_address} onChange={(e) => form.setData('pickup_address', e.target.value)} />
+                                </Field>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Money */}
+                    <Card>
+                        <CardContent className="pt-6">
+                            <SectionHeader title="Amounts" subtitle="Cash collection and invoice" />
+                            <div className="grid gap-4 md:grid-cols-3">
+                                <Field label={t.cash_collection} required error={form.errors.cash_collection} icon={Banknote}>
+                                    <Input type="number" step="any" value={form.data.cash_collection} onChange={(e) => form.setData('cash_collection', e.target.value)} />
+                                </Field>
+                                <Field label={t.selling_price} error={form.errors.selling_price} icon={Banknote}>
+                                    <Input type="number" step="any" value={form.data.selling_price} onChange={(e) => form.setData('selling_price', e.target.value)} />
+                                </Field>
+                                <Field label={t.invoice_no} error={form.errors.invoice_no}>
+                                    <Input value={form.data.invoice_no} onChange={(e) => form.setData('invoice_no', e.target.value)} />
+                                </Field>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Item details */}
+                    <Card>
+                        <CardContent className="pt-6">
+                            <SectionHeader title="Item" subtitle="Category, weight, delivery type" />
+                            <div className="grid gap-4 md:grid-cols-3">
+                                <Field label={t.category} required error={form.errors.category_id} icon={Tag}>
+                                    <Select value={form.data.category_id} onChange={(e) => form.setData('category_id', e.target.value)}>
+                                        <option value="">—</option>
+                                        {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </Select>
+                                </Field>
+                                <Field label={t.weight} error={form.errors.weight} icon={Package}>
+                                    <Select value={form.data.weight} onChange={(e) => form.setData('weight', e.target.value)}>
+                                        <option value="">—</option>
+                                        {[0.5, 1, 2, 3, 5, 10, 15, 20].map((w) => <option key={w} value={w}>{w} kg</option>)}
+                                    </Select>
+                                </Field>
+                                <Field label={t.delivery_type} required error={form.errors.delivery_type_id} icon={Truck}>
+                                    <Select value={form.data.delivery_type_id} onChange={(e) => form.setData('delivery_type_id', e.target.value)}>
+                                        <option value="">—</option>
+                                        {delivery_types.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                    </Select>
+                                </Field>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Customer */}
+                    <Card>
+                        <CardContent className="pt-6">
+                            <SectionHeader title="Customer" subtitle="Recipient + drop-off location" />
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <Field label={t.customer_name} required error={form.errors.customer_name} icon={User}>
+                                    <Input value={form.data.customer_name} onChange={(e) => form.setData('customer_name', e.target.value)} />
+                                </Field>
+                                <Field label={t.customer_phone} required error={form.errors.customer_phone} icon={Phone}>
+                                    <Input value={form.data.customer_phone} onChange={(e) => form.setData('customer_phone', e.target.value)} inputMode="tel" />
+                                </Field>
+                                <Field label={t.city} required error={form.errors.city_id} icon={MapPin}>
+                                    <Select value={form.data.city_id} onChange={(e) => form.setData('city_id', e.target.value)}>
+                                        <option value="">—</option>
+                                        {cities.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </Select>
+                                </Field>
+                                <Field label={t.area} error={form.errors.area_id} icon={MapPin}>
+                                    <Select value={form.data.area_id} onChange={(e) => form.setData('area_id', e.target.value)} disabled={!form.data.city_id}>
+                                        <option value="">{form.data.city_id ? '—' : t.select_city_first}</option>
+                                        {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                                    </Select>
+                                </Field>
+                                <Field label={t.customer_address} required error={form.errors.customer_address} className="md:col-span-2" icon={MapPin}>
+                                    <Input value={form.data.customer_address} onChange={(e) => form.setData('customer_address', e.target.value)} />
+                                </Field>
+                                <div className="md:col-span-2">
+                                    <Label className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                        <MapPin className="h-3 w-3" /> {t.map_title || 'Pickup & drop-off pins'}
+                                    </Label>
+                                    <LocationPicker
+                                        form={form}
+                                        defaultCenter={[24.7136, 46.6753]}
+                                        labels={{
+                                            pickup_pin:  t.pickup_pin  || 'Pickup',
+                                            dropoff_pin: t.dropoff_pin || 'Drop-off',
+                                            map_hint:    t.map_hint    || 'Click on the map to place the selected pin, or drag existing pins.',
+                                        }}
+                                    />
+                                </div>
+                                <Field label={t.note} error={form.errors.note} className="md:col-span-2" icon={StickyNote}>
+                                    <Textarea rows={3} value={form.data.note} onChange={(e) => form.setData('note', e.target.value)} />
+                                </Field>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Extras */}
+                    <Card>
+                        <CardContent className="pt-6">
+                            <SectionHeader title="Options" subtitle="Packaging, priority, and surcharges" />
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <Field label={t.packaging} error={form.errors.packaging_id} icon={Box}>
+                                    <Select value={form.data.packaging_id} onChange={(e) => form.setData('packaging_id', e.target.value)}>
+                                        <option value="">—</option>
+                                        {packagings.map((p) => (
+                                            <option key={p.id} value={p.id}>
+                                                {p.name} ({Number(p.price).toFixed(2)} {currency})
+                                            </option>
+                                        ))}
+                                    </Select>
+                                </Field>
+                                <Field label={t.priority} error={form.errors.priority_id}>
+                                    <Select value={form.data.priority_id} onChange={(e) => form.setData('priority_id', e.target.value)}>
+                                        <option value="2">{t.normal}</option>
+                                        <option value="1">{t.high}</option>
+                                    </Select>
+                                </Field>
+                                <label className="md:col-span-2 flex items-center gap-2 rounded-md border border-input bg-background px-3 py-2.5 cursor-pointer hover:bg-accent/30 transition-colors">
+                                    <input
+                                        type="checkbox"
+                                        checked={form.data.fragileLiquid}
+                                        onChange={(e) => form.setData('fragileLiquid', e.target.checked)}
+                                        className="h-4 w-4 rounded border-input"
+                                    />
+                                    <span className="text-sm font-medium flex items-center gap-1.5">
+                                        <Flame className="h-4 w-4 text-rose-500" /> {t.liquid_fragile}
+                                        <span className="text-xs text-muted-foreground ms-2">+{Number(settings.fragile_liquid_charge || 0).toFixed(2)} {currency}</span>
+                                    </span>
+                                </label>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Submit row */}
+                    <div className="flex items-center justify-end gap-2 rounded-xl border border-border bg-card p-4 shadow-sm">
+                        <a href={urls.cancel} className="inline-flex h-10 items-center rounded-md border border-input bg-background px-4 text-sm font-medium hover:bg-accent">
+                            <ArrowLeft className="h-4 w-4 me-1" /> {t.cancel}
+                        </a>
+                        <Button type="submit" disabled={form.processing}>
+                            <Save className="h-4 w-4 me-1" /> {form.processing ? '…' : (mode === 'edit' ? (t.update || t.save) : t.save)}
+                        </Button>
+                    </div>
+                </div>
+
+                {/* Live charge summary */}
+                <div className="lg:col-span-1">
+                    <Card className="sticky top-20">
+                        <CardContent className="pt-6">
+                            <div className="mb-4 flex items-center gap-2">
+                                <Calculator className="h-4 w-4 text-primary" />
+                                <div className="text-sm font-semibold">{t.charge_details}</div>
+                            </div>
+                            <div>
+                                <ChargeRow label={t.cash_collection} value={cashCollection} currency={currency} />
+                                <ChargeRow label={t.delivery_charge} value={deliveryCharge} currency={currency} />
+                                <ChargeRow label={t.cod_charge}      value={codCharge}      currency={currency} />
+                                {form.data.fragileLiquid && (
+                                    <ChargeRow label={t.liquid_charge} value={liquidCharge} currency={currency} />
+                                )}
+                                {form.data.packaging_id && (
+                                    <ChargeRow label={t.packaging_charge} value={packagingCharge} currency={currency} />
+                                )}
+                                <ChargeRow label={t.total_charge}   value={totalCharge}   currency={currency} bold />
+                                <ChargeRow label={t.vat}             value={vatAmount}     currency={currency} />
+                                <ChargeRow label={t.net_payable}     value={netPayable}    currency={currency} />
+                                <ChargeRow label={t.current_payable} value={currentPayable} currency={currency} bold />
+                            </div>
+                            {deliveryCharge === 0 && form.data.merchant_id && form.data.city_id && (
+                                <p className="mt-3 text-[11px] text-muted-foreground leading-relaxed">
+                                    Delivery charge depends on merchant pricing tier + city zone and is calculated on submit.
+                                </p>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+        </form>
+    );
+}

@@ -82,30 +82,23 @@ function loadGoogleMaps(apiKey) {
 }
 
 /**
- * Click-to-pin picker on a Google Map. Two markers: pickup (blue) +
- * drop-off (red). The toggle above the map decides which marker the
- * next click places, existing markers can be dragged. Coordinates are
- * written straight back into the form so the backend keeps its existing
- * contract (pickup_lat/pickup_long, lat/long).
+ * Click-to-pin picker on a Google Map for the customer drop-off only.
+ * Clicking the map places the marker, dragging it updates the coord
+ * fields. Pickup coordinates still flow through the form (from the
+ * selected shop), they just don't get a pin here because operators
+ * shouldn't be re-placing them by hand.
  *
  * If the tenant has no Google Maps key configured (empty apiKey) the
- * component renders a small notice pointing at where to set one, plus
- * numeric coord inputs so the workflow doesn't dead-end.
+ * component renders a small notice pointing at where to set one.
  */
 function LocationPicker({ form, defaultCenter, labels, apiKey }) {
     const mapEl = React.useRef(null);
     const mapObj = React.useRef(null);
-    const pickupMarker = React.useRef(null);
     const dropoffMarker = React.useRef(null);
-    const [mode, setMode] = React.useState('dropoff');
     const [status, setStatus] = React.useState(apiKey ? 'loading' : 'no-key');
-    const modeRef = React.useRef(mode);
-    modeRef.current = mode;
 
-    const pickupLat  = parseFloat(form.data.pickup_lat);
-    const pickupLong = parseFloat(form.data.pickup_long);
-    const dropLat    = parseFloat(form.data.lat);
-    const dropLong   = parseFloat(form.data.long);
+    const dropLat  = parseFloat(form.data.lat);
+    const dropLong = parseFloat(form.data.long);
 
     React.useEffect(() => {
         if (!apiKey) return;
@@ -114,9 +107,7 @@ function LocationPicker({ form, defaultCenter, labels, apiKey }) {
             if (cancelled || !maps || !mapEl.current || mapObj.current) return;
             const initial = Number.isFinite(dropLat) && Number.isFinite(dropLong)
                 ? { lat: dropLat, lng: dropLong }
-                : Number.isFinite(pickupLat) && Number.isFinite(pickupLong)
-                    ? { lat: pickupLat, lng: pickupLong }
-                    : { lat: defaultCenter[0], lng: defaultCenter[1] };
+                : { lat: defaultCenter[0], lng: defaultCenter[1] };
             const map = new maps.Map(mapEl.current, {
                 center: initial,
                 zoom: 12,
@@ -126,52 +117,33 @@ function LocationPicker({ form, defaultCenter, labels, apiKey }) {
             });
             mapObj.current = map;
 
-            const pickupIcon = {
-                path: maps.SymbolPath.CIRCLE,
-                fillColor: '#0284c7', fillOpacity: 1,
-                strokeColor: '#ffffff', strokeWeight: 2, scale: 8,
-            };
             const dropIcon = {
                 path: maps.SymbolPath.CIRCLE,
                 fillColor: '#dc2626', fillOpacity: 1,
                 strokeColor: '#ffffff', strokeWeight: 2, scale: 8,
             };
 
-            const placePickup = (lat, lng) => {
-                if (pickupMarker.current) {
-                    pickupMarker.current.setPosition({ lat, lng });
-                } else {
-                    pickupMarker.current = new maps.Marker({ position: { lat, lng }, map, icon: pickupIcon, draggable: true, title: labels.pickup_pin || 'Pickup' });
-                    pickupMarker.current.addListener('dragend', (e) => {
-                        const p = e.latLng;
-                        form.setData((d) => ({ ...d, pickup_lat: p.lat().toFixed(6), pickup_long: p.lng().toFixed(6) }));
-                    });
-                }
-            };
             const placeDropoff = (lat, lng) => {
                 if (dropoffMarker.current) {
                     dropoffMarker.current.setPosition({ lat, lng });
                 } else {
-                    dropoffMarker.current = new maps.Marker({ position: { lat, lng }, map, icon: dropIcon, draggable: true, title: labels.dropoff_pin || 'Drop-off' });
+                    dropoffMarker.current = new maps.Marker({
+                        position: { lat, lng }, map, icon: dropIcon,
+                        draggable: true, title: labels.dropoff_pin || 'Drop-off',
+                    });
                     dropoffMarker.current.addListener('dragend', (e) => {
                         const p = e.latLng;
                         form.setData((d) => ({ ...d, lat: p.lat().toFixed(6), long: p.lng().toFixed(6) }));
                     });
                 }
             };
-            if (Number.isFinite(pickupLat) && Number.isFinite(pickupLong)) placePickup(pickupLat, pickupLong);
-            if (Number.isFinite(dropLat)    && Number.isFinite(dropLong))    placeDropoff(dropLat, dropLong);
+            if (Number.isFinite(dropLat) && Number.isFinite(dropLong)) placeDropoff(dropLat, dropLong);
 
             map.addListener('click', (ev) => {
                 const lat = ev.latLng.lat();
                 const lng = ev.latLng.lng();
-                if (modeRef.current === 'pickup') {
-                    placePickup(lat, lng);
-                    form.setData((d) => ({ ...d, pickup_lat: lat.toFixed(6), pickup_long: lng.toFixed(6) }));
-                } else {
-                    placeDropoff(lat, lng);
-                    form.setData((d) => ({ ...d, lat: lat.toFixed(6), long: lng.toFixed(6) }));
-                }
+                placeDropoff(lat, lng);
+                form.setData((d) => ({ ...d, lat: lat.toFixed(6), long: lng.toFixed(6) }));
             });
 
             setStatus('ready');
@@ -180,56 +152,20 @@ function LocationPicker({ form, defaultCenter, labels, apiKey }) {
         return () => {
             cancelled = true;
             mapObj.current = null;
-            pickupMarker.current = null;
             dropoffMarker.current = null;
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [apiKey]);
 
-    // Keep the pickup pin in sync if it changes from the shop picker.
-    React.useEffect(() => {
-        const map = mapObj.current;
-        if (!map || !window.google || !window.google.maps) return;
-        if (Number.isFinite(pickupLat) && Number.isFinite(pickupLong)) {
-            if (pickupMarker.current) {
-                pickupMarker.current.setPosition({ lat: pickupLat, lng: pickupLong });
-            } else {
-                const maps = window.google.maps;
-                const icon = { path: maps.SymbolPath.CIRCLE, fillColor: '#0284c7', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2, scale: 8 };
-                pickupMarker.current = new maps.Marker({ position: { lat: pickupLat, lng: pickupLong }, map, icon, draggable: true, title: labels.pickup_pin || 'Pickup' });
-                pickupMarker.current.addListener('dragend', (e) => {
-                    const p = e.latLng;
-                    form.setData((d) => ({ ...d, pickup_lat: p.lat().toFixed(6), pickup_long: p.lng().toFixed(6) }));
-                });
-            }
-        }
-    }, [pickupLat, pickupLong]); // eslint-disable-line react-hooks/exhaustive-deps
-
     return (
         <div className="space-y-2">
             <div className="flex items-center gap-2 text-xs">
-                <button
-                    type="button"
-                    onClick={() => setMode('pickup')}
-                    className={cn(
-                        'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 font-medium transition-colors',
-                        mode === 'pickup' ? 'bg-sky-600 text-white border-sky-600' : 'bg-background border-input hover:bg-accent',
-                    )}
-                >
-                    <span className="inline-block h-2 w-2 rounded-full bg-sky-500" /> {labels.pickup_pin || 'Pickup'}
-                </button>
-                <button
-                    type="button"
-                    onClick={() => setMode('dropoff')}
-                    className={cn(
-                        'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 font-medium transition-colors',
-                        mode === 'dropoff' ? 'bg-rose-600 text-white border-rose-600' : 'bg-background border-input hover:bg-accent',
-                    )}
-                >
-                    <span className="inline-block h-2 w-2 rounded-full bg-rose-500" /> {labels.dropoff_pin || 'Drop-off'}
-                </button>
+                <span className="inline-flex items-center gap-1.5 rounded-md border border-rose-200 bg-rose-50 dark:bg-rose-950/40 dark:border-rose-900 px-2.5 py-1.5 font-medium text-rose-700 dark:text-rose-200">
+                    <span className="inline-block h-2 w-2 rounded-full bg-rose-500" />
+                    {labels.dropoff_pin || 'Drop-off'}
+                </span>
                 <span className="ms-auto text-[11px] text-muted-foreground">
-                    {labels.map_hint || 'Click on the map to place the selected pin, or drag existing pins.'}
+                    {labels.map_hint || 'Click on the map to place the drop-off pin, or drag it to adjust.'}
                 </span>
             </div>
             {status === 'no-key' ? (
@@ -247,9 +183,9 @@ function LocationPicker({ form, defaultCenter, labels, apiKey }) {
                     style={{ minHeight: '256px' }}
                 />
             )}
-            <div className="grid grid-cols-2 gap-3 text-[11px] text-muted-foreground">
-                <div><span className="font-semibold text-foreground">{labels.pickup_pin || 'Pickup'}:</span> {form.data.pickup_lat && form.data.pickup_long ? `${form.data.pickup_lat}, ${form.data.pickup_long}` : '—'}</div>
-                <div><span className="font-semibold text-foreground">{labels.dropoff_pin || 'Drop-off'}:</span> {form.data.lat && form.data.long ? `${form.data.lat}, ${form.data.long}` : '—'}</div>
+            <div className="text-[11px] text-muted-foreground">
+                <span className="font-semibold text-foreground">{labels.dropoff_pin || 'Drop-off'}:</span>{' '}
+                {form.data.lat && form.data.long ? `${form.data.lat}, ${form.data.long}` : '—'}
             </div>
         </div>
     );
@@ -473,16 +409,15 @@ export default function ParcelForm({
                                 </Field>
                                 <div className="md:col-span-2">
                                     <Label className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                        <MapPin className="h-3 w-3" /> {t.map_title || 'Pickup & drop-off pins'}
+                                        <MapPin className="h-3 w-3" /> {t.map_title || 'Drop-off location'}
                                     </Label>
                                     <LocationPicker
                                         form={form}
                                         defaultCenter={[24.7136, 46.6753]}
                                         apiKey={settings.google_maps_key || ''}
                                         labels={{
-                                            pickup_pin:  t.pickup_pin  || 'Pickup',
                                             dropoff_pin: t.dropoff_pin || 'Drop-off',
-                                            map_hint:    t.map_hint    || 'Click on the map to place the selected pin, or drag existing pins.',
+                                            map_hint:    t.map_hint    || 'Click on the map to place the drop-off pin, or drag it to adjust.',
                                             no_key:      t.map_no_key,
                                             load_error:  t.map_load_error,
                                         }}

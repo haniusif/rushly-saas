@@ -43,42 +43,62 @@ function Money({ value, currency }) {
     );
 }
 
-// ── Leaflet loader shared across ParcelForm instances. Loads the CSS + JS
-// from unpkg on demand so we don't pull the library into the merchant.js
-// bundle. Once resolved every subsequent map uses the cached window.L.
-let leafletPromise = null;
-function loadLeaflet() {
+// ── Google Maps JS API loader shared across ParcelForm instances.
+// Loads the SDK once per page and reuses the cached window.google.maps.
+// Different components can request different key/params — the first one
+// wins; requests with different keys are logged and use the earlier load.
+let gmapsPromise = null;
+let gmapsKey = null;
+function loadGoogleMaps(apiKey) {
     if (typeof window === 'undefined') return Promise.resolve(null);
-    if (window.L) return Promise.resolve(window.L);
-    if (leafletPromise) return leafletPromise;
-    leafletPromise = new Promise((resolve, reject) => {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-        document.head.appendChild(link);
+    if (window.google && window.google.maps) return Promise.resolve(window.google.maps);
+    if (gmapsPromise) {
+        if (apiKey && gmapsKey && apiKey !== gmapsKey) {
+            // Not fatal — the first key wins and subsequent picks share it.
+            // Emitting a warning helps track down mismatches during rollout.
+            // eslint-disable-next-line no-console
+            console.warn('Google Maps loader already initialized with a different key; reusing existing load.');
+        }
+        return gmapsPromise;
+    }
+    gmapsKey = apiKey;
+    gmapsPromise = new Promise((resolve, reject) => {
+        const cb = `__gmaps_ready_${Math.random().toString(36).slice(2)}`;
+        window[cb] = () => { resolve(window.google.maps); try { delete window[cb]; } catch (e) {} };
         const script = document.createElement('script');
-        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        const params = new URLSearchParams({
+            key: apiKey || '',
+            callback: cb,
+            libraries: 'places',
+            loading: 'async',
+        });
+        script.src = `https://maps.googleapis.com/maps/api/js?${params.toString()}`;
         script.async = true;
-        script.onload = () => resolve(window.L);
-        script.onerror = () => reject(new Error('Failed to load Leaflet'));
-        document.body.appendChild(script);
+        script.defer = true;
+        script.onerror = () => reject(new Error('Failed to load Google Maps JS API'));
+        document.head.appendChild(script);
     });
-    return leafletPromise;
+    return gmapsPromise;
 }
 
 /**
- * Click-to-pin picker over OpenStreetMap. Two markers: pickup (blue) +
- * drop-off (red). Clicking the map places the currently-active marker,
- * which flips based on the toggle above the map. Coordinates are written
- * straight back into the form so the backend keeps its existing contract
- * (pickup_lat/pickup_long, lat/long).
+ * Click-to-pin picker on a Google Map. Two markers: pickup (blue) +
+ * drop-off (red). The toggle above the map decides which marker the
+ * next click places, existing markers can be dragged. Coordinates are
+ * written straight back into the form so the backend keeps its existing
+ * contract (pickup_lat/pickup_long, lat/long).
+ *
+ * If the tenant has no Google Maps key configured (empty apiKey) the
+ * component renders a small notice pointing at where to set one, plus
+ * numeric coord inputs so the workflow doesn't dead-end.
  */
-function LocationPicker({ form, defaultCenter, labels }) {
+function LocationPicker({ form, defaultCenter, labels, apiKey }) {
     const mapEl = React.useRef(null);
     const mapObj = React.useRef(null);
     const pickupMarker = React.useRef(null);
     const dropoffMarker = React.useRef(null);
     const [mode, setMode] = React.useState('dropoff');
+    const [status, setStatus] = React.useState(apiKey ? 'loading' : 'no-key');
     const modeRef = React.useRef(mode);
     modeRef.current = mode;
 
@@ -88,93 +108,98 @@ function LocationPicker({ form, defaultCenter, labels }) {
     const dropLong   = parseFloat(form.data.long);
 
     React.useEffect(() => {
+        if (!apiKey) return;
         let cancelled = false;
-        loadLeaflet().then((L) => {
-            if (cancelled || !L || !mapEl.current || mapObj.current) return;
+        loadGoogleMaps(apiKey).then((maps) => {
+            if (cancelled || !maps || !mapEl.current || mapObj.current) return;
             const initial = Number.isFinite(dropLat) && Number.isFinite(dropLong)
-                ? [dropLat, dropLong]
+                ? { lat: dropLat, lng: dropLong }
                 : Number.isFinite(pickupLat) && Number.isFinite(pickupLong)
-                    ? [pickupLat, pickupLong]
-                    : defaultCenter;
-            const map = L.map(mapEl.current).setView(initial, 12);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '&copy; OpenStreetMap contributors',
-            }).addTo(map);
-            const pickupIcon = L.divIcon({
-                className: '', html: '<div style="background:#0284c7;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);width:16px;height:16px;border-radius:50%;transform:translate(-50%,-50%)"></div>',
+                    ? { lat: pickupLat, lng: pickupLong }
+                    : { lat: defaultCenter[0], lng: defaultCenter[1] };
+            const map = new maps.Map(mapEl.current, {
+                center: initial,
+                zoom: 12,
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: false,
             });
-            const dropIcon = L.divIcon({
-                className: '', html: '<div style="background:#dc2626;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);width:16px;height:16px;border-radius:50%;transform:translate(-50%,-50%)"></div>',
-            });
-            if (Number.isFinite(pickupLat) && Number.isFinite(pickupLong)) {
-                pickupMarker.current = L.marker([pickupLat, pickupLong], { icon: pickupIcon, draggable: true }).addTo(map);
-                pickupMarker.current.on('dragend', (ev) => {
-                    const p = ev.target.getLatLng();
-                    form.setData((d) => ({ ...d, pickup_lat: p.lat.toFixed(6), pickup_long: p.lng.toFixed(6) }));
-                });
-            }
-            if (Number.isFinite(dropLat) && Number.isFinite(dropLong)) {
-                dropoffMarker.current = L.marker([dropLat, dropLong], { icon: dropIcon, draggable: true }).addTo(map);
-                dropoffMarker.current.on('dragend', (ev) => {
-                    const p = ev.target.getLatLng();
-                    form.setData((d) => ({ ...d, lat: p.lat.toFixed(6), long: p.lng.toFixed(6) }));
-                });
-            }
-            map.on('click', (ev) => {
-                const { lat, lng } = ev.latlng;
+            mapObj.current = map;
+
+            const pickupIcon = {
+                path: maps.SymbolPath.CIRCLE,
+                fillColor: '#0284c7', fillOpacity: 1,
+                strokeColor: '#ffffff', strokeWeight: 2, scale: 8,
+            };
+            const dropIcon = {
+                path: maps.SymbolPath.CIRCLE,
+                fillColor: '#dc2626', fillOpacity: 1,
+                strokeColor: '#ffffff', strokeWeight: 2, scale: 8,
+            };
+
+            const placePickup = (lat, lng) => {
+                if (pickupMarker.current) {
+                    pickupMarker.current.setPosition({ lat, lng });
+                } else {
+                    pickupMarker.current = new maps.Marker({ position: { lat, lng }, map, icon: pickupIcon, draggable: true, title: labels.pickup_pin || 'Pickup' });
+                    pickupMarker.current.addListener('dragend', (e) => {
+                        const p = e.latLng;
+                        form.setData((d) => ({ ...d, pickup_lat: p.lat().toFixed(6), pickup_long: p.lng().toFixed(6) }));
+                    });
+                }
+            };
+            const placeDropoff = (lat, lng) => {
+                if (dropoffMarker.current) {
+                    dropoffMarker.current.setPosition({ lat, lng });
+                } else {
+                    dropoffMarker.current = new maps.Marker({ position: { lat, lng }, map, icon: dropIcon, draggable: true, title: labels.dropoff_pin || 'Drop-off' });
+                    dropoffMarker.current.addListener('dragend', (e) => {
+                        const p = e.latLng;
+                        form.setData((d) => ({ ...d, lat: p.lat().toFixed(6), long: p.lng().toFixed(6) }));
+                    });
+                }
+            };
+            if (Number.isFinite(pickupLat) && Number.isFinite(pickupLong)) placePickup(pickupLat, pickupLong);
+            if (Number.isFinite(dropLat)    && Number.isFinite(dropLong))    placeDropoff(dropLat, dropLong);
+
+            map.addListener('click', (ev) => {
+                const lat = ev.latLng.lat();
+                const lng = ev.latLng.lng();
                 if (modeRef.current === 'pickup') {
-                    if (pickupMarker.current) {
-                        pickupMarker.current.setLatLng([lat, lng]);
-                    } else {
-                        pickupMarker.current = L.marker([lat, lng], { icon: pickupIcon, draggable: true }).addTo(map);
-                        pickupMarker.current.on('dragend', (e) => {
-                            const p = e.target.getLatLng();
-                            form.setData((d) => ({ ...d, pickup_lat: p.lat.toFixed(6), pickup_long: p.lng.toFixed(6) }));
-                        });
-                    }
+                    placePickup(lat, lng);
                     form.setData((d) => ({ ...d, pickup_lat: lat.toFixed(6), pickup_long: lng.toFixed(6) }));
                 } else {
-                    if (dropoffMarker.current) {
-                        dropoffMarker.current.setLatLng([lat, lng]);
-                    } else {
-                        dropoffMarker.current = L.marker([lat, lng], { icon: dropIcon, draggable: true }).addTo(map);
-                        dropoffMarker.current.on('dragend', (e) => {
-                            const p = e.target.getLatLng();
-                            form.setData((d) => ({ ...d, lat: p.lat.toFixed(6), long: p.lng.toFixed(6) }));
-                        });
-                    }
+                    placeDropoff(lat, lng);
                     form.setData((d) => ({ ...d, lat: lat.toFixed(6), long: lng.toFixed(6) }));
                 }
             });
-            mapObj.current = map;
-        });
+
+            setStatus('ready');
+        }).catch(() => setStatus('error'));
+
         return () => {
             cancelled = true;
-            if (mapObj.current) {
-                mapObj.current.remove();
-                mapObj.current = null;
-                pickupMarker.current = null;
-                dropoffMarker.current = null;
-            }
+            mapObj.current = null;
+            pickupMarker.current = null;
+            dropoffMarker.current = null;
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [apiKey]);
 
-    // Keep markers in sync if pickup coords are set from the shop picker.
+    // Keep the pickup pin in sync if it changes from the shop picker.
     React.useEffect(() => {
         const map = mapObj.current;
-        if (!map || !window.L) return;
+        if (!map || !window.google || !window.google.maps) return;
         if (Number.isFinite(pickupLat) && Number.isFinite(pickupLong)) {
             if (pickupMarker.current) {
-                pickupMarker.current.setLatLng([pickupLat, pickupLong]);
+                pickupMarker.current.setPosition({ lat: pickupLat, lng: pickupLong });
             } else {
-                const L = window.L;
-                const icon = L.divIcon({ className: '', html: '<div style="background:#0284c7;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);width:16px;height:16px;border-radius:50%;transform:translate(-50%,-50%)"></div>' });
-                pickupMarker.current = L.marker([pickupLat, pickupLong], { icon, draggable: true }).addTo(map);
-                pickupMarker.current.on('dragend', (ev) => {
-                    const p = ev.target.getLatLng();
-                    form.setData((d) => ({ ...d, pickup_lat: p.lat.toFixed(6), pickup_long: p.lng.toFixed(6) }));
+                const maps = window.google.maps;
+                const icon = { path: maps.SymbolPath.CIRCLE, fillColor: '#0284c7', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2, scale: 8 };
+                pickupMarker.current = new maps.Marker({ position: { lat: pickupLat, lng: pickupLong }, map, icon, draggable: true, title: labels.pickup_pin || 'Pickup' });
+                pickupMarker.current.addListener('dragend', (e) => {
+                    const p = e.latLng;
+                    form.setData((d) => ({ ...d, pickup_lat: p.lat().toFixed(6), pickup_long: p.lng().toFixed(6) }));
                 });
             }
         }
@@ -207,11 +232,21 @@ function LocationPicker({ form, defaultCenter, labels }) {
                     {labels.map_hint || 'Click on the map to place the selected pin, or drag existing pins.'}
                 </span>
             </div>
-            <div
-                ref={mapEl}
-                className="h-64 w-full rounded-md border border-input bg-muted"
-                style={{ minHeight: '256px' }}
-            />
+            {status === 'no-key' ? (
+                <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-xs text-amber-800 dark:text-amber-200">
+                    {labels.no_key || 'Google Maps API key not configured for this workspace. Set it under Settings → Google Map to enable the map. Coordinates below are still editable.'}
+                </div>
+            ) : status === 'error' ? (
+                <div className="rounded-md border border-rose-300 bg-rose-50 dark:bg-rose-950/30 dark:border-rose-800 p-3 text-xs text-rose-800 dark:text-rose-200">
+                    {labels.load_error || 'Google Maps failed to load. Check the API key + billing status.'}
+                </div>
+            ) : (
+                <div
+                    ref={mapEl}
+                    className="h-64 w-full rounded-md border border-input bg-muted"
+                    style={{ minHeight: '256px' }}
+                />
+            )}
             <div className="grid grid-cols-2 gap-3 text-[11px] text-muted-foreground">
                 <div><span className="font-semibold text-foreground">{labels.pickup_pin || 'Pickup'}:</span> {form.data.pickup_lat && form.data.pickup_long ? `${form.data.pickup_lat}, ${form.data.pickup_long}` : '—'}</div>
                 <div><span className="font-semibold text-foreground">{labels.dropoff_pin || 'Drop-off'}:</span> {form.data.lat && form.data.long ? `${form.data.lat}, ${form.data.long}` : '—'}</div>
@@ -443,10 +478,13 @@ export default function ParcelForm({
                                     <LocationPicker
                                         form={form}
                                         defaultCenter={[24.7136, 46.6753]}
+                                        apiKey={settings.google_maps_key || ''}
                                         labels={{
                                             pickup_pin:  t.pickup_pin  || 'Pickup',
                                             dropoff_pin: t.dropoff_pin || 'Drop-off',
                                             map_hint:    t.map_hint    || 'Click on the map to place the selected pin, or drag existing pins.',
+                                            no_key:      t.map_no_key,
+                                            load_error:  t.map_load_error,
                                         }}
                                     />
                                 </div>

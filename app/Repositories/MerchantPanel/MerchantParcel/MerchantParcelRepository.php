@@ -243,10 +243,15 @@ public function parcel_by_daterange($merchant_id, $from, $to , $paginate = 10)
             }
             // End Pickup & Delivery Time
 
-            $parcel->vat                    = $chargeDetails->vatTex;
-           
-            $parcel->vat_amount             = $chargeDetails->VatAmount;
-            $parcel->delivery_charge        = $chargeDetails->deliveryChargeAmount;
+            // The old Blade form stuffed the VAT rate + amount + delivery-charge
+            // into chargeDetails; the Inertia ParcelForm sends the rate as a
+            // top-level form field (`vat_tex`) and renamed the totals. Read
+            // both shapes so the merchant Create page stops throwing
+            // "Undefined property: stdClass::$vatTex" (log 2026-06-29).
+            $parcel->vat                    = $chargeDetails->vatTex ?? $request->vat_tex ?? 0;
+            $parcel->vat_amount             = $chargeDetails->VatAmount ?? 0;
+            $parcel->delivery_charge        = $chargeDetails->deliveryChargeAmount
+                                              ?? $chargeDetails->totalDeliveryChargeAmount ?? 0;
 //return true;
             //merchant cod charge
             $Codmerchant  = Auth::user()->merchant;
@@ -396,9 +401,10 @@ public function parcel_by_daterange($merchant_id, $from, $to , $paginate = 10)
             // End Pickup & Delivery Time
 
             if(!blank($chargeDetails)){
-                $parcel->vat                    = $chargeDetails->vatTex;
-                $parcel->vat_amount             = $chargeDetails->VatAmount;
-                $parcel->delivery_charge        = $chargeDetails->deliveryChargeAmount;
+                $parcel->vat                    = $chargeDetails->vatTex ?? $request->vat_tex ?? 0;
+                $parcel->vat_amount             = $chargeDetails->VatAmount ?? 0;
+                $parcel->delivery_charge        = $chargeDetails->deliveryChargeAmount
+                                                  ?? $chargeDetails->totalDeliveryChargeAmount ?? 0;
                 //merchant cod charge
                 $Codmerchant  = Auth::user()->merchant;
                 $merchantCODCharge   = 0;
@@ -584,9 +590,10 @@ public function parcel_by_daterange($merchant_id, $from, $to , $paginate = 10)
                 $parcel->parcel_bank            = $request->parcel_bank;
 
             if(!blank($chargeDetails)){
-                    $parcel->vat                    = $chargeDetails->vatTex;
-                    $parcel->vat_amount             = $chargeDetails->VatAmount;
-                    $parcel->delivery_charge        = $chargeDetails->deliveryChargeAmount;
+                    $parcel->vat                    = $chargeDetails->vatTex ?? $request->vat_tex ?? 0;
+                    $parcel->vat_amount             = $chargeDetails->VatAmount ?? 0;
+                    $parcel->delivery_charge        = $chargeDetails->deliveryChargeAmount
+                                                      ?? $chargeDetails->totalDeliveryChargeAmount ?? 0;
 
                 //merchant cod charge
                 $Codmerchant         = Auth::user()->merchant;

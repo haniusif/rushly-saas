@@ -50,10 +50,28 @@ class MerchantParcelController extends Controller
         $this->repo = $repo;
         $this->shop = $shop;
     }
+
+    /**
+     * Look up the merchant row for the current user, or short-circuit the
+     * request when there isn't one. Non-merchant users (e.g. an admin who
+     * lands on /merchant/parcel/index by accident) used to dereference
+     * $merchant->id and 500. Now they get a clean redirect + flash.
+     */
+    private function currentMerchant()
+    {
+        $merchant = $this->repo->getMerchant(Auth::id());
+        if (! $merchant) {
+            throw new \Illuminate\Http\Exceptions\HttpResponseException(
+                redirect()->route('dashboard.index')
+                    ->with('error', __('No merchant profile is linked to this account.'))
+            );
+        }
+        return $merchant;
+    }
     public function index(Request $request)
     {
         $userID = Auth::user()->id;
-        $merchant = $this->repo->getMerchant($userID);
+        $merchant = $this->currentMerchant();
         $parcels = $this->repo->all($merchant->id);
         return Inertia::render('Merchant/Parcel/Index', [
             'parcels'  => $parcels,
@@ -64,7 +82,7 @@ class MerchantParcelController extends Controller
     public function parcelBank(Request $request)
     {
         $userID = Auth::user()->id;
-        $merchant = $this->repo->getMerchant($userID);
+        $merchant = $this->currentMerchant();
         $parcels = $this->repo->parcelBank($merchant->id);
         return Inertia::render('Merchant/ParcelBank/Index', [
             'parcels'  => $parcels,
@@ -76,7 +94,7 @@ class MerchantParcelController extends Controller
     public function filter(Request $request)
     {
         $userID = Auth::user()->id;
-        $merchant = $this->repo->getMerchant($userID);
+        $merchant = $this->currentMerchant();
         if($this->repo->filter($merchant->id,$request)){
             $parcels      = $this->repo->filter($merchant->id,$request);
             return view('backend.merchant_panel.parcel.index',compact('parcels','request' ));
@@ -88,7 +106,7 @@ class MerchantParcelController extends Controller
     public function create()
     {
         $userID = Auth::user()->id;
-        $merchant = $this->repo->getMerchant($userID);
+        $merchant = $this->currentMerchant();
 
         // Normalize shops to a stable {id, name, phone, address, lat, long} shape.
         // getShops() pads index 0 with the default shop, which may be null.
@@ -167,7 +185,7 @@ class MerchantParcelController extends Controller
 
         
         $userID = Auth::user()->id;
-        $merchant = $this->repo->getMerchant($userID);
+        $merchant = $this->currentMerchant();
         if($this->repo->store($request,$merchant->id)){
             Toastr::success(__('parcel.added_msg'),__('message.success'));
             return redirect()->route('merchant-panel.parcel.index');
@@ -180,7 +198,7 @@ class MerchantParcelController extends Controller
     public function duplicateStore(StoreRequest $request)
     {
         $userID = Auth::user()->id;
-        $merchant = $this->repo->getMerchant($userID);
+        $merchant = $this->currentMerchant();
         if($this->repo->duplicateStore($request,$merchant->id)){
             Toastr::success(__('parcel.added_msg'),__('message.success'));
             return redirect()->route('merchant-panel.parcel.index');
@@ -234,7 +252,7 @@ class MerchantParcelController extends Controller
         $userID = Auth::user()->id;
         $parcel = $this->repo->get($id);
         if($parcel->status == ParcelStatus::PENDING){
-            $merchant = $this->repo->getMerchant($userID);
+            $merchant = $this->currentMerchant();
             $shops = $this->repo->getShops($merchant->id);
             $deliveryCharges = DeliveryCharge::companywise()->where('category_id',$parcel->category_id)->get();
             $deliveryCategories = $this->repo->deliveryCategories();

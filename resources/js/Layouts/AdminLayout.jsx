@@ -49,11 +49,18 @@ const NAV = [
         // Knowledge Base hub (Main → Knowledge Base → WMS card).
     ]},
     { group: 'menu_operations', items: [
-        { tKey: 'menu_deliveryman',    icon: Truck,      route: 'deliveryman.index',       match: ['admin/deliveryman'] },
         { tKey: 'menu_tms',            icon: Map,        route: 'tms',                     match: ['admin/tms'] },
         { tKey: 'menu_hubs',           icon: Warehouse,  route: 'hubs.index',              match: ['admin/hub'] },
-        { tKey: 'menu_merchants',      icon: Users,      route: 'merchant.index',          match: ['admin/merchant'] },
         { tKey: 'menu_pickup_request', icon: Inbox,      route: 'pickup.request.regular',  match: ['admin/pickup-request'] },
+    ]},
+    // Users Management — customers of the platform (Clients = merchants),
+    // internal delivery staff (Couriers = deliverymen), and platform back-
+    // office logins (Users & Roles). Same routes as before; the sidebar
+    // groups them under one heading so operators find them by function.
+    { group: 'menu_users_management', items: [
+        { tKey: 'menu_merchants',   icon: Users,      route: 'merchant.index',    match: ['admin/merchant'] },
+        { tKey: 'menu_deliveryman', icon: Truck,      route: 'deliveryman.index', match: ['admin/deliveryman'] },
+        { tKey: 'menu_users_roles', icon: UserCog,    route: 'users.index',       match: ['admin/users','admin/roles'] },
     ]},
     { group: 'menu_finance', items: [
         { tKey: 'menu_payment_received', icon: BadgeDollarSign, route: 'paid.invoice.index',  match: ['admin/paid'] },
@@ -62,7 +69,6 @@ const NAV = [
         { tKey: 'menu_wallet_request',   icon: Wallet,          route: 'wallet.request.index', match: ['admin/wallet-request'] },
     ]},
     { group: 'menu_hr', items: [
-        { tKey: 'menu_users_roles', icon: UserCog,    route: 'users.index',   match: ['admin/users','admin/roles'] },
         { tKey: 'menu_payroll',     icon: Briefcase,  route: 'salary.index',  match: ['admin/salary'] },
         { tKey: 'menu_assets',      icon: HardDrive,  route: 'asset.index',   match: ['admin/assets'] },
     ]},

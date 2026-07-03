@@ -168,58 +168,61 @@ class ParcelController extends Controller
      */
     public function store(StoreRequest $request)
     {
-
-
-        $parcel_count = Parcel::companywise()->count(); 
-        if(!settings()->subscription): 
-            Toastr::error('Something went wrong!', 'Error');
-            return redirect()->route('subscription.index');
-        elseif(settings()->subscription && settings()->subscription->parcel_count <= $parcel_count ):
-            Toastr::error('You have limited parcel manage. Please upgrade your package.', 'Error');
-            return redirect()->back(); 
-        endif;
-
-
-        //wallet use checking
-        $merchant      = Merchant::find($request->merchant_id);
-        if ($merchant->wallet_use_activation == Status::ACTIVE) :
-            $chargeDetails = json_decode($request->chargeDetails);
-            if ($chargeDetails->totalDeliveryChargeAmount > $merchant->wallet_balance) :
-                Toastr::error('This merchant has a low balance.', 'Error');
-                return redirect()->back()->withInput($request->all());
-            endif;
-        endif;
-        // end wallet use checking
-  
-        if($this->repo->store($request)){
-            Toastr::success(__('parcel.added_msg'),__('message.success'));
-            return redirect()->route('parcel.index');
-        }else{
-            Toastr::error(__('parcel.error_msg'),__('message.error'));
-            return redirect()->back();
+        // Flash keys go via ->with('error'|'success', …) so HandleInertia-
+        // Requests exposes them as props.flash — the FlashBanner in AdminLayout
+        // renders them. Toastr::* writes to a legacy session key the Inertia
+        // frontend never reads, so those calls used to fail silently: admin saw
+        // a 302 with no visible feedback.
+        $parcel_count = Parcel::companywise()->count();
+        if (! settings()->subscription) {
+            return redirect()->route('subscription.index')
+                ->with('error', __('Your workspace has no active subscription. Contact billing.'));
         }
+        if (settings()->subscription->parcel_count <= $parcel_count) {
+            return redirect()->back()
+                ->with('error', __('You have reached your parcel limit. Upgrade your package to create more.'));
+        }
+
+        // Wallet-balance gate for merchants that pay per-shipment from their wallet.
+        $merchant = Merchant::find($request->merchant_id);
+        if ($merchant && $merchant->wallet_use_activation == Status::ACTIVE) {
+            $chargeDetails = json_decode($request->chargeDetails);
+            if (isset($chargeDetails->totalDeliveryChargeAmount)
+                && $chargeDetails->totalDeliveryChargeAmount > $merchant->wallet_balance) {
+                return redirect()->back()->withInput($request->all())
+                    ->with('error', __('This merchant has insufficient wallet balance to cover the delivery charge.'));
+            }
+        }
+
+        if ($this->repo->store($request)) {
+            return redirect()->route('parcel.index')
+                ->with('success', __('parcel.added_msg'));
+        }
+
+        return redirect()->back()->withInput($request->all())
+            ->with('error', __('parcel.error_msg'));
     }
 
 
     public function duplicateStore(StoreRequest $request)
     {
-
         $parcel_count = Parcel::companywise()->count();
-        if(!settings()->subscription): 
-            Toastr::error('Something went wrong!', 'Error');
-            return redirect()->back();
-        elseif(settings()->subscription && settings()->subscription->parcel_count <= $parcel_count ):
-            Toastr::error('You have limited parcel manage. Please upgrade your package.', 'Error');
-            return redirect()->back(); 
-        endif;
-         
-        if($this->repo->duplicateStore($request)){
-            Toastr::success(__('parcel.added_msg'),__('message.success'));
-            return redirect()->route('parcel.index');
-        }else{
-            Toastr::error(__('parcel.error_msg'),__('message.error'));
-            return redirect()->back();
+        if (! settings()->subscription) {
+            return redirect()->back()
+                ->with('error', __('Your workspace has no active subscription. Contact billing.'));
         }
+        if (settings()->subscription->parcel_count <= $parcel_count) {
+            return redirect()->back()
+                ->with('error', __('You have reached your parcel limit. Upgrade your package to create more.'));
+        }
+
+        if ($this->repo->duplicateStore($request)) {
+            return redirect()->route('parcel.index')
+                ->with('success', __('parcel.added_msg'));
+        }
+
+        return redirect()->back()
+            ->with('error', __('parcel.error_msg'));
     }
 
     /**

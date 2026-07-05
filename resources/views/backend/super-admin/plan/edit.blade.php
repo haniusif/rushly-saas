@@ -76,6 +76,17 @@
                         </div>
 
                         <div>
+                            <label for="user_count" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">
+                                {{ __('levels.user_count') }}
+                            </label>
+                            <input type="number" min="1" id="user_count" name="user_count"
+                                   placeholder="{{ __('levels.user_count_placeholder') }}"
+                                   class="tw-input tw-w-full tw-h-10 tw-px-3 tw-text-sm tw-bg-white tw-border tw-rounded-lg @error('user_count') tw-border-red-300 @else tw-border-gray-200 @enderror"
+                                   value="{{ old('user_count', @$plan->user_count) }}">
+                            @error('user_count')<small class="tw-block tw-text-xs tw-text-red-500 tw-mt-1">{{ $message }}</small>@enderror
+                        </div>
+
+                        <div>
                             <label for="days_count" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">
                                 {{ __('levels.days_count') }} <span class="tw-text-red-500">*</span>
                             </label>

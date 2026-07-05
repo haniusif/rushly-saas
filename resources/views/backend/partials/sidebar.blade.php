@@ -167,7 +167,8 @@
                     href="{{ route('deliveryman.index') }}" aria-expanded="false" data-target="#submenu-1"
                     aria-controls="submenu-1"><i class="ti ti-truck-delivery"></i>{{ __('menus.deliveryman') }}</a>
             </li>
-            
+        @endif
+        @if (hasPermission('tms_read') == true)
              <li class="nav-item ">
                 <a class="nav-link {{ request()->is('admin/tms*') ? 'active' : '' }}"
                     href="{{ route('tms') }}" aria-expanded="false" data-target="#submenu-1"

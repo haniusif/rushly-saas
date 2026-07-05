@@ -49,7 +49,7 @@ const NAV = [
         // Knowledge Base hub (Main → Knowledge Base → WMS card).
     ]},
     { group: 'menu_operations', items: [
-        { tKey: 'menu_tms',            icon: Map,        route: 'tms',                     match: ['admin/tms'] },
+        { tKey: 'menu_tms',            icon: Map,        route: 'tms',                     match: ['admin/tms'],             perm: 'tms_read' },
         { tKey: 'menu_hubs',           icon: Warehouse,  route: 'hubs.index',              match: ['admin/hub'] },
         { tKey: 'menu_pickup_request', icon: Inbox,      route: 'pickup.request.regular',  match: ['admin/pickup-request'] },
     ]},
@@ -58,9 +58,10 @@ const NAV = [
     // office logins (Users & Roles). Same routes as before; the sidebar
     // groups them under one heading so operators find them by function.
     { group: 'menu_users_management', items: [
-        { tKey: 'menu_merchants',   icon: Users,      route: 'merchant.index',    match: ['admin/merchant'] },
-        { tKey: 'menu_deliveryman', icon: Truck,      route: 'deliveryman.index', match: ['admin/deliveryman'] },
-        { tKey: 'menu_users_roles', icon: UserCog,    route: 'users.index',       match: ['admin/users','admin/roles'] },
+        { tKey: 'menu_merchants',       icon: Users,      route: 'merchant.index',            match: ['admin/merchant'] },
+        { tKey: 'menu_deliveryman',     icon: Truck,      route: 'deliveryman.index',         match: ['admin/deliveryman'] },
+        { tKey: 'menu_users_roles',     icon: UserCog,    route: 'users.index',               match: ['admin/users','admin/roles'] },
+        { tKey: 'menu_child_companies', icon: Building2,  route: 'child-companies.index',     match: ['admin/child-companies'], perm: 'company_create' },
     ]},
     { group: 'menu_finance', items: [
         { tKey: 'menu_payment_received', icon: BadgeDollarSign, route: 'paid.invoice.index',  match: ['admin/paid'] },

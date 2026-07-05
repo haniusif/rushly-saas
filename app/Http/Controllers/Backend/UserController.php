@@ -157,6 +157,15 @@ class UserController extends Controller
 
     public function store(StoreUserRequest $request)
     {
+        $seatCap = optional(settings()->subscription)->user_count;
+        if ($seatCap !== null) {
+            $current = \App\Models\User::companywise()->count();
+            if ($current >= (int) $seatCap) {
+                Toastr::error('User seat limit reached ('.$seatCap.'). Please upgrade your plan.', __('message.error'));
+                return redirect()->back()->withInput($request->all());
+            }
+        }
+
         if($this->repo->store($request)){
             Toastr::success('User successfully added.',__('message.success'));
             return redirect()->route('users.index');

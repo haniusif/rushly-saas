@@ -24,10 +24,11 @@ class PlanRepository implements PlanInterface{
     public function store($request){
         try { 
   
-            $plan             = new $this->planModel(); 
+            $plan             = new $this->planModel();
             $plan->name       = $request->name;
             $plan->parcel_count = $request->parcel_count;
             $plan->deliveryman_count = $request->deliveryman_count;
+            $plan->user_count = $request->user_count;
             $plan->days_count = $request->days_count;
             $plan->price      = $request->price;
             $plan->description= $request->description; 
@@ -44,10 +45,11 @@ class PlanRepository implements PlanInterface{
     }
     public function update($id,$request){
         try {
-            $plan              = $this->planModel::find($id); 
+            $plan              = $this->planModel::find($id);
             $plan->name       = $request->name;
             $plan->parcel_count = $request->parcel_count;
             $plan->deliveryman_count = $request->deliveryman_count;
+            $plan->user_count = $request->user_count;
             $plan->days_count = $request->days_count;
             $plan->price      = $request->price;
             $plan->description= $request->description; 

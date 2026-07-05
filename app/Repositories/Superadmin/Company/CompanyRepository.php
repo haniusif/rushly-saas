@@ -57,7 +57,7 @@ class CompanyRepository implements CompanyInterface
         return User::where('id', $id)->where('user_type', UserType::ADMIN)->where('company_owner', BooleanStatus::YES)->first();
     }
 
-    public function company_create($request, $id = null)
+    public function company_create($request, $id = null, $parentCompanyId = null)
     {
 
 
@@ -76,6 +76,9 @@ class CompanyRepository implements CompanyInterface
             $company->current_version      = settings()->current_version;
             $company->par_track_prefix     = Str::upper($request->par_track_prefix);
             $company->invoice_prefix       = Str::upper($request->invoice_prefix);
+            if (! $id && $parentCompanyId !== null) {
+                $company->parent_company_id = $parentCompanyId;
+            }
             if (isset($request->logo) && $request->logo != null) {
 
                 $company->logo = $this->file('', $request->logo);
@@ -194,12 +197,12 @@ class CompanyRepository implements CompanyInterface
         return $array;
     }
 
-    public function store($request)
+    public function store($request, $parentCompanyId = null)
     {
-     
+
         try {
             DB::beginTransaction();
-            $company_id  = $this->company_create($request);
+            $company_id  = $this->company_create($request, null, $parentCompanyId);
             if ($company_id) :
 
              
@@ -237,6 +240,7 @@ class CompanyRepository implements CompanyInterface
                 $subscription->parcel_count = $plan->parcel_count;
                 $subscription->days_count   = $plan->days_count;
                 $subscription->deliveryman_count = $plan->deliveryman_count;
+                $subscription->user_count   = $plan->user_count;
                 $subscription->price        = $plan->price;
                 $subscription->start_date   = Carbon::now()->toDateTimeString();
                 $subscription->expired_date = Carbon::now()->addDays($plan->days_count)->toDateTimeString();
@@ -247,7 +251,7 @@ class CompanyRepository implements CompanyInterface
                 $company->subscription_id = $subscription->id;
                 $company->plan_id         = $plan->id;
                 $company->save();
- 
+
                 // Company Site Data
                 if ($user) :
                     (new CompanyFrontendDataSeeder)->companySiteData($company_id);
@@ -315,6 +319,7 @@ class CompanyRepository implements CompanyInterface
                 $subscription->parcel_count = $plan->parcel_count;
                 $subscription->days_count   = $plan->days_count;
                 $subscription->deliveryman_count = $plan->deliveryman_count;
+                $subscription->user_count   = $plan->user_count;
                 $subscription->price        = $plan->price;
                 $subscription->expired_date = Carbon::parse($subscription->start_date)->addDays($plan->days_count)->toDateTimeString();
                 $subscription->save();
@@ -364,6 +369,7 @@ class CompanyRepository implements CompanyInterface
             $subscription->days_count   = $plan->days_count;
             $subscription->parcel_count = $plan->parcel_count;
             $subscription->deliveryman_count = $plan->deliveryman_count;
+            $subscription->user_count   = $plan->user_count;
             $subscription->price        = $plan->price;
             $subscription->start_date   = Carbon::now()->toDateTimeString();
             $subscription->expired_date = Carbon::now()->addDays($plan->days_count)->toDateTimeString();

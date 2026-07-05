@@ -391,6 +391,8 @@ return [
     'login_id' => 'Login ID',
     'max_deliveryman'=>'Max Couriers',
     'deliveryman_count' => 'Max Couriers',
+    'user_count'    => 'Max Users (staff seats)',
+    'user_count_placeholder' => 'Leave empty for unlimited',
     'domain' =>'Domain',
     'more_modules'  => 'More modules',
     'wallet_activation' => 'Wallet Activation',

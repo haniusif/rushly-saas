@@ -25,6 +25,12 @@
                             <ul class="list-unstyled text-start plan-accordion">
                                 <li><i class="fa fa-check text-success me-3"></i>Total parcel count
                                     {{ @$plan->parcel_count }}</li>
+                                @if (!empty($plan->deliveryman_count))
+                                    <li><i class="fa fa-check text-success me-3"></i>{{ __('levels.max_deliveryman') }}: {{ $plan->deliveryman_count }}</li>
+                                @endif
+                                @if (!empty($plan->user_count))
+                                    <li><i class="fa fa-check text-success me-3"></i>{{ __('levels.user_count') }}: {{ $plan->user_count }}</li>
+                                @endif
 
                                 @foreach ($allmodules as $key=>$module)
                                     @if (in_array($module, $plan->modules))

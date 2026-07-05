@@ -436,6 +436,22 @@ class PermissionSeeder extends Seeder
                 'reports'      => 'wms_reports',
             ],
 
+            // TMS (Transport Management) module
+            'tms' => [
+                'read'   => 'tms_read',
+                'create' => 'tms_create',
+                'update' => 'tms_update',
+                'delete' => 'tms_delete',
+            ],
+
+            // Child-company management (reseller/white-label — a tenant admin
+            // can spin up new tenants gated by this permission). Distinct
+            // from the super_admin 'company' attribute; both strings coexist.
+            'company' => [
+                'read'   => 'company_read',
+                'create' => 'company_create',
+            ],
+
             // ZATCA (Saudi e-invoicing) Phase 1 module
             'zatca' => [
                 'manage'     => 'zatca_manage',

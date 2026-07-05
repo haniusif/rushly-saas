@@ -41,6 +41,7 @@ return [
             'cash_received_from_delivery_man'=>'Cash received from couriers',
 
             'reports'               => 'Reports',
+            'tms'                   => 'TMS',
             'salary_generate'       => 'Salary Generate',
             'reply'                 => 'Reply',
             'fraud'                 =>  'Deception',

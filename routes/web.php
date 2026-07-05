@@ -604,10 +604,11 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::post('get-merchant-cod',                         [parcelController::class, 'getMerchantCod'])->name('get.merchant.cod');
                         // WMS product picker (fulfillment-enabled merchants)
                         Route::get('parcel/merchant-products',                  [ParcelController::class, 'merchantProducts'])->name('parcel.merchantProducts')->middleware('hasPermission:parcel_create');
-                        // Deliveryman
-                        Route::get('tms',                [TMSController::class, 'tms'])->name('tms')->middleware('hasPermission:delivery_man_read');
-                        Route::get('tms/driver/{driver_id}/export',                [TMSController::class, 'print_runsheet'])->name('tms.runsheet')->middleware('hasPermission:delivery_man_read');
-                        Route::get('tms/runsheet/bulk',                            [TMSController::class, 'print_runsheet_bulk'])->name('tms.runsheet.bulk')->middleware('hasPermission:delivery_man_read');
+                        // TMS (Transport Management) — gated by its own permission
+                        // so plans can opt in/out independently of driver management.
+                        Route::get('tms',                [TMSController::class, 'tms'])->name('tms')->middleware('hasPermission:tms_read');
+                        Route::get('tms/driver/{driver_id}/export',                [TMSController::class, 'print_runsheet'])->name('tms.runsheet')->middleware('hasPermission:tms_read');
+                        Route::get('tms/runsheet/bulk',                            [TMSController::class, 'print_runsheet_bulk'])->name('tms.runsheet.bulk')->middleware('hasPermission:tms_read');
                         
                         
                         
@@ -720,6 +721,15 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                             Route::get('/{ndr}',                [NdrController::class, 'show'])->name('show');
                             Route::put('/{ndr}/action',         [NdrController::class, 'updateAction'])->name('action');
                             Route::put('/{ndr}/resolve',        [NdrController::class, 'resolve'])->name('resolve');
+                        });
+
+                        // Child-company (sub-account) management — a tenant admin with
+                        // company_create can spin up new tenants under their account.
+                        // See app/Http/Controllers/Backend/ChildCompanyController.php.
+                        Route::prefix('child-companies')->name('child-companies.')->middleware('hasPermission:company_create')->group(function () {
+                            Route::get('/',       [\App\Http\Controllers\Backend\ChildCompanyController::class, 'index'])->name('index');
+                            Route::get('/create', [\App\Http\Controllers\Backend\ChildCompanyController::class, 'create'])->name('create');
+                            Route::post('/',      [\App\Http\Controllers\Backend\ChildCompanyController::class, 'store'])->name('store');
                         });
 
                         // Abnormal Shipments module (gated by abnormal_manage)

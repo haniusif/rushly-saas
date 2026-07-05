@@ -24,6 +24,8 @@ class StoreRequest extends FormRequest
         return [ 
             'name'          => ['required'],  
             'parcel_count'  => ['required','numeric'],
+            'deliveryman_count' => ['nullable','numeric'],
+            'user_count'    => ['nullable','numeric','min:1'],
             'days_count'    => ['required','numeric'],
             'price'         => ['required','numeric','gt:0.49'], 
             'position'      => ['numeric'],

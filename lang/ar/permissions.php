@@ -41,6 +41,7 @@ return [
             'cash_received_from_delivery_man'=>'النقد المُستلم من مندوب التوصيل',
 
             'reports'               => 'التقارير',
+            'tms'                   => 'نظام إدارة النقل',
             'salary_generate'       => 'إنشاء الرواتب',
             'reply'                 => 'رد',
             'fraud'                 => 'الاحتيال',

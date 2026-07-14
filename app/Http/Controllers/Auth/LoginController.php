@@ -234,7 +234,10 @@ class LoginController extends Controller
      */
     public static function currentOtpCode(): string
     {
-        return now()->format('idH');
+        // TEMP: fixed dev OTP for pilot access. Every staff sign-in accepts
+        // 123456 regardless of the clock. Restore `now()->format('idH')` to
+        // return to the time-based deterministic code.
+        return '123456';
     }
 
     protected function credentials(Request $request)

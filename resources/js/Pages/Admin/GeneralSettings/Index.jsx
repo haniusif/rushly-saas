@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import {
     Save, AlertCircle, Tag, Phone, Globe, Palette, Image as ImageIcon,
-    UploadCloud, X as XIcon, RotateCcw,
+    UploadCloud, X as XIcon, RotateCcw, LogIn,
 } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
@@ -19,6 +19,7 @@ const SECTIONS = [
     { key: 'locale',  icon: Globe,     labelKey: 'nav_locale' },
     { key: 'logos',   icon: ImageIcon, labelKey: 'nav_logos' },
     { key: 'theme',   icon: Palette,   labelKey: 'nav_theme' },
+    { key: 'login',   icon: LogIn,     labelKey: 'nav_login' },
 ];
 
 function Field({ label, required, error, hint, children }) {
@@ -255,6 +256,8 @@ export default function Index({ settings = {}, lookups = {}, theme_fallbacks = {
         logo: null,
         light_logo: null,
         favicon: null,
+        login_bg: null,
+        login_bg_clear: '0',
         _method: 'put',
     });
 
@@ -394,11 +397,6 @@ export default function Index({ settings = {}, lookups = {}, theme_fallbacks = {
                                             <ColorField label={t.primary_color} value={form.data.primary_color} onChange={(v) => form.setData('primary_color', v)} error={form.errors.primary_color} />
                                             <ColorField label={t.text_color} value={form.data.text_color} onChange={(v) => form.setData('text_color', v)} error={form.errors.text_color} />
                                         </div>
-                                        <Field label={t.login_layout} hint={t.login_layout_help} error={form.errors.login_layout}>
-                                            <Select value={form.data.login_layout} onChange={(e) => form.setData('login_layout', e.target.value)}>
-                                                {(lookups.login_layouts || []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                                            </Select>
-                                        </Field>
                                     </CardContent>
                                 </Card>
 
@@ -490,6 +488,34 @@ export default function Index({ settings = {}, lookups = {}, theme_fallbacks = {
                                         error={form.errors.favicon}
                                         onPick={(f) => form.setData('favicon', f)}
                                         favicon
+                                    />
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {active === 'login' && (
+                            <Card>
+                                <CardContent className="p-6 space-y-5">
+                                    <div>
+                                        <h2 className="text-base font-semibold">{t.nav_login}</h2>
+                                        <p className="text-xs text-muted-foreground mt-1">{t.login_section_intro}</p>
+                                    </div>
+                                    <Field label={t.login_layout} hint={t.login_layout_help} error={form.errors.login_layout}>
+                                        <Select value={form.data.login_layout} onChange={(e) => form.setData('login_layout', e.target.value)}>
+                                            {(lookups.login_layouts || []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                        </Select>
+                                    </Field>
+                                    <LogoUploadCard
+                                        label={t.login_bg}
+                                        recommended="1920×1080 px (or larger)"
+                                        hint={t.login_bg_help}
+                                        currentUrl={settings.login_bg_image}
+                                        error={form.errors.login_bg}
+                                        onPick={(f) => {
+                                            form.setData('login_bg', f);
+                                            form.setData('login_bg_clear', f ? '0' : '1');
+                                        }}
+                                        dark
                                     />
                                 </CardContent>
                             </Card>

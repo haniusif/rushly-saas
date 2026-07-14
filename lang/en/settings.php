@@ -18,4 +18,9 @@ return [
         'timezone'                => 'Timezone',
         'timezone_help'           => 'Applies to timestamps, scheduled jobs, and the login OTP clock. Leave empty to inherit the application default.',
         'timezone_default_option' => 'Application default',
+        'login_bg'                => 'Login background image',
+        'login_bg_help'           => 'Full-bleed image behind the login form (Split and Fullbleed layouts). Recommended 1920×1080 or larger.',
+        'login_bg_clear'          => 'Remove background',
+        'nav_login'               => 'Login page',
+        'login_section_intro'     => 'How the pre-authentication sign-in screen looks.',
     ];

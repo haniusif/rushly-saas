@@ -46,8 +46,22 @@
   $__lb       = $loginBrand ?? loginBrand();
   $__lbName   = $__lb['name'] ?? config('app.name', 'Rushly');
   $__lbLogo   = $__lb['light_logo'] ?? $__lb['logo'] ?? null;
+  $__lbBg     = $__lb['login_bg'] ?? null;
   $locale     = app()->getLocale();
 @endphp
+
+@if($__lbBg)
+  {{-- Full-screen custom background: paint the body with the picture and dim it
+       so the glass card on top stays readable. Overrides the gradient set in @push('styles'). --}}
+  <style>
+    body.login-fullbleed { background: url('{{ $__lbBg }}') center/cover no-repeat fixed !important; }
+    body.login-fullbleed::after {
+      content: ""; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      pointer-events: none; z-index: 0;
+    }
+    .fb-wrap, .fb-card { position: relative; z-index: 1; }
+  </style>
+@endif
 
 <div class="fb-wrap">
   <div class="fb-card">

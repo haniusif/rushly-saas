@@ -23,6 +23,7 @@ class GeneralSettings extends Model
         'prefix',
         'purchase_code',
         'timezone',
+        'login_bg',
     ];
 
     public function getActivitylogOptions(): LogOptions
@@ -54,6 +55,10 @@ class GeneralSettings extends Model
     public function rxfavicon()
     {
         return $this->belongsTo(Upload::class, 'favicon', 'id');
+    }
+    public function loginBgUpload()
+    {
+        return $this->belongsTo(Upload::class, 'login_bg', 'id');
     }
 
     /**
@@ -96,6 +101,20 @@ class GeneralSettings extends Model
             return static_asset($path);
         }
         return static_asset('images/default/favicon.png');
+    }
+
+    /**
+     * Login-screen background image. Nullable by design — when unset the
+     * layouts render their default gradient/blank background. No filesystem
+     * fallback because the login screens all work fine without it.
+     */
+    public function getLoginBgImageAttribute()
+    {
+        $path = optional($this->loginBgUpload)->original;
+        if (!empty($path) && file_exists(public_path($path))) {
+            return static_asset($path);
+        }
+        return null;
     }
 
     public function createdBy(){

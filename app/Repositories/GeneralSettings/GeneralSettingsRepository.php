@@ -100,6 +100,14 @@ class GeneralSettingsRepository implements GeneralSettingsInterface{
         {
             $row->favicon = $this->file($row->favicon, $request->favicon);
         }
+        if(isset($request->login_bg) && $request->login_bg != null)
+        {
+            $row->login_bg = $this->file($row->login_bg, $request->login_bg);
+        }
+        // Explicit clear: form posts login_bg_clear=1 to remove the current image.
+        if ($request->boolean('login_bg_clear')) {
+            $row->login_bg = null;
+        }
         $row->save();
         return $row;
 

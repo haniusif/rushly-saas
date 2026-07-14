@@ -178,6 +178,7 @@ if(!function_exists('merchantBrand')){
             'logo'               => $s->logo_image ?? null,
             'light_logo'         => $s->light_logo_image ?? null,
             'favicon'            => $s->favicon_image ?? null,
+            'login_bg'           => $s->login_bg_image ?? null,
             'primary_color'      => $s->primary_color ?? null,
             'text_color'         => $s->text_color ?? null,
             'sidebar_color'      => $s->sidebar_color ?? null,
@@ -1003,6 +1004,20 @@ if (!function_exists('singleUser')) {
             if (! $row || ! $row->meta) return null;
             $meta = json_decode($row->meta, true);
             return $meta[$key] ?? null;
+        }
+    }
+
+    if (!function_exists('zidBridge')) {
+        /**
+         * Read a Zid bridge credential from the current tenant's
+         * integration_settings row. Zid uses the bridge-app pattern, so the
+         * fields live in the top-level columns (app_url / writeback_token /
+         * api_base), not in meta. Returns null when the tenant has no row
+         * yet — callers fall back to the deprecated env() values.
+         */
+        function zidBridge(string $key){
+            $row = integrationSettings('zid');
+            return $row?->{$key};
         }
     }
 

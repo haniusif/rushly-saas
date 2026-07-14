@@ -163,10 +163,16 @@
   </div>
 
   {{-- ============ RIGHT: GRADIENT PANEL ============ --}}
-  <div class="hidden lg:flex relative overflow-hidden gradient-primary text-white">
-    {{-- Decorative blobs --}}
-    <div aria-hidden="true" class="pointer-events-none absolute -top-32 -end-32 w-[36rem] h-[36rem] rounded-full bg-white/10 blur-3xl"></div>
-    <div aria-hidden="true" class="pointer-events-none absolute -bottom-32 -start-24 w-[28rem] h-[28rem] rounded-full bg-white/5 blur-3xl"></div>
+  @php $__lbBg = $__lb['login_bg'] ?? null; @endphp
+  <div class="hidden lg:flex relative overflow-hidden gradient-primary text-white"
+       @if($__lbBg) style="background-image: url('{{ $__lbBg }}'); background-size: cover; background-position: center;" @endif>
+    @if($__lbBg)
+      {{-- Overlay so the copy on top of the image stays readable regardless of the picture. --}}
+      <div aria-hidden="true" class="absolute inset-0 bg-black/35"></div>
+    @endif
+    {{-- Decorative blobs (subdued when a custom image is set so we don't fight the picture). --}}
+    <div aria-hidden="true" class="pointer-events-none absolute -top-32 -end-32 w-[36rem] h-[36rem] rounded-full bg-white/10 blur-3xl {{ $__lbBg ? 'opacity-30' : '' }}"></div>
+    <div aria-hidden="true" class="pointer-events-none absolute -bottom-32 -start-24 w-[28rem] h-[28rem] rounded-full bg-white/5 blur-3xl {{ $__lbBg ? 'opacity-30' : '' }}"></div>
 
     {{-- Subtle grid pattern --}}
     <div aria-hidden="true" class="absolute inset-0 opacity-[0.05]"

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Enums\UserType;
 use App\Http\Controllers\Controller;
+use App\Mail\LoginOtpMail;
 use App\Models\User;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
@@ -11,6 +12,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 
 class LoginController extends Controller
 {
@@ -77,9 +80,18 @@ class LoginController extends Controller
         }
 
         if ($this->attemptLogin($request)) {
+            $authed = $this->guard()->user();
+
+            // Two-step login (features.login_otp): after a valid password,
+            // Admin/SuperAdmin users get a 6-digit code emailed to them
+            // instead of being fully signed in. Merchants/deliverymen skip.
+            if ($this->requiresLoginOtp($authed)) {
+                return $this->challengeWithOtp($request, $authed);
+            }
+
             if ($request->hasSession()) {
                 $request->session()->put('auth.password_confirmed_at', time());
-            } 
+            }
             return $this->sendLoginResponse($request);
         }
 
@@ -151,6 +163,59 @@ class LoginController extends Controller
             'loginBrand' => $brand,
             'loginSlug'  => $slug,
         ]);
+    }
+
+    /**
+     * True when this user must complete the email-OTP challenge before the
+     * session is considered fully signed in. Gated by features.login_otp and
+     * scoped to staff (Admin, SuperAdmin) only.
+     */
+    protected function requiresLoginOtp($user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+        if (! config('features.login_otp')) {
+            return false;
+        }
+        return in_array((int) $user->user_type, [UserType::ADMIN, UserType::SUPER_ADMIN], true);
+    }
+
+    /**
+     * Log the user back out immediately, park their id + remember-me choice
+     * in the session together with the hashed OTP, generate the code, and
+     * email it. Storage is session-based because on tenant subdomains the
+     * default cache driver (file) can't be tagged by Stancl Tenancy's cache
+     * bootstrapper — the session bypasses that entire path.
+     */
+    protected function challengeWithOtp(Request $request, $user)
+    {
+        if (empty($user->email)) {
+            Auth::logout();
+            return back()->withInput($request->only('email', 'remember'))
+                ->withErrors(['email' => __('auth.login_otp_session_lost')]);
+        }
+
+        $code       = (string) random_int(100000, 999999);
+        $ttlMinutes = 5;
+
+        Auth::logout();
+        $request->session()->put('login_otp', [
+            'user_id'    => $user->id,
+            'remember'   => (bool) $request->boolean('remember'),
+            'hash'       => Hash::make($code),
+            'expires_at' => now()->addMinutes($ttlMinutes)->timestamp,
+            'attempts'   => 0,
+            'resends'    => 0,
+        ]);
+
+        try {
+            Mail::to($user->email)->send(new LoginOtpMail($code, $ttlMinutes, $user->name ?: 'there'));
+        } catch (\Throwable $e) {
+            \Log::error('Login OTP mail failed: '.$e->getMessage(), ['user_id' => $user->id]);
+        }
+
+        return redirect()->route('login.otp.show')->with('status', __('auth.login_otp_sent'));
     }
 
     protected function credentials(Request $request)

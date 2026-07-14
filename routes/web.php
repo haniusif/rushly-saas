@@ -186,6 +186,14 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                 ->name('login.branded');
             Auth::routes();
 
+            // Two-step login challenge (features.login_otp). Reached only when
+            // the previous password-step stashed a user id in the session.
+            Route::middleware('guest')->group(function () {
+                Route::get('/login/otp', [\App\Http\Controllers\Auth\LoginOtpController::class, 'show'])->name('login.otp.show');
+                Route::post('/login/otp', [\App\Http\Controllers\Auth\LoginOtpController::class, 'verify'])->name('login.otp.verify');
+                Route::post('/login/otp/resend', [\App\Http\Controllers\Auth\LoginOtpController::class, 'resend'])->name('login.otp.resend');
+            });
+
             // Stop impersonation — accessible to whoever is currently logged in (the
             // impersonated merchant) as long as session.impersonator_id is set.
             // No permission middleware: the gate is "did an admin set up this session?".

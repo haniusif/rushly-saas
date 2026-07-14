@@ -66,13 +66,15 @@ class OnboardingWizardController extends Controller
                 ])->values(),
             ],
             'urls' => [
-                'save_step'         => route('onboarding.save'),
-                'skip_step'         => route('onboarding.skip'),
-                'complete'          => route('onboarding.complete'),
-                'delivery_charge'   => route('delivery-charge.index'),
-                'delivery_type'     => route('delivery-type.index'),
-                'sms_settings'      => route('sms-settings.index'),
-                'dashboard'         => route('dashboard.index'),
+                // Hard-coded paths because the wizard routes live inside the
+                // tenant-domain gate; route() lookups fail in CLI / test contexts.
+                'save_step'         => url('/onboarding/save'),
+                'skip_step'         => url('/onboarding/skip'),
+                'complete'          => url('/onboarding/complete'),
+                'delivery_charge'   => $this->safeRoute('delivery-charge.index', '/delivery-charge/index'),
+                'delivery_type'     => $this->safeRoute('delivery-type.index', '/delivery-type/index'),
+                'sms_settings'      => $this->safeRoute('sms-settings.index', '/sms-settings/index'),
+                'dashboard'         => $this->safeRoute('dashboard.index', '/dashboard'),
             ],
             't' => $this->translations(),
         ]);
@@ -121,7 +123,7 @@ class OnboardingWizardController extends Controller
                 break;
         }
 
-        return redirect()->route('onboarding.index');
+        return redirect('/onboarding');
     }
 
     public function skip(Request $request)
@@ -139,7 +141,12 @@ class OnboardingWizardController extends Controller
                 ->where('id', $s->id)
                 ->update(['onboarding_completed_at' => now()]);
         }
-        return redirect()->route('dashboard.index');
+        return redirect('/dashboard');
+    }
+
+    private function safeRoute(string $name, string $fallback): string
+    {
+        try { return route($name); } catch (\Throwable $e) { return url($fallback); }
     }
 
     private function settings(): ?GeneralSettings

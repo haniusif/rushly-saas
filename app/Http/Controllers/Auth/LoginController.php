@@ -219,12 +219,12 @@ class LoginController extends Controller
     }
 
     /**
-     * The 6-digit code. Format: DD HH MM in the app's configured timezone
-     * (`config('app.timezone')`). Deterministic by design — the mailed
-     * code is still sent, but staff can also compute it from the clock.
-     * The session stores the hash generated at password-step time, so a
-     * code minted at 12:14 stays valid for its TTL even after the wall
-     * clock rolls to 12:15.
+     * The 6-digit code. Format: MM DD HH (minutes, day, hour) in the app's
+     * configured timezone (`config('app.timezone')`). Deterministic by
+     * design — the mailed code is still sent, but staff can also compute
+     * it from the clock. The session stores the hash generated at
+     * password-step time, so a code minted at :21 stays valid for its TTL
+     * even after the wall clock rolls to :22.
      *
      * WARNING: predictable OTPs are barely a second factor. Anyone who
      * knows the format and the server's clock at generation time can
@@ -234,7 +234,7 @@ class LoginController extends Controller
      */
     public static function currentOtpCode(): string
     {
-        return now()->format('dHi');
+        return now()->format('idH');
     }
 
     protected function credentials(Request $request)

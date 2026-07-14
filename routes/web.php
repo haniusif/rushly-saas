@@ -178,6 +178,16 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
             CompanyActivationMiddleware::class
         ])->group(function () {
 
+            // Two-step login challenge (features.login_otp). Reached only when
+            // the previous password-step stashed a user id in the session.
+            // Registered BEFORE the /login/{slug} branded-login catch-all so
+            // /login/otp isn't captured as a merchant slug.
+            Route::middleware('guest')->group(function () {
+                Route::get('/login/otp', [\App\Http\Controllers\Auth\LoginOtpController::class, 'show'])->name('login.otp.show');
+                Route::post('/login/otp', [\App\Http\Controllers\Auth\LoginOtpController::class, 'verify'])->name('login.otp.verify');
+                Route::post('/login/otp/resend', [\App\Http\Controllers\Auth\LoginOtpController::class, 'resend'])->name('login.otp.resend');
+            });
+
             // Branded login: /login/{merchant_unique_id} pre-overlays that merchant's
             // brand on the otherwise tenant-branded login screen. Registered BEFORE
             // Auth::routes() so /login (no slug) still hits the framework default.
@@ -185,14 +195,6 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                 ->middleware('guest')
                 ->name('login.branded');
             Auth::routes();
-
-            // Two-step login challenge (features.login_otp). Reached only when
-            // the previous password-step stashed a user id in the session.
-            Route::middleware('guest')->group(function () {
-                Route::get('/login/otp', [\App\Http\Controllers\Auth\LoginOtpController::class, 'show'])->name('login.otp.show');
-                Route::post('/login/otp', [\App\Http\Controllers\Auth\LoginOtpController::class, 'verify'])->name('login.otp.verify');
-                Route::post('/login/otp/resend', [\App\Http\Controllers\Auth\LoginOtpController::class, 'resend'])->name('login.otp.resend');
-            });
 
             // Stop impersonation — accessible to whoever is currently logged in (the
             // impersonated merchant) as long as session.impersonator_id is set.

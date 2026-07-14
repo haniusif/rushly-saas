@@ -42,6 +42,7 @@ class Kernel extends HttpKernel
             \App\Http\Middleware\LanguageManager::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
             \App\Http\Middleware\TrackDriverLastSeen::class,
+            \App\Http\Middleware\SetTenantTimezone::class,
         ],
 
         'api' => [

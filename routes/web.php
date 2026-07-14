@@ -203,6 +203,15 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                 ->middleware('auth')
                 ->name('merchant.impersonate.stop');
 
+            // First-run setup wizard. RequireOnboarding middleware redirects
+            // Admins here on their first login into a fresh tenant.
+            Route::middleware('auth')->group(function () {
+                Route::get('/onboarding',           [\App\Http\Controllers\Backend\OnboardingWizardController::class, 'index'])->name('onboarding.index');
+                Route::post('/onboarding/save',     [\App\Http\Controllers\Backend\OnboardingWizardController::class, 'save'])->name('onboarding.save');
+                Route::post('/onboarding/skip',     [\App\Http\Controllers\Backend\OnboardingWizardController::class, 'skip'])->name('onboarding.skip');
+                Route::post('/onboarding/complete', [\App\Http\Controllers\Backend\OnboardingWizardController::class, 'complete'])->name('onboarding.complete');
+            });
+
             //frontend
             // Public parcel-rating capture (signed URL, no auth required).
             // Customer clicks the link from SMS/email after delivery → rates 1..5.

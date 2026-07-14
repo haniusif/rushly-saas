@@ -1,12 +1,13 @@
 import * as React from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
-import { Check, ChevronRight, ExternalLink, SkipForward } from 'lucide-react';
+import { Check, ChevronRight, ExternalLink, SkipForward, Globe } from 'lucide-react';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { Button } from '@/Components/ui/Button';
 import { Input } from '@/Components/ui/Input';
 import { Label } from '@/Components/ui/Label';
 import { Select } from '@/Components/ui/Select';
 import { Textarea } from '@/Components/ui/Textarea';
+import { useLocale, SUPPORTED_LOCALES } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 // Ordering + descriptors must mirror OnboardingWizardController::STEPS.
@@ -32,6 +33,37 @@ function Field({ label, required, error, hint, children }) {
             {children}
             {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}
             {error && <p className="text-xs text-destructive">{error}</p>}
+        </div>
+    );
+}
+
+function LanguageSwitcher() {
+    const locale = useLocale();
+    const switchTo = (code) => {
+        if (code === locale) return;
+        // Hard-coded path — the wizard renders before route() has the tenant
+        // routes loaded (see SafeRoute pattern in the controller).
+        window.location.href = `/localization/${code}`;
+    };
+    return (
+        <div className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-1 py-1 shadow-sm">
+            <Globe className="h-3.5 w-3.5 text-muted-foreground mx-1.5" aria-hidden />
+            {SUPPORTED_LOCALES.map((l) => (
+                <button
+                    key={l.code}
+                    type="button"
+                    onClick={() => switchTo(l.code)}
+                    className={cn(
+                        'px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors',
+                        l.code === locale
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    )}
+                    aria-current={l.code === locale ? 'true' : undefined}
+                >
+                    {l.native}
+                </button>
+            ))}
         </div>
     );
 }
@@ -104,7 +136,10 @@ export default function Index({ settings = {}, lookups = {}, urls = {}, t = {} }
         <>
             <Head title={t.title} />
 
-            <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4 sm:p-6 lg:p-8">
+            <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4 sm:p-6 lg:p-8 relative">
+                <div className="absolute top-4 end-4 sm:top-6 sm:end-6">
+                    <LanguageSwitcher />
+                </div>
                 <div className="w-full max-w-5xl">
                     <div className="mb-6 text-center">
                         <h1 className="text-2xl font-bold tracking-tight">{t.title}</h1>

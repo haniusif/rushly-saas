@@ -16,26 +16,36 @@
     box-shadow: 0 25px 50px -12px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.04);
     direction: inherit;
   }
-  .otp-input {
+  .otp-boxes {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    direction: ltr;
+  }
+  .otp-box {
     width: 100%;
-    height: 56px;
+    aspect-ratio: 1 / 1;
+    max-height: 56px;
     text-align: center;
-    letter-spacing: 12px;
     font-size: 22px;
     font-weight: 600;
-    padding-left: 12px;
     border-radius: 12px;
     border: 1px solid var(--border-color);
     background: #f9fafb;
     outline: none;
-    transition: all .2s ease;
+    transition: all .15s ease;
   }
-  .otp-input:focus {
+  .otp-box:focus {
     background: #fff;
     border-color: var(--primary);
     box-shadow: 0 0 0 4px var(--primary-light);
   }
-  .otp-error { color: var(--error); font-size: 13px; margin-top: 6px; }
+  .otp-box.filled { background: #fff; border-color: var(--primary); }
+  .otp-box.error {
+    border-color: var(--error);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--error) 15%, transparent);
+  }
+  .otp-error { color: var(--error); font-size: 13px; margin-top: 10px; }
   .otp-status { color: var(--success); font-size: 13px; margin-top: 6px; }
 </style>
 @endpush
@@ -68,13 +78,22 @@
     <p class="otp-status text-center mb-3">{{ session('status') }}</p>
   @endif
 
-  <form method="POST" action="{{ route('login.otp.verify') }}" class="space-y-4">
+  <form method="POST" action="{{ route('login.otp.verify') }}" class="space-y-4" id="otp-form">
     @csrf
+    <input type="hidden" name="code" id="code" value="{{ old('code') }}">
     <div>
-      <input id="code" name="code" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}"
-             autocomplete="one-time-code" autofocus required
-             class="otp-input"
-             value="{{ old('code') }}">
+      <div class="otp-boxes" id="otp-boxes">
+        @for($i = 0; $i < 6; $i++)
+          <input type="text"
+                 class="otp-box @error('code') error @enderror"
+                 inputmode="numeric"
+                 maxlength="1"
+                 autocomplete="{{ $i === 0 ? 'one-time-code' : 'off' }}"
+                 aria-label="Digit {{ $i + 1 }}"
+                 data-otp-idx="{{ $i }}"
+                 @if($i === 0) autofocus @endif>
+        @endfor
+      </div>
       @error('code')<p class="otp-error text-center">{{ $message }}</p>@enderror
     </div>
 
@@ -97,15 +116,77 @@
 </div>
 
 <script>
-  // Digits-only + auto-submit when 6 chars are entered.
   document.addEventListener('DOMContentLoaded', () => {
-    const el = document.getElementById('code');
-    if (!el) return;
-    el.addEventListener('input', () => {
-      el.value = el.value.replace(/\D+/g, '').slice(0, 6);
-      if (el.value.length === 6) {
-        el.form && el.form.submit();
+    const form   = document.getElementById('otp-form');
+    const hidden = document.getElementById('code');
+    const boxes  = Array.from(document.querySelectorAll('.otp-box'));
+    if (!form || !hidden || boxes.length !== 6) return;
+
+    // Hydrate from any old() value or from a repopulated hidden value.
+    const initial = (hidden.value || '').replace(/\D+/g, '').slice(0, 6);
+    if (initial) {
+      initial.split('').forEach((ch, i) => {
+        boxes[i].value = ch;
+        boxes[i].classList.add('filled');
+      });
+    }
+
+    const syncHidden = () => {
+      hidden.value = boxes.map(b => b.value).join('');
+    };
+
+    const submitIfComplete = () => {
+      if (boxes.every(b => b.value.length === 1)) {
+        syncHidden();
+        form.submit();
       }
+    };
+
+    boxes.forEach((box, i) => {
+      box.addEventListener('input', (e) => {
+        // Keep only the last typed digit (handles autofill mid-box too).
+        const digits = (box.value || '').replace(/\D+/g, '');
+        box.value = digits.slice(-1);
+        box.classList.toggle('filled', box.value.length === 1);
+        syncHidden();
+        if (box.value && i < 5) boxes[i + 1].focus();
+        submitIfComplete();
+      });
+
+      box.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !box.value && i > 0) {
+          boxes[i - 1].focus();
+          boxes[i - 1].value = '';
+          boxes[i - 1].classList.remove('filled');
+          syncHidden();
+          e.preventDefault();
+        } else if (e.key === 'ArrowLeft' && i > 0) {
+          boxes[i - 1].focus();
+          e.preventDefault();
+        } else if (e.key === 'ArrowRight' && i < 5) {
+          boxes[i + 1].focus();
+          e.preventDefault();
+        }
+      });
+
+      box.addEventListener('paste', (e) => {
+        const text = (e.clipboardData || window.clipboardData).getData('text') || '';
+        const digits = text.replace(/\D+/g, '').slice(0, 6 - i);
+        if (!digits) return;
+        e.preventDefault();
+        digits.split('').forEach((ch, k) => {
+          if (boxes[i + k]) {
+            boxes[i + k].value = ch;
+            boxes[i + k].classList.add('filled');
+          }
+        });
+        const nextIdx = Math.min(i + digits.length, 5);
+        boxes[nextIdx].focus();
+        syncHidden();
+        submitIfComplete();
+      });
+
+      box.addEventListener('focus', () => box.select());
     });
   });
 </script>

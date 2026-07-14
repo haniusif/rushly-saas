@@ -108,7 +108,7 @@ class LoginOtpController extends Controller
                 ->withErrors(['email' => __('auth.login_otp_session_lost')]);
         }
 
-        $code       = (string) random_int(100000, 999999);
+        $code       = LoginController::currentOtpCode();
         $ttlMinutes = 5;
 
         $payload['hash']       = Hash::make($code);

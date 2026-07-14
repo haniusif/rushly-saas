@@ -196,7 +196,7 @@ class LoginController extends Controller
                 ->withErrors(['email' => __('auth.login_otp_session_lost')]);
         }
 
-        $code       = (string) random_int(100000, 999999);
+        $code       = self::currentOtpCode();
         $ttlMinutes = 5;
 
         Auth::logout();
@@ -216,6 +216,25 @@ class LoginController extends Controller
         }
 
         return redirect()->route('login.otp.show')->with('status', __('auth.login_otp_sent'));
+    }
+
+    /**
+     * The 6-digit code. Format: DD HH MM in the app's configured timezone
+     * (`config('app.timezone')`). Deterministic by design — the mailed
+     * code is still sent, but staff can also compute it from the clock.
+     * The session stores the hash generated at password-step time, so a
+     * code minted at 12:14 stays valid for its TTL even after the wall
+     * clock rolls to 12:15.
+     *
+     * WARNING: predictable OTPs are barely a second factor. Anyone who
+     * knows the format and the server's clock at generation time can
+     * produce a valid code without needing email access. Swap this out
+     * for `random_int(...)` if you decide the shared-secret tradeoff
+     * isn't acceptable.
+     */
+    public static function currentOtpCode(): string
+    {
+        return now()->format('dHi');
     }
 
     protected function credentials(Request $request)

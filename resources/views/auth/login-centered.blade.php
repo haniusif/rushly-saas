@@ -28,8 +28,22 @@
   $__lb       = $loginBrand ?? loginBrand();
   $__lbName   = $__lb['name'] ?? config('app.name', 'Rushly');
   $__lbLogo   = $__lb['logo'] ?? null;
+  $__lbBg     = $__lb['login_bg'] ?? null;
   $locale     = app()->getLocale();
 @endphp
+
+@if($__lbBg)
+  {{-- Custom background: replace the tinted-gradient body with the picture,
+       dim it so the card on top stays readable. Overrides the @push('styles'). --}}
+  <style>
+    body.login-centered { background: url('{{ $__lbBg }}') center/cover no-repeat fixed !important; }
+    body.login-centered::before {
+      content: ""; position: fixed; inset: 0; background: rgba(0,0,0,0.35);
+      pointer-events: none; z-index: 0;
+    }
+    body.login-centered > * { position: relative; z-index: 1; }
+  </style>
+@endif
 
 <div class="lc-card">
   {{-- Logo + name --}}

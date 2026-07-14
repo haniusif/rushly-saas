@@ -69,7 +69,7 @@ return [
     |
     */
 
-    'timezone' => 'Asia/Dubai',
+    'timezone' => 'Asia/Riyadh',
 
     /*
     |--------------------------------------------------------------------------
@@ -181,6 +181,9 @@ return [
         App\Providers\RouteServiceProvider::class,
         App\Providers\TenancyServiceProvider::class, // multi-tenancy  service provider multiple domain manage
         App\Providers\IntegrationConfigServiceProvider::class, // overlays DB integration_settings onto config('services.<platform>.*')
+        App\Providers\ZatcaServiceProvider::class, // ZATCA (Saudi e-invoicing) Phase 1 generation module
+        App\Shipping\ShippingServiceProvider::class, // generic shipping module (Logestechs + future providers)
+        App\Commerce\CommerceServiceProvider::class, // generic commerce module — Phase 1 scaffold; behavior gated by config('features.commerce_layer')
     ])->toArray(),
 
     /*

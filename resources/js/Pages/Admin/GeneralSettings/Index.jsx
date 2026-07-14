@@ -227,8 +227,119 @@ function LogoUploadCard({ label, hint, recommended, currentUrl, error, onPick, d
     );
 }
 
+/**
+ * Miniature, in-browser mock of the pre-auth login page. Reads the current
+ * form values (not just what's saved) so admins can see unsaved changes to
+ * layout, colors, and background image before clicking Save. Deliberately
+ * approximates the real Blade templates rather than iframing them — that
+ * way there's no reload, no session, and the preview stays crisp on small
+ * cards.
+ */
+function LoginPreview({ layout, primaryColor, textColor, bgUrl, logoUrl, brandName }) {
+    const primary = primaryColor || '#a21f5c';
+    const accent  = '#29245a';
+    const gradient = `linear-gradient(135deg, ${primary} 0%, ${accent} 100%)`;
+    const brandInitial = (brandName || 'R').trim().charAt(0).toUpperCase();
+
+    const Logo = ({ className = 'h-6', tint = 'primary' }) => (
+        logoUrl
+            ? <img src={logoUrl} alt="" className={`${className} w-auto`} />
+            : <span
+                className={`inline-grid place-items-center h-8 w-8 rounded-lg text-white font-bold text-sm`}
+                style={{ background: tint === 'primary' ? primary : 'rgba(255,255,255,0.15)' }}
+            >{brandInitial}</span>
+    );
+
+    if (layout === 'centered') {
+        return (
+            <div className="relative aspect-[16/9] w-full overflow-hidden rounded-lg border border-border">
+                <div className="absolute inset-0"
+                     style={{ background: bgUrl
+                         ? `url('${bgUrl}') center/cover no-repeat`
+                         : `linear-gradient(135deg, ${primary}1a, ${accent}14)` }} />
+                {bgUrl && <div className="absolute inset-0 bg-black/25" />}
+                <div className="relative z-10 flex h-full w-full items-center justify-center p-6">
+                    <div className="w-full max-w-[220px] rounded-2xl bg-white p-5 shadow-2xl">
+                        <div className="mb-3 flex flex-col items-center">
+                            <Logo />
+                            <div className="mt-2 text-[11px] font-semibold" style={{ color: textColor || '#0f172a' }}>Welcome back</div>
+                        </div>
+                        <div className="space-y-2">
+                            <div className="h-6 rounded-md bg-gray-100" />
+                            <div className="h-6 rounded-md bg-gray-100" />
+                            <div className="h-6 rounded-md text-[9px] font-semibold text-white flex items-center justify-center"
+                                 style={{ background: gradient }}>Sign in</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (layout === 'fullbleed') {
+        return (
+            <div className="relative aspect-[16/9] w-full overflow-hidden rounded-lg border border-border">
+                <div className="absolute inset-0"
+                     style={{ background: bgUrl
+                         ? `url('${bgUrl}') center/cover no-repeat`
+                         : gradient }} />
+                <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.35)' }} />
+                <div className="relative z-10 flex h-full w-full items-center justify-center p-6">
+                    <div className="w-full max-w-[220px] rounded-2xl border border-white/20 bg-white/10 p-5 backdrop-blur-md text-white">
+                        <div className="mb-3 flex flex-col items-center">
+                            <Logo tint="light" />
+                            <div className="mt-2 text-[11px] font-semibold">Welcome back</div>
+                        </div>
+                        <div className="space-y-2">
+                            <div className="h-6 rounded-md bg-white/15" />
+                            <div className="h-6 rounded-md bg-white/15" />
+                            <div className="h-6 rounded-md text-[9px] font-semibold flex items-center justify-center bg-white" style={{ color: primary }}>Sign in</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // split (default)
+    return (
+        <div className="relative aspect-[16/9] w-full overflow-hidden rounded-lg border border-border">
+            <div className="grid h-full grid-cols-2">
+                <div className="flex flex-col items-center justify-center bg-white p-4">
+                    <Logo className="h-5" />
+                    <div className="mt-2 text-[10px] font-semibold" style={{ color: textColor || '#0f172a' }}>Welcome back</div>
+                    <div className="mt-3 w-full max-w-[140px] space-y-1.5">
+                        <div className="h-5 rounded bg-gray-100" />
+                        <div className="h-5 rounded bg-gray-100" />
+                        <div className="h-5 rounded text-[8px] font-semibold text-white flex items-center justify-center"
+                             style={{ background: gradient }}>Sign in</div>
+                    </div>
+                </div>
+                <div className="relative overflow-hidden text-white"
+                     style={{ background: bgUrl ? `url('${bgUrl}') center/cover no-repeat` : gradient }}>
+                    {bgUrl && <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.35)' }} />}
+                    <div className="relative z-10 flex h-full flex-col items-start justify-center p-4">
+                        <div className="rounded-full bg-white/15 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-wide">
+                            Smart logistics
+                        </div>
+                        <div className="mt-2 text-[11px] font-bold leading-tight">{brandName || 'Your brand'}</div>
+                        <div className="mt-1 space-y-1 text-[8px] opacity-90">
+                            <div>• Real-time tracking</div>
+                            <div>• Fleet visibility</div>
+                            <div>• Automated billing</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function Index({ settings = {}, lookups = {}, theme_fallbacks = {}, permissions = {}, urls = {}, t = {} }) {
     const [active, setActive] = React.useState('brand');
+    // Preview URL for the picked-but-not-yet-uploaded login_bg File.
+    const [loginBgObjectUrl, setLoginBgObjectUrl] = React.useState(null);
+    React.useEffect(() => () => { if (loginBgObjectUrl) URL.revokeObjectURL(loginBgObjectUrl); }, [loginBgObjectUrl]);
 
     const form = useForm({
         name: settings.name ?? '',
@@ -500,6 +611,34 @@ export default function Index({ settings = {}, lookups = {}, theme_fallbacks = {
                                         <h2 className="text-base font-semibold">{t.nav_login}</h2>
                                         <p className="text-xs text-muted-foreground mt-1">{t.login_section_intro}</p>
                                     </div>
+
+                                    {/* Live preview — reflects unsaved edits to layout, colors and bg. */}
+                                    <div className="rounded-lg border border-border bg-muted/20 p-3">
+                                        <div className="mb-2 flex items-center justify-between">
+                                            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                                {t.live_preview || 'Live preview'}
+                                            </span>
+                                            <span className="text-[10px] text-muted-foreground">
+                                                {(lookups.login_layouts || []).find(o => o.value === form.data.login_layout)?.label || form.data.login_layout}
+                                            </span>
+                                        </div>
+                                        <LoginPreview
+                                            layout={form.data.login_layout}
+                                            primaryColor={form.data.primary_color}
+                                            textColor={form.data.text_color}
+                                            bgUrl={
+                                                // Prefer the just-picked File (via ObjectURL) so the preview updates
+                                                // instantly; when the user cleared, use nothing; otherwise fall
+                                                // back to whatever is already saved on the row.
+                                                form.data.login_bg_clear === '1'
+                                                    ? null
+                                                    : (loginBgObjectUrl || settings.login_bg_image || null)
+                                            }
+                                            logoUrl={settings.logo_image}
+                                            brandName={form.data.name || settings.name || 'Your brand'}
+                                        />
+                                    </div>
+
                                     <Field label={t.login_layout} hint={t.login_layout_help} error={form.errors.login_layout}>
                                         <Select value={form.data.login_layout} onChange={(e) => form.setData('login_layout', e.target.value)}>
                                             {(lookups.login_layouts || []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -514,6 +653,9 @@ export default function Index({ settings = {}, lookups = {}, theme_fallbacks = {
                                         onPick={(f) => {
                                             form.setData('login_bg', f);
                                             form.setData('login_bg_clear', f ? '0' : '1');
+                                            // Update the object URL for the preview.
+                                            if (loginBgObjectUrl) URL.revokeObjectURL(loginBgObjectUrl);
+                                            setLoginBgObjectUrl(f ? URL.createObjectURL(f) : null);
                                         }}
                                         dark
                                     />

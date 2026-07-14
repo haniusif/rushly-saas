@@ -23,4 +23,5 @@ return [
         'login_bg_clear'          => 'Remove background',
         'nav_login'               => 'Login page',
         'login_section_intro'     => 'How the pre-authentication sign-in screen looks.',
+        'live_preview'            => 'Live preview',
     ];

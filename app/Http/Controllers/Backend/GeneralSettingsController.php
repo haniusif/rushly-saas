@@ -146,6 +146,7 @@ class GeneralSettingsController extends Controller
                 'login_bg_clear'=> __('settings.login_bg_clear') ?: 'Remove background',
                 'nav_login'     => __('settings.nav_login') ?: 'Login page',
                 'login_section_intro' => __('settings.login_section_intro') ?: 'How the pre-authentication sign-in screen looks.',
+                'live_preview'  => __('settings.live_preview') ?: 'Live preview',
                 'show_landing'  => 'Show landing page on /',
                 'show_landing_help' => 'When off, visiting / redirects to the login page instead of the public landing page.',
             ],

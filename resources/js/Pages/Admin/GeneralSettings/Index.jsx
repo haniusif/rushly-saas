@@ -251,6 +251,7 @@ export default function Index({ settings = {}, lookups = {}, theme_fallbacks = {
         font_family: settings.font_family ?? '',
         border_radius: settings.border_radius ?? '',
         density: settings.density ?? '',
+        timezone: settings.timezone ?? '',
         logo: null,
         light_logo: null,
         favicon: null,
@@ -354,6 +355,12 @@ export default function Index({ settings = {}, lookups = {}, theme_fallbacks = {
                                         <Select value={form.data.currency} onChange={(e) => form.setData('currency', e.target.value)}>
                                             <option value="">—</option>
                                             {(lookups.currencies || []).map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                                        </Select>
+                                    </Field>
+                                    <Field label={t.timezone} hint={t.timezone_help} error={form.errors.timezone}>
+                                        <Select value={form.data.timezone} onChange={(e) => form.setData('timezone', e.target.value)}>
+                                            <option value="">{t.timezone_default_option}</option>
+                                            {(lookups.timezones || []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                                         </Select>
                                     </Field>
                                     <div className="grid gap-4 md:grid-cols-2">

@@ -49,6 +49,18 @@ class GeneralSettingsRepository implements GeneralSettingsInterface{
             $row->login_layout = $request->input('login_layout');
         }
 
+        // Timezone: NULL clears back to the app default; anything else must
+        // be a real identifier from PHP's zoneinfo list to avoid poisoning
+        // date_default_timezone_set() in the SetTenantTimezone middleware.
+        if ($request->has('timezone')) {
+            $tz = trim((string) $request->input('timezone'));
+            if ($tz === '') {
+                $row->timezone = null;
+            } elseif (in_array($tz, timezone_identifiers_list(), true)) {
+                $row->timezone = $tz;
+            }
+        }
+
         // Extended theme defaults (inherited by every merchant on this tenant unless
         // they set their own override). Each field can be cleared by passing "".
         foreach (['sidebar_color','sidebar_text_color','topbar_color','topbar_text_color','accent_color'] as $field) {

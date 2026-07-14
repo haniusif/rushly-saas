@@ -55,6 +55,7 @@ class GeneralSettingsController extends Controller
                 'font_family'         => (string) ($s->font_family ?? ''),
                 'border_radius'       => (string) ($s->border_radius ?? ''),
                 'density'             => (string) ($s->density ?? ''),
+                'timezone'            => (string) ($s->timezone ?? ''),
                 'logo_image'          => $s->logo_image,
                 'light_logo_image'    => $s->light_logo_image,
                 'favicon_image'       => $s->favicon_image,
@@ -85,6 +86,13 @@ class GeneralSettingsController extends Controller
                     'value' => $k,
                     'label' => __('merchant.density_' . $k) ?: ucfirst($k),
                 ])->values(),
+                // Every valid tzdb identifier. Rendered as a native <select>;
+                // ~420 options is fine and lets users pick a specific city
+                // rather than a UTC offset that ignores DST.
+                'timezones' => collect(timezone_identifiers_list())
+                    ->sort()
+                    ->values()
+                    ->map(fn ($tz) => ['value' => $tz, 'label' => $tz]),
             ],
             'permissions' => [
                 'update' => hasPermission('general_settings_update'),
@@ -108,6 +116,9 @@ class GeneralSettingsController extends Controller
                 'email'        => __('levels.email') ?: 'Email',
                 'address'      => __('levels.address') ?: 'Address',
                 'currency'     => __('levels.currency') ?: 'Currency',
+                'timezone'     => __('settings.timezone') ?: 'Timezone',
+                'timezone_help'=> __('settings.timezone_help') ?: 'Leave empty to use the application default (' . config('app.timezone') . ').',
+                'timezone_default_option' => __('settings.timezone_default_option') ?: 'Application default (' . config('app.timezone') . ')',
                 'par_track_prefix' => (__('settings.parcel_tracking') ?: 'Tracking') . ' ' . (__('levels.prefix') ?: 'prefix'),
                 'invoice_prefix'   => (__('invoice.invoice') ?: 'Invoice') . ' ' . (__('levels.prefix') ?: 'prefix'),
                 'primary_color' => __('levels.primary_color') ?: 'Primary color',

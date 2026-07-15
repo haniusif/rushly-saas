@@ -103,6 +103,27 @@ class SummaryController extends Controller
                 ->where('status', 1)->sum(DB::raw('COALESCE(amount, 0)')),
         ];
 
+        // -------- Top 10 merchants by shipment volume ------------
+        // Correlated subquery keeps the FROM clause a single table so the
+        // Merchant::companywise() scope's `company_id` filter stays
+        // unambiguous. Merchants with no shipments still show up (0) if
+        // they land in the top-N by lifetime — sorted desc by count.
+        $topMerchants = Merchant::companywise()
+            ->select('id', 'business_name')
+            ->selectSub(
+                Parcel::query()->selectRaw('COUNT(*)')->whereColumn('parcels.merchant_id', 'merchants.id'),
+                'shipments'
+            )
+            ->orderByDesc('shipments')
+            ->limit(10)
+            ->get()
+            ->map(fn ($m) => [
+                'id'        => (int) $m->id,
+                'name'      => (string) ($m->business_name ?: 'Merchant #'.$m->id),
+                'shipments' => (int) $m->shipments,
+            ])
+            ->values();
+
         return Inertia::render('Admin/Summary/Index', [
             'greeting_name'  => (string) (Auth::user()->name ?? ''),
             'currency'       => (string) (settings()->currency ?? ''),
@@ -110,6 +131,7 @@ class SummaryController extends Controller
             'trend'          => $trend,
             'recent'         => $recent,
             'totals'         => $totals,
+            'top_merchants'  => $topMerchants,
             'urls' => [
                 'create_parcel'   => $this->safeRoute('parcel.create', '/admin/parcel/create'),
                 'list_parcels'    => $this->safeRoute('parcel.index',  '/admin/parcel/index'),
@@ -140,6 +162,10 @@ class SummaryController extends Controller
                 'legend_created'   => __('summary.legend_created')   ?: 'Created',
                 'legend_delivered' => __('summary.legend_delivered') ?: 'Delivered',
                 'no_recent'       => __('summary.no_recent') ?: 'No shipments yet — create your first one.',
+                'top_merchants_title'    => __('summary.top_merchants_title') ?: 'Top merchants by shipments',
+                'top_merchants_col_name' => __('summary.top_merchants_col_name') ?: 'Merchant',
+                'top_merchants_col_qty'  => __('summary.top_merchants_col_qty')  ?: 'Shipments',
+                'top_merchants_empty'    => __('summary.top_merchants_empty')    ?: 'No merchants yet.',
             ],
         ]);
     }

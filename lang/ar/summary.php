@@ -23,4 +23,8 @@ return [
     'legend_created'     => 'أُنشئت',
     'legend_delivered'   => 'سُلّمت',
     'no_recent'          => 'لا توجد شحنات بعد — أنشئ أول شحنة.',
+    'top_merchants_title'    => 'أفضل العملاء حسب عدد الشحنات',
+    'top_merchants_col_name' => 'العميل',
+    'top_merchants_col_qty'  => 'الشحنات',
+    'top_merchants_empty'    => 'لا يوجد عملاء بعد.',
 ];

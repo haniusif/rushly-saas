@@ -23,4 +23,8 @@ return [
     'legend_created'     => 'Created',
     'legend_delivered'   => 'Delivered',
     'no_recent'          => 'No shipments yet — create your first one.',
+    'top_merchants_title'    => 'Top merchants by shipments',
+    'top_merchants_col_name' => 'Merchant',
+    'top_merchants_col_qty'  => 'Shipments',
+    'top_merchants_empty'    => 'No merchants yet.',
 ];

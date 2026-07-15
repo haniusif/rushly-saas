@@ -319,6 +319,10 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         // Topbar global search (parcel / driver / client / product / ticket)
                         Route::get('global-search', [\App\Http\Controllers\Backend\GlobalSearchController::class, 'search'])->name('global.search');
 
+                        // Account: browser sessions (Jetstream-style).
+                        Route::get('browser-sessions',  [\App\Http\Controllers\Backend\BrowserSessionsController::class, 'index'])->name('browser-sessions.index');
+                        Route::delete('browser-sessions', [\App\Http\Controllers\Backend\BrowserSessionsController::class, 'destroy'])->name('browser-sessions.destroy');
+
                         // Onboarding tour manager (admin CRUD + analytics)
                         Route::prefix('tours')->name('admin.tours.')->group(function () {
                             Route::get('/',             [\App\Http\Controllers\Backend\TourManagerController::class, 'index'])->name('index')->middleware('hasPermission:tour_manage');

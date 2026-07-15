@@ -94,7 +94,8 @@ const NAV = [
         { tKey: 'menu_front_web', icon: Layout, route: 'blogs.index', match: ['admin/front-web'] },
     ]},
     { group: 'menu_system', items: [
-        { tKey: 'menu_logs', icon: History, route: 'logs.index', match: ['admin/logs'] },
+        { tKey: 'menu_logs',             icon: History,      route: 'logs.index',              match: ['admin/logs'] },
+        { tKey: 'menu_browser_sessions', icon: ShieldAlert,  route: 'browser-sessions.index',  match: ['admin/browser-sessions'] },
     ]},
     { group: 'menu_settings', items: [
         { tKey: 'menu_general_settings',        icon: Sliders,       route: 'general-settings.index',         match: ['admin/general-settings'] },

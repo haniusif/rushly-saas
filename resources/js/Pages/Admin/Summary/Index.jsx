@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Head, Link } from '@inertiajs/react';
 import {
     Package, Truck, CheckCircle2, Clock, ArrowUpRight,
-    Users, Bike, Wallet, LineChart, ExternalLink, Store, Trophy, Warehouse, MapPin, Map,
+    Users, Bike, Wallet, LineChart, Store, Trophy, Warehouse, MapPin, Map,
 } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
@@ -230,7 +230,6 @@ function DeliverymenPerformanceCard({ items = [], t = {} }) {
 }
 
 export default function Index({
-    greeting_name = '',
     currency = '',
     kpis = {},
     trend = [],
@@ -245,26 +244,8 @@ export default function Index({
     t = {},
 }) {
     return (
-        <AdminLayout title={t.title} breadcrumbs={[t.title]}>
+        <AdminLayout title={t.title} breadcrumbs={[]}>
             <Head title={t.title} />
-
-            {/* Header */}
-            <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-                <div>
-                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t.greeting}</div>
-                    <h1 className="mt-1 text-2xl font-bold tracking-tight">
-                        {greeting_name ? `${t.greeting}, ${greeting_name.split(' ')[0]}` : t.greeting}
-                    </h1>
-                    <p className="mt-1 text-sm text-muted-foreground">{t.subtitle}</p>
-                </div>
-                <a
-                    href={urls.full_dashboard}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input bg-background px-3 text-xs font-medium hover:bg-accent transition-colors"
-                >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    {t.full_dashboard}
-                </a>
-            </div>
 
             {/* KPI row */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">

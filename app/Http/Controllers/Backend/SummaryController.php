@@ -229,7 +229,6 @@ class SummaryController extends Controller
             ->values();
 
         return Inertia::render('Admin/Summary/Index', [
-            'greeting_name'  => (string) (Auth::user()->name ?? ''),
             'currency'       => (string) (settings()->currency ?? ''),
             'kpis'           => $kpis,
             'trend'          => $trend,
@@ -242,12 +241,9 @@ class SummaryController extends Controller
             'top_deliverymen'=> $topDeliverymen,
             'urls' => [
                 'list_parcels'    => $this->safeRoute('parcel.index', '/admin/parcel/index'),
-                'full_dashboard'  => $this->safeRoute('dashboard.index', '/dashboard'),
             ],
             't' => [
                 'title'           => __('summary.title') ?: 'Summary',
-                'greeting'        => __('summary.greeting') ?: 'Welcome back',
-                'subtitle'        => __('summary.subtitle') ?: 'Everything moving through your account, at a glance.',
                 'kpi_today'       => __('summary.kpi_today')       ?: "Today's shipments",
                 'kpi_in_transit'  => __('summary.kpi_in_transit')  ?: 'In transit',
                 'kpi_delivered'   => __('summary.kpi_delivered')   ?: 'Delivered today',
@@ -255,7 +251,6 @@ class SummaryController extends Controller
                 'seven_day_title' => __('summary.seven_day_title') ?: 'Last 7 days',
                 'recent_title'    => __('summary.recent_title')    ?: 'Recent shipments',
                 'list_parcels'    => __('summary.list_parcels')    ?: 'View all shipments',
-                'full_dashboard'  => __('summary.full_dashboard')  ?: 'Open full dashboard',
                 'roster_title'    => __('summary.roster_title')    ?: 'Team & payouts',
                 'roster_merchants'   => __('summary.roster_merchants')   ?: 'Merchants',
                 'roster_deliverymen' => __('summary.roster_deliverymen') ?: 'Deliverymen',

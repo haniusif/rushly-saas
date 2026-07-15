@@ -2,8 +2,6 @@
 
 return [
     'title'              => 'ملخص',
-    'greeting'           => 'مرحباً بعودتك',
-    'subtitle'           => 'كل ما يتحرك في حسابك، بلمحة واحدة.',
     'kpi_today'          => 'شحنات اليوم',
     'kpi_in_transit'     => 'قيد النقل',
     'kpi_delivered'      => 'تم التسليم اليوم',
@@ -11,7 +9,6 @@ return [
     'seven_day_title'    => 'آخر 7 أيام',
     'recent_title'       => 'أحدث الشحنات',
     'list_parcels'       => 'عرض كل الشحنات',
-    'full_dashboard'     => 'فتح لوحة التحكم الكاملة',
     'roster_title'       => 'الفريق والمستحقات',
     'roster_merchants'   => 'العملاء',
     'roster_deliverymen' => 'المندوبون',

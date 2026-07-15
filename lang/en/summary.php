@@ -2,8 +2,6 @@
 
 return [
     'title'              => 'Summary',
-    'greeting'           => 'Welcome back',
-    'subtitle'           => 'Everything moving through your account, at a glance.',
     'kpi_today'          => "Today's shipments",
     'kpi_in_transit'     => 'In transit',
     'kpi_delivered'      => 'Delivered today',
@@ -11,7 +9,6 @@ return [
     'seven_day_title'    => 'Last 7 days',
     'recent_title'       => 'Recent shipments',
     'list_parcels'       => 'View all shipments',
-    'full_dashboard'     => 'Open full dashboard',
     'roster_title'       => 'Team & payouts',
     'roster_merchants'   => 'Merchants',
     'roster_deliverymen' => 'Deliverymen',

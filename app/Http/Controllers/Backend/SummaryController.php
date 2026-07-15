@@ -76,23 +76,19 @@ class SummaryController extends Controller
         }
         $trend = array_values($days);
 
-        // Every leaderboard below is windowed to the current month
-        // (parcels.created_at). Hoisted once so the bounds are consistent
-        // across merchants / hubs / cities / areas / deliverymen.
+        // TEMP: leaderboards are unwindowed (lifetime) for now — revert by
+        // re-adding `->whereBetween('parcels.created_at', [$monthFrom, $monthTo])`
+        // to each correlated subquery below. $monthFrom / $monthTo are still
+        // resolved because the Deliveryman perf card + subtitle need them.
         $monthFrom = $now->startOfMonth();
         $monthTo   = $now->endOfMonth();
 
-        // -------- Top 10 merchants (current month) ---------------
-        // Correlated subquery keeps the FROM clause a single table so the
-        // Merchant::companywise() scope's `company_id` filter stays
-        // unambiguous. Rows with zero shipments this month are filtered
-        // out below so the card shows only merchants with real activity.
+        // -------- Top 10 merchants (all time) --------------------
         $topMerchants = Merchant::companywise()
             ->select('id', 'business_name')
             ->selectSub(
                 Parcel::query()->selectRaw('COUNT(*)')
-                    ->whereColumn('parcels.merchant_id', 'merchants.id')
-                    ->whereBetween('parcels.created_at', [$monthFrom, $monthTo]),
+                    ->whereColumn('parcels.merchant_id', 'merchants.id'),
                 'shipments'
             )
             ->orderByDesc('shipments')
@@ -106,15 +102,12 @@ class SummaryController extends Controller
             ])
             ->values();
 
-        // -------- Top 10 hubs (current month) --------------------
-        // Joins on parcels.hub_id (the current hub the parcel sits at,
-        // not first_hub_id / transfer_hub_id).
+        // -------- Top 10 hubs (all time) -------------------------
         $topHubs = Hub::companywise()
             ->select('id', 'name')
             ->selectSub(
                 Parcel::query()->selectRaw('COUNT(*)')
-                    ->whereColumn('parcels.hub_id', 'hubs.id')
-                    ->whereBetween('parcels.created_at', [$monthFrom, $monthTo]),
+                    ->whereColumn('parcels.hub_id', 'hubs.id'),
                 'shipments'
             )
             ->orderByDesc('shipments')
@@ -128,17 +121,15 @@ class SummaryController extends Controller
             ])
             ->values();
 
-        // -------- Top 10 cities & areas (current month) ----------
-        // Cities/areas are shared reference data (no company_id), so we
+        // -------- Top 10 cities (all time) -----------------------
+        // Cities are shared reference data (no company_id), so we
         // subquery Parcel::companywise() to keep the count tenant-scoped.
-        // en_name wins over name when both are set — matches the create
-        // form's label pick from ParcelController::create().
+        // en_name wins over name — matches the create form's label pick.
         $topCities = City::query()
             ->select('id', 'name', 'en_name')
             ->selectSub(
                 Parcel::companywise()->selectRaw('COUNT(*)')
-                    ->whereColumn('parcels.city_id', 'cities.id')
-                    ->whereBetween('parcels.created_at', [$monthFrom, $monthTo]),
+                    ->whereColumn('parcels.city_id', 'cities.id'),
                 'shipments'
             )
             ->orderByDesc('shipments')
@@ -161,10 +152,10 @@ class SummaryController extends Controller
             ->with('user:id,name')
             ->select('delivery_man.id', 'delivery_man.user_id')
             ->selectSub(
+                // TEMP all-time — see the "TEMP" note above the leaderboards.
                 ParcelEvent::query()
                     ->selectRaw('COUNT(DISTINCT parcel_id)')
-                    ->whereColumn('parcel_events.delivery_man_id', 'delivery_man.id')
-                    ->whereBetween('parcel_events.created_at', [$monthFrom, $monthTo]),
+                    ->whereColumn('parcel_events.delivery_man_id', 'delivery_man.id'),
                 'assigned'
             )
             ->selectSub(
@@ -172,7 +163,6 @@ class SummaryController extends Controller
                     ->selectRaw('COUNT(DISTINCT parcel_events.parcel_id)')
                     ->join('parcels', 'parcels.id', '=', 'parcel_events.parcel_id')
                     ->whereColumn('parcel_events.delivery_man_id', 'delivery_man.id')
-                    ->whereBetween('parcel_events.created_at', [$monthFrom, $monthTo])
                     ->where('parcels.status', ParcelStatus::DELIVERED),
                 'delivered'
             )
@@ -249,12 +239,10 @@ class SummaryController extends Controller
                 'ofd_by_hub_col_name' => __('summary.ofd_by_hub_col_name') ?: 'Hub',
                 'ofd_by_hub_col_qty'  => __('summary.ofd_by_hub_col_qty')  ?: 'OFD',
                 'ofd_by_hub_empty'    => __('summary.ofd_by_hub_empty')    ?: 'No parcels out for delivery today.',
-                // Shared "Current month: <name>" caption used under every
-                // leaderboard title. translatedFormat honors app locale so
-                // Arabic gets Arabic month names.
-                'current_month'  => trans('summary.current_month', [
-                    'month' => $monthFrom->locale(app()->getLocale())->translatedFormat('F Y'),
-                ]),
+                // TEMP: while leaderboards are unwindowed above, the shared
+                // caption reads "All time" instead of "Current month: <name>".
+                // Swap this back to the trans() call when the window returns.
+                'current_month'  => __('summary.all_time') ?: 'All time',
                 'top_deliverymen_title'    => __('summary.top_deliverymen_title') ?: 'Deliveryman performance',
                 'top_deliverymen_col_name' => __('summary.top_deliverymen_col_name') ?: 'Deliveryman',
                 'top_deliverymen_col_assigned'  => __('summary.top_deliverymen_col_assigned')  ?: 'Assigned',

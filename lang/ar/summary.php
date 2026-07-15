@@ -26,6 +26,7 @@ return [
     'ofd_by_hub_empty'    => 'لا توجد شحنات قيد التسليم اليوم.',
     'top_deliverymen_title'          => 'أداء المندوبين',
     'current_month'                  => 'الشهر الحالي: :month',
+    'all_time'                       => 'كل الفترات',
     'top_deliverymen_col_name'       => 'المندوب',
     'top_deliverymen_col_assigned'   => 'مُسندة',
     'top_deliverymen_col_delivered'  => 'مُسلَّمة',

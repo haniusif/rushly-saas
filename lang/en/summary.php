@@ -26,6 +26,7 @@ return [
     'ofd_by_hub_empty'    => 'No parcels out for delivery today.',
     'top_deliverymen_title'          => 'Deliveryman performance',
     'current_month'                  => 'Current month: :month',
+    'all_time'                       => 'All time',
     'top_deliverymen_col_name'       => 'Deliveryman',
     'top_deliverymen_col_assigned'   => 'Assigned',
     'top_deliverymen_col_delivered'  => 'Delivered',

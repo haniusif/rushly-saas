@@ -401,6 +401,11 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::post('users/store',   [UserController::class, 'store'])->name('users.store')->middleware('hasPermission:user_create');
                         Route::get('users/edit/{id}', [UserController::class, 'edit'])->name('users.edit')->middleware('hasPermission:user_update');
                         Route::put('users/update',   [UserController::class, 'update'])->name('users.update')->middleware('hasPermission:user_update');
+                        // Read-only user detail + admin password reset (+ optional email).
+                        Route::get('users/view/{id}',              [UserController::class, 'show'])->name('users.show')->middleware('hasPermission:user_read');
+                        Route::get('users/change-password/{id}',   [UserController::class, 'changePasswordForm'])->name('users.change-password.form')->middleware('hasPermission:user_update');
+                        Route::put('users/change-password/{id}',   [UserController::class, 'changePasswordUpdate'])->name('users.change-password.update')->middleware('hasPermission:user_update');
+                        Route::post('users/send-credentials/{id}', [UserController::class, 'sendCredentials'])->name('users.send-credentials')->middleware('hasPermission:user_update');
                         Route::get('users/permissions/{id}',  [UserController::class, 'permission'])->name('users.permission')->middleware('hasPermission:permission_update');
                         Route::put('users/permissions/update', [UserController::class, 'permissionsUpdate'])->name('users.permissions.update')->middleware('hasPermission:permission_update');
                         Route::delete('user/delete/{id}',     [UserController::class, 'destroy'])->name('user.delete')->middleware('hasPermission:user_delete');

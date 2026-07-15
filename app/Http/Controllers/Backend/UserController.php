@@ -6,10 +6,13 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Http\Requests\User\StoreUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
+use App\Mail\UserCredentialsMail;
 use App\Models\User;
 use App\Repositories\Role\RoleInterface;
 use App\Repositories\User\UserInterface;
 use Brian2694\Toastr\Facades\Toastr;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 class UserController extends Controller
 {
     protected $repo;
@@ -42,9 +45,11 @@ class UserController extends Controller
             'status'   => (int) ($u->status ?? 1),
             'is_locked'=> $u->id == 1 || (string) $u->company_owner === 'yes',
             'urls' => [
+                'view'        => route('users.show', $u->id),
                 'edit'        => route('users.edit', $u->id),
                 'delete'      => route('user.delete', $u->id),
                 'permissions' => route('users.edit', $u->id),
+                'change_password' => route('users.change-password.form', $u->id),
             ],
         ])->values();
 
@@ -100,6 +105,8 @@ class UserController extends Controller
                 'prev'    => 'Prev',
                 'next'    => 'Next',
                 'showing_results' => 'Showing :from – :to of :total',
+                'view'    => __('levels.view') ?: 'View',
+                'change_password' => __('menus.change_password') ?: 'Change password',
             ],
         ]);
     }
@@ -280,6 +287,193 @@ class UserController extends Controller
             return redirect()->back();
         }
     }
+    /**
+     * Read-only user detail page. Same shape as ProfileController::view but
+     * for any user id — accessible to anyone with user_read permission.
+     */
+    public function show($id)
+    {
+        $u = $this->repo->get($id);
+        abort_unless($u, 404);
+        $u->loadMissing(['role', 'hub', 'department', 'designation']);
+
+        return \Inertia\Inertia::render('Admin/User/View', [
+            'user' => [
+                'id'             => $u->id,
+                'name'           => $u->name,
+                'email'          => $u->email,
+                'mobile'         => $u->mobile,
+                'image'          => $u->image,
+                'address'        => $u->address,
+                'nid_number'     => $u->nid_number,
+                'unique_id'      => $u->unique_id,
+                'user_type'      => $u->user_type,
+                'joining_date'   => $u->joining_date,
+                'salary'         => (float) ($u->salary ?? 0),
+                'status'         => (int) $u->status,
+                'role'           => optional($u->role)->name,
+                'hub'            => optional($u->hub)->name,
+                'department'     => optional($u->department)->title,
+                'designation'    => optional($u->designation)->title,
+            ],
+            'currency' => settings()->currency,
+            'permissions' => [
+                'update'          => hasPermission('user_update'),
+                'change_password' => hasPermission('user_update'),
+            ],
+            'urls' => [
+                'edit'            => $this->safeRoute('users.edit', $u->id, "/admin/users/edit/{$u->id}"),
+                'change_password' => $this->safeRoute('users.change-password.form', $u->id, "/admin/users/change-password/{$u->id}"),
+                'send_credentials'=> $this->safeRoute('users.send-credentials', $u->id, "/admin/users/send-credentials/{$u->id}"),
+                'back'            => $this->safeRoute('users.index', null, '/admin/users'),
+            ],
+            't' => $this->userViewLabels(),
+        ]);
+    }
+
+    private function safeRoute(string $name, $param = null, string $fallback = ''): string
+    {
+        try { return $param === null ? route($name) : route($name, $param); }
+        catch (\Throwable $e) { return $fallback ?: url('/'); }
+    }
+
+    /**
+     * Admin-side change password form. No "current password" step — admins
+     * have authority. UI gets a "send new password to user's email" toggle
+     * so the recipient can be notified as part of the same submission.
+     */
+    public function changePasswordForm($id)
+    {
+        $u = $this->repo->get($id);
+        abort_unless($u, 404);
+
+        return \Inertia\Inertia::render('Admin/User/ChangePassword', [
+            'user' => [
+                'id'    => $u->id,
+                'name'  => $u->name,
+                'email' => $u->email,
+                'image' => $u->image,
+            ],
+            'urls' => [
+                'submit' => $this->safeRoute('users.change-password.update', $u->id, "/admin/users/change-password/{$u->id}"),
+                'cancel' => $this->safeRoute('users.show', $u->id, "/admin/users/view/{$u->id}"),
+            ],
+            't' => $this->userChangePasswordLabels($u),
+        ]);
+    }
+
+    public function changePasswordUpdate(Request $request, $id)
+    {
+        $request->validate([
+            'new_password'     => ['required', 'string', 'min:6'],
+            'confirm_password' => ['required', 'same:new_password'],
+        ], [
+            'confirm_password.same' => 'Password confirmation does not match.',
+        ]);
+
+        $u = User::find($id);
+        abort_unless($u, 404);
+
+        $u->password = Hash::make($request->input('new_password'));
+        $u->save();
+
+        if ($request->boolean('send_email') && ! empty($u->email)) {
+            try {
+                Mail::to($u->email)->send(new UserCredentialsMail(
+                    userName:  (string) $u->name,
+                    email:     (string) $u->email,
+                    password:  (string) $request->input('new_password'),
+                    loginUrl:  url('/login'),
+                ));
+            } catch (\Throwable $e) {
+                \Log::error('UserCredentialsMail failed: '.$e->getMessage(), ['user_id' => $u->id]);
+                return redirect()->route('users.show', $u->id)
+                    ->with('warning', __('Password updated, but the email could not be sent. Please share the new password manually.'));
+            }
+        }
+
+        return redirect()->route('users.show', $u->id)
+            ->with('success', __('Password updated.').($request->boolean('send_email') && !empty($u->email) ? ' '.__('Login info emailed to the user.') : ''));
+    }
+
+    /**
+     * Send an email invite with the current login link (no password included
+     * because it's already hashed). Useful when a user was created before the
+     * mailer feature existed and needs a nudge to sign in.
+     */
+    public function sendCredentials(Request $request, $id)
+    {
+        $u = User::find($id);
+        abort_unless($u, 404);
+        abort_if(empty($u->email), 422, 'This user has no email on file.');
+
+        try {
+            Mail::to($u->email)->send(new UserCredentialsMail(
+                userName: (string) $u->name,
+                email:    (string) $u->email,
+                password: null, // no plaintext available — reset flow will be prompted
+                loginUrl: url('/login'),
+            ));
+        } catch (\Throwable $e) {
+            \Log::error('UserCredentialsMail invite failed: '.$e->getMessage(), ['user_id' => $u->id]);
+            return back()->with('error', __('Could not send the email. Check the mail configuration.'));
+        }
+
+        return back()->with('success', __('Login info emailed to the user.'));
+    }
+
+    private function userViewLabels(): array
+    {
+        return [
+            'title'     => __('user.title') ?: 'Users',
+            'view'      => __('levels.view') ?: 'View',
+            'edit'      => __('levels.edit') ?: 'Edit',
+            'change_password' => __('menus.change_password') ?: 'Change password',
+            'send_credentials'=> __('user.send_credentials') ?: 'Send login info by email',
+            'back'      => __('levels.back') ?: 'Back',
+            'name'      => __('levels.name') ?: 'Name',
+            'email'     => __('levels.email') ?: 'Email',
+            'phone'     => __('levels.phone') ?: 'Phone',
+            'address'   => __('levels.address') ?: 'Address',
+            'nid'       => __('levels.nid') ?: 'NID',
+            'unique_id' => __('levels.unique_id') ?: 'Unique ID',
+            'role'      => __('levels.role') ?: 'Role',
+            'hub'       => __('levels.hub') ?: 'Hub',
+            'department' => __('levels.department') ?: 'Department',
+            'designation'=> __('levels.designation') ?: 'Designation',
+            'joining_date' => __('levels.joining_date') ?: 'Joining date',
+            'salary'    => __('levels.salary') ?: 'Salary',
+            'status'    => __('levels.status') ?: 'Status',
+            'active'    => __('levels.active') ?: 'Active',
+            'inactive'  => __('levels.inactive') ?: 'Inactive',
+            'identity'  => 'Identity',
+            'work'      => 'Work',
+            'contact'   => 'Contact',
+            'no_email_hint'  => 'This user has no email on file, so the email button is disabled.',
+        ];
+    }
+
+    private function userChangePasswordLabels($u): array
+    {
+        return [
+            'title'            => (__('user.title') ?: 'Users').' · '.(__('menus.change_password') ?: 'Change password'),
+            'heading'          => __('menus.change_password') ?: 'Change password',
+            'subheading'       => __('user.change_pw_for') ?: 'For: :name',
+            'intro'            => __('user.change_pw_intro') ?: "Set a new password for this user. They'll be signed out of other devices on next login.",
+            'new_password'     => __('levels.new_password') ?: 'New password',
+            'confirm_password' => __('levels.confirm_password') ?: 'Confirm new password',
+            'send_email'       => __('user.send_email_option') ?: 'Also email the new password to the user',
+            'send_email_hint'  => $u->email ? __('user.send_email_hint', ['email' => $u->email]) : __('user.send_email_no_email'),
+            'no_email'         => empty($u->email),
+            'save'             => __('levels.save_change') ?: 'Save changes',
+            'cancel'           => __('levels.cancel') ?: 'Cancel',
+            'requirements'     => __('profile.password_reqs') ?: 'Minimum 6 characters. Use a mix of letters, numbers, and symbols.',
+            'strength_weak'    => __('profile.strength_weak') ?: 'Weak',
+            'strength_ok'      => __('profile.strength_ok') ?: 'Okay',
+            'strength_strong'  => __('profile.strength_strong') ?: 'Strong',
+        ];
+    }
+
     //user permissions
     public function permission($id){
         $user        = User::where('id',$id)->first();

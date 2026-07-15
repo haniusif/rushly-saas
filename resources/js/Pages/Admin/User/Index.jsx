@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Head, router } from '@inertiajs/react';
-import { Users, Plus, Edit, Trash2, MoreVertical, ChevronLeft, ChevronRight, Filter, Eraser, Lock } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, MoreVertical, ChevronLeft, ChevronRight, Filter, Eraser, Lock, Eye, KeyRound } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { Button } from '@/Components/ui/Button';
@@ -104,7 +104,9 @@ export default function Index({ rows = [], pagination = {}, filters = {}, curren
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="w-44">
+                                                    <DropdownMenuItem onClick={() => { window.location.href = r.urls.view; }}><Eye className="h-4 w-4 me-2" /> {t.view || 'View'}</DropdownMenuItem>
                                                     {permissions.update && <DropdownMenuItem onClick={() => { window.location.href = r.urls.edit; }}><Edit className="h-4 w-4 me-2" /> {t.edit}</DropdownMenuItem>}
+                                                    {permissions.update && <DropdownMenuItem onClick={() => { window.location.href = r.urls.change_password; }}><KeyRound className="h-4 w-4 me-2" /> {t.change_password || 'Change password'}</DropdownMenuItem>}
                                                     {permissions.delete && !r.is_locked && <DropdownMenuItem onClick={() => del(r)} className="text-destructive focus:text-destructive"><Trash2 className="h-4 w-4 me-2" /> {t.delete}</DropdownMenuItem>}
                                                 </DropdownMenuContent>
                                             </DropdownMenu>

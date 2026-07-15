@@ -26,4 +26,10 @@ return [
     'top_hubs_title'    => 'أفضل الفروع حسب عدد الشحنات',
     'top_hubs_col_name' => 'الفرع',
     'top_hubs_empty'    => 'لا توجد فروع بعد.',
+    'top_cities_title'    => 'أفضل المدن حسب عدد الشحنات',
+    'top_cities_col_name' => 'المدينة',
+    'top_cities_empty'    => 'لا توجد مدن بعد.',
+    'top_areas_title'     => 'أفضل المناطق حسب عدد الشحنات',
+    'top_areas_col_name'  => 'المنطقة',
+    'top_areas_empty'     => 'لا توجد مناطق بعد.',
 ];

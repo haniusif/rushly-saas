@@ -26,4 +26,10 @@ return [
     'top_hubs_title'    => 'Top hubs by shipments',
     'top_hubs_col_name' => 'Hub',
     'top_hubs_empty'    => 'No hubs yet.',
+    'top_cities_title'    => 'Top cities by shipments',
+    'top_cities_col_name' => 'City',
+    'top_cities_empty'    => 'No cities yet.',
+    'top_areas_title'     => 'Top areas by shipments',
+    'top_areas_col_name'  => 'Area',
+    'top_areas_empty'     => 'No areas yet.',
 ];

@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Backend;
 
 use App\Enums\ParcelStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Backend\Area;
+use App\Models\Backend\City;
 use App\Models\Backend\DeliveryMan;
 use App\Models\Backend\Hub;
 use App\Models\Backend\Merchant;
@@ -144,6 +146,43 @@ class SummaryController extends Controller
             ])
             ->values();
 
+        // -------- Top 10 cities & areas by shipment volume -------
+        // Cities/areas are shared reference data (no company_id), so we
+        // subquery Parcel::companywise() to keep the count tenant-scoped.
+        // en_name wins over name when both are set — matches the create
+        // form's label pick from ParcelController::create().
+        $topCities = City::query()
+            ->select('id', 'name', 'en_name')
+            ->selectSub(
+                Parcel::companywise()->selectRaw('COUNT(*)')->whereColumn('parcels.city_id', 'cities.id'),
+                'shipments'
+            )
+            ->orderByDesc('shipments')
+            ->limit(10)
+            ->get()
+            ->map(fn ($c) => [
+                'id'        => (int) $c->id,
+                'name'      => (string) ($c->en_name ?: $c->name ?: 'City #'.$c->id),
+                'shipments' => (int) $c->shipments,
+            ])
+            ->values();
+
+        $topAreas = Area::query()
+            ->select('id', 'name', 'en_name')
+            ->selectSub(
+                Parcel::companywise()->selectRaw('COUNT(*)')->whereColumn('parcels.area_id', 'areas.id'),
+                'shipments'
+            )
+            ->orderByDesc('shipments')
+            ->limit(10)
+            ->get()
+            ->map(fn ($a) => [
+                'id'        => (int) $a->id,
+                'name'      => (string) ($a->en_name ?: $a->name ?: 'Area #'.$a->id),
+                'shipments' => (int) $a->shipments,
+            ])
+            ->values();
+
         return Inertia::render('Admin/Summary/Index', [
             'greeting_name'  => (string) (Auth::user()->name ?? ''),
             'currency'       => (string) (settings()->currency ?? ''),
@@ -153,6 +192,8 @@ class SummaryController extends Controller
             'totals'         => $totals,
             'top_merchants'  => $topMerchants,
             'top_hubs'       => $topHubs,
+            'top_cities'     => $topCities,
+            'top_areas'      => $topAreas,
             'urls' => [
                 'list_parcels'    => $this->safeRoute('parcel.index', '/admin/parcel/index'),
                 'full_dashboard'  => $this->safeRoute('dashboard.index', '/dashboard'),
@@ -183,6 +224,12 @@ class SummaryController extends Controller
                 'top_hubs_title'    => __('summary.top_hubs_title') ?: 'Top hubs by shipments',
                 'top_hubs_col_name' => __('summary.top_hubs_col_name') ?: 'Hub',
                 'top_hubs_empty'    => __('summary.top_hubs_empty')    ?: 'No hubs yet.',
+                'top_cities_title'    => __('summary.top_cities_title') ?: 'Top cities by shipments',
+                'top_cities_col_name' => __('summary.top_cities_col_name') ?: 'City',
+                'top_cities_empty'    => __('summary.top_cities_empty')    ?: 'No cities yet.',
+                'top_areas_title'     => __('summary.top_areas_title')  ?: 'Top areas by shipments',
+                'top_areas_col_name'  => __('summary.top_areas_col_name') ?: 'Area',
+                'top_areas_empty'     => __('summary.top_areas_empty')  ?: 'No areas yet.',
             ],
         ]);
     }

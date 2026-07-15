@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Head, Link } from '@inertiajs/react';
 import {
     Package, Truck, CheckCircle2, Clock, ArrowUpRight,
-    Users, Bike, Wallet, LineChart, ExternalLink, Store, Trophy, Warehouse,
+    Users, Bike, Wallet, LineChart, ExternalLink, Store, Trophy, Warehouse, MapPin, Map,
 } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
@@ -173,6 +173,8 @@ export default function Index({
     totals = {},
     top_merchants = [],
     top_hubs = [],
+    top_cities = [],
+    top_areas = [],
     urls = {},
     t = {},
 }) {
@@ -231,7 +233,7 @@ export default function Index({
                         />
                     </div>
 
-                    {/* Top hubs row (full width of the left col; pair with Recent below) */}
+                    {/* Top hubs — full width of the left column */}
                     <TopByShipmentsCard
                         items={top_hubs}
                         icon={Warehouse}
@@ -240,6 +242,26 @@ export default function Index({
                         colQty={t.top_merchants_col_qty}
                         empty={t.top_hubs_empty}
                     />
+
+                    {/* 50/50 row: Top cities + Top areas */}
+                    <div className="grid gap-6 md:grid-cols-2">
+                        <TopByShipmentsCard
+                            items={top_cities}
+                            icon={MapPin}
+                            title={t.top_cities_title}
+                            colName={t.top_cities_col_name}
+                            colQty={t.top_merchants_col_qty}
+                            empty={t.top_cities_empty}
+                        />
+                        <TopByShipmentsCard
+                            items={top_areas}
+                            icon={Map}
+                            title={t.top_areas_title}
+                            colName={t.top_areas_col_name}
+                            colQty={t.top_merchants_col_qty}
+                            empty={t.top_areas_empty}
+                        />
+                    </div>
 
                     <Card className="rounded-xl shadow-sm border border-border">
                         <CardContent className="p-0">

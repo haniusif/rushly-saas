@@ -125,7 +125,7 @@ function TopMerchantsCard({ merchants = [], t = {} }) {
                         <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3 px-5 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                             <span className="w-6 text-center">#</span>
                             <span>{t.top_merchants_col_name}</span>
-                            <span className="w-24" />
+                            <span className="hidden xl:block w-16" />
                             <span className="justify-self-end">{t.top_merchants_col_qty}</span>
                         </div>
                         {merchants.map((m, i) => {
@@ -141,7 +141,7 @@ function TopMerchantsCard({ merchants = [], t = {} }) {
                                         </span>
                                         <span className="text-sm font-medium truncate">{m.name}</span>
                                     </div>
-                                    <div className="w-24 h-1.5 rounded-full bg-muted overflow-hidden">
+                                    <div className="hidden xl:block w-16 h-1.5 rounded-full bg-muted overflow-hidden">
                                         <div
                                             className="h-full bg-primary/70"
                                             style={{ width: `${pct}%` }}
@@ -202,19 +202,22 @@ export default function Index({
             </div>
 
             <div className="grid gap-6 lg:grid-cols-3">
-                {/* Left column: trend + recent */}
+                {/* Left column: trend + top merchants (side-by-side) + recent */}
                 <div className="lg:col-span-2 space-y-6">
-                    <Card className="rounded-xl shadow-sm border border-border">
-                        <CardContent className="p-5">
-                            <div className="mb-4 flex items-center gap-2">
-                                <LineChart className="h-4 w-4 text-primary" />
-                                <div className="text-sm font-semibold">{t.seven_day_title}</div>
-                            </div>
-                            <TrendChart data={trend} tCreated={t.legend_created} tDelivered={t.legend_delivered} />
-                        </CardContent>
-                    </Card>
+                    {/* 50/50 row on md+ — 7-day trend and Top merchants share the width */}
+                    <div className="grid gap-6 md:grid-cols-2">
+                        <Card className="rounded-xl shadow-sm border border-border">
+                            <CardContent className="p-5">
+                                <div className="mb-4 flex items-center gap-2">
+                                    <LineChart className="h-4 w-4 text-primary" />
+                                    <div className="text-sm font-semibold">{t.seven_day_title}</div>
+                                </div>
+                                <TrendChart data={trend} tCreated={t.legend_created} tDelivered={t.legend_delivered} />
+                            </CardContent>
+                        </Card>
 
-                    <TopMerchantsCard merchants={top_merchants} t={t} />
+                        <TopMerchantsCard merchants={top_merchants} t={t} />
+                    </div>
 
                     <Card className="rounded-xl shadow-sm border border-border">
                         <CardContent className="p-0">

@@ -91,8 +91,42 @@ class ProfileController extends Controller
 
     public function create($id)
     {
-        $user = $this->repo->get(auth()->user()->id);
-        return view('backend.profile.update',compact('user'));
+        if ((int) auth()->user()->id !== (int) $id) {
+            abort(403);
+        }
+        $u = $this->repo->get(auth()->user()->id);
+
+        return Inertia::render('Admin/Profile/Edit', [
+            'user' => [
+                'id'      => $u->id,
+                'name'    => (string) $u->name,
+                'email'   => (string) $u->email,
+                'mobile'  => (string) $u->mobile,
+                'address' => (string) $u->address,
+                'image'   => $u->image,
+            ],
+            'urls' => [
+                'submit'  => route('profile.update', $u->id),
+                'cancel'  => route('profile.index', $u->id),
+                'change_password' => route('password.change', $u->id),
+            ],
+            't' => [
+                'title'       => (__('menus.profile') ?: 'Profile').' · '.(__('levels.edit') ?: 'Edit'),
+                'heading'     => (__('levels.update') ?: 'Update').' '.(__('menus.profile') ?: 'profile'),
+                'intro'       => __('profile.edit_intro') ?: 'Update your public identity. Mobile and email stay unchanged from here — contact the admin if they need to change.',
+                'name'        => __('levels.name') ?: 'Name',
+                'address'     => __('levels.address') ?: 'Address',
+                'email'       => __('levels.email') ?: 'Email',
+                'phone'       => __('levels.phone') ?: 'Phone',
+                'image'       => __('levels.image') ?: 'Photo',
+                'image_hint'  => __('profile.edit_image_hint') ?: 'Square PNG or JPG, up to 5 MB. Displayed on your profile card and in the sidebar.',
+                'change_photo'=> __('profile.change_photo') ?: 'Change photo',
+                'remove_photo'=> __('profile.remove_photo') ?: 'Remove',
+                'save'        => __('levels.save_change') ?: 'Save changes',
+                'cancel'      => __('levels.cancel') ?: 'Cancel',
+                'change_password' => __('menus.change_password') ?: 'Change password',
+            ],
+        ]);
     }
 
     public function changePassword($id)

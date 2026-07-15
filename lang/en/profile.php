@@ -6,4 +6,8 @@ return [
     'strength_weak'     => 'Weak',
     'strength_ok'       => 'Okay',
     'strength_strong'   => 'Strong',
+    'edit_intro'        => 'Update your public identity. Email and phone stay unchanged from here — contact the admin if they need to change.',
+    'edit_image_hint'   => 'Square PNG or JPG, up to 5 MB. Displayed on your profile card and in the sidebar.',
+    'change_photo'      => 'Change photo',
+    'remove_photo'      => 'Remove',
 ];

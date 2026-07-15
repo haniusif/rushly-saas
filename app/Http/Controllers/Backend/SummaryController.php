@@ -82,21 +82,6 @@ class SummaryController extends Controller
         }
         $trend = array_values($days);
 
-        // -------- Recent parcels ---------------------------------
-        $recent = Parcel::companywise()
-            ->with(['merchant:id,business_name'])
-            ->orderByDesc('id')->limit(8)
-            ->get()
-            ->map(fn ($p) => [
-                'id'            => $p->id,
-                'tracking_id'   => (string) $p->tracking_id,
-                'customer_name' => (string) $p->customer_name,
-                'merchant'      => optional($p->merchant)->business_name,
-                'status'        => (int) $p->status,
-                'status_label'  => $this->statusLabel((int) $p->status),
-                'created_at'    => optional($p->created_at)->diffForHumans(),
-            ]);
-
         // -------- Top 10 merchants by shipment volume ------------
         // Correlated subquery keeps the FROM clause a single table so the
         // Merchant::companywise() scope's `company_id` filter stays
@@ -221,15 +206,11 @@ class SummaryController extends Controller
         return Inertia::render('Admin/Summary/Index', [
             'kpis'           => $kpis,
             'trend'          => $trend,
-            'recent'         => $recent,
             'top_merchants'  => $topMerchants,
             'top_hubs'       => $topHubs,
             'top_cities'     => $topCities,
             'top_areas'      => $topAreas,
             'top_deliverymen'=> $topDeliverymen,
-            'urls' => [
-                'list_parcels'    => $this->safeRoute('parcel.index', '/admin/parcel/index'),
-            ],
             't' => [
                 'title'           => __('summary.title') ?: 'Summary',
                 'kpi_today'       => __('summary.kpi_today')       ?: "Today's shipments",
@@ -237,11 +218,8 @@ class SummaryController extends Controller
                 'kpi_delivered'   => __('summary.kpi_delivered')   ?: 'Delivered today',
                 'kpi_pending'     => __('summary.kpi_pending')     ?: 'Pending pickup',
                 'seven_day_title' => __('summary.seven_day_title') ?: 'Last 7 days',
-                'recent_title'    => __('summary.recent_title')    ?: 'Recent shipments',
-                'list_parcels'    => __('summary.list_parcels')    ?: 'View all shipments',
                 'legend_created'   => __('summary.legend_created')   ?: 'Created',
                 'legend_delivered' => __('summary.legend_delivered') ?: 'Delivered',
-                'no_recent'       => __('summary.no_recent') ?: 'No shipments yet — create your first one.',
                 'top_merchants_title'    => __('summary.top_merchants_title') ?: 'Top merchants by shipments',
                 'top_merchants_col_name' => __('summary.top_merchants_col_name') ?: 'Merchant',
                 'top_merchants_col_qty'  => __('summary.top_merchants_col_qty')  ?: 'Shipments',
@@ -269,27 +247,4 @@ class SummaryController extends Controller
         ]);
     }
 
-    private function statusLabel(int $status): string
-    {
-        static $labels = [
-            ParcelStatus::PENDING                     => 'Pending',
-            ParcelStatus::PICKUP_ASSIGN               => 'Pickup assigned',
-            ParcelStatus::RECEIVED_BY_PICKUP_MAN      => 'Picked up',
-            ParcelStatus::RECEIVED_WAREHOUSE          => 'At warehouse',
-            ParcelStatus::TRANSFER_TO_HUB             => 'To hub',
-            ParcelStatus::RECEIVED_BY_HUB             => 'At hub',
-            ParcelStatus::DELIVERY_MAN_ASSIGN         => 'Out for delivery',
-            ParcelStatus::DELIVERED                   => 'Delivered',
-            ParcelStatus::PARTIAL_DELIVERED           => 'Partial delivery',
-            ParcelStatus::RETURN_WAREHOUSE            => 'Return',
-            ParcelStatus::RETURN_RECEIVED_BY_MERCHANT => 'Returned to merchant',
-            ParcelStatus::ASSIGN_TO_3PL               => '3PL',
-        ];
-        return $labels[$status] ?? 'Status '.$status;
-    }
-
-    private function safeRoute(string $name, string $fallback): string
-    {
-        try { return route($name); } catch (\Throwable $e) { return url($fallback); }
-    }
 }

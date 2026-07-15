@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Head, Link } from '@inertiajs/react';
 import {
-    Package, Truck, CheckCircle2, Clock, ArrowUpRight,
+    Package, Truck, CheckCircle2, Clock,
     Bike, LineChart, Store, Trophy, Warehouse, MapPin, Map,
 } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
@@ -75,36 +75,6 @@ function TrendChart({ data, tCreated, tDelivered }) {
                 </span>
             </div>
         </div>
-    );
-}
-
-function StatusPill({ status, label }) {
-    // Map status buckets to color tones for the pill.
-    const groups = {
-        delivered: [9],                                    // DELIVERED
-        pending:   [1],                                    // PENDING
-        transit:   [2, 4, 5, 6, 7, 19, 34],                // in-motion states
-        returned:  [11, 13, 30],                           // return-y states
-        partial:   [32],                                   // partial
-    };
-    let tone = 'muted';
-    if (groups.delivered.includes(status)) tone = 'success';
-    else if (groups.pending.includes(status)) tone = 'warning';
-    else if (groups.transit.includes(status)) tone = 'info';
-    else if (groups.returned.includes(status)) tone = 'danger';
-    else if (groups.partial.includes(status)) tone = 'info';
-
-    const tones = {
-        muted:   'bg-muted text-muted-foreground',
-        success: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
-        warning: 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200',
-        info:    'bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300',
-        danger:  'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300',
-    };
-    return (
-        <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium', tones[tone])}>
-            {label}
-        </span>
     );
 }
 
@@ -232,13 +202,11 @@ function DeliverymenPerformanceCard({ items = [], t = {} }) {
 export default function Index({
     kpis = {},
     trend = [],
-    recent = [],
     top_merchants = [],
     top_hubs = [],
     top_cities = [],
     top_areas = [],
     top_deliverymen = [],
-    urls = {},
     t = {},
 }) {
     return (
@@ -309,40 +277,6 @@ export default function Index({
 
                     {/* Deliveryman performance — full width, 3 numeric cols */}
                     <DeliverymenPerformanceCard items={top_deliverymen} t={t} />
-
-                    <Card className="rounded-xl shadow-sm border border-border">
-                        <CardContent className="p-0">
-                            <div className="px-5 pt-5 pb-3 flex items-center justify-between">
-                                <div className="text-sm font-semibold">{t.recent_title}</div>
-                                <a href={urls.list_parcels} className="text-xs text-primary hover:underline inline-flex items-center gap-1">
-                                    {t.list_parcels} <ArrowUpRight className="h-3 w-3" />
-                                </a>
-                            </div>
-                            {recent.length === 0 ? (
-                                <div className="px-5 pb-6 text-sm text-muted-foreground">{t.no_recent}</div>
-                            ) : (
-                                <div className="divide-y divide-border">
-                                    {recent.map((p) => (
-                                        <div key={p.id} className="flex items-center gap-3 px-5 py-3 hover:bg-muted/30 transition-colors">
-                                            <span className="inline-grid place-items-center h-8 w-8 rounded-lg bg-primary/10 text-primary shrink-0">
-                                                <Package className="h-4 w-4" />
-                                            </span>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="text-sm font-medium truncate">
-                                                    {p.tracking_id || `#${p.id}`}
-                                                    {p.customer_name && <span className="text-muted-foreground font-normal"> · {p.customer_name}</span>}
-                                                </div>
-                                                <div className="text-[11px] text-muted-foreground truncate">
-                                                    {p.merchant && `${p.merchant} · `}{p.created_at}
-                                                </div>
-                                            </div>
-                                            <StatusPill status={p.status} label={p.status_label} />
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
                 </div>
 
             </div>

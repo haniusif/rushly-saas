@@ -23,4 +23,7 @@ return [
     'top_merchants_col_name' => 'Merchant',
     'top_merchants_col_qty'  => 'Shipments',
     'top_merchants_empty'    => 'No merchants yet.',
+    'top_hubs_title'    => 'Top hubs by shipments',
+    'top_hubs_col_name' => 'Hub',
+    'top_hubs_empty'    => 'No hubs yet.',
 ];

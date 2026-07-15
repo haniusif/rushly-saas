@@ -23,4 +23,7 @@ return [
     'top_merchants_col_name' => 'العميل',
     'top_merchants_col_qty'  => 'الشحنات',
     'top_merchants_empty'    => 'لا يوجد عملاء بعد.',
+    'top_hubs_title'    => 'أفضل الفروع حسب عدد الشحنات',
+    'top_hubs_col_name' => 'الفرع',
+    'top_hubs_empty'    => 'لا توجد فروع بعد.',
 ];

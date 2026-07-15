@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Head, Link } from '@inertiajs/react';
 import {
     Package, Truck, CheckCircle2, Clock, ArrowUpRight,
-    Users, Bike, Wallet, LineChart, ExternalLink, Store, Trophy,
+    Users, Bike, Wallet, LineChart, ExternalLink, Store, Trophy, Warehouse,
 } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
@@ -108,27 +108,31 @@ function StatusPill({ status, label }) {
     );
 }
 
-function TopMerchantsCard({ merchants = [], t = {} }) {
-    // Normalise so the widest bar caps at 100% and the rest scale relative to it.
-    const max = Math.max(1, ...merchants.map(m => m.shipments));
+/**
+ * Generic "Top N by shipments" leaderboard card. Reused by the Top
+ * merchants and Top hubs cards on /summary. Callers pass the trophy-header
+ * title, per-row icon, translated column headers, and the list.
+ */
+function TopByShipmentsCard({ items = [], icon: RowIcon = Store, title, colName, colQty, empty }) {
+    const max = Math.max(1, ...items.map(m => m.shipments));
     return (
         <Card className="rounded-xl shadow-sm border border-border">
             <CardContent className="p-0">
                 <div className="px-5 pt-5 pb-3 flex items-center gap-2">
                     <Trophy className="h-4 w-4 text-primary" />
-                    <div className="text-sm font-semibold">{t.top_merchants_title}</div>
+                    <div className="text-sm font-semibold">{title}</div>
                 </div>
-                {merchants.length === 0 ? (
-                    <div className="px-5 pb-6 text-sm text-muted-foreground">{t.top_merchants_empty}</div>
+                {items.length === 0 ? (
+                    <div className="px-5 pb-6 text-sm text-muted-foreground">{empty}</div>
                 ) : (
                     <div className="divide-y divide-border">
                         <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3 px-5 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                             <span className="w-6 text-center">#</span>
-                            <span>{t.top_merchants_col_name}</span>
+                            <span>{colName}</span>
                             <span className="hidden xl:block w-16" />
-                            <span className="justify-self-end">{t.top_merchants_col_qty}</span>
+                            <span className="justify-self-end">{colQty}</span>
                         </div>
-                        {merchants.map((m, i) => {
+                        {items.map((m, i) => {
                             const pct = Math.max(2, Math.round((m.shipments / max) * 100));
                             return (
                                 <div key={m.id} className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3 px-5 py-2.5 hover:bg-muted/30 transition-colors">
@@ -137,7 +141,7 @@ function TopMerchantsCard({ merchants = [], t = {} }) {
                                     </span>
                                     <div className="flex items-center gap-2 min-w-0">
                                         <span className="inline-grid place-items-center h-7 w-7 rounded-md bg-primary/10 text-primary shrink-0">
-                                            <Store className="h-3.5 w-3.5" />
+                                            <RowIcon className="h-3.5 w-3.5" />
                                         </span>
                                         <span className="text-sm font-medium truncate">{m.name}</span>
                                     </div>
@@ -168,6 +172,7 @@ export default function Index({
     recent = [],
     totals = {},
     top_merchants = [],
+    top_hubs = [],
     urls = {},
     t = {},
 }) {
@@ -204,7 +209,7 @@ export default function Index({
             <div className="grid gap-6 lg:grid-cols-3">
                 {/* Left column: trend + top merchants (side-by-side) + recent */}
                 <div className="lg:col-span-2 space-y-6">
-                    {/* 50/50 row on md+ — 7-day trend and Top merchants share the width */}
+                    {/* 50/50 row: 7-day trend + Top merchants */}
                     <div className="grid gap-6 md:grid-cols-2">
                         <Card className="rounded-xl shadow-sm border border-border">
                             <CardContent className="p-5">
@@ -216,8 +221,25 @@ export default function Index({
                             </CardContent>
                         </Card>
 
-                        <TopMerchantsCard merchants={top_merchants} t={t} />
+                        <TopByShipmentsCard
+                            items={top_merchants}
+                            icon={Store}
+                            title={t.top_merchants_title}
+                            colName={t.top_merchants_col_name}
+                            colQty={t.top_merchants_col_qty}
+                            empty={t.top_merchants_empty}
+                        />
                     </div>
+
+                    {/* Top hubs row (full width of the left col; pair with Recent below) */}
+                    <TopByShipmentsCard
+                        items={top_hubs}
+                        icon={Warehouse}
+                        title={t.top_hubs_title}
+                        colName={t.top_hubs_col_name}
+                        colQty={t.top_merchants_col_qty}
+                        empty={t.top_hubs_empty}
+                    />
 
                     <Card className="rounded-xl shadow-sm border border-border">
                         <CardContent className="p-0">

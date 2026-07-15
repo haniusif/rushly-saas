@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Backend;
 use App\Enums\ParcelStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Backend\DeliveryMan;
+use App\Models\Backend\Hub;
 use App\Models\Backend\Merchant;
 use App\Models\Backend\Parcel;
 use App\Models\Backend\Payment;
@@ -124,6 +125,25 @@ class SummaryController extends Controller
             ])
             ->values();
 
+        // -------- Top 10 hubs by shipment volume -----------------
+        // Same shape as topMerchants; joins on parcels.hub_id (the current
+        // hub the parcel sits at, not first_hub_id / transfer_hub_id).
+        $topHubs = Hub::companywise()
+            ->select('id', 'name')
+            ->selectSub(
+                Parcel::query()->selectRaw('COUNT(*)')->whereColumn('parcels.hub_id', 'hubs.id'),
+                'shipments'
+            )
+            ->orderByDesc('shipments')
+            ->limit(10)
+            ->get()
+            ->map(fn ($h) => [
+                'id'        => (int) $h->id,
+                'name'      => (string) ($h->name ?: 'Hub #'.$h->id),
+                'shipments' => (int) $h->shipments,
+            ])
+            ->values();
+
         return Inertia::render('Admin/Summary/Index', [
             'greeting_name'  => (string) (Auth::user()->name ?? ''),
             'currency'       => (string) (settings()->currency ?? ''),
@@ -132,6 +152,7 @@ class SummaryController extends Controller
             'recent'         => $recent,
             'totals'         => $totals,
             'top_merchants'  => $topMerchants,
+            'top_hubs'       => $topHubs,
             'urls' => [
                 'list_parcels'    => $this->safeRoute('parcel.index', '/admin/parcel/index'),
                 'full_dashboard'  => $this->safeRoute('dashboard.index', '/dashboard'),
@@ -159,6 +180,9 @@ class SummaryController extends Controller
                 'top_merchants_col_name' => __('summary.top_merchants_col_name') ?: 'Merchant',
                 'top_merchants_col_qty'  => __('summary.top_merchants_col_qty')  ?: 'Shipments',
                 'top_merchants_empty'    => __('summary.top_merchants_empty')    ?: 'No merchants yet.',
+                'top_hubs_title'    => __('summary.top_hubs_title') ?: 'Top hubs by shipments',
+                'top_hubs_col_name' => __('summary.top_hubs_col_name') ?: 'Hub',
+                'top_hubs_empty'    => __('summary.top_hubs_empty')    ?: 'No hubs yet.',
             ],
         ]);
     }

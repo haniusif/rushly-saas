@@ -115,7 +115,7 @@ class SummaryController extends Controller
                 'shipments'
             )
             ->orderByDesc('shipments')
-            ->limit(10)
+            ->limit(6)
             ->get()
             ->map(fn ($m) => [
                 'id'        => (int) $m->id,

@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Http\Requests\Profile\UpdateRequest;
 use App\Http\Requests\Profile\UpdatePasswordRequest;
+use App\Http\Controllers\Backend\BrowserSessionsController;
 use App\Repositories\Profile\ProfileInterface;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class ProfileController extends Controller
 {
@@ -18,14 +20,73 @@ class ProfileController extends Controller
         $this->repo = $repo;
     }
 
-    public function view($id)
+    public function view($id, \Illuminate\Http\Request $request)
     {
         if(Auth::user()->id != $id):
             abort(500);
         endif;
-        $user = $this->repo->get($id);
+        $u = $this->repo->get($id);
+        $u->loadMissing(['role', 'hub', 'department', 'designation']);
 
-        return view('backend.profile.index',compact('user'));
+        $bs = BrowserSessionsController::sessionsPayload($request);
+
+        // Hard-coded destroy path so tinker + non-tenant contexts can still
+        // resolve — the route lives inside the tenant-domain gate in
+        // routes/web.php and route() can't find it at CLI-eval time.
+        $bsDestroy = url('/admin/browser-sessions');
+
+        return Inertia::render('Admin/Profile/View', [
+            'browser_sessions'    => $bs['sessions'],
+            'browser_sessions_t'  => $bs['t'],
+            'browser_sessions_url'=> $bsDestroy,
+            'user' => [
+                'id'              => $u->id,
+                'name'            => $u->name,
+                'email'           => $u->email,
+                'mobile'          => $u->mobile,
+                'image'           => $u->image,
+                'address'         => $u->address,
+                'nid_number'      => $u->nid_number,
+                'unique_id'       => $u->unique_id,
+                'user_type'       => $u->user_type,
+                'joining_date'    => $u->joining_date,
+                'salary'          => (float) ($u->salary ?? 0),
+                'status'          => (int) $u->status,
+                'role'            => optional($u->role)->name,
+                'hub'             => optional($u->hub)->name,
+                'department'      => optional($u->department)->title,
+                'designation'     => optional($u->designation)->title,
+            ],
+            'currency'    => settings()->currency,
+            'urls' => [
+                'edit'            => route('profile.edit', $u->id),
+                'change_password' => route('password.change', $u->id),
+                'dashboard'       => route('dashboard.index'),
+            ],
+            't' => [
+                'title'          => __('menus.profile') ?: 'My profile',
+                'edit'           => __('levels.edit') ?: 'Edit',
+                'change_password'=> 'Change password',
+                'name'           => __('levels.name') ?: 'Name',
+                'email'          => __('levels.email') ?: 'Email',
+                'phone'          => __('levels.phone') ?: 'Phone',
+                'address'        => __('levels.address') ?: 'Address',
+                'nid'            => __('levels.nid') ?: 'NID',
+                'unique_id'      => __('levels.unique_id') ?: 'Unique ID',
+                'role'           => __('levels.role') ?: 'Role',
+                'hub'            => __('levels.hub') ?: 'Hub',
+                'department'     => __('levels.department') ?: 'Department',
+                'designation'    => __('levels.designation') ?: 'Designation',
+                'joining_date'   => __('levels.joining_date') ?: 'Joining date',
+                'salary'         => __('levels.salary') ?: 'Salary',
+                'status'         => __('levels.status') ?: 'Status',
+                'active'         => __('levels.active') ?: 'Active',
+                'inactive'       => __('levels.inactive') ?: 'Inactive',
+                'identity'       => 'Identity',
+                'work'           => 'Work',
+                'contact'        => 'Contact',
+            ],
+        ]);
     }
 
     public function create($id)

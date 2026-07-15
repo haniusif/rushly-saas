@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Inertia\Inertia;
 
 /**
  * Jetstream-style "your active browser sessions" screen. Works for both
@@ -22,12 +21,19 @@ use Inertia\Inertia;
  */
 class BrowserSessionsController extends Controller
 {
-    public function index(Request $request)
+    /**
+     * Shared entry — returns the active-sessions list for the current user
+     * plus a translation bundle, callable from any controller (Profile page,
+     * account settings, etc.). Kept static so callers don't have to resolve
+     * an instance of this controller from the container.
+     */
+    public static function sessionsPayload(Request $request): array
     {
-        return Inertia::render('Admin/BrowserSessions/Index', [
-            'sessions' => $this->sessions($request),
-            't' => $this->translations(),
-        ]);
+        $c = app(self::class);
+        return [
+            'sessions' => $c->sessions($request),
+            't'        => $c->translations(),
+        ];
     }
 
     /**
@@ -91,7 +97,9 @@ class BrowserSessionsController extends Controller
 
     private function fromFiles(Request $request): array
     {
-        $dir = storage_path('framework/sessions');
+        // Bypass Stancl's per-tenant storage remap — session files always live at
+// the framework's central path regardless of the tenant currently bound.
+$dir = base_path('storage/framework/sessions');
         if (! is_dir($dir)) return [];
 
         $userId       = (int) Auth::id();
@@ -190,7 +198,7 @@ class BrowserSessionsController extends Controller
         $driver = config('session.driver');
         if ($driver !== 'file') return;
 
-        $dir       = storage_path('framework/sessions');
+        $dir       = base_path('storage/framework/sessions');
         if (! is_dir($dir)) return;
         $userId    = (int) Auth::id();
         $guardKey  = 'login_web_'.sha1(\Illuminate\Auth\SessionGuard::class);

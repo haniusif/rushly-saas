@@ -319,8 +319,8 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         // Topbar global search (parcel / driver / client / product / ticket)
                         Route::get('global-search', [\App\Http\Controllers\Backend\GlobalSearchController::class, 'search'])->name('global.search');
 
-                        // Account: browser sessions (Jetstream-style).
-                        Route::get('browser-sessions',  [\App\Http\Controllers\Backend\BrowserSessionsController::class, 'index'])->name('browser-sessions.index');
+                        // Log out this user's other browser sessions.
+                        // The listing is rendered as a section on the Profile page.
                         Route::delete('browser-sessions', [\App\Http\Controllers\Backend\BrowserSessionsController::class, 'destroy'])->name('browser-sessions.destroy');
 
                         // Onboarding tour manager (admin CRUD + analytics)

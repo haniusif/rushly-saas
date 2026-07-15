@@ -11,10 +11,8 @@ use App\Models\Backend\Hub;
 use App\Models\Backend\Merchant;
 use App\Models\Backend\Parcel;
 use App\Models\Backend\ParcelEvent;
-use App\Models\Backend\Payment;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 /**
@@ -98,14 +96,6 @@ class SummaryController extends Controller
                 'status_label'  => $this->statusLabel((int) $p->status),
                 'created_at'    => optional($p->created_at)->diffForHumans(),
             ]);
-
-        // -------- Roster tiles -----------------------------------
-        $totals = [
-            'merchants'    => (int) Merchant::companywise()->count(),
-            'deliverymen'  => (int) DeliveryMan::companywise()->count(),
-            'pending_pay'  => (float) Payment::companywise()
-                ->where('status', 1)->sum(DB::raw('COALESCE(amount, 0)')),
-        ];
 
         // -------- Top 10 merchants by shipment volume ------------
         // Correlated subquery keeps the FROM clause a single table so the
@@ -229,11 +219,9 @@ class SummaryController extends Controller
             ->values();
 
         return Inertia::render('Admin/Summary/Index', [
-            'currency'       => (string) (settings()->currency ?? ''),
             'kpis'           => $kpis,
             'trend'          => $trend,
             'recent'         => $recent,
-            'totals'         => $totals,
             'top_merchants'  => $topMerchants,
             'top_hubs'       => $topHubs,
             'top_cities'     => $topCities,
@@ -251,10 +239,6 @@ class SummaryController extends Controller
                 'seven_day_title' => __('summary.seven_day_title') ?: 'Last 7 days',
                 'recent_title'    => __('summary.recent_title')    ?: 'Recent shipments',
                 'list_parcels'    => __('summary.list_parcels')    ?: 'View all shipments',
-                'roster_title'    => __('summary.roster_title')    ?: 'Team & payouts',
-                'roster_merchants'   => __('summary.roster_merchants')   ?: 'Merchants',
-                'roster_deliverymen' => __('summary.roster_deliverymen') ?: 'Deliverymen',
-                'roster_pending_pay' => __('summary.roster_pending_pay') ?: 'Pending payouts',
                 'legend_created'   => __('summary.legend_created')   ?: 'Created',
                 'legend_delivered' => __('summary.legend_delivered') ?: 'Delivered',
                 'no_recent'       => __('summary.no_recent') ?: 'No shipments yet — create your first one.',

@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Head, Link } from '@inertiajs/react';
 import {
     Package, Truck, CheckCircle2, Clock, ArrowUpRight,
-    Users, Bike, Wallet, LineChart, Store, Trophy, Warehouse, MapPin, Map,
+    Bike, LineChart, Store, Trophy, Warehouse, MapPin, Map,
 } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
@@ -230,11 +230,9 @@ function DeliverymenPerformanceCard({ items = [], t = {} }) {
 }
 
 export default function Index({
-    currency = '',
     kpis = {},
     trend = [],
     recent = [],
-    totals = {},
     top_merchants = [],
     top_hubs = [],
     top_cities = [],
@@ -255,9 +253,8 @@ export default function Index({
                 <KpiCard icon={Clock}        tone="warning" label={t.kpi_pending}    value={kpis.pending} />
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-3">
-                {/* Left column: trend + top merchants (side-by-side) + recent */}
-                <div className="lg:col-span-2 space-y-6">
+            <div className="space-y-6">
+                <div className="space-y-6">
                     {/* 50/50 row: 7-day trend + Top merchants */}
                     <div className="grid gap-6 md:grid-cols-2">
                         <Card className="rounded-xl shadow-sm border border-border">
@@ -348,37 +345,6 @@ export default function Index({
                     </Card>
                 </div>
 
-                {/* Right column: roster tile */}
-                <div className="space-y-6">
-                    <Card className="rounded-xl shadow-sm border border-border">
-                        <CardContent className="p-5">
-                            <div className="mb-3 text-sm font-semibold">{t.roster_title}</div>
-                            <dl className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <dt className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <Users className="h-4 w-4" /> {t.roster_merchants}
-                                    </dt>
-                                    <dd className="text-sm font-semibold tabular-nums">{Number(totals.merchants ?? 0).toLocaleString()}</dd>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <dt className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <Bike className="h-4 w-4" /> {t.roster_deliverymen}
-                                    </dt>
-                                    <dd className="text-sm font-semibold tabular-nums">{Number(totals.deliverymen ?? 0).toLocaleString()}</dd>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <dt className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <Wallet className="h-4 w-4" /> {t.roster_pending_pay}
-                                    </dt>
-                                    <dd className="text-sm font-semibold tabular-nums">
-                                        <span className="text-muted-foreground text-xs me-1">{currency}</span>
-                                        {Number(totals.pending_pay ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                    </dd>
-                                </div>
-                            </dl>
-                        </CardContent>
-                    </Card>
-                </div>
             </div>
         </AdminLayout>
     );

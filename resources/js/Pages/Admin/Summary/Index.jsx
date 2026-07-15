@@ -208,6 +208,7 @@ export default function Index({
     top_merchants = [],
     top_hubs = [],
     top_cities = [],
+    ofd_by_hub = [],
     top_deliverymen = [],
     t = {},
 }) {
@@ -248,16 +249,27 @@ export default function Index({
                         />
                     </div>
 
-                    {/* Top hubs — full width of the left column */}
-                    <TopByShipmentsCard
-                        items={top_hubs}
-                        icon={Warehouse}
-                        title={t.top_hubs_title}
-                        subtitle={t.current_month}
-                        colName={t.top_hubs_col_name}
-                        colQty={t.top_merchants_col_qty}
-                        empty={t.top_hubs_empty}
-                    />
+                    {/* 50/50 row: Top hubs (month) + OFD by hub (today) */}
+                    <div className="grid gap-6 md:grid-cols-2">
+                        <TopByShipmentsCard
+                            items={top_hubs}
+                            icon={Warehouse}
+                            title={t.top_hubs_title}
+                            subtitle={t.current_month}
+                            colName={t.top_hubs_col_name}
+                            colQty={t.top_merchants_col_qty}
+                            empty={t.top_hubs_empty}
+                        />
+                        <TopByShipmentsCard
+                            items={ofd_by_hub}
+                            icon={Warehouse}
+                            title={t.ofd_by_hub_title}
+                            subtitle={t.ofd_by_hub_subtitle}
+                            colName={t.ofd_by_hub_col_name}
+                            colQty={t.ofd_by_hub_col_qty}
+                            empty={t.ofd_by_hub_empty}
+                        />
+                    </div>
 
                     <TopByShipmentsCard
                         items={top_cities}

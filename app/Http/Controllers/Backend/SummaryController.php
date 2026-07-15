@@ -193,9 +193,34 @@ class SummaryController extends Controller
             })
             ->values();
 
+        // -------- Today's OFD per hub ---------------------------
+        // Parcels currently Out For Delivery (status=DELIVERY_MAN_ASSIGN)
+        // that were also created today. Grouped per hub so an ops lead
+        // can see which hubs are under active load right now.
+        $ofdByHub = Hub::companywise()
+            ->select('id', 'name')
+            ->selectSub(
+                Parcel::query()->selectRaw('COUNT(*)')
+                    ->whereColumn('parcels.hub_id', 'hubs.id')
+                    ->whereBetween('parcels.created_at', [$todayFrom, $todayTo])
+                    ->where('parcels.status', ParcelStatus::DELIVERY_MAN_ASSIGN),
+                'shipments'
+            )
+            ->orderByDesc('shipments')
+            ->limit(10)
+            ->get()
+            ->filter(fn ($h) => (int) $h->shipments > 0)
+            ->map(fn ($h) => [
+                'id'        => (int) $h->id,
+                'name'      => (string) ($h->name ?: 'Hub #'.$h->id),
+                'shipments' => (int) $h->shipments,
+            ])
+            ->values();
+
         return Inertia::render('Admin/Summary/Index', [
             'kpis'           => $kpis,
             'trend'          => $trend,
+            'ofd_by_hub'     => $ofdByHub,
             'top_merchants'  => $topMerchants,
             'top_hubs'       => $topHubs,
             'top_cities'     => $topCities,
@@ -219,6 +244,11 @@ class SummaryController extends Controller
                 'top_cities_title'    => __('summary.top_cities_title') ?: 'Top cities by shipments',
                 'top_cities_col_name' => __('summary.top_cities_col_name') ?: 'City',
                 'top_cities_empty'    => __('summary.top_cities_empty')    ?: 'No cities yet.',
+                'ofd_by_hub_title'    => __('summary.ofd_by_hub_title') ?: 'OFD by hub',
+                'ofd_by_hub_subtitle' => __('summary.ofd_by_hub_subtitle') ?: 'Today, currently out for delivery',
+                'ofd_by_hub_col_name' => __('summary.ofd_by_hub_col_name') ?: 'Hub',
+                'ofd_by_hub_col_qty'  => __('summary.ofd_by_hub_col_qty')  ?: 'OFD',
+                'ofd_by_hub_empty'    => __('summary.ofd_by_hub_empty')    ?: 'No parcels out for delivery today.',
                 // Shared "Current month: <name>" caption used under every
                 // leaderboard title. translatedFormat honors app locale so
                 // Arabic gets Arabic month names.

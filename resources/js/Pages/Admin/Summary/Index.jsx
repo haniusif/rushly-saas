@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Head, Link } from '@inertiajs/react';
 import {
     Package, Truck, CheckCircle2, Clock,
-    Bike, LineChart, Store, Trophy, Warehouse, MapPin,
+    LineChart, Store, Trophy, Warehouse, MapPin,
 } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
@@ -84,10 +84,38 @@ function TrendChart({ data, tCreated, tDelivered }) {
  * title, per-row icon, translated column headers, and the list.
  */
 /**
- * @param {string} [imageKey] - when set, each row uses item[imageKey] as an
- *                              <img> src; falls back to the RowIcon on empty.
+ * Deterministic hue from a string so the letter-avatar for a given
+ * merchant/driver stays the same colour across renders.
  */
-function TopByShipmentsCard({ items = [], icon: RowIcon = Store, imageKey, title, subtitle, colName, colQty, empty }) {
+function stringHue(s = '') {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+    return Math.abs(h) % 360;
+}
+
+function InitialAvatar({ name = '', shape = 'square' }) {
+    const initial = (name || '?').trim().charAt(0).toUpperCase();
+    const hue = stringHue(name);
+    return (
+        <span
+            className={cn(
+                'inline-grid place-items-center h-7 w-7 shrink-0 text-[11px] font-semibold text-white',
+                shape === 'circle' ? 'rounded-full' : 'rounded-md'
+            )}
+            style={{ backgroundColor: `hsl(${hue}, 62%, 48%)` }}
+            aria-hidden
+        >
+            {initial}
+        </span>
+    );
+}
+
+/**
+ * @param {string} [imageKey] - when set, each row uses item[imageKey] as an
+ *                              <img> src; falls back to a colored letter
+ *                              avatar so rows stay visually distinct.
+ */
+function TopByShipmentsCard({ items = [], icon: RowIcon = Store, imageKey, avatarShape = 'square', title, subtitle, colName, colQty, empty }) {
     const max = Math.max(1, ...items.map(m => m.shipments));
     return (
         <Card className="rounded-xl shadow-sm border border-border">
@@ -122,8 +150,13 @@ function TopByShipmentsCard({ items = [], icon: RowIcon = Store, imageKey, title
                                                 src={m[imageKey]}
                                                 alt=""
                                                 loading="lazy"
-                                                className="h-7 w-7 rounded-md object-cover shrink-0 bg-muted"
+                                                className={cn(
+                                                    'h-7 w-7 object-cover shrink-0 bg-muted',
+                                                    avatarShape === 'circle' ? 'rounded-full' : 'rounded-md'
+                                                )}
                                             />
+                                        ) : imageKey ? (
+                                            <InitialAvatar name={m.name} shape={avatarShape} />
                                         ) : (
                                             <span className="inline-grid place-items-center h-7 w-7 rounded-md bg-primary/10 text-primary shrink-0">
                                                 <RowIcon className="h-3.5 w-3.5" />
@@ -198,9 +231,7 @@ function DeliverymenPerformanceCard({ items = [], t = {} }) {
                                             className="h-7 w-7 rounded-full object-cover shrink-0 bg-muted"
                                         />
                                     ) : (
-                                        <span className="inline-grid place-items-center h-7 w-7 rounded-full bg-primary/10 text-primary shrink-0">
-                                            <Bike className="h-3.5 w-3.5" />
-                                        </span>
+                                        <InitialAvatar name={d.name} shape="circle" />
                                     )}
                                     <span className="text-sm font-medium truncate">{d.name}</span>
                                 </div>

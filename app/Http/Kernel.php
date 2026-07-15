@@ -44,6 +44,7 @@ class Kernel extends HttpKernel
             \App\Http\Middleware\TrackDriverLastSeen::class,
             \App\Http\Middleware\SetTenantTimezone::class,
             \App\Http\Middleware\RequireOnboarding::class,
+            \App\Http\Middleware\RecordSessionMetadata::class,
         ],
 
         'api' => [

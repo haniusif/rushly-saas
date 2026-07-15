@@ -143,11 +143,27 @@ $dir = base_path('storage/framework/sessions');
 
     private function shape(array $row, Request $request, ?string $currentId = null): array
     {
-        $ua = $row['user_agent'] ?? '';
+        $isCurrent = $currentId
+            ? ($row['id'] === $currentId)
+            : ($row['ip'] === $request->ip() && ($row['user_agent'] ?? '') === (string) $request->userAgent());
+
+        // If the session file hadn't been stamped yet (older sessions from
+        // before the RecordSessionMetadata middleware), the current session
+        // still gets a legible label because we know the browser's UA from
+        // the request in hand.
+        $ua = (string) ($row['user_agent'] ?? '');
+        if ($ua === '' && $isCurrent) {
+            $ua = (string) $request->userAgent();
+        }
+        $ip = (string) ($row['ip'] ?? '');
+        if ($ip === '' && $isCurrent) {
+            $ip = (string) $request->ip();
+        }
+
         return [
             'id'                => $row['id'],
-            'is_current'        => $currentId ? ($row['id'] === $currentId) : ($row['ip'] === $request->ip() && $ua === (string) $request->userAgent()),
-            'ip'                => $row['ip'] ?: $request->ip(),
+            'is_current'        => $isCurrent,
+            'ip'                => $ip,
             'ua'                => $ua,
             'browser'           => $this->parseBrowser($ua),
             'platform'          => $this->parsePlatform($ua),

@@ -3,7 +3,7 @@
 return [
     'title'              => 'Summary',
     'kpi_today'          => "Today's shipments",
-    'kpi_in_transit'     => 'In transit',
+    'kpi_ofd'            => 'OFD',
     'kpi_delivered'      => 'Delivered today',
     'kpi_pending'        => 'Pending pickup',
     'seven_day_title'    => 'Last 7 days',

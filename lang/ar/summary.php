@@ -3,7 +3,7 @@
 return [
     'title'              => 'ملخص',
     'kpi_today'          => 'شحنات اليوم',
-    'kpi_in_transit'     => 'قيد النقل',
+    'kpi_ofd'            => 'خارجة للتسليم',
     'kpi_delivered'      => 'تم التسليم اليوم',
     'kpi_pending'        => 'بانتظار الاستلام',
     'seven_day_title'    => 'آخر 7 أيام',

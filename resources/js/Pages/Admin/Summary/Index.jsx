@@ -218,10 +218,10 @@ export default function Index({
 
             {/* KPI row */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-                <KpiCard icon={Package}      tone="primary" label={t.kpi_today}      value={kpis.today_shipments} />
-                <KpiCard icon={Truck}        tone="info"    label={t.kpi_in_transit} value={kpis.in_transit} />
-                <KpiCard icon={CheckCircle2} tone="success" label={t.kpi_delivered}  value={kpis.delivered_today} />
-                <KpiCard icon={Clock}        tone="warning" label={t.kpi_pending}    value={kpis.pending} />
+                <KpiCard icon={Package}      tone="primary" label={t.kpi_today}     value={kpis.today_shipments} />
+                <KpiCard icon={Truck}        tone="info"    label={t.kpi_ofd}       value={kpis.ofd} />
+                <KpiCard icon={CheckCircle2} tone="success" label={t.kpi_delivered} value={kpis.delivered_today} />
+                <KpiCard icon={Clock}        tone="warning" label={t.kpi_pending}   value={kpis.pending} />
             </div>
 
             <div className="space-y-6">

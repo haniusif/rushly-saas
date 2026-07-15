@@ -29,28 +29,23 @@ class SummaryController extends Controller
         $todayTo   = $now->endOfDay();
         $weekFrom  = $now->subDays(6)->startOfDay();
 
-        // -------- KPI cards --------------------------------------
-        // "In transit" = anywhere between "received at warehouse" and "delivery-man assigned"
-        // (i.e., anything moving that isn't yet delivered or returned).
-        $inTransitStates = [
-            ParcelStatus::PICKUP_ASSIGN,
-            ParcelStatus::RECEIVED_BY_PICKUP_MAN,
-            ParcelStatus::RECEIVED_WAREHOUSE,
-            ParcelStatus::TRANSFER_TO_HUB,
-            ParcelStatus::RECEIVED_BY_HUB,
-            ParcelStatus::DELIVERY_MAN_ASSIGN,
-            ParcelStatus::ASSIGN_TO_3PL,
-        ];
-
+        // -------- KPI cards (all scoped to TODAY) ----------------
+        // Every KPI is the count of parcels created between start-of-day
+        // and end-of-day, further filtered by status where applicable.
+        // Keeps the four cards internally consistent — they all describe
+        // today's shipments in different states.
         $kpis = [
             'today_shipments' => (int) Parcel::companywise()
                 ->whereBetween('created_at', [$todayFrom, $todayTo])->count(),
-            'in_transit'      => (int) Parcel::companywise()
-                ->whereIn('status', $inTransitStates)->count(),
+            // OFD = Out For Delivery (status = DELIVERY_MAN_ASSIGN).
+            'ofd'             => (int) Parcel::companywise()
+                ->whereBetween('created_at', [$todayFrom, $todayTo])
+                ->where('status', ParcelStatus::DELIVERY_MAN_ASSIGN)->count(),
             'delivered_today' => (int) Parcel::companywise()
-                ->where('status', ParcelStatus::DELIVERED)
-                ->whereBetween('updated_at', [$todayFrom, $todayTo])->count(),
+                ->whereBetween('created_at', [$todayFrom, $todayTo])
+                ->where('status', ParcelStatus::DELIVERED)->count(),
             'pending'         => (int) Parcel::companywise()
+                ->whereBetween('created_at', [$todayFrom, $todayTo])
                 ->where('status', ParcelStatus::PENDING)->count(),
         ];
 
@@ -229,7 +224,7 @@ class SummaryController extends Controller
             't' => [
                 'title'           => __('summary.title') ?: 'Summary',
                 'kpi_today'       => __('summary.kpi_today')       ?: "Today's shipments",
-                'kpi_in_transit'  => __('summary.kpi_in_transit')  ?: 'In transit',
+                'kpi_ofd'         => __('summary.kpi_ofd')         ?: 'OFD',
                 'kpi_delivered'   => __('summary.kpi_delivered')   ?: 'Delivered today',
                 'kpi_pending'     => __('summary.kpi_pending')     ?: 'Pending pickup',
                 'seven_day_title' => __('summary.seven_day_title') ?: 'Last 7 days',

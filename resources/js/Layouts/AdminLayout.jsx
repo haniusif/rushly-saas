@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Head, Link, usePage, router } from '@inertiajs/react';
 import {
-    LayoutDashboard, Package, Truck, Building2, Users, Warehouse,
+    LayoutDashboard, Home, Package, Truck, Building2, Users, Warehouse,
     Boxes, ClipboardList, MapPin, Inbox, Send, ArrowRightLeft,
     CheckSquare, Bug, Map, MessageCircle, Newspaper, Activity,
     Settings, History, FileText, Receipt, Menu, X, Sun, Moon,
@@ -24,6 +24,7 @@ import TourLauncher from '@/Tour/TourLauncher';
 
 const NAV = [
     { group: 'menu_main', items: [
+        { tKey: 'menu_summary',        icon: Home,            route: 'summary.index',       match: ['summary'] },
         { tKey: 'menu_dashboard',      icon: LayoutDashboard, route: 'dashboard.index',     match: ['admin/dashboard', 'dashboard'] },
         { tKey: 'menu_performance',    icon: BarChart3,       route: 'performance.index',   match: ['admin/performance'] },
         { tKey: 'menu_knowledge_base', icon: BookOpen,        route: 'admin.kb.index',      match: ['admin/knowledge-base'] },

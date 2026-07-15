@@ -387,12 +387,12 @@ class UserController extends Controller
                 ));
             } catch (\Throwable $e) {
                 \Log::error('UserCredentialsMail failed: '.$e->getMessage(), ['user_id' => $u->id]);
-                return redirect()->route('users.show', $u->id)
+                return redirect($this->safeRoute('users.show', $u->id, "/admin/users/view/{$u->id}"))
                     ->with('warning', __('Password updated, but the email could not be sent. Please share the new password manually.'));
             }
         }
 
-        return redirect()->route('users.show', $u->id)
+        return redirect($this->safeRoute('users.show', $u->id, "/admin/users/view/{$u->id}"))
             ->with('success', __('Password updated.').($request->boolean('send_email') && !empty($u->email) ? ' '.__('Login info emailed to the user.') : ''));
     }
 

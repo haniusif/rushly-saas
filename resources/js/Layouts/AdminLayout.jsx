@@ -170,7 +170,7 @@ function useDarkMode() {
     return [dark, toggle];
 }
 
-function Sidebar({ open, onClose, currentUrl, brand }) {
+function Sidebar({ open, onClose, currentUrl, brand, appName }) {
     const t = useT();
     const { props } = usePage();
     // Flat permission list shared by HandleInertiaRequests.share.
@@ -178,8 +178,12 @@ function Sidebar({ open, onClose, currentUrl, brand }) {
     // gate so users don't see menu rows that would 403 anyway.
     const perms = new Set(props?.auth?.permissions ?? []);
     const canSee = (item) => ! item.perm || perms.has(item.perm);
-    const brandName = brand?.name || 'Admin';
+    // Fallback chain: tenant setting → app.name → literal (last-resort).
+    // Empty general_settings.name shouldn't leave the sidebar reading "Admin".
+    const brandName = (brand?.name || appName || 'Admin');
     const initial = brandName.charAt(0).toUpperCase();
+    const homeHref = safeRoute('summary.index');
+    const homeUrl  = homeHref === '#' ? '/summary' : homeHref;
     return (
         <>
             <div
@@ -198,7 +202,7 @@ function Sidebar({ open, onClose, currentUrl, brand }) {
                 )}
             >
                 <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-5">
-                    <Link href="/admin/dashboard" className="flex min-w-0 items-center gap-2 font-semibold">
+                    <Link href={homeUrl} className="flex min-w-0 items-center gap-2 font-semibold">
                         {brand?.logo ? (
                             <img src={brand.logo} alt="" className="h-8 w-8 shrink-0 rounded-lg bg-white/5 object-contain" />
                         ) : (
@@ -426,7 +430,7 @@ export default function AdminLayout({ title, breadcrumbs, children }) {
     return (
         <div className="min-h-screen bg-background text-foreground">
             <Head title={docTitle} />
-            <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} currentUrl={url} brand={brand} />
+            <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} currentUrl={url} brand={brand} appName={appName} />
             <div className="md:ps-64">
                 <Topbar onSidebarOpen={() => setSidebarOpen(true)} user={user} />
                 <main className="p-4 md:p-8">

@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Head, Link } from '@inertiajs/react';
 import {
     Package, Truck, CheckCircle2, Clock,
-    Bike, LineChart, Store, Trophy, Warehouse, MapPin, Map,
+    Bike, LineChart, Store, Trophy, Warehouse, MapPin,
 } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
@@ -208,7 +208,6 @@ export default function Index({
     top_merchants = [],
     top_hubs = [],
     top_cities = [],
-    top_areas = [],
     top_deliverymen = [],
     t = {},
 }) {
@@ -260,27 +259,15 @@ export default function Index({
                         empty={t.top_hubs_empty}
                     />
 
-                    {/* 50/50 row: Top cities + Top areas */}
-                    <div className="grid gap-6 md:grid-cols-2">
-                        <TopByShipmentsCard
-                            items={top_cities}
-                            icon={MapPin}
-                            title={t.top_cities_title}
-                            subtitle={t.current_month}
-                            colName={t.top_cities_col_name}
-                            colQty={t.top_merchants_col_qty}
-                            empty={t.top_cities_empty}
-                        />
-                        <TopByShipmentsCard
-                            items={top_areas}
-                            icon={Map}
-                            title={t.top_areas_title}
-                            subtitle={t.current_month}
-                            colName={t.top_areas_col_name}
-                            colQty={t.top_merchants_col_qty}
-                            empty={t.top_areas_empty}
-                        />
-                    </div>
+                    <TopByShipmentsCard
+                        items={top_cities}
+                        icon={MapPin}
+                        title={t.top_cities_title}
+                        subtitle={t.current_month}
+                        colName={t.top_cities_col_name}
+                        colQty={t.top_merchants_col_qty}
+                        empty={t.top_cities_empty}
+                    />
 
                     {/* Deliveryman performance — full width, 3 numeric cols */}
                     <DeliverymenPerformanceCard items={top_deliverymen} t={t} />

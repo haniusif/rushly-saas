@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Backend;
 
 use App\Enums\ParcelStatus;
 use App\Http\Controllers\Controller;
-use App\Models\Backend\Area;
 use App\Models\Backend\City;
 use App\Models\Backend\DeliveryMan;
 use App\Models\Backend\Hub;
@@ -194,32 +193,12 @@ class SummaryController extends Controller
             })
             ->values();
 
-        $topAreas = Area::query()
-            ->select('id', 'name', 'en_name')
-            ->selectSub(
-                Parcel::companywise()->selectRaw('COUNT(*)')
-                    ->whereColumn('parcels.area_id', 'areas.id')
-                    ->whereBetween('parcels.created_at', [$monthFrom, $monthTo]),
-                'shipments'
-            )
-            ->orderByDesc('shipments')
-            ->limit(10)
-            ->get()
-            ->filter(fn ($a) => (int) $a->shipments > 0)
-            ->map(fn ($a) => [
-                'id'        => (int) $a->id,
-                'name'      => (string) ($a->en_name ?: $a->name ?: 'Area #'.$a->id),
-                'shipments' => (int) $a->shipments,
-            ])
-            ->values();
-
         return Inertia::render('Admin/Summary/Index', [
             'kpis'           => $kpis,
             'trend'          => $trend,
             'top_merchants'  => $topMerchants,
             'top_hubs'       => $topHubs,
             'top_cities'     => $topCities,
-            'top_areas'      => $topAreas,
             'top_deliverymen'=> $topDeliverymen,
             't' => [
                 'title'           => __('summary.title') ?: 'Summary',
@@ -240,9 +219,6 @@ class SummaryController extends Controller
                 'top_cities_title'    => __('summary.top_cities_title') ?: 'Top cities by shipments',
                 'top_cities_col_name' => __('summary.top_cities_col_name') ?: 'City',
                 'top_cities_empty'    => __('summary.top_cities_empty')    ?: 'No cities yet.',
-                'top_areas_title'     => __('summary.top_areas_title')  ?: 'Top areas by shipments',
-                'top_areas_col_name'  => __('summary.top_areas_col_name') ?: 'Area',
-                'top_areas_empty'     => __('summary.top_areas_empty')  ?: 'No areas yet.',
                 // Shared "Current month: <name>" caption used under every
                 // leaderboard title. translatedFormat honors app locale so
                 // Arabic gets Arabic month names.

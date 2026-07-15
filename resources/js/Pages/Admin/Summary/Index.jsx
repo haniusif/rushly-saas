@@ -83,14 +83,17 @@ function TrendChart({ data, tCreated, tDelivered }) {
  * merchants and Top hubs cards on /summary. Callers pass the trophy-header
  * title, per-row icon, translated column headers, and the list.
  */
-function TopByShipmentsCard({ items = [], icon: RowIcon = Store, title, colName, colQty, empty }) {
+function TopByShipmentsCard({ items = [], icon: RowIcon = Store, title, subtitle, colName, colQty, empty }) {
     const max = Math.max(1, ...items.map(m => m.shipments));
     return (
         <Card className="rounded-xl shadow-sm border border-border">
             <CardContent className="p-0">
-                <div className="px-5 pt-5 pb-3 flex items-center gap-2">
-                    <Trophy className="h-4 w-4 text-primary" />
-                    <div className="text-sm font-semibold">{title}</div>
+                <div className="px-5 pt-5 pb-3 flex items-start gap-2">
+                    <Trophy className="h-4 w-4 text-primary mt-0.5" />
+                    <div>
+                        <div className="text-sm font-semibold">{title}</div>
+                        {subtitle && <div className="text-[11px] text-muted-foreground mt-0.5">{subtitle}</div>}
+                    </div>
                 </div>
                 {items.length === 0 ? (
                     <div className="px-5 pb-6 text-sm text-muted-foreground">{empty}</div>
@@ -152,8 +155,8 @@ function DeliverymenPerformanceCard({ items = [], t = {} }) {
                     <Trophy className="h-4 w-4 text-primary mt-0.5" />
                     <div>
                         <div className="text-sm font-semibold">{t.top_deliverymen_title}</div>
-                        {t.top_deliverymen_subtitle && (
-                            <div className="text-[11px] text-muted-foreground mt-0.5">{t.top_deliverymen_subtitle}</div>
+                        {t.current_month && (
+                            <div className="text-[11px] text-muted-foreground mt-0.5">{t.current_month}</div>
                         )}
                     </div>
                 </div>
@@ -239,6 +242,7 @@ export default function Index({
                             items={top_merchants}
                             icon={Store}
                             title={t.top_merchants_title}
+                            subtitle={t.current_month}
                             colName={t.top_merchants_col_name}
                             colQty={t.top_merchants_col_qty}
                             empty={t.top_merchants_empty}
@@ -250,6 +254,7 @@ export default function Index({
                         items={top_hubs}
                         icon={Warehouse}
                         title={t.top_hubs_title}
+                        subtitle={t.current_month}
                         colName={t.top_hubs_col_name}
                         colQty={t.top_merchants_col_qty}
                         empty={t.top_hubs_empty}
@@ -261,6 +266,7 @@ export default function Index({
                             items={top_cities}
                             icon={MapPin}
                             title={t.top_cities_title}
+                            subtitle={t.current_month}
                             colName={t.top_cities_col_name}
                             colQty={t.top_merchants_col_qty}
                             empty={t.top_cities_empty}
@@ -269,6 +275,7 @@ export default function Index({
                             items={top_areas}
                             icon={Map}
                             title={t.top_areas_title}
+                            subtitle={t.current_month}
                             colName={t.top_areas_col_name}
                             colQty={t.top_merchants_col_qty}
                             empty={t.top_areas_empty}

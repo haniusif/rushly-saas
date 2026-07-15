@@ -23,7 +23,7 @@ return [
     'top_areas_col_name'  => 'Area',
     'top_areas_empty'     => 'No areas yet.',
     'top_deliverymen_title'          => 'Deliveryman performance',
-    'top_deliverymen_subtitle'       => 'Current month: :month',
+    'current_month'                  => 'Current month: :month',
     'top_deliverymen_col_name'       => 'Deliveryman',
     'top_deliverymen_col_assigned'   => 'Assigned',
     'top_deliverymen_col_delivered'  => 'Delivered',

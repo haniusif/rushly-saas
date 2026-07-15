@@ -82,20 +82,29 @@ class SummaryController extends Controller
         }
         $trend = array_values($days);
 
-        // -------- Top 10 merchants by shipment volume ------------
+        // Every leaderboard below is windowed to the current month
+        // (parcels.created_at). Hoisted once so the bounds are consistent
+        // across merchants / hubs / cities / areas / deliverymen.
+        $monthFrom = $now->startOfMonth();
+        $monthTo   = $now->endOfMonth();
+
+        // -------- Top 10 merchants (current month) ---------------
         // Correlated subquery keeps the FROM clause a single table so the
         // Merchant::companywise() scope's `company_id` filter stays
-        // unambiguous. Merchants with no shipments still show up (0) if
-        // they land in the top-N by lifetime — sorted desc by count.
+        // unambiguous. Rows with zero shipments this month are filtered
+        // out below so the card shows only merchants with real activity.
         $topMerchants = Merchant::companywise()
             ->select('id', 'business_name')
             ->selectSub(
-                Parcel::query()->selectRaw('COUNT(*)')->whereColumn('parcels.merchant_id', 'merchants.id'),
+                Parcel::query()->selectRaw('COUNT(*)')
+                    ->whereColumn('parcels.merchant_id', 'merchants.id')
+                    ->whereBetween('parcels.created_at', [$monthFrom, $monthTo]),
                 'shipments'
             )
             ->orderByDesc('shipments')
             ->limit(10)
             ->get()
+            ->filter(fn ($m) => (int) $m->shipments > 0)
             ->map(fn ($m) => [
                 'id'        => (int) $m->id,
                 'name'      => (string) ($m->business_name ?: 'Merchant #'.$m->id),
@@ -103,18 +112,21 @@ class SummaryController extends Controller
             ])
             ->values();
 
-        // -------- Top 10 hubs by shipment volume -----------------
-        // Same shape as topMerchants; joins on parcels.hub_id (the current
-        // hub the parcel sits at, not first_hub_id / transfer_hub_id).
+        // -------- Top 10 hubs (current month) --------------------
+        // Joins on parcels.hub_id (the current hub the parcel sits at,
+        // not first_hub_id / transfer_hub_id).
         $topHubs = Hub::companywise()
             ->select('id', 'name')
             ->selectSub(
-                Parcel::query()->selectRaw('COUNT(*)')->whereColumn('parcels.hub_id', 'hubs.id'),
+                Parcel::query()->selectRaw('COUNT(*)')
+                    ->whereColumn('parcels.hub_id', 'hubs.id')
+                    ->whereBetween('parcels.created_at', [$monthFrom, $monthTo]),
                 'shipments'
             )
             ->orderByDesc('shipments')
             ->limit(10)
             ->get()
+            ->filter(fn ($h) => (int) $h->shipments > 0)
             ->map(fn ($h) => [
                 'id'        => (int) $h->id,
                 'name'      => (string) ($h->name ?: 'Hub #'.$h->id),
@@ -122,7 +134,7 @@ class SummaryController extends Controller
             ])
             ->values();
 
-        // -------- Top 10 cities & areas by shipment volume -------
+        // -------- Top 10 cities & areas (current month) ----------
         // Cities/areas are shared reference data (no company_id), so we
         // subquery Parcel::companywise() to keep the count tenant-scoped.
         // en_name wins over name when both are set — matches the create
@@ -130,12 +142,15 @@ class SummaryController extends Controller
         $topCities = City::query()
             ->select('id', 'name', 'en_name')
             ->selectSub(
-                Parcel::companywise()->selectRaw('COUNT(*)')->whereColumn('parcels.city_id', 'cities.id'),
+                Parcel::companywise()->selectRaw('COUNT(*)')
+                    ->whereColumn('parcels.city_id', 'cities.id')
+                    ->whereBetween('parcels.created_at', [$monthFrom, $monthTo]),
                 'shipments'
             )
             ->orderByDesc('shipments')
             ->limit(10)
             ->get()
+            ->filter(fn ($c) => (int) $c->shipments > 0)
             ->map(fn ($c) => [
                 'id'        => (int) $c->id,
                 'name'      => (string) ($c->en_name ?: $c->name ?: 'City #'.$c->id),
@@ -143,14 +158,11 @@ class SummaryController extends Controller
             ])
             ->values();
 
-        // -------- Top 10 deliverymen for CURRENT MONTH ------------
-        // Both counts are windowed to [start of month .. end of month]
-        // by parcel_events.created_at, so a driver is judged on the
-        // parcels they were handed *this* month and how many of those
-        // are now delivered.
-        $monthFrom = $now->startOfMonth();
-        $monthTo   = $now->endOfMonth();
-
+        // -------- Top 10 deliverymen (current month) --------------
+        // Both counts are windowed to [monthFrom .. monthTo] by
+        // parcel_events.created_at, so a driver is judged on the parcels
+        // they were handed *this* month and how many of those are now
+        // delivered.
         $topDeliverymen = DeliveryMan::companywise()
             ->with('user:id,name')
             ->select('delivery_man.id', 'delivery_man.user_id')
@@ -190,12 +202,15 @@ class SummaryController extends Controller
         $topAreas = Area::query()
             ->select('id', 'name', 'en_name')
             ->selectSub(
-                Parcel::companywise()->selectRaw('COUNT(*)')->whereColumn('parcels.area_id', 'areas.id'),
+                Parcel::companywise()->selectRaw('COUNT(*)')
+                    ->whereColumn('parcels.area_id', 'areas.id')
+                    ->whereBetween('parcels.created_at', [$monthFrom, $monthTo]),
                 'shipments'
             )
             ->orderByDesc('shipments')
             ->limit(10)
             ->get()
+            ->filter(fn ($a) => (int) $a->shipments > 0)
             ->map(fn ($a) => [
                 'id'        => (int) $a->id,
                 'name'      => (string) ($a->en_name ?: $a->name ?: 'Area #'.$a->id),
@@ -233,11 +248,13 @@ class SummaryController extends Controller
                 'top_areas_title'     => __('summary.top_areas_title')  ?: 'Top areas by shipments',
                 'top_areas_col_name'  => __('summary.top_areas_col_name') ?: 'Area',
                 'top_areas_empty'     => __('summary.top_areas_empty')  ?: 'No areas yet.',
-                'top_deliverymen_title'    => __('summary.top_deliverymen_title') ?: 'Deliveryman performance',
-                // translatedFormat honors app locale, so Arabic gets Arabic month names.
-                'top_deliverymen_subtitle' => trans('summary.top_deliverymen_subtitle', [
+                // Shared "Current month: <name>" caption used under every
+                // leaderboard title. translatedFormat honors app locale so
+                // Arabic gets Arabic month names.
+                'current_month'  => trans('summary.current_month', [
                     'month' => $monthFrom->locale(app()->getLocale())->translatedFormat('F Y'),
                 ]),
+                'top_deliverymen_title'    => __('summary.top_deliverymen_title') ?: 'Deliveryman performance',
                 'top_deliverymen_col_name' => __('summary.top_deliverymen_col_name') ?: 'Deliveryman',
                 'top_deliverymen_col_assigned'  => __('summary.top_deliverymen_col_assigned')  ?: 'Assigned',
                 'top_deliverymen_col_delivered' => __('summary.top_deliverymen_col_delivered') ?: 'Delivered',

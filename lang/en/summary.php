@@ -32,4 +32,10 @@ return [
     'top_areas_title'     => 'Top areas by shipments',
     'top_areas_col_name'  => 'Area',
     'top_areas_empty'     => 'No areas yet.',
+    'top_deliverymen_title'          => 'Deliveryman performance',
+    'top_deliverymen_col_name'       => 'Deliveryman',
+    'top_deliverymen_col_assigned'   => 'Assigned',
+    'top_deliverymen_col_delivered'  => 'Delivered',
+    'top_deliverymen_col_performance' => 'Performance',
+    'top_deliverymen_empty'          => 'No deliverymen yet.',
 ];

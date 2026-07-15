@@ -10,6 +10,7 @@ use App\Models\Backend\DeliveryMan;
 use App\Models\Backend\Hub;
 use App\Models\Backend\Merchant;
 use App\Models\Backend\Parcel;
+use App\Models\Backend\ParcelEvent;
 use App\Models\Backend\Payment;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Auth;
@@ -167,6 +168,44 @@ class SummaryController extends Controller
             ])
             ->values();
 
+        // -------- Top 10 deliverymen: assigned, delivered, % ------
+        // Assignments live in parcel_events (many rows per parcel). Using
+        // COUNT(DISTINCT parcel_id) so a parcel handed to the same driver
+        // twice counts as one assignment. `delivered` joins parcels once
+        // to check the current status without inflating the count.
+        $topDeliverymen = DeliveryMan::companywise()
+            ->with('user:id,name')
+            ->select('delivery_man.id', 'delivery_man.user_id')
+            ->selectSub(
+                ParcelEvent::query()
+                    ->selectRaw('COUNT(DISTINCT parcel_id)')
+                    ->whereColumn('parcel_events.delivery_man_id', 'delivery_man.id'),
+                'assigned'
+            )
+            ->selectSub(
+                ParcelEvent::query()
+                    ->selectRaw('COUNT(DISTINCT parcel_events.parcel_id)')
+                    ->join('parcels', 'parcels.id', '=', 'parcel_events.parcel_id')
+                    ->whereColumn('parcel_events.delivery_man_id', 'delivery_man.id')
+                    ->where('parcels.status', ParcelStatus::DELIVERED),
+                'delivered'
+            )
+            ->orderByDesc('assigned')
+            ->limit(10)
+            ->get()
+            ->map(function ($d) {
+                $assigned  = (int) $d->assigned;
+                $delivered = (int) $d->delivered;
+                return [
+                    'id'          => (int) $d->id,
+                    'name'        => (string) (optional($d->user)->name ?: 'Deliveryman #'.$d->id),
+                    'assigned'    => $assigned,
+                    'delivered'   => $delivered,
+                    'performance' => $assigned > 0 ? round(($delivered / $assigned) * 100, 1) : 0.0,
+                ];
+            })
+            ->values();
+
         $topAreas = Area::query()
             ->select('id', 'name', 'en_name')
             ->selectSub(
@@ -194,6 +233,7 @@ class SummaryController extends Controller
             'top_hubs'       => $topHubs,
             'top_cities'     => $topCities,
             'top_areas'      => $topAreas,
+            'top_deliverymen'=> $topDeliverymen,
             'urls' => [
                 'list_parcels'    => $this->safeRoute('parcel.index', '/admin/parcel/index'),
                 'full_dashboard'  => $this->safeRoute('dashboard.index', '/dashboard'),
@@ -230,6 +270,12 @@ class SummaryController extends Controller
                 'top_areas_title'     => __('summary.top_areas_title')  ?: 'Top areas by shipments',
                 'top_areas_col_name'  => __('summary.top_areas_col_name') ?: 'Area',
                 'top_areas_empty'     => __('summary.top_areas_empty')  ?: 'No areas yet.',
+                'top_deliverymen_title'    => __('summary.top_deliverymen_title') ?: 'Deliveryman performance',
+                'top_deliverymen_col_name' => __('summary.top_deliverymen_col_name') ?: 'Deliveryman',
+                'top_deliverymen_col_assigned'  => __('summary.top_deliverymen_col_assigned')  ?: 'Assigned',
+                'top_deliverymen_col_delivered' => __('summary.top_deliverymen_col_delivered') ?: 'Delivered',
+                'top_deliverymen_col_performance' => __('summary.top_deliverymen_col_performance') ?: 'Performance',
+                'top_deliverymen_empty' => __('summary.top_deliverymen_empty') ?: 'No deliverymen yet.',
             ],
         ]);
     }

@@ -32,4 +32,10 @@ return [
     'top_areas_title'     => 'أفضل المناطق حسب عدد الشحنات',
     'top_areas_col_name'  => 'المنطقة',
     'top_areas_empty'     => 'لا توجد مناطق بعد.',
+    'top_deliverymen_title'          => 'أداء المندوبين',
+    'top_deliverymen_col_name'       => 'المندوب',
+    'top_deliverymen_col_assigned'   => 'مُسندة',
+    'top_deliverymen_col_delivered'  => 'مُسلَّمة',
+    'top_deliverymen_col_performance' => 'الأداء',
+    'top_deliverymen_empty'          => 'لا يوجد مندوبون بعد.',
 ];

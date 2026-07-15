@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Head, Link } from '@inertiajs/react';
 import {
-    Package, Truck, CheckCircle2, Clock, ArrowUpRight, PlusCircle,
+    Package, Truck, CheckCircle2, Clock, ArrowUpRight,
     Users, Bike, Wallet, LineChart, ExternalLink, Store, Trophy,
 } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
@@ -105,24 +105,6 @@ function StatusPill({ status, label }) {
         <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium', tones[tone])}>
             {label}
         </span>
-    );
-}
-
-function QuickAction({ href, icon: Icon, title, subtitle }) {
-    return (
-        <a
-            href={href}
-            className="group flex items-start gap-3 rounded-xl border border-border bg-card p-4 hover:border-primary/40 hover:bg-primary/5 transition-all"
-        >
-            <span className="inline-grid place-items-center h-10 w-10 rounded-lg bg-primary/10 text-primary group-hover:scale-110 transition-transform">
-                <Icon className="h-4 w-4" />
-            </span>
-            <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-foreground">{title}</div>
-                {subtitle && <div className="mt-0.5 text-xs text-muted-foreground truncate">{subtitle}</div>}
-            </div>
-            <ArrowUpRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-        </a>
     );
 }
 
@@ -269,20 +251,8 @@ export default function Index({
                     </Card>
                 </div>
 
-                {/* Right column: quick actions + roster tile */}
+                {/* Right column: roster tile */}
                 <div className="space-y-6">
-                    <Card className="rounded-xl shadow-sm border border-border">
-                        <CardContent className="p-5">
-                            <div className="mb-4 text-sm font-semibold">{t.quick_actions}</div>
-                            <div className="space-y-2">
-                                <QuickAction href={urls.create_parcel} icon={PlusCircle} title={t.create_parcel} />
-                                <QuickAction href={urls.list_parcels}  icon={Package}    title={t.list_parcels} />
-                                <QuickAction href={urls.add_merchant}  icon={Users}      title={t.add_merchant} />
-                                <QuickAction href={urls.reports}       icon={LineChart}  title={t.reports} />
-                            </div>
-                        </CardContent>
-                    </Card>
-
                     <Card className="rounded-xl shadow-sm border border-border">
                         <CardContent className="p-5">
                             <div className="mb-3 text-sm font-semibold">{t.roster_title}</div>

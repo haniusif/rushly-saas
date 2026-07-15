@@ -178,9 +178,14 @@ function DeliverymenPerformanceCard({ items = [], t = {} }) {
     return (
         <Card className="rounded-xl shadow-sm border border-border">
             <CardContent className="p-0">
-                <div className="px-5 pt-5 pb-3 flex items-center gap-2">
-                    <Trophy className="h-4 w-4 text-primary" />
-                    <div className="text-sm font-semibold">{t.top_deliverymen_title}</div>
+                <div className="px-5 pt-5 pb-3 flex items-start gap-2">
+                    <Trophy className="h-4 w-4 text-primary mt-0.5" />
+                    <div>
+                        <div className="text-sm font-semibold">{t.top_deliverymen_title}</div>
+                        {t.top_deliverymen_subtitle && (
+                            <div className="text-[11px] text-muted-foreground mt-0.5">{t.top_deliverymen_subtitle}</div>
+                        )}
+                    </div>
                 </div>
                 {items.length === 0 ? (
                     <div className="px-5 pb-6 text-sm text-muted-foreground">{t.top_deliverymen_empty}</div>

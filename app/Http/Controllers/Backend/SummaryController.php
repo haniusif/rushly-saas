@@ -168,18 +168,22 @@ class SummaryController extends Controller
             ])
             ->values();
 
-        // -------- Top 10 deliverymen: assigned, delivered, % ------
-        // Assignments live in parcel_events (many rows per parcel). Using
-        // COUNT(DISTINCT parcel_id) so a parcel handed to the same driver
-        // twice counts as one assignment. `delivered` joins parcels once
-        // to check the current status without inflating the count.
+        // -------- Top 10 deliverymen for CURRENT MONTH ------------
+        // Both counts are windowed to [start of month .. end of month]
+        // by parcel_events.created_at, so a driver is judged on the
+        // parcels they were handed *this* month and how many of those
+        // are now delivered.
+        $monthFrom = $now->startOfMonth();
+        $monthTo   = $now->endOfMonth();
+
         $topDeliverymen = DeliveryMan::companywise()
             ->with('user:id,name')
             ->select('delivery_man.id', 'delivery_man.user_id')
             ->selectSub(
                 ParcelEvent::query()
                     ->selectRaw('COUNT(DISTINCT parcel_id)')
-                    ->whereColumn('parcel_events.delivery_man_id', 'delivery_man.id'),
+                    ->whereColumn('parcel_events.delivery_man_id', 'delivery_man.id')
+                    ->whereBetween('parcel_events.created_at', [$monthFrom, $monthTo]),
                 'assigned'
             )
             ->selectSub(
@@ -187,12 +191,14 @@ class SummaryController extends Controller
                     ->selectRaw('COUNT(DISTINCT parcel_events.parcel_id)')
                     ->join('parcels', 'parcels.id', '=', 'parcel_events.parcel_id')
                     ->whereColumn('parcel_events.delivery_man_id', 'delivery_man.id')
+                    ->whereBetween('parcel_events.created_at', [$monthFrom, $monthTo])
                     ->where('parcels.status', ParcelStatus::DELIVERED),
                 'delivered'
             )
             ->orderByDesc('assigned')
             ->limit(10)
             ->get()
+            ->filter(fn ($d) => (int) $d->assigned > 0) // hide drivers with no activity this month
             ->map(function ($d) {
                 $assigned  = (int) $d->assigned;
                 $delivered = (int) $d->delivered;
@@ -271,6 +277,10 @@ class SummaryController extends Controller
                 'top_areas_col_name'  => __('summary.top_areas_col_name') ?: 'Area',
                 'top_areas_empty'     => __('summary.top_areas_empty')  ?: 'No areas yet.',
                 'top_deliverymen_title'    => __('summary.top_deliverymen_title') ?: 'Deliveryman performance',
+                // translatedFormat honors app locale, so Arabic gets Arabic month names.
+                'top_deliverymen_subtitle' => trans('summary.top_deliverymen_subtitle', [
+                    'month' => $monthFrom->locale(app()->getLocale())->translatedFormat('F Y'),
+                ]),
                 'top_deliverymen_col_name' => __('summary.top_deliverymen_col_name') ?: 'Deliveryman',
                 'top_deliverymen_col_assigned'  => __('summary.top_deliverymen_col_assigned')  ?: 'Assigned',
                 'top_deliverymen_col_delivered' => __('summary.top_deliverymen_col_delivered') ?: 'Delivered',

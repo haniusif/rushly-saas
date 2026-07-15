@@ -56,6 +56,7 @@
   $__lbName = $__lb['name'] ?? config('app.name', 'Rushly');
   $__lbLogo = $__lb['logo'] ?? null;
   $__lbBg   = $__lb['login_bg'] ?? null;
+  $locale   = app()->getLocale();
 @endphp
 
 @if($__lbBg)
@@ -87,6 +88,17 @@
     <p class="text-sm text-gray-500 mt-1.5">
       {{ __('auth.login_otp_sent') }}
     </p>
+  </div>
+
+  {{-- Locale switcher (matches /login-centered) --}}
+  <div class="flex items-center gap-1 p-1 rounded-full bg-gray-50 border border-gray-200 mx-auto mb-6 w-fit">
+    @foreach (['en' => 'EN', 'ar' => 'عربي'] as $code => $label)
+      <a href="{{ route('setlocalization', $code) }}"
+         class="px-3 py-1 rounded-full text-xs font-semibold transition-all
+                {{ $locale === $code ? 'gradient-primary text-white shadow' : 'text-gray-500 hover:text-primary' }}">
+        {{ $label }}
+      </a>
+    @endforeach
   </div>
 
   @if(session('status'))

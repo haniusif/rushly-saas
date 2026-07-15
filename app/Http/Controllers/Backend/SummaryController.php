@@ -84,8 +84,12 @@ class SummaryController extends Controller
         $monthTo   = $now->endOfMonth();
 
         // -------- Top 10 merchants (all time) --------------------
+        // Eager-loads the logo relation so getLogoUrlAttribute() has the
+        // upload without an N+1 fetch per row. `logo_id` must be in the
+        // outer select for the belongsTo relation to resolve.
         $topMerchants = Merchant::companywise()
-            ->select('id', 'business_name')
+            ->with('logo:id,original')
+            ->select('id', 'business_name', 'logo_id')
             ->selectSub(
                 Parcel::query()->selectRaw('COUNT(*)')
                     ->whereColumn('parcels.merchant_id', 'merchants.id'),
@@ -98,6 +102,7 @@ class SummaryController extends Controller
             ->map(fn ($m) => [
                 'id'        => (int) $m->id,
                 'name'      => (string) ($m->business_name ?: 'Merchant #'.$m->id),
+                'logo_url'  => $m->logo_url, // null when the merchant hasn't uploaded a logo
                 'shipments' => (int) $m->shipments,
             ])
             ->values();
@@ -149,7 +154,10 @@ class SummaryController extends Controller
         // they were handed *this* month and how many of those are now
         // delivered.
         $topDeliverymen = DeliveryMan::companywise()
-            ->with('user:id,name')
+            // Eager-load user + upload so getImageAttribute() renders each
+            // driver's avatar without an N+1 fetch. user.image_id feeds the
+            // belongsTo, upload.original supplies the actual asset path.
+            ->with(['user' => fn ($q) => $q->select('id', 'name', 'image_id')->with('upload:id,original')])
             ->select('delivery_man.id', 'delivery_man.user_id')
             ->selectSub(
                 // TEMP all-time — see the "TEMP" note above the leaderboards.
@@ -176,6 +184,10 @@ class SummaryController extends Controller
                 return [
                     'id'          => (int) $d->id,
                     'name'        => (string) (optional($d->user)->name ?: 'Deliveryman #'.$d->id),
+                    // Only surface a real photo — the accessor otherwise
+                    // returns images/default/user.png for every driver,
+                    // making the whole column look identical.
+                    'photo_url'   => optional($d->user)->image_id ? optional($d->user)->image : null,
                     'assigned'    => $assigned,
                     'delivered'   => $delivered,
                     'performance' => $assigned > 0 ? round(($delivered / $assigned) * 100, 1) : 0.0,

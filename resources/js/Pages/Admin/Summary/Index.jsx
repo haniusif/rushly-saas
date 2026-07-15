@@ -83,7 +83,11 @@ function TrendChart({ data, tCreated, tDelivered }) {
  * merchants and Top hubs cards on /summary. Callers pass the trophy-header
  * title, per-row icon, translated column headers, and the list.
  */
-function TopByShipmentsCard({ items = [], icon: RowIcon = Store, title, subtitle, colName, colQty, empty }) {
+/**
+ * @param {string} [imageKey] - when set, each row uses item[imageKey] as an
+ *                              <img> src; falls back to the RowIcon on empty.
+ */
+function TopByShipmentsCard({ items = [], icon: RowIcon = Store, imageKey, title, subtitle, colName, colQty, empty }) {
     const max = Math.max(1, ...items.map(m => m.shipments));
     return (
         <Card className="rounded-xl shadow-sm border border-border">
@@ -113,9 +117,18 @@ function TopByShipmentsCard({ items = [], icon: RowIcon = Store, title, subtitle
                                         {i + 1}
                                     </span>
                                     <div className="flex items-center gap-2 min-w-0">
-                                        <span className="inline-grid place-items-center h-7 w-7 rounded-md bg-primary/10 text-primary shrink-0">
-                                            <RowIcon className="h-3.5 w-3.5" />
-                                        </span>
+                                        {imageKey && m[imageKey] ? (
+                                            <img
+                                                src={m[imageKey]}
+                                                alt=""
+                                                loading="lazy"
+                                                className="h-7 w-7 rounded-md object-cover shrink-0 bg-muted"
+                                            />
+                                        ) : (
+                                            <span className="inline-grid place-items-center h-7 w-7 rounded-md bg-primary/10 text-primary shrink-0">
+                                                <RowIcon className="h-3.5 w-3.5" />
+                                            </span>
+                                        )}
                                         <span className="text-sm font-medium truncate">{m.name}</span>
                                     </div>
                                     <div className="hidden xl:block w-16 h-1.5 rounded-full bg-muted overflow-hidden">
@@ -177,9 +190,18 @@ function DeliverymenPerformanceCard({ items = [], t = {} }) {
                                     {i + 1}
                                 </span>
                                 <div className="flex items-center gap-2 min-w-0">
-                                    <span className="inline-grid place-items-center h-7 w-7 rounded-md bg-primary/10 text-primary shrink-0">
-                                        <Bike className="h-3.5 w-3.5" />
-                                    </span>
+                                    {d.photo_url ? (
+                                        <img
+                                            src={d.photo_url}
+                                            alt=""
+                                            loading="lazy"
+                                            className="h-7 w-7 rounded-full object-cover shrink-0 bg-muted"
+                                        />
+                                    ) : (
+                                        <span className="inline-grid place-items-center h-7 w-7 rounded-full bg-primary/10 text-primary shrink-0">
+                                            <Bike className="h-3.5 w-3.5" />
+                                        </span>
+                                    )}
                                     <span className="text-sm font-medium truncate">{d.name}</span>
                                 </div>
                                 <span className="justify-self-end w-16 text-sm tabular-nums text-muted-foreground">
@@ -241,6 +263,7 @@ export default function Index({
                         <TopByShipmentsCard
                             items={top_merchants}
                             icon={Store}
+                            imageKey="logo_url"
                             title={t.top_merchants_title}
                             subtitle={t.current_month}
                             colName={t.top_merchants_col_name}

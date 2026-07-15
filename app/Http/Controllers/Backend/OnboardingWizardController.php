@@ -141,7 +141,7 @@ class OnboardingWizardController extends Controller
                 ->where('id', $s->id)
                 ->update(['onboarding_completed_at' => now()]);
         }
-        return redirect('/dashboard');
+        return redirect('/summary');
     }
 
     private function safeRoute(string $name, string $fallback): string

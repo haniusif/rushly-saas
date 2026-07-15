@@ -1,0 +1,26 @@
+<?php
+
+return [
+    'title'              => 'ملخص',
+    'greeting'           => 'مرحباً بعودتك',
+    'subtitle'           => 'كل ما يتحرك في حسابك، بلمحة واحدة.',
+    'kpi_today'          => 'شحنات اليوم',
+    'kpi_in_transit'     => 'قيد النقل',
+    'kpi_delivered'      => 'تم التسليم اليوم',
+    'kpi_pending'        => 'بانتظار الاستلام',
+    'seven_day_title'    => 'آخر 7 أيام',
+    'recent_title'       => 'أحدث الشحنات',
+    'quick_actions'      => 'إجراءات سريعة',
+    'create_parcel'      => 'إنشاء شحنة',
+    'list_parcels'       => 'عرض كل الشحنات',
+    'add_merchant'       => 'إضافة عميل',
+    'reports'            => 'تقارير الأداء',
+    'full_dashboard'     => 'فتح لوحة التحكم الكاملة',
+    'roster_title'       => 'الفريق والمستحقات',
+    'roster_merchants'   => 'العملاء',
+    'roster_deliverymen' => 'المندوبون',
+    'roster_pending_pay' => 'مستحقات معلّقة',
+    'legend_created'     => 'أُنشئت',
+    'legend_delivered'   => 'سُلّمت',
+    'no_recent'          => 'لا توجد شحنات بعد — أنشئ أول شحنة.',
+];

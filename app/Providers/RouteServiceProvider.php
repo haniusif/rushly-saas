@@ -18,8 +18,11 @@ class RouteServiceProvider extends ServiceProvider
      *
      * @var string
      */
-    public const HOME = '/dashboard';
-    // public const HOME = '/home';
+    public const HOME = '/summary';
+    // Previously '/dashboard' — tenant admins now land on the lighter
+    // summary page after login. The full dashboard is still linked from
+    // the summary's "Open full dashboard" button and remains the merchant
+    // portal's landing page (that redirect is handled elsewhere).
 
     /**
      * Define your route model bindings, pattern filters, etc.

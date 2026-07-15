@@ -285,6 +285,8 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
     
                 // XSS Protection
                 Route::get('/dashboard',             [DashbordController::class, 'index'])->name('dashboard.index');
+                // Lightweight home for tenant admins — KPIs, 7-day trend, recent shipments.
+                Route::get('/summary',               [\App\Http\Controllers\Backend\SummaryController::class, 'index'])->name('summary.index');
 
                 // Onboarding tour engine — JSON endpoints consumed by the React
                 // TourProvider. Session-auth'd, tenant-scoped. Open to any

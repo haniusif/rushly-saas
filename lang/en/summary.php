@@ -1,0 +1,26 @@
+<?php
+
+return [
+    'title'              => 'Summary',
+    'greeting'           => 'Welcome back',
+    'subtitle'           => 'Everything moving through your account, at a glance.',
+    'kpi_today'          => "Today's shipments",
+    'kpi_in_transit'     => 'In transit',
+    'kpi_delivered'      => 'Delivered today',
+    'kpi_pending'        => 'Pending pickup',
+    'seven_day_title'    => 'Last 7 days',
+    'recent_title'       => 'Recent shipments',
+    'quick_actions'      => 'Quick actions',
+    'create_parcel'      => 'Create shipment',
+    'list_parcels'       => 'View all shipments',
+    'add_merchant'       => 'Add merchant',
+    'reports'            => 'Performance reports',
+    'full_dashboard'     => 'Open full dashboard',
+    'roster_title'       => 'Team & payouts',
+    'roster_merchants'   => 'Merchants',
+    'roster_deliverymen' => 'Deliverymen',
+    'roster_pending_pay' => 'Pending payouts',
+    'legend_created'     => 'Created',
+    'legend_delivered'   => 'Delivered',
+    'no_recent'          => 'No shipments yet — create your first one.',
+];

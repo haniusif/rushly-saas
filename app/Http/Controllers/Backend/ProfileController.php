@@ -97,9 +97,38 @@ class ProfileController extends Controller
 
     public function changePassword($id)
     {
+        if ((int) auth()->user()->id !== (int) $id) {
+            abort(403);
+        }
+        $u = $this->repo->get(auth()->user()->id);
 
-        $user = $this->repo->get(auth()->user()->id);
-        return view('backend.profile.change_password',compact('user'));
+        return Inertia::render('Admin/Profile/ChangePassword', [
+            'user' => [
+                'id'    => $u->id,
+                'name'  => $u->name,
+                'email' => $u->email,
+                'image' => $u->image,
+            ],
+            'urls' => [
+                'submit'  => route('profile.password.update', $u->id),
+                'cancel'  => route('profile.index', $u->id),
+                'profile' => route('profile.index', $u->id),
+            ],
+            't' => [
+                'title'            => (__('menus.profile') ?: 'Profile').' · '.(__('menus.change_password') ?: 'Change password'),
+                'heading'          => __('menus.change_password') ?: 'Change password',
+                'intro'            => __('profile.password_intro') ?: 'Choose a strong new password. You will need to sign in again on other devices.',
+                'old_password'     => __('levels.old_password') ?: 'Current password',
+                'new_password'     => __('levels.new_password') ?: 'New password',
+                'confirm_password' => __('levels.confirm_password') ?: 'Confirm new password',
+                'save'             => __('levels.save_change') ?: 'Save changes',
+                'cancel'           => __('levels.cancel') ?: 'Cancel',
+                'requirements'     => __('profile.password_reqs') ?: 'Minimum 6 characters. Use a mix of letters, numbers, and symbols for stronger security.',
+                'strength_weak'    => __('profile.strength_weak') ?: 'Weak',
+                'strength_ok'      => __('profile.strength_ok') ?: 'Okay',
+                'strength_strong'  => __('profile.strength_strong') ?: 'Strong',
+            ],
+        ]);
     }
 
     public function update($id, UpdateRequest $request)

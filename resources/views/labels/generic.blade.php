@@ -45,7 +45,7 @@
 <div class="wrap">
     <div class="row" style="text-align:center;">
         @if ($__logoDataUri)
-            <img src="{{ $__logoDataUri }}" alt="logo" style="max-height:24px;max-width:60%;display:inline-block;vertical-align:middle;margin-bottom:2px;" />
+            <img src="{{ $__logoDataUri }}" alt="logo" style="max-height:56px;max-width:80%;display:inline-block;vertical-align:middle;margin-bottom:4px;" />
             <div style="font-size:9pt;color:#333;margin-top:1px;">{{ __('Shipping Label') }}</div>
         @else
             <strong style="font-size:11pt;">{{ __('Shipping Label') }}</strong>

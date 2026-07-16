@@ -118,26 +118,29 @@ Merchant slice of `/api/v10/*`. ~70 endpoints across 9 groups.
 | Invoices | 2 | `GET /invoice-list/index`, `/invoice-details/{id}` |
 | Dashboard | 5 | `GET /dashboard`, `/dashboard/filter`, `/dashboard/balance-details`, `/dashboard/available-parcels`, `/analytics` |
 | Fraud | 6 | `GET /fraud/index`, `POST /fraud/store`, `GET /fraud/edit/{id}`, `PUT /fraud/update/{id}`, `POST /fraud/check`, `DELETE /fraud/delete/{id}` |
-| Support | 7 | list, create, store, view/{id}, edit, update, reply, delete |
+| Support | 7 | list, create, store, view/{id}, edit, update, reply (supports `attached_file` multipart), delete |
+| Reports | 1 | `GET /reports/shipments?from=&to=` — totals + by_driver + by_city + by_status + daily timeseries |
+| Bulk | 1 | `POST /parcel/bulk-store` — accepts `{rows: [...]}`, validates each row with the same `StoreRequest` rules, returns `{created, error_count, errors: [{row, errors}]}` |
 | Helpers | 6 | `/hub`, `/general-settings`, `/all-currencies`, `/settings/cod-charges`, `/settings/delivery-charges`, `/news-offer/index` |
 
 ### Current features
 - Signup with OTP verification and password reset flows
 - Bottom-nav shell: Dashboard, Parcels, Shops, Payments, Support (+ drawer for Fraud, News, Settings, Invoices)
-- Dashboard: balance card, pending/delivered counts, analytics via `fl_chart`
-- Parcel create/edit form (recipient, address, items, COD, payment method)
+- Dashboard: balance card, pending/delivered counts, analytics via `fl_chart`, "Reports" button in AppBar
+- **Reports screen** — date-range picker + 4 tabs: Overview (KPI cards), By driver, By city, Trend (line chart)
+- Parcel create/edit form (recipient, address, items, COD, payment method) + **live charge preview** (delivery + COD + fragile/liquid + VAT + net) computed client-side from the same reference data the server uses
+- **Bulk parcel import (CSV)** — file picker → parse → preview with per-row issue highlighting → submit → per-row error report from backend
 - Parcel detail with tracking timeline (`/parcel/logs/{id}`)
 - Shops CRUD
 - Payment accounts CRUD + withdrawal (payment request) flow
-- Statements + account transactions
+- Statements + account transactions + **PDF export** (Statements tab FAB → `pdf` + `printing` → native share sheet)
 - Invoices list + detail view
 - Fraud: check a phone number, view / add / delete flagged customers
 - News / offers feed
-- Support tickets
+- Support tickets with **client-side search** and **image attachments** on replies (multipart to existing `/support/reply`)
 - Push notifications via FCM
 
 ### Known gaps (candidates for new features)
-- Bulk parcel upload (CSV / paste) — a common web-panel feature not in the app
 - Live tracking map for a specific parcel (currently timeline text only)
 - In-app onboarding tour (`TOURS.md` copy exists but not wired here)
 - Wallet top-up / online payment inside the app (currently redirect-only in web)
@@ -175,6 +178,7 @@ Dedicated `/api/v10/admin/*` namespace — gated by `CheckApiKey` + `auth:sanctu
 Controllers: `app/Http/Controllers/Api/V10/Admin/*Controller.php`.
 
 ### Current features
+- **Tenant-aware / SaaS-wise install** — first launch prompts for a workspace (Slack-style). Two input modes: (a) type a subdomain like `acme` and the app builds `https://acme.<TENANT_HOST_SUFFIX>/api/v10`, or (b) advanced mode accepts a full URL for custom domains and staging. Before persisting, the app pings `/general-settings` to prove the URL is a live Rushly API. The choice is stored in `flutter_secure_storage` and read by `DioClient` at construction; the router's redirect gates every route on `tenant_configured && authed`. Profile screen shows the current workspace host and a "Change workspace" action that wipes tenant + token and returns the user to the tenant-select screen. One APK, any tenant.
 - Role-aware login (only ADMIN / SUPER_ADMIN / INCHARGE / HUB user types allowed)
 - Dashboard with KPI cards + time-series chart
 - Bottom nav: **Dashboard**, **Parcels**, **Drivers**, **Profile** (+ drawer for Merchants, Approvals, Hubs, Support, Fraud)

@@ -314,6 +314,8 @@ Route::prefix('v10')->group(function() {
             
             Route::get('parcel/create',                                 [ParcelController::class,'create']);
             Route::post('parcel/store',                                 [ParcelController::class,'store']);
+            Route::post('parcel/bulk-store',                            [ParcelController::class,'bulkStore']);
+            Route::get('reports/shipments',                             [\App\Http\Controllers\Api\V10\MerchantReportsController::class,'shipments']);
             Route::get('parcel/details/{id}',                           [ParcelController::class,'details']);
             Route::get('parcel/edit/{id}',                              [ParcelController::class,'edit']);
             Route::put('parcel/update/{id}',                            [ParcelController::class,'update']);

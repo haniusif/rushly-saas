@@ -137,6 +137,68 @@ class ParcelController extends Controller
         }
     }
 
+    /**
+     * Bulk parcel creation from a JSON body: { rows: [ {row1}, {row2}, ... ] }
+     * Each row is validated with the same rules as single-parcel /store and
+     * persisted via the existing merchant repo, so behavior stays identical
+     * to the one-at-a-time API — merchants just get to submit N rows in one
+     * shot. Returns per-row errors so the mobile client can highlight bad
+     * lines without failing the whole batch.
+     */
+    public function bulkStore(Request $request)
+    {
+        $rows = $request->input('rows');
+        if (!is_array($rows) || empty($rows)) {
+            return $this->responseWithError(__('parcel.title'),
+                ['message' => 'rows[] is required'], 422);
+        }
+        if (count($rows) > 500) {
+            return $this->responseWithError(__('parcel.title'),
+                ['message' => 'Max 500 rows per batch'], 422);
+        }
+
+        $merchant = $this->repo->getMerchant(auth()->user()->id);
+        $rules    = (new StoreRequest())->rules();
+
+        $created = 0;
+        $errors  = [];
+
+        foreach ($rows as $i => $row) {
+            if (!is_array($row)) {
+                $errors[] = ['row' => $i, 'message' => 'Row must be an object'];
+                continue;
+            }
+            $v = Validator::make($row, $rules);
+            if ($v->fails()) {
+                $errors[] = [
+                    'row'    => $i,
+                    'errors' => $v->errors()->toArray(),
+                ];
+                continue;
+            }
+            try {
+                // The repo signature is store($request, $merchantId). Build a
+                // fresh Request instance so we don't mutate the outer one and
+                // so downstream `$request->input('...')` reads see this row.
+                $sub = Request::create('/', 'POST', $row);
+                $ok  = $this->repo->store($sub, $merchant->id);
+                if ($ok) {
+                    $created++;
+                } else {
+                    $errors[] = ['row' => $i, 'message' => 'Repo returned falsy'];
+                }
+            } catch (\Throwable $e) {
+                $errors[] = ['row' => $i, 'message' => $e->getMessage()];
+            }
+        }
+
+        return $this->responseWithSuccess(__('parcel.added_msg'), [
+            'created'     => $created,
+            'error_count' => count($errors),
+            'errors'      => $errors,
+        ], 200);
+    }
+
 
 
     public function logs($id)

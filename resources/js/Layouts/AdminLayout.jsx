@@ -110,6 +110,7 @@ const NAV = [
         { tKey: 'menu_social_login_settings',   icon: KeyRound,      route: 'social.login.settings.index',    match: ['admin/social-login-settings'] },
         { tKey: 'menu_payment_gateway_setup',   icon: CreditCard,    route: 'payout.setup.settings.index',    match: ['admin/settings/pay-out'] },
         { tKey: 'menu_packaging',               icon: Boxes,         route: 'packaging.index',                match: ['admin/packaging'] },
+        { tKey: 'menu_label_templates',         icon: FileText,      route: 'label-templates.index',          match: ['admin/settings/label-templates'], perm: 'label_template_manage' },
         { tKey: 'menu_assets_category',         icon: Tags,          route: 'asset-category.index',           match: ['admin/asset-category'] },
         { tKey: 'menu_invoice_generate',        icon: FileText,      route: 'invoice.generate.menually.index', match: ['admin/settings/invoice-generate'] },
         { tKey: 'menu_api_docs',                icon: BookOpen,      route: 'api-docs.merchant',              match: ['admin/api-docs'],           perm: 'integrations_read' },

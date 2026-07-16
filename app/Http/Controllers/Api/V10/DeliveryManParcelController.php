@@ -46,6 +46,39 @@ class DeliveryManParcelController extends Controller
 
         }
     }
+
+    /**
+     * GET /deliveryman/parcel/by-tracking/{tracking_id}
+     *
+     * Look up a parcel by tracking id and return its full details in the
+     * same shape as /details/{id}. Feeds the driver app's barcode scan
+     * → open parcel flow. Guards that the parcel is actually assigned to
+     * the caller — a scanner in the field can be pointed at anything.
+     */
+    public function findByTracking($trackingId, Request $request)
+    {
+        try {
+            $parcel = Parcel::where('tracking_id', $trackingId)->first();
+            if (!$parcel) {
+                return $this->responseWithError(__('parcel.not_found'),
+                    ['tracking_id' => $trackingId], 404);
+            }
+            $userId = auth()->id();
+            if ((int) $parcel->delivery_man_id !== (int) optional($request->user()->deliveryMan)->id) {
+                return $this->responseWithError(__('parcel.not_assigned'),
+                    ['tracking_id' => $trackingId], 403);
+            }
+            $parcelDetails = $this->repo->details($parcel->id);
+            $parcelEvents  = $this->repo->parcelEvents($parcel->id);
+            return $this->responseWithSuccess(__('parcel.parcel_details'), [
+                'parcel'       => $parcelDetails,
+                'parcelEvents' => $parcelEvents,
+            ], 200);
+        } catch (\Exception $exception) {
+            return $this->responseWithError(__('parcel.parcel_details'),
+                ['error' => $exception->getMessage()], 500);
+        }
+    }
     
     
     

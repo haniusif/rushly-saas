@@ -80,6 +80,65 @@ class DeliverymanController extends Controller
     }
 
 
+    /**
+     * GET /deliveryman/cash
+     *
+     * Driver-facing view of their COD reconciliation state:
+     *  - `current_balance` — the DeliveryMan row's balance (negative =
+     *    driver is holding COD that hasn't yet been handed to the hub).
+     *  - `owed` — same value normalised as a positive number for display.
+     *  - `handovers` — the last 50 `cash_received_from_deliverymen`
+     *    entries for this driver (each = a hub incharge recorded receiving
+     *    cash from them).
+     *
+     * Mirror of `AdminHubCashController::index` but scoped to the caller
+     * driver so they can reconcile against what the hub says they've
+     * turned in.
+     */
+    public function cash()
+    {
+        try {
+            $driver = Auth::user()->deliveryman;
+            if (!$driver) {
+                return $this->responseWithError('No driver profile', [], 403);
+            }
+
+            $balance = (float) ($driver->current_balance ?? 0);
+            $handovers = \App\Models\CashReceivedFromDeliveryman::query()
+                ->with([
+                    'user:id,name',
+                    'account:id,account_no,account_holder_name',
+                ])
+                ->where('delivery_man_id', $driver->id)
+                ->latest('id')
+                ->limit(50)
+                ->get()
+                ->map(fn ($e) => [
+                    'id'          => $e->id,
+                    'amount'      => (float) $e->amount,
+                    'date'        => optional($e->date)->toDateString(),
+                    'note'        => $e->note,
+                    'received_by' => optional($e->user)->name,
+                    'account' => $e->account ? [
+                        'id'                  => $e->account->id,
+                        'account_no'          => $e->account->account_no,
+                        'account_holder_name' => $e->account->account_holder_name,
+                    ] : null,
+                    'created_at' => optional($e->created_at)->toIso8601String(),
+                ]);
+
+            return $this->responseWithSuccess(__('dashboard.delivery_man'), [
+                'current_balance' => $balance,
+                'owed'            => $balance < 0 ? -$balance : 0.0,
+                'handovers'       => $handovers,
+                'total_handed_over' => (float) $handovers->sum('amount'),
+            ], 200);
+        } catch (\Throwable $th) {
+            return $this->responseWithError(__('parcel.error_msg'),
+                ['error' => $th->getMessage()], 500);
+        }
+    }
+
     public function paymentLogs(){
         try {
 

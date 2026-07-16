@@ -339,6 +339,7 @@ Route::prefix('v10')->group(function() {
             //deliveryman
             Route::get('deliveryman/parcel/index',                      [DeliveryManParcelController::class,'index']);
             Route::get('deliveryman/parcel/details/{id}',               [DeliveryManParcelController::class,'details']);
+            Route::get('deliveryman/parcel/by-tracking/{tracking}',     [DeliveryManParcelController::class,'findByTracking']);
             Route::post('deliveryman/parcel/delivered/{id}',            [DeliveryManParcelController::class,'parcelDelivered']);
             Route::post('deliveryman/parcel/delivered-by-tracking/{id}',[DeliveryManParcelController::class,'parcelByTrackDelivered']);
             Route::post('deliveryman/parcel/partial-delivered/{id}',    [DeliveryManParcelController::class,'parcelPartialDelivered']);
@@ -348,6 +349,7 @@ Route::prefix('v10')->group(function() {
 
             Route::get('deliveryman/dashboard',                          [DeliverymanController::class,'dashboard']);
             Route::get('deliveryman/profile',                           [DeliverymanController::class,'profile']);
+            Route::get('deliveryman/cash',                              [DeliverymanController::class,'cash']);
             Route::get('deliveryman/payment-logs',                      [DeliverymanController::class,'paymentLogs']);
             Route::get('deliveryman/parcel-payment-logs',               [DeliverymanController::class,'parcelPaymentLogs']);
 

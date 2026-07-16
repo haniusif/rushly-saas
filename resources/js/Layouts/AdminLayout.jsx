@@ -8,7 +8,7 @@ import {
     LogOut, ChevronDown, Bell, Search, Globe, Check, User as UserIcon,
     BarChart3, AlertTriangle, Hourglass, Wand2, ListChecks, CheckCircle2, XCircle, Info,
     Wallet, ShieldAlert, DollarSign, CreditCard, BadgeDollarSign,
-    UserCog, HardDrive, Briefcase, Tags, BellRing, KeyRound,
+    UserCog, HardDrive, Briefcase, Tags, BellRing, KeyRound, Layers,
     Plug, MapPinned, Layout, ScrollText, Sliders, BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';

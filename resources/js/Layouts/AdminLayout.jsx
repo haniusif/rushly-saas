@@ -117,6 +117,37 @@ const NAV = [
     ]},
 ];
 
+/**
+ * Super-admin sidebar. Deliberately terse — the platform super admin
+ * only needs cross-tenant surfaces (tenants, plans, billing, tickets,
+ * global settings). Tenant-scoped screens (parcels, WMS, TMS, etc.)
+ * are hidden here because they're meaningless on the central domain.
+ */
+const SUPER_NAV = [
+    { group: 'menu_main', items: [
+        { tKey: 'menu_summary',   icon: Home,            route: 'summary.index',   match: ['summary'] },
+        { tKey: 'menu_dashboard', icon: LayoutDashboard, route: 'dashboard.index', match: ['admin/dashboard', 'dashboard'] },
+    ]},
+    { group: 'menu_users_management', items: [
+        { tKey: 'menu_users_roles', icon: UserCog, route: 'users.index', match: ['admin/users','admin/roles'] },
+    ]},
+    { group: 'menu_billing', items: [
+        { tKey: 'menu_company',              icon: Building2, route: 'company.index',             match: ['admin/company'] },
+        { tKey: 'menu_plans',                icon: Layers,    route: 'plans.index',               match: ['admin/plans'] },
+        { tKey: 'menu_subscribe',            icon: Bell,      route: 'subscribe.index',           match: ['admin/subscribe'] },
+        { tKey: 'menu_subscription_history', icon: Receipt,   route: 'admin.subscription.history',match: ['admin/subscription/history'] },
+    ]},
+    { group: 'menu_productivity', items: [
+        { tKey: 'menu_support', icon: MessageCircle, route: 'support.index', match: ['admin/support'] },
+    ]},
+    { group: 'menu_cms', items: [
+        { tKey: 'menu_front_web', icon: Layout, route: 'blogs.index', match: ['admin/front-web'] },
+    ]},
+    { group: 'menu_settings', items: [
+        { tKey: 'menu_general_settings', icon: Sliders, route: 'general-settings.index', match: ['admin/general-settings'] },
+    ]},
+];
+
 function safeRoute(name, params) {
     try {
         if (typeof window !== 'undefined' && typeof window.route === 'function') {
@@ -178,6 +209,10 @@ function Sidebar({ open, onClose, currentUrl, brand, appName }) {
     // gate so users don't see menu rows that would 403 anyway.
     const perms = new Set(props?.auth?.permissions ?? []);
     const canSee = (item) => ! item.perm || perms.has(item.perm);
+    // user_type = 6 → super admin. Central-domain super admins see a
+    // terse cross-tenant nav (SUPER_NAV); everyone else keeps NAV.
+    const isSuperAdmin = Number(props?.auth?.user?.user_type) === 6;
+    const nav = isSuperAdmin ? SUPER_NAV : NAV;
     // Fallback chain: tenant setting → app.name → literal (last-resort).
     // Empty general_settings.name shouldn't leave the sidebar reading "Admin".
     const brandName = (brand?.name || appName || 'Admin');
@@ -215,7 +250,7 @@ function Sidebar({ open, onClose, currentUrl, brand, appName }) {
                     </Button>
                 </div>
                 <nav className="h-[calc(100vh-4rem)] space-y-5 overflow-y-auto px-3 py-4">
-                    {NAV.map((section) => {
+                    {nav.map((section) => {
                         const visibleItems = section.items.filter(canSee);
                         if (visibleItems.length === 0) return null;   // hide empty groups
                         return (

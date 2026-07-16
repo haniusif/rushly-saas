@@ -31,10 +31,11 @@ class HandleInertiaRequests extends Middleware
 
             'auth' => [
                 'user' => $user ? [
-                    'id'    => $user->id,
-                    'name'  => $user->name ?? null,
-                    'email' => $user->email ?? null,
-                    'image' => $user->image ?? null,
+                    'id'        => $user->id,
+                    'name'      => $user->name ?? null,
+                    'email'     => $user->email ?? null,
+                    'image'     => $user->image ?? null,
+                    'user_type' => (int) ($user->user_type ?? 0),
                 ] : null,
                 // Flat permission array — same source the server-side
                 // hasPermission() helper reads (users.permissions JSON).

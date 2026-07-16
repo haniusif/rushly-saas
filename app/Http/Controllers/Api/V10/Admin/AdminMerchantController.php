@@ -82,6 +82,91 @@ class AdminMerchantController extends Controller
         ], 200);
     }
 
+    /**
+     * Onboarding queue: merchants whose applyStore submission is awaiting
+     * admin review. `merchant.status = 0` is the pending marker set in
+     * MerchantRepository::applyStore. Approved rows go to status = 1 and
+     * fall out of this list; rejected rows go to status = 2 (also out).
+     */
+    public function pending(Request $request)
+    {
+        $this->guardSuperOrAdmin($request->user());
+
+        $query = Merchant::query()->with('user')
+            ->where('status', 0)
+            ->latest();
+
+        if ($q = $request->query('q')) {
+            $query->where(function ($w) use ($q) {
+                $w->where('business_name', 'like', "%$q%")
+                  ->orWhere('unique_id', 'like', "%$q%")
+                  ->orWhere('cr_number', 'like', "%$q%")
+                  ->orWhereHas('user', fn ($u) => $u->where('email', 'like', "%$q%")
+                                                   ->orWhere('mobile', 'like', "%$q%"));
+            });
+        }
+
+        $per = max(10, min(100, (int) $request->query('per_page', 25)));
+        $merchants = $query->paginate($per);
+
+        return $this->responseWithSuccess('admin.merchants.pending', [
+            'merchants' => $merchants->through(fn ($m) => $this->transformPending($m)),
+        ], 200);
+    }
+
+    public function approve($id, Request $request)
+    {
+        $this->guardSuperOrAdmin($request->user());
+
+        $merchant = Merchant::with('user')->findOrFail($id);
+        if ((int) $merchant->status !== 0) {
+            return $this->responseWithError('admin.merchant.not_pending', [
+                'status' => (int) $merchant->status,
+            ], 422);
+        }
+        if (!$merchant->user) {
+            return $this->responseWithError('admin.merchant.no_user', [], 422);
+        }
+
+        DB::transaction(function () use ($merchant) {
+            $merchant->status = 1;
+            $merchant->save();
+
+            $merchant->user->status = 1;
+            $merchant->user->verification_status = 1;
+            $merchant->user->save();
+        });
+
+        return $this->responseWithSuccess('admin.merchant.approved', [
+            'merchant_id' => $merchant->id,
+            'status'      => (int) $merchant->status,
+        ], 200);
+    }
+
+    public function reject($id, Request $request)
+    {
+        $this->guardSuperOrAdmin($request->user());
+
+        $merchant = Merchant::with('user')->findOrFail($id);
+        if ((int) $merchant->status !== 0) {
+            return $this->responseWithError('admin.merchant.not_pending', [
+                'status' => (int) $merchant->status,
+            ], 422);
+        }
+
+        $merchant->status = 2;
+        $merchant->save();
+        if ($merchant->user) {
+            $merchant->user->status = 0;
+            $merchant->user->save();
+        }
+
+        return $this->responseWithSuccess('admin.merchant.rejected', [
+            'merchant_id' => $merchant->id,
+            'status'      => (int) $merchant->status,
+        ], 200);
+    }
+
     private function transform(Merchant $m): array
     {
         return [
@@ -97,6 +182,35 @@ class AdminMerchantController extends Controller
                 'status' => (int) optional($m->user)->status,
             ],
         ];
+    }
+
+    /**
+     * Extends transform() with the KYC payload the review screen needs.
+     */
+    private function transformPending(Merchant $m): array
+    {
+        return array_merge($this->transform($m), [
+            'created_at'                  => optional($m->created_at)->toIso8601String(),
+            'cr_number'                   => $m->cr_number,
+            'cr_expiry'                   => optional($m->cr_expiry)->toDateString(),
+            'tax_number'                  => $m->tax_number,
+            'owner_id_number'             => $m->owner_id_number,
+            'classification'              => $m->classification,
+            'delivery_type'               => $m->delivery_type,
+            'expected_daily_shipments'    => $m->expected_daily_shipments,
+            'national_address_short_code' => $m->national_address_short_code,
+            'iban'                        => $m->iban,
+            'bank_name'                   => $m->bank_name,
+            'swift_code'                  => $m->swift_code,
+            'services'                    => $m->services ?? [],
+            'files' => [
+                'cr_file'               => $m->cr_file_url,
+                'contract_file'         => $m->contract_file_url,
+                'owner_id_file'         => $m->owner_id_file_url,
+                'national_address_file' => $m->national_address_file_url,
+                'iban_file'             => $m->iban_file_url,
+            ],
+        ]);
     }
 
     private function guardSuperOrAdmin($user): void

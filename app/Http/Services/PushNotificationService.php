@@ -165,7 +165,7 @@ class PushNotificationService
             'topic' => 'nullable',
         ]);
 
-        $deviceToken = $request->token;
+        $deviceToken = $request->device_token;
 
         $headers = array(
             'Authorization: key=' .notificationSettings()->fcm_secret_key,

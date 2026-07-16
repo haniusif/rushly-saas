@@ -45,6 +45,11 @@ use App\Http\Controllers\Api\V10\Admin\AdminHubController;
 use App\Http\Controllers\Api\V10\Admin\AdminPaymentRequestController;
 use App\Http\Controllers\Api\V10\Admin\AdminSupportController;
 use App\Http\Controllers\Api\V10\Admin\AdminFraudController;
+use App\Http\Controllers\Api\V10\Admin\AdminPushController;
+use App\Http\Controllers\Api\V10\Admin\AdminMapController;
+use App\Http\Controllers\Api\V10\Admin\AdminHubCashController;
+use App\Http\Controllers\Api\V10\Admin\AdminWmsController;
+use App\Http\Controllers\Api\V10\Admin\AdminParcel3plController;
 
 
 
@@ -157,8 +162,11 @@ Route::prefix('v10/admin')->middleware(['CheckApiKey'])->group(function () {
         Route::post('/parcels/{id}/status',                 [AdminParcelController::class,       'forceStatus']);
 
         Route::get('/merchants',                            [AdminMerchantController::class,     'index']);
+        Route::get('/merchants/pending',                    [AdminMerchantController::class,     'pending']);
         Route::get('/merchants/{id}',                       [AdminMerchantController::class,     'show']);
         Route::post('/merchants/{id}/toggle-active',        [AdminMerchantController::class,     'toggleActive']);
+        Route::post('/merchants/{id}/approve',              [AdminMerchantController::class,     'approve']);
+        Route::post('/merchants/{id}/reject',               [AdminMerchantController::class,     'reject']);
 
         Route::get('/drivers',                              [AdminDriverController::class,       'index']);
         Route::get('/drivers/{id}',                         [AdminDriverController::class,       'show']);
@@ -178,6 +186,23 @@ Route::prefix('v10/admin')->middleware(['CheckApiKey'])->group(function () {
         Route::get('/fraud',                                [AdminFraudController::class,        'index']);
         Route::post('/fraud',                               [AdminFraudController::class,        'store']);
         Route::delete('/fraud/{id}',                        [AdminFraudController::class,        'destroy']);
+
+        Route::post('/fcm-subscribe',                       [AdminPushController::class,         'subscribe']);
+        Route::post('/fcm-unsubscribe',                     [AdminPushController::class,         'unsubscribe']);
+
+        Route::get('/map/parcels',                          [AdminMapController::class,          'parcels']);
+        Route::get('/map/drivers',                          [AdminMapController::class,          'drivers']);
+
+        Route::get('/hub-cash',                             [AdminHubCashController::class,      'index']);
+        Route::get('/hub-cash/drivers',                     [AdminHubCashController::class,      'drivers']);
+        Route::get('/hub-cash/accounts',                    [AdminHubCashController::class,      'accounts']);
+        Route::post('/hub-cash',                            [AdminHubCashController::class,      'store']);
+
+        Route::get('/wms/grns',                             [AdminWmsController::class,          'grns']);
+        Route::get('/wms/locations',                        [AdminWmsController::class,          'locations']);
+
+        Route::get('/parcels/{id}/3pl',                     [AdminParcel3plController::class,    'status']);
+        Route::post('/parcels/{id}/3pl-assign',             [AdminParcel3plController::class,    'assign']);
     });
 });
 

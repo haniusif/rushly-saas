@@ -2,22 +2,21 @@
 
 namespace App\Http\Controllers\Backend\Superadmin;
 
-use App\Enums\ParcelStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Backend\GeneralSettings;
-use App\Models\Backend\Parcel;
-use App\Models\Backend\ParcelEvent;
-use App\Models\Backend\DeliveryMan;
+use App\Models\Backend\Subscription;
+use App\Models\Backend\Support;
+use App\Models\Backend\Superadmin\Plan;
 use App\Models\User;
+use App\Enums\UserType;
 use Carbon\CarbonImmutable;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 /**
- * Cross-tenant summary rendered on the central (super-admin) domain. Same
- * layout as the tenant Summary page but every query drops the companywise
- * scope so the numbers reflect the whole platform.
+ * SaaS-owner dashboard on the central super-admin domain. Focuses on
+ * platform health — tenants, subscriptions/MRR, plans, support — not
+ * shipment operations (that's what the tenant /summary is for).
  */
 class SummaryController extends Controller
 {
@@ -26,193 +25,160 @@ class SummaryController extends Controller
         $now       = CarbonImmutable::now();
         $todayFrom = $now->startOfDay();
         $todayTo   = $now->endOfDay();
-        $weekFrom  = $now->subDays(6)->startOfDay();
-
-        // -------- KPI cards (today, platform-wide) ----------------
-        $kpis = [
-            'today_shipments' => (int) Parcel::query()
-                ->whereBetween('created_at', [$todayFrom, $todayTo])->count(),
-            'ofd'             => (int) Parcel::query()
-                ->whereBetween('created_at', [$todayFrom, $todayTo])
-                ->where('status', ParcelStatus::DELIVERY_MAN_ASSIGN)->count(),
-            'delivered_today' => (int) Parcel::query()
-                ->whereBetween('created_at', [$todayFrom, $todayTo])
-                ->where('status', ParcelStatus::DELIVERED)->count(),
-            'pending'         => (int) Parcel::query()
-                ->whereBetween('created_at', [$todayFrom, $todayTo])
-                ->where('status', ParcelStatus::PENDING)->count(),
-        ];
-
-        // -------- 7-day trend, cross-tenant -----------------------
-        $days = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $d = $now->subDays($i)->startOfDay();
-            $days[$d->format('Y-m-d')] = [
-                'label'   => $d->format('D'),
-                'iso'     => $d->format('Y-m-d'),
-                'created' => 0,
-                'delivered' => 0,
-            ];
-        }
-        $created = Parcel::query()
-            ->selectRaw("DATE(created_at) as d, COUNT(*) as c")
-            ->whereBetween('created_at', [$weekFrom, $todayTo])
-            ->groupBy('d')->pluck('c', 'd');
-        foreach ($created as $d => $c) if (isset($days[$d])) $days[$d]['created'] = (int) $c;
-
-        $delivered = Parcel::query()
-            ->selectRaw("DATE(updated_at) as d, COUNT(*) as c")
-            ->where('status', ParcelStatus::DELIVERED)
-            ->whereBetween('updated_at', [$weekFrom, $todayTo])
-            ->groupBy('d')->pluck('c', 'd');
-        foreach ($delivered as $d => $c) if (isset($days[$d])) $days[$d]['delivered'] = (int) $c;
-
-        $trend = array_values($days);
-
-        // -------- Today's OFD per tenant --------------------------
-        $ofdByTenant = GeneralSettings::query()
-            ->select('id', 'name')
-            ->selectSub(
-                Parcel::query()->selectRaw('COUNT(*)')
-                    ->whereColumn('parcels.company_id', 'general_settings.id')
-                    ->whereBetween('parcels.created_at', [$todayFrom, $todayTo])
-                    ->where('parcels.status', ParcelStatus::DELIVERY_MAN_ASSIGN),
-                'shipments'
-            )
-            ->orderByDesc('shipments')
-            ->limit(10)
-            ->get()
-            ->filter(fn ($t) => (int) $t->shipments > 0)
-            ->map(fn ($t) => [
-                'id'        => (int) $t->id,
-                'name'      => (string) ($t->name ?: 'Tenant #'.$t->id),
-                'shipments' => (int) $t->shipments,
-            ])
-            ->values();
-
-        // -------- Top 10 tenants by shipment volume (all time) ----
-        $topTenants = GeneralSettings::query()
-            ->select('id', 'name')
-            ->selectSub(
-                Parcel::query()->selectRaw('COUNT(*)')
-                    ->whereColumn('parcels.company_id', 'general_settings.id'),
-                'shipments'
-            )
-            ->orderByDesc('shipments')
-            ->limit(10)
-            ->get()
-            ->filter(fn ($t) => (int) $t->shipments > 0)
-            ->map(fn ($t) => [
-                'id'        => (int) $t->id,
-                'name'      => (string) ($t->name ?: 'Tenant #'.$t->id),
-                'shipments' => (int) $t->shipments,
-            ])
-            ->values();
-
-        // -------- Deliveryman performance CURRENT MONTH, cross-tenant
         $monthFrom = $now->startOfMonth();
         $monthTo   = $now->endOfMonth();
+        $soonFrom  = $now->copy();
+        $soonTo    = $now->copy()->addDays(30)->endOfDay();
 
-        $topDeliverymen = DeliveryMan::query()
-            ->with(['user' => fn ($q) => $q->select('id', 'name', 'image_id')->with('upload:id,original')])
-            ->select('delivery_man.id', 'delivery_man.user_id', 'delivery_man.company_id')
+        // -------- SaaS KPIs --------------------------------------
+        $activeSubs   = Subscription::query()->where('expired_date', '>=', $now)->count();
+        $mrr          = (float) Subscription::query()->where('expired_date', '>=', $now)->sum('price');
+        $newThisMonth = GeneralSettings::query()->whereBetween('created_at', [$monthFrom, $monthTo])->count();
+        $openTickets  = Support::query()->where('status', '!=', 2)->count(); // 2 = closed convention in this repo
+
+        $saas = [
+            'tenants'         => (int) GeneralSettings::query()->count(),
+            'active_subs'     => (int) $activeSubs,
+            'mrr'             => $mrr,
+            'new_this_month'  => (int) $newThisMonth,
+            'open_tickets'    => (int) $openTickets,
+            'total_tickets'   => (int) Support::query()->count(),
+        ];
+
+        // -------- Users spread ----------------------------------
+        $userSplit = [
+            'total'       => (int) User::query()->count(),
+            'admins'      => (int) User::query()->where('user_type', UserType::ADMIN)->count(),
+            'deliverymen' => (int) User::query()->where('user_type', UserType::DELIVERYMAN)->count(),
+            'merchants'   => (int) User::query()->where('user_type', UserType::MERCHANT)->count(),
+        ];
+
+        // -------- Subscription status breakdown -----------------
+        // "Expiring soon" = active but within 30 days of the end date.
+        $subStatus = [
+            'active'      => (int) Subscription::query()->where('expired_date', '>=', $now)->count(),
+            'expired'     => (int) Subscription::query()->where('expired_date', '<',  $now)->count(),
+            'expiring_soon' => (int) Subscription::query()
+                ->whereBetween('expired_date', [$soonFrom, $soonTo])->count(),
+        ];
+
+        // -------- 30-day tenant signup trend --------------------
+        $days = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $d = $now->subDays($i)->startOfDay();
+            $days[$d->format('Y-m-d')] = [
+                'label' => $d->format('d'),
+                'iso'   => $d->format('Y-m-d'),
+                'count' => 0,
+            ];
+        }
+        $rows = GeneralSettings::query()
+            ->selectRaw('DATE(created_at) as d, COUNT(*) as c')
+            ->whereBetween('created_at', [$now->subDays(29)->startOfDay(), $todayTo])
+            ->groupBy('d')->pluck('c', 'd');
+        foreach ($rows as $d => $c) if (isset($days[$d])) $days[$d]['count'] = (int) $c;
+        $signupTrend = array_values($days);
+
+        // -------- Plan distribution (# active tenants per plan) --
+        $planDist = Plan::query()
+            ->select('id', 'name', 'price')
             ->selectSub(
-                ParcelEvent::query()->selectRaw('COUNT(DISTINCT parcel_id)')
-                    ->whereColumn('parcel_events.delivery_man_id', 'delivery_man.id')
-                    ->whereBetween('parcel_events.created_at', [$monthFrom, $monthTo]),
-                'assigned'
+                Subscription::query()
+                    ->selectRaw('COUNT(DISTINCT company_id)')
+                    ->whereColumn('subscriptions.plan_id', 'plans.id')
+                    ->where('expired_date', '>=', $now),
+                'active_tenants'
             )
-            ->selectSub(
-                ParcelEvent::query()->selectRaw('COUNT(DISTINCT parcel_events.parcel_id)')
-                    ->join('parcels', 'parcels.id', '=', 'parcel_events.parcel_id')
-                    ->whereColumn('parcel_events.delivery_man_id', 'delivery_man.id')
-                    ->whereBetween('parcel_events.created_at', [$monthFrom, $monthTo])
-                    ->where('parcels.status', ParcelStatus::DELIVERED),
-                'delivered'
-            )
-            ->orderByDesc('assigned')
-            ->limit(10)
+            ->orderByDesc('active_tenants')
             ->get()
-            ->filter(fn ($d) => (int) $d->assigned > 0)
-            ->map(function ($d) {
-                $a = (int) $d->assigned; $del = (int) $d->delivered;
-                return [
-                    'id'          => (int) $d->id,
-                    'name'        => (string) (optional($d->user)->name ?: 'Deliveryman #'.$d->id),
-                    'photo_url'   => optional($d->user)->image_id ? optional($d->user)->image : null,
-                    'assigned'    => $a,
-                    'delivered'   => $del,
-                    'performance' => $a > 0 ? round(($del / $a) * 100, 1) : 0.0,
-                ];
-            })
+            ->map(fn ($p) => [
+                'id'             => (int) $p->id,
+                'name'           => (string) $p->name,
+                'price'          => (float) $p->price,
+                'active_tenants' => (int) $p->active_tenants,
+            ])
             ->values();
 
-        // Platform-only metrics (no tenant equivalent, so they appear here).
-        $tenantCount = (int) GeneralSettings::query()->count();
-        $userCount   = (int) User::query()->count();
-        $adminCount  = (int) User::query()->where('user_type', \App\Enums\UserType::ADMIN)->count();
-        $deliveryCount = (int) DeliveryMan::query()->count();
-
-        // Last 5 tenant signups by created_at.
+        // -------- Recent tenants (last 6) with plan info ---------
         $recentTenants = GeneralSettings::query()
-            ->select('id', 'name', 'created_at')
+            ->select('id', 'name', 'created_at', 'plan_id', 'subscription_id')
+            ->with(['plan:id,name,price'])
             ->orderByDesc('created_at')
-            ->limit(5)
+            ->limit(6)
             ->get()
             ->map(fn ($t) => [
                 'id'         => (int) $t->id,
                 'name'       => (string) ($t->name ?: 'Tenant #'.$t->id),
+                'plan'       => optional($t->plan)->name,
                 'created_at' => optional($t->created_at)->format('Y-m-d'),
                 'ago'        => optional($t->created_at)?->diffForHumans(),
             ])
             ->values();
 
+        // -------- Recent support tickets (last 6) ----------------
+        $recentTickets = Support::query()
+            ->with(['user:id,name'])
+            ->orderByDesc('created_at')
+            ->limit(6)
+            ->get()
+            ->map(fn ($s) => [
+                'id'         => (int) $s->id,
+                'subject'    => (string) ($s->subject ?: '—'),
+                'status'     => (int) ($s->status ?? 0),
+                'priority'   => (string) ($s->priority ?? ''),
+                'user'       => optional($s->user)->name,
+                'ago'        => optional($s->created_at)?->diffForHumans(),
+            ])
+            ->values();
+
         return Inertia::render('Admin/Superadmin/Summary/Index', [
-            'kpis'            => $kpis,
-            'platform'        => [
-                'tenants'      => $tenantCount,
-                'users'        => $userCount,
-                'admins'       => $adminCount,
-                'deliverymen'  => $deliveryCount,
-            ],
-            'trend'           => $trend,
-            'top_tenants'     => $topTenants,
-            'ofd_by_tenant'   => $ofdByTenant,
-            'recent_tenants'  => $recentTenants,
-            'top_deliverymen' => $topDeliverymen,
+            'currency'      => (string) (settings()->currency ?? ''),
+            'saas'          => $saas,
+            'users'         => $userSplit,
+            'sub_status'    => $subStatus,
+            'signup_trend'  => $signupTrend,
+            'plan_dist'     => $planDist,
+            'recent_tenants'=> $recentTenants,
+            'recent_tickets'=> $recentTickets,
             't' => [
-                'title'          => 'Platform summary',
-                'subtitle'       => 'Cross-tenant KPIs for the whole platform.',
-                'kpi_today'      => "Today's shipments",
-                'kpi_ofd'        => 'OFD',
-                'kpi_delivered'  => 'Delivered today',
-                'kpi_pending'    => 'Pending pickup',
-                'platform_title'    => 'Platform',
-                'platform_tenants'  => 'Tenants',
-                'platform_users'    => 'Users',
-                'platform_admins'   => 'Admins',
-                'platform_deliverymen' => 'Deliverymen',
-                'seven_day_title'    => 'Last 7 days · platform-wide',
-                'legend_created'     => 'Created',
-                'legend_delivered'   => 'Delivered',
-                'top_tenants_title'  => 'Top tenants by shipments',
-                'top_tenants_col_name' => 'Tenant',
-                'top_tenants_col_qty'  => 'Shipments',
-                'top_tenants_empty'    => 'No tenants with shipments yet.',
-                'ofd_title'          => 'OFD by tenant',
-                'ofd_subtitle'       => 'Today, currently out for delivery',
-                'ofd_col_name'       => 'Tenant',
-                'ofd_col_qty'        => 'OFD',
-                'ofd_empty'          => 'No parcels out for delivery today.',
+                'title'    => 'Platform overview',
+                'subtitle' => 'SaaS health at a glance: tenants, subscriptions, plans, and support.',
+                // KPI labels
+                'kpi_tenants'      => 'Tenants',
+                'kpi_active_subs'  => 'Active subscriptions',
+                'kpi_mrr'          => 'Active revenue',
+                'kpi_new_month'    => 'New this month',
+                'kpi_open_tickets' => 'Open tickets',
+                'kpi_total_tickets'=> 'Total tickets',
+                // Users breakdown
+                'users_title'      => 'Users on the platform',
+                'users_total'      => 'Total',
+                'users_admins'     => 'Admins',
+                'users_delivery'   => 'Deliverymen',
+                'users_merchants'  => 'Merchants',
+                // Subscription status
+                'sub_status_title'  => 'Subscriptions',
+                'sub_active'        => 'Active',
+                'sub_expiring_soon' => 'Expiring in 30 days',
+                'sub_expired'       => 'Expired',
+                // Signup trend
+                'signup_trend_title'    => 'Tenant signups · last 30 days',
+                'signup_trend_empty'    => 'No signups in the last 30 days.',
+                // Plan distribution
+                'plan_dist_title'   => 'Plan distribution',
+                'plan_dist_col_name'=> 'Plan',
+                'plan_dist_col_price'=> 'Price',
+                'plan_dist_col_tenants' => 'Active tenants',
+                'plan_dist_empty'   => 'No plans yet.',
+                // Recent tenants
                 'recent_tenants_title' => 'Recent tenants',
                 'recent_tenants_empty' => 'No tenants signed up yet.',
-                'top_deliverymen_title'    => 'Deliveryman performance',
-                'top_deliverymen_subtitle' => 'Current month · across all tenants',
-                'top_deliverymen_col_name' => 'Deliveryman',
-                'top_deliverymen_col_assigned'  => 'Assigned',
-                'top_deliverymen_col_delivered' => 'Delivered',
-                'top_deliverymen_col_performance' => 'Performance',
-                'top_deliverymen_empty' => 'No deliveryman activity this month.',
+                // Recent tickets
+                'recent_tickets_title' => 'Recent support tickets',
+                'recent_tickets_empty' => 'No support tickets yet.',
+                'ticket_open'          => 'Open',
+                'ticket_pending'       => 'Pending',
+                'ticket_closed'        => 'Closed',
             ],
         ]);
     }

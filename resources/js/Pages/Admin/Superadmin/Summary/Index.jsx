@@ -1,33 +1,40 @@
 import * as React from 'react';
 import { Head } from '@inertiajs/react';
 import {
-    Package, Truck, CheckCircle2, Clock, Building2, Users, Bike, Trophy,
-    LineChart, Warehouse, ShieldCheck,
+    Building2, Users, ShieldCheck, Bike, Store, TicketCheck,
+    CreditCard, DollarSign, Clock, TrendingUp, Layers, MessageCircle,
+    AlertCircle, ArrowUpRight,
 } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { cn } from '@/lib/utils';
 
-/* -------- shared bits (kept local so this page is self-contained) -- */
-
-function KpiCard({ icon: Icon, label, value, tone = 'primary' }) {
+function KpiCard({ icon: Icon, label, value, tone = 'primary', hint, format = 'number', currency }) {
     const tones = {
         primary: 'from-primary/10 to-primary/5 text-primary',
         info:    'from-sky-100 to-sky-50 text-sky-700 dark:from-sky-950/40 dark:to-sky-950/10 dark:text-sky-300',
         success: 'from-emerald-100 to-emerald-50 text-emerald-700 dark:from-emerald-950/40 dark:to-emerald-950/10 dark:text-emerald-300',
         warning: 'from-amber-100 to-amber-50 text-amber-700 dark:from-amber-950/40 dark:to-amber-950/10 dark:text-amber-200',
+        rose:    'from-rose-100 to-rose-50 text-rose-700 dark:from-rose-950/40 dark:to-rose-950/10 dark:text-rose-300',
     };
+    const shown = format === 'money'
+        ? <>
+            <span className="text-lg text-muted-foreground me-1 font-medium">{currency}</span>
+            {Number(value ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </>
+        : Number(value ?? 0).toLocaleString();
     return (
         <Card className="rounded-xl shadow-sm border border-border overflow-hidden">
             <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-3">
-                    <div>
+                    <div className="min-w-0">
                         <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
                         <div className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-foreground">
-                            {Number(value ?? 0).toLocaleString()}
+                            {shown}
                         </div>
+                        {hint && <div className="mt-1 text-xs text-muted-foreground">{hint}</div>}
                     </div>
-                    <span className={cn('inline-grid place-items-center h-10 w-10 rounded-xl bg-gradient-to-br', tones[tone])}>
+                    <span className={cn('inline-grid place-items-center h-10 w-10 rounded-xl bg-gradient-to-br shrink-0', tones[tone])}>
                         <Icon className="h-5 w-5" />
                     </span>
                 </div>
@@ -36,254 +43,282 @@ function KpiCard({ icon: Icon, label, value, tone = 'primary' }) {
     );
 }
 
-function TrendChart({ data, tCreated, tDelivered }) {
-    if (!data?.length) return null;
-    const max = Math.max(1, ...data.map(d => Math.max(d.created, d.delivered)));
+function SignupSparkline({ data = [], emptyLabel }) {
+    if (!data.length || data.every(d => d.count === 0)) {
+        return <div className="text-sm text-muted-foreground text-center py-8">{emptyLabel}</div>;
+    }
+    const max = Math.max(1, ...data.map(d => d.count));
     return (
-        <div className="space-y-3">
-            <div className="flex items-end justify-between gap-3 h-40">
+        <div className="space-y-2">
+            <div className="flex items-end gap-[3px] h-28">
                 {data.map((d) => {
-                    const hC = Math.max(4, Math.round((d.created / max) * 100));
-                    const hD = Math.max(4, Math.round((d.delivered / max) * 100));
+                    const h = Math.max(2, Math.round((d.count / max) * 100));
                     return (
-                        <div key={d.iso} className="flex-1 flex flex-col items-center gap-1.5">
-                            <div className="flex items-end justify-center gap-1 h-full w-full">
-                                <div title={`${tCreated}: ${d.created}`} className="w-full max-w-[10px] rounded-t bg-primary/70" style={{ height: `${hC}%` }} />
-                                <div title={`${tDelivered}: ${d.delivered}`} className="w-full max-w-[10px] rounded-t bg-emerald-500/70" style={{ height: `${hD}%` }} />
-                            </div>
-                            <div className="text-[10px] font-medium text-muted-foreground">{d.label}</div>
-                        </div>
+                        <div
+                            key={d.iso}
+                            title={`${d.iso}: ${d.count} tenant(s)`}
+                            className={cn(
+                                'flex-1 rounded-t transition-colors',
+                                d.count > 0 ? 'bg-primary/70 hover:bg-primary' : 'bg-muted'
+                            )}
+                            style={{ height: `${h}%` }}
+                        />
                     );
                 })}
             </div>
-            <div className="flex items-center justify-center gap-4 text-[11px]">
-                <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-primary" /> {tCreated}</span>
-                <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-emerald-500" /> {tDelivered}</span>
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                <span>{data[0]?.iso}</span>
+                <span>Today</span>
             </div>
         </div>
     );
 }
 
 function hue(s = '') { let h = 0; for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0; return Math.abs(h) % 360; }
-function InitialAvatar({ name = '', shape = 'square' }) {
-    const initial = (name || '?').trim().charAt(0).toUpperCase();
+function Initial({ name = '', shape = 'square', size = 'sm' }) {
+    const cls = {
+        sm: 'h-8 w-8 text-xs',
+        md: 'h-10 w-10 text-sm',
+    }[size];
     return (
         <span
             className={cn(
-                'inline-grid place-items-center h-7 w-7 shrink-0 text-[11px] font-semibold text-white',
-                shape === 'circle' ? 'rounded-full' : 'rounded-md'
+                'inline-grid place-items-center shrink-0 font-semibold text-white',
+                shape === 'circle' ? 'rounded-full' : 'rounded-md',
+                cls
             )}
             style={{ backgroundColor: `hsl(${hue(name)}, 62%, 48%)` }}
             aria-hidden
         >
-            {initial}
+            {(name || '?').trim().charAt(0).toUpperCase()}
         </span>
     );
 }
 
-function LeaderboardCard({ items = [], icon: RowIcon = Building2, avatarShape = 'square', title, subtitle, colName, colQty, empty }) {
-    const max = Math.max(1, ...items.map(m => m.shipments));
-    return (
-        <Card className="rounded-xl shadow-sm border border-border">
-            <CardContent className="p-0">
-                <div className="px-5 pt-5 pb-3 flex items-start gap-2">
-                    <Trophy className="h-4 w-4 text-primary mt-0.5" />
-                    <div>
-                        <div className="text-sm font-semibold">{title}</div>
-                        {subtitle && <div className="text-[11px] text-muted-foreground mt-0.5">{subtitle}</div>}
-                    </div>
-                </div>
-                {items.length === 0 ? (
-                    <div className="px-5 pb-6 text-sm text-muted-foreground">{empty}</div>
-                ) : (
-                    <div className="divide-y divide-border">
-                        <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3 px-5 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                            <span className="w-6 text-center">#</span>
-                            <span>{colName}</span>
-                            <span className="hidden xl:block w-16" />
-                            <span className="justify-self-end">{colQty}</span>
-                        </div>
-                        {items.map((m, i) => {
-                            const pct = Math.max(2, Math.round((m.shipments / max) * 100));
-                            return (
-                                <div key={m.id} className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3 px-5 py-2.5 hover:bg-muted/30 transition-colors">
-                                    <span className="w-6 text-center text-xs font-semibold text-muted-foreground tabular-nums">{i + 1}</span>
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        <InitialAvatar name={m.name} shape={avatarShape} />
-                                        <span className="text-sm font-medium truncate">{m.name}</span>
-                                    </div>
-                                    <div className="hidden xl:block w-16 h-1.5 rounded-full bg-muted overflow-hidden">
-                                        <div className="h-full bg-primary/70" style={{ width: `${pct}%` }} />
-                                    </div>
-                                    <span className="justify-self-end text-sm font-semibold tabular-nums">
-                                        {Number(m.shipments).toLocaleString()}
-                                    </span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </CardContent>
-        </Card>
-    );
+/** Priority tone → pill classes. Priority is a free-text field in this repo. */
+function PriorityPill({ priority }) {
+    const p = String(priority || '').toLowerCase();
+    const tone =
+        p.includes('high') || p.includes('urgent') ? 'bg-rose-100 text-rose-700' :
+        p.includes('medium') ? 'bg-amber-100 text-amber-800' :
+        p.includes('low') ? 'bg-sky-100 text-sky-700' :
+        'bg-muted text-muted-foreground';
+    if (!priority) return null;
+    return <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide', tone)}>{priority}</span>;
 }
 
-function DeliverymenPerformanceCard({ items = [], t = {} }) {
-    const bandTone = (pct) => pct >= 85
-        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-        : pct >= 60
-            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200'
-            : 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300';
-    return (
-        <Card className="rounded-xl shadow-sm border border-border">
-            <CardContent className="p-0">
-                <div className="px-5 pt-5 pb-3 flex items-start gap-2">
-                    <Trophy className="h-4 w-4 text-primary mt-0.5" />
-                    <div>
-                        <div className="text-sm font-semibold">{t.top_deliverymen_title}</div>
-                        {t.top_deliverymen_subtitle && (
-                            <div className="text-[11px] text-muted-foreground mt-0.5">{t.top_deliverymen_subtitle}</div>
-                        )}
-                    </div>
-                </div>
-                {items.length === 0 ? (
-                    <div className="px-5 pb-6 text-sm text-muted-foreground">{t.top_deliverymen_empty}</div>
-                ) : (
-                    <div className="divide-y divide-border">
-                        <div className="grid grid-cols-[auto_1fr_repeat(3,auto)] items-center gap-3 px-5 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                            <span className="w-6 text-center">#</span>
-                            <span>{t.top_deliverymen_col_name}</span>
-                            <span className="justify-self-end w-16">{t.top_deliverymen_col_assigned}</span>
-                            <span className="justify-self-end w-16">{t.top_deliverymen_col_delivered}</span>
-                            <span className="justify-self-end w-20">{t.top_deliverymen_col_performance}</span>
-                        </div>
-                        {items.map((d, i) => (
-                            <div key={d.id} className="grid grid-cols-[auto_1fr_repeat(3,auto)] items-center gap-3 px-5 py-2.5 hover:bg-muted/30 transition-colors">
-                                <span className="w-6 text-center text-xs font-semibold text-muted-foreground tabular-nums">{i + 1}</span>
-                                <div className="flex items-center gap-2 min-w-0">
-                                    {d.photo_url ? (
-                                        <img src={d.photo_url} alt="" loading="lazy" className="h-7 w-7 rounded-full object-cover shrink-0 bg-muted" />
-                                    ) : (
-                                        <InitialAvatar name={d.name} shape="circle" />
-                                    )}
-                                    <span className="text-sm font-medium truncate">{d.name}</span>
-                                </div>
-                                <span className="justify-self-end w-16 text-sm tabular-nums text-muted-foreground">{Number(d.assigned).toLocaleString()}</span>
-                                <span className="justify-self-end w-16 text-sm tabular-nums font-medium">{Number(d.delivered).toLocaleString()}</span>
-                                <span className="justify-self-end w-20 flex justify-end">
-                                    <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums', bandTone(d.performance))}>
-                                        {Number(d.performance).toFixed(1)}%
-                                    </span>
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </CardContent>
-        </Card>
-    );
-}
-
-function RecentTenantsCard({ items = [], t = {} }) {
-    return (
-        <Card className="rounded-xl shadow-sm border border-border">
-            <CardContent className="p-0">
-                <div className="px-5 pt-5 pb-3 flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 text-primary" />
-                    <div className="text-sm font-semibold">{t.recent_tenants_title}</div>
-                </div>
-                {items.length === 0 ? (
-                    <div className="px-5 pb-6 text-sm text-muted-foreground">{t.recent_tenants_empty}</div>
-                ) : (
-                    <div className="divide-y divide-border">
-                        {items.map((t) => (
-                            <div key={t.id} className="flex items-center gap-3 px-5 py-3 hover:bg-muted/30 transition-colors">
-                                <InitialAvatar name={t.name} />
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-medium truncate">{t.name}</div>
-                                    <div className="text-[11px] text-muted-foreground">{t.created_at} · {t.ago}</div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </CardContent>
-        </Card>
-    );
+function TicketStatusPill({ status, t }) {
+    const st = Number(status);
+    const map = {
+        1: { label: t.ticket_open,    tone: 'bg-emerald-100 text-emerald-700' },
+        2: { label: t.ticket_closed,  tone: 'bg-muted text-muted-foreground' },
+    };
+    const shown = map[st] || { label: t.ticket_pending, tone: 'bg-amber-100 text-amber-800' };
+    return <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium', shown.tone)}>{shown.label}</span>;
 }
 
 export default function Index({
-    kpis = {},
-    platform = {},
-    trend = [],
-    top_tenants = [],
-    ofd_by_tenant = [],
+    currency = '',
+    saas = {},
+    users = {},
+    sub_status = {},
+    signup_trend = [],
+    plan_dist = [],
     recent_tenants = [],
-    top_deliverymen = [],
+    recent_tickets = [],
     t = {},
 }) {
+    const topPlanValue = Math.max(1, ...plan_dist.map(p => p.active_tenants));
+
     return (
         <AdminLayout title={t.title} breadcrumbs={[]}>
             <Head title={t.title} />
 
-            <div className="mb-4">
+            <div className="mb-5">
                 <h1 className="text-lg font-semibold">{t.title}</h1>
                 <p className="text-sm text-muted-foreground">{t.subtitle}</p>
             </div>
 
-            {/* Platform-only quick row */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-                <KpiCard icon={Building2}   tone="primary" label={t.platform_tenants}     value={platform.tenants} />
-                <KpiCard icon={Users}       tone="info"    label={t.platform_users}       value={platform.users} />
-                <KpiCard icon={ShieldCheck} tone="success" label={t.platform_admins}      value={platform.admins} />
-                <KpiCard icon={Bike}        tone="warning" label={t.platform_deliverymen} value={platform.deliverymen} />
+            {/* SaaS KPI row */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-4">
+                <KpiCard icon={Building2}  tone="primary" label={t.kpi_tenants}      value={saas.tenants}
+                    hint={`+${saas.new_this_month ?? 0} ${t.kpi_new_month?.toLowerCase() ?? ''}`} />
+                <KpiCard icon={CreditCard} tone="info"    label={t.kpi_active_subs}  value={saas.active_subs} />
+                <KpiCard icon={DollarSign} tone="success" label={t.kpi_mrr}          value={saas.mrr} format="money" currency={currency} />
+                <KpiCard icon={TicketCheck} tone={saas.open_tickets > 0 ? 'rose' : 'warning'}
+                    label={t.kpi_open_tickets} value={saas.open_tickets}
+                    hint={`${saas.total_tickets ?? 0} ${t.kpi_total_tickets?.toLowerCase() ?? ''}`} />
             </div>
 
-            {/* Today's cross-tenant shipment KPIs */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-                <KpiCard icon={Package}      tone="primary" label={t.kpi_today}     value={kpis.today_shipments} />
-                <KpiCard icon={Truck}        tone="info"    label={t.kpi_ofd}       value={kpis.ofd} />
-                <KpiCard icon={CheckCircle2} tone="success" label={t.kpi_delivered} value={kpis.delivered_today} />
-                <KpiCard icon={Clock}        tone="warning" label={t.kpi_pending}   value={kpis.pending} />
+            {/* Users breakdown */}
+            <div className="mb-6">
+                <Card className="rounded-xl shadow-sm border border-border">
+                    <CardContent className="p-5">
+                        <div className="mb-3 flex items-center gap-2">
+                            <Users className="h-4 w-4 text-primary" />
+                            <div className="text-sm font-semibold">{t.users_title}</div>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            {[
+                                { icon: Users,        label: t.users_total,     value: users.total,       tone: 'text-foreground' },
+                                { icon: ShieldCheck,  label: t.users_admins,    value: users.admins,      tone: 'text-primary' },
+                                { icon: Bike,         label: t.users_delivery,  value: users.deliverymen, tone: 'text-amber-600' },
+                                { icon: Store,        label: t.users_merchants, value: users.merchants,   tone: 'text-emerald-600' },
+                            ].map(({ icon: I, label, value, tone }) => (
+                                <div key={label} className="flex items-start gap-3">
+                                    <I className={cn('h-4 w-4 mt-1', tone)} />
+                                    <div>
+                                        <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+                                        <div className="text-2xl font-bold tabular-nums mt-0.5">
+                                            {Number(value ?? 0).toLocaleString()}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
 
-            <div className="space-y-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                    <Card className="rounded-xl shadow-sm border border-border">
-                        <CardContent className="p-5">
-                            <div className="mb-4 flex items-center gap-2">
-                                <LineChart className="h-4 w-4 text-primary" />
-                                <div className="text-sm font-semibold">{t.seven_day_title}</div>
+            <div className="grid gap-6 lg:grid-cols-2 mb-6">
+                {/* Signup trend */}
+                <Card className="rounded-xl shadow-sm border border-border">
+                    <CardContent className="p-5">
+                        <div className="mb-4 flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 text-primary" />
+                            <div className="text-sm font-semibold">{t.signup_trend_title}</div>
+                        </div>
+                        <SignupSparkline data={signup_trend} emptyLabel={t.signup_trend_empty} />
+                    </CardContent>
+                </Card>
+
+                {/* Subscription status */}
+                <Card className="rounded-xl shadow-sm border border-border">
+                    <CardContent className="p-5">
+                        <div className="mb-4 flex items-center gap-2">
+                            <CreditCard className="h-4 w-4 text-primary" />
+                            <div className="text-sm font-semibold">{t.sub_status_title}</div>
+                        </div>
+                        <div className="space-y-3">
+                            {[
+                                { label: t.sub_active,        value: sub_status.active,        tone: 'bg-emerald-500' },
+                                { label: t.sub_expiring_soon, value: sub_status.expiring_soon, tone: 'bg-amber-500' },
+                                { label: t.sub_expired,       value: sub_status.expired,       tone: 'bg-rose-500' },
+                            ].map((row) => {
+                                const total = Math.max(1, (sub_status.active || 0) + (sub_status.expired || 0));
+                                const pct = Math.round(((row.value || 0) / total) * 100);
+                                return (
+                                    <div key={row.label}>
+                                        <div className="flex items-center justify-between text-xs mb-1">
+                                            <span className="font-medium">{row.label}</span>
+                                            <span className="text-muted-foreground tabular-nums">{row.value ?? 0}</span>
+                                        </div>
+                                        <div className="h-2 rounded-full bg-muted overflow-hidden">
+                                            <div className={cn('h-full transition-all', row.tone)} style={{ width: `${pct}%` }} />
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-2 mb-6">
+                {/* Plan distribution */}
+                <Card className="rounded-xl shadow-sm border border-border">
+                    <CardContent className="p-0">
+                        <div className="px-5 pt-5 pb-3 flex items-center gap-2">
+                            <Layers className="h-4 w-4 text-primary" />
+                            <div className="text-sm font-semibold">{t.plan_dist_title}</div>
+                        </div>
+                        {plan_dist.length === 0 ? (
+                            <div className="px-5 pb-6 text-sm text-muted-foreground">{t.plan_dist_empty}</div>
+                        ) : (
+                            <div className="divide-y divide-border">
+                                {plan_dist.map((p) => {
+                                    const pct = Math.max(2, Math.round((p.active_tenants / topPlanValue) * 100));
+                                    return (
+                                        <div key={p.id} className="grid grid-cols-[1fr_auto_auto] items-center gap-4 px-5 py-3 hover:bg-muted/30 transition-colors">
+                                            <div className="min-w-0">
+                                                <div className="text-sm font-medium truncate">{p.name}</div>
+                                                <div className="mt-1 h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                                                    <div className="h-full bg-primary/70" style={{ width: `${pct}%` }} />
+                                                </div>
+                                            </div>
+                                            <div className="text-xs text-muted-foreground tabular-nums">
+                                                <span className="me-1">{currency}</span>
+                                                {Number(p.price).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </div>
+                                            <div className="text-sm font-semibold tabular-nums w-10 text-end">{p.active_tenants}</div>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                            <TrendChart data={trend} tCreated={t.legend_created} tDelivered={t.legend_delivered} />
-                        </CardContent>
-                    </Card>
+                        )}
+                    </CardContent>
+                </Card>
 
-                    <LeaderboardCard
-                        items={top_tenants}
-                        icon={Building2}
-                        title={t.top_tenants_title}
-                        colName={t.top_tenants_col_name}
-                        colQty={t.top_tenants_col_qty}
-                        empty={t.top_tenants_empty}
-                    />
-                </div>
-
-                <div className="grid gap-6 md:grid-cols-2">
-                    <LeaderboardCard
-                        items={ofd_by_tenant}
-                        icon={Warehouse}
-                        title={t.ofd_title}
-                        subtitle={t.ofd_subtitle}
-                        colName={t.ofd_col_name}
-                        colQty={t.ofd_col_qty}
-                        empty={t.ofd_empty}
-                    />
-                    <RecentTenantsCard items={recent_tenants} t={t} />
-                </div>
-
-                <DeliverymenPerformanceCard items={top_deliverymen} t={t} />
+                {/* Recent tenants */}
+                <Card className="rounded-xl shadow-sm border border-border">
+                    <CardContent className="p-0">
+                        <div className="px-5 pt-5 pb-3 flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-primary" />
+                            <div className="text-sm font-semibold">{t.recent_tenants_title}</div>
+                        </div>
+                        {recent_tenants.length === 0 ? (
+                            <div className="px-5 pb-6 text-sm text-muted-foreground">{t.recent_tenants_empty}</div>
+                        ) : (
+                            <div className="divide-y divide-border">
+                                {recent_tenants.map((row) => (
+                                    <div key={row.id} className="flex items-center gap-3 px-5 py-3 hover:bg-muted/30 transition-colors">
+                                        <Initial name={row.name} size="md" />
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-sm font-medium truncate">{row.name}</div>
+                                            <div className="text-[11px] text-muted-foreground truncate">
+                                                {row.plan && <>{row.plan} · </>}{row.created_at} · {row.ago}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
             </div>
+
+            {/* Recent tickets — full width */}
+            <Card className="rounded-xl shadow-sm border border-border">
+                <CardContent className="p-0">
+                    <div className="px-5 pt-5 pb-3 flex items-center gap-2">
+                        <MessageCircle className="h-4 w-4 text-primary" />
+                        <div className="text-sm font-semibold">{t.recent_tickets_title}</div>
+                    </div>
+                    {recent_tickets.length === 0 ? (
+                        <div className="px-5 pb-6 text-sm text-muted-foreground">{t.recent_tickets_empty}</div>
+                    ) : (
+                        <div className="divide-y divide-border">
+                            {recent_tickets.map((r) => (
+                                <div key={r.id} className="flex items-start gap-3 px-5 py-3 hover:bg-muted/30 transition-colors">
+                                    <span className="inline-grid place-items-center h-8 w-8 rounded-lg bg-primary/10 text-primary shrink-0">
+                                        <TicketCheck className="h-4 w-4" />
+                                    </span>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-medium truncate">{r.subject}</div>
+                                        <div className="text-[11px] text-muted-foreground truncate mt-0.5">
+                                            {r.user && <>{r.user} · </>}{r.ago}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        <PriorityPill priority={r.priority} />
+                                        <TicketStatusPill status={r.status} t={t} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
         </AdminLayout>
     );
 }

@@ -74,9 +74,14 @@
     @routes
 
     {{-- Manually emit Vite tags via global_asset() so Stancl Tenancy's asset_helper_tenancy
-         doesn't rewrite them to /tenancy/assets/... (which 404s and returns text/html). --}}
+         doesn't rewrite them to /tenancy/assets/... (which 404s and returns text/html).
+         Guarded by file_exists — during `npm run build` the manifest is briefly
+         missing, and without the guard the whole admin app.blade returns a 500. --}}
     @php
-        $__viteManifest = json_decode(file_get_contents(public_path('build/manifest.json')), true);
+        $__manifestPath = public_path('build/manifest.json');
+        $__viteManifest = is_file($__manifestPath)
+            ? (json_decode(@file_get_contents($__manifestPath), true) ?: [])
+            : [];
         $__cssEntry = $__viteManifest['resources/css/merchant.css']['file'] ?? null;
         $__jsEntry  = $__viteManifest['resources/js/merchant.jsx']['file'] ?? null;
     @endphp

@@ -78,6 +78,10 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
         Route::group(['middleware' => 'auth'], function () {
 
             Route::get('/dashboard',                   [DashbordController::class, 'index'])->name('dashboard.index');
+            // Platform-wide summary — cross-tenant KPIs, top tenants,
+            // per-tenant OFD, and deliveryman performance. Home page for
+            // super admins.
+            Route::get('/summary',                     [\App\Http\Controllers\Backend\Superadmin\SummaryController::class, 'index'])->name('summary.index');
             Route::get('/subscription',                [PlanController::class, 'subscription'])->name('subscription.index');
             Route::get('/admin/subscription/history',  [PlanController::class, 'subscriptionHistory'])->name('admin.subscription.history');
 

@@ -4,15 +4,18 @@
 <meta charset="UTF-8">
 <title>AWB {{ $data['awb'] }}</title>
 @php
-    // Tenant brand colors — read from settings() when available. mPDF understands
-    // inline styles better than CSS variables, so we bake them in per-render.
+    // Tenant brand colors — used ONLY for accent surfaces (header bar, COD
+    // block, divider). Body text is always a fixed dark color because some
+    // tenants set text_color to #fff for their light portal theme, and
+    // that would make the label body invisible on the printed white paper.
+    $isHex = fn ($v) => is_string($v) && preg_match('/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/', $v);
     try {
-        $primary   = settings()->primary_color ?: '#2563eb';
-        $secondary = settings()->accent_color  ?: '#7c3aed';
-        $textDark  = settings()->text_color    ?: '#0f172a';
+        $primary   = $isHex(settings()->primary_color) ? settings()->primary_color : '#2563eb';
+        $secondary = $isHex(settings()->accent_color)  ? settings()->accent_color  : '#7c3aed';
     } catch (\Throwable $e) {
-        $primary   = '#2563eb'; $secondary = '#7c3aed'; $textDark = '#0f172a';
+        $primary = '#2563eb'; $secondary = '#7c3aed';
     }
+    $textDark = '#0f172a'; // fixed — never inherit tenant text_color for print
 @endphp
 <style>
     html, body { width:100%; height:100%; margin:0; padding:0; font-family:'Helvetica','Arial',sans-serif; color:{{ $textDark }}; }
@@ -28,8 +31,10 @@
     .sub { font-size:9pt; }
     .cod { background:{{ $secondary }}; color:#fff; padding:10px; text-align:center; font-weight:900; font-size:14pt; border-radius:0 0 4px 4px; }
     .cc  { background:#f1f5f9; color:{{ $textDark }}; padding:10px; text-align:center; font-weight:800; font-size:12pt; border-radius:0 0 4px 4px; }
-    .meta { display:table; width:100%; }
-    .meta div { display:table-cell; font-size:8pt; padding-right:6px; }
+    /* Plain block layout — mPDF's `display:table-cell` was silently
+       dropping the inner text nodes for this template. */
+    .meta { width:100%; }
+    .meta .cell { display:inline-block; width:32%; font-size:8pt; vertical-align:top; }
 </style>
 </head>
 <body>
@@ -58,9 +63,9 @@
 
     <div class="row">
         <div class="meta">
-            <div><span class="lbl">Order</span><br>{{ $data['orderNumber'] }}</div>
-            <div><span class="lbl">Ref</span><br>{{ $data['reference_number'] }}</div>
-            <div><span class="lbl">Date</span><br>{{ $data['date'] }}</div>
+            <span class="cell"><span class="lbl">Order</span><br>{{ $data['orderNumber'] }}</span>
+            <span class="cell"><span class="lbl">Ref</span><br>{{ $data['reference_number'] }}</span>
+            <span class="cell"><span class="lbl">Date</span><br>{{ $data['date'] }}</span>
         </div>
     </div>
 

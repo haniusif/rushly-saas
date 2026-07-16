@@ -54,14 +54,14 @@
                 <div class="lbl">Sender</div>
                 <div class="val">{{ $data['sender']['name'] }}</div>
                 <div class="sub">{{ $data['sender']['addressLine1'] }}</div>
-                <div class="sub">📞 {{ $data['sender']['phone'] }}</div>
+                <div class="sub">Tel:{{ $data['sender']['phone'] }}</div>
             </td>
             <td>
                 <div class="lbl">Receiver</div>
                 <div class="val">{{ $data['receiver']['name'] }}</div>
                 <div class="sub">{{ $data['receiver']['addressLine1'] }}</div>
                 <div class="sub">{{ $data['receiver']['city'] }} · {{ $data['receiver']['country'] }}</div>
-                <div class="sub">📞 {{ $data['receiver']['phone'] }}</div>
+                <div class="sub">Tel:{{ $data['receiver']['phone'] }}</div>
             </td>
         </tr>
     </table>

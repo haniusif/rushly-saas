@@ -37,7 +37,7 @@
         <div class="val">{{ $data['receiver']['name'] }}</div>
         <div class="sub">{{ $data['receiver']['addressLine1'] }}</div>
         <div class="sub">{{ $data['receiver']['city'] }} · {{ $data['receiver']['country'] }}</div>
-        <div class="sub" style="margin-top:2px;">📞 {{ $data['receiver']['phone'] }}</div>
+        <div class="sub" style="margin-top:2px;">Tel: {{ $data['receiver']['phone'] }}</div>
     </div>
 
     <div class="zone">

@@ -9,7 +9,7 @@ Companion doc to `RUSHLY_APPS_OVERVIEW.md`. That file covers the storefront brid
 | 1 | `rushly-driver-app` | Delivery drivers (deliverymen) | **Feature-complete** | Assigned parcels, delivery outcomes (delivered/partial/not-delivered with photo), NDR, earnings, cash reconciliation, live tracking map, AWB scan, route-optimised runsheet |
 | 2 | `rushly-merchant-app` | Merchants / shop owners | **Feature-complete** | Parcel CRUD, bulk CSV import, tracking map, shops, payments (accounts + requests + statements PDF), invoices, fraud, NDR, store connections, reports |
 | 3 | `rushly-admin-app` | Back-office (super_admin, admin, incharge, hub) | **Feature-complete** | Dashboard, parcels, drivers, merchants (including onboarding approval queue), hubs, payouts, support, fraud, driver-assignment map, hub cash, WMS (stock lookup + GRN receiving + cycle count + damage reports), 3PL assign |
-| 4 | `rushly-supervisor-app` | Field supervisors | **Scaffold** | Monitor drivers, assign deliveries, live tracking, performance dashboards, exception management |
+| 4 | `rushly-supervisor-app` | Field supervisors | **Feature-complete** | Live drivers list + detail, unassigned parcels + assign, per-driver performance reports with date range, aggregated exceptions feed (open NDRs + stuck parcels + returning to courier) |
 | 5 | `rushly-warehouse-app` | Warehouse staff | **Scaffold** | Receiving, put-away, picking, packing, inventory counting, barcode scanning, dispatch, returns |
 | 6 | `rushly-sorting-app` | Hub sorting operations | **Scaffold** | Shipment sorting, scan-in/scan-out, bag & container management, route assignment |
 | 7 | `rushly-fleet-app` | Long-haul fleet drivers | **Scaffold** | Trips, vehicle inspection, fuel logging, GPS tracking, maintenance, checkpoints |
@@ -305,10 +305,24 @@ Five apps scaffolded in one pass (see `/tmp/scaffold_apps.py`). Each is a workin
 
 ### Follow-up work per app
 
-None of these have backend endpoints wired to their tabs yet. Turning a scaffold into a functional app means, per tab:
+The remaining 4 scaffolds don't have backend endpoints wired to their tabs yet. Turning a scaffold into a functional app means, per tab:
 
 1. Backend controller under `app/Http/Controllers/Api/V10/<AppName>/` (or reuse admin/driver equivalents).
 2. Routes in `routes/api.php` inside the appropriate auth group.
 3. Mobile: `features/<tab>/` module with domain + repo + presentation, wire into home shell (replace `PlaceholderScreen` with the real widget).
 
 The scaffolds already have `dio_client`, `providers.dart`, `api_endpoints.dart`, and `auth_repository.dart` in place so each new feature only needs its own repository method + screen — no plumbing.
+
+### Supervisor app — completed
+
+The Supervisor app is now feature-complete. Reuses several existing admin endpoints and adds two new ones:
+
+- **Backend additions**:
+  - `GET /admin/reports/drivers?from=&to=&hub_id=` — per-driver aggregates (parcels, delivered, cod, delivery-rate %). Hub-clamped.
+  - `GET /admin/exceptions?stuck_days=` — aggregated attention feed: open NDRs + stuck parcels (same status for N+ days) + returning-to-courier. Hub-clamped via parcel scope.
+- **Reused endpoints**: `/admin/map/drivers`, `/admin/drivers/{id}`, `/admin/map/parcels`, `/admin/parcels/{id}/assign-driver`.
+- **Mobile tabs**:
+  - **Drivers** — live list from `/admin/map/drivers` (status pill, load, last-seen relative time, GPS indicator). Tap → driver detail (today's assigned/delivered, GPS + directions link).
+  - **Assignments** — unassigned parcels; tap opens a driver-picker sheet sorted by haversine distance; assign posts to `/admin/parcels/{id}/assign-driver`.
+  - **Reports** — date-range picker + totals header + per-driver rows with delivery-rate progress bar (green ≥80%, orange ≥50%, red otherwise).
+  - **Exceptions** — sectioned feed grouped by type (Open NDRs / Stuck / Returning) with counts per section and a friendly "all clear" empty state.

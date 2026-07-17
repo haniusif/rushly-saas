@@ -49,6 +49,8 @@ use App\Http\Controllers\Api\V10\Admin\AdminPushController;
 use App\Http\Controllers\Api\V10\Admin\AdminMapController;
 use App\Http\Controllers\Api\V10\Admin\AdminHubCashController;
 use App\Http\Controllers\Api\V10\Admin\AdminWmsController;
+use App\Http\Controllers\Api\V10\Admin\AdminReportsController;
+use App\Http\Controllers\Api\V10\Admin\AdminExceptionsController;
 use App\Http\Controllers\Api\V10\Admin\AdminParcel3plController;
 
 
@@ -204,6 +206,9 @@ Route::prefix('v10/admin')->middleware(['CheckApiKey'])->group(function () {
         Route::post('/wms/cycle-counts',                    [AdminWmsController::class,          'cycleCountsStore']);
         Route::get('/wms/damage-reports',                   [AdminWmsController::class,          'damageReports']);
         Route::post('/wms/damage-reports',                  [AdminWmsController::class,          'damageReportsStore']);
+
+        Route::get('/reports/drivers',                      [AdminReportsController::class,      'drivers']);
+        Route::get('/exceptions',                           [AdminExceptionsController::class,   'index']);
 
         Route::get('/parcels/{id}/3pl',                     [AdminParcel3plController::class,    'status']);
         Route::post('/parcels/{id}/3pl-assign',             [AdminParcel3plController::class,    'assign']);

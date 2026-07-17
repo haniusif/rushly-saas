@@ -1212,3 +1212,62 @@ if (!function_exists('getParcelStatusLabel')) {
     }
 }
 
+/**
+ * Flatten a Laravel LengthAwarePaginator into the shape the shared
+ * Admin/FrontWeb/_SimpleList component expects. Keeps every controller
+ * from repeating the same collect(linkCollection)->map() boilerplate.
+ */
+if (! function_exists('paginate_shape')) {
+    function paginate_shape($paginator): array {
+        return [
+            'current_page' => $paginator->currentPage(),
+            'per_page'     => $paginator->perPage(),
+            'total'        => $paginator->total(),
+            'from'         => $paginator->firstItem(),
+            'to'           => $paginator->lastItem(),
+            'last_page'    => $paginator->lastPage(),
+            'links'        => collect($paginator->linkCollection())->map(fn ($l) => [
+                'url'    => $l['url'],
+                'label'  => $l['label'],
+                'active' => (bool) $l['active'],
+            ])->values(),
+        ];
+    }
+}
+
+/**
+ * Per-module CRUD permission bundle used by the front-web pages.
+ * $prefix = 'faq' -> checks faq_create / faq_update / faq_delete.
+ */
+if (! function_exists('front_web_permissions')) {
+    function front_web_permissions(string $prefix): array {
+        return [
+            'create' => hasPermission("{$prefix}_create"),
+            'update' => hasPermission("{$prefix}_update"),
+            'delete' => hasPermission("{$prefix}_delete"),
+        ];
+    }
+}
+
+/**
+ * Common translation bundle for the front-web list pages. Individual
+ * modules can spread this and override any key.
+ */
+if (! function_exists('front_web_t')) {
+    function front_web_t(string $moduleLabel, string $confirmDelete): array {
+        return [
+            'front_web'      => __('levels.front_web') ?: 'Front Web',
+            'title'          => $moduleLabel,
+            'count_suffix'   => __('Showing') ?: 'total',
+            'add'            => __('levels.add'),
+            'edit'           => __('levels.edit'),
+            'delete'         => __('levels.delete'),
+            'actions'        => __('levels.actions'),
+            'status'         => __('levels.status'),
+            'position'       => __('levels.position'),
+            'no_data'        => __('levels.no_data_found'),
+            'confirm_delete' => __($confirmDelete) ?: $confirmDelete,
+        ];
+    }
+}
+

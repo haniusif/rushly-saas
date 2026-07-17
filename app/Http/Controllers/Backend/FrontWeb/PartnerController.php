@@ -8,6 +8,7 @@ use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
 use App\Http\Requests\FrontWeb\Partner\StoreRequest;
 use App\Http\Requests\FrontWeb\Partner\UpdateRequest;
+use Inertia\Inertia;
 
 class PartnerController extends Controller
 {
@@ -20,7 +21,30 @@ class PartnerController extends Controller
     public function index()
     {
         $partners = $this->repo->get();
-        return view('backend.front_web.partner.index', compact('partners'));
+
+        return Inertia::render('Admin/FrontWeb/Partner/Index', [
+            'rows' => collect($partners->items())->map(fn ($p) => [
+                'id'          => $p->id,
+                'name'        => (string) $p->name,
+                'image'       => $p->image,
+                'link'        => (string) ($p->link ?? ''),
+                'status_html' => $p->my_status ?? '',
+                'urls'        => [
+                    'edit'   => route('partner.edit',   $p->id),
+                    'delete' => route('partner.delete', $p->id),
+                ],
+            ])->values(),
+            'pagination'  => paginate_shape($partners),
+            'permissions' => front_web_permissions('partner'),
+            'urls'        => [
+                'create' => route('partner.create'),
+            ],
+            't' => array_merge(front_web_t(__('menus.partner') ?: 'Partners', 'Do you want to delete partner ?'), [
+                'name'  => __('levels.name'),
+                'image' => __('levels.image'),
+                'link'  => __('levels.link'),
+            ]),
+        ]);
     }
 
     public function create()

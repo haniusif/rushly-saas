@@ -8,6 +8,7 @@ use App\Http\Requests\FrontWeb\WhyCourier\UpdateRequest;
 use App\Repositories\FrontWeb\WhyCourier\WhyCourierInterface;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class WhyCourierController extends Controller
 {
@@ -20,7 +21,29 @@ class WhyCourierController extends Controller
     public function index()
     {
         $whycouriers = $this->repo->get();
-        return view('backend.front_web.why_courier.index', compact('whycouriers'));
+
+        return Inertia::render('Admin/FrontWeb/WhyRushly/Index', [
+            'rows' => collect($whycouriers->items())->map(fn ($w) => [
+                'id'          => $w->id,
+                'title'       => (string) $w->title,
+                'image'       => $w->image,
+                'position'    => (int) $w->position,
+                'status_html' => $w->my_status ?? '',
+                'urls'        => [
+                    'edit'   => route('why.rushly.edit',   $w->id),
+                    'delete' => route('why.rushly.delete', $w->id),
+                ],
+            ])->values(),
+            'pagination'  => paginate_shape($whycouriers),
+            'permissions' => front_web_permissions('why_courier'),
+            'urls'        => [
+                'create' => route('why.rushly.create'),
+            ],
+            't' => array_merge(front_web_t(__('menus.why_rushly') ?: 'Why Rushly', 'Do you want to delete row ?'), [
+                'title' => __('levels.title'),
+                'image' => __('levels.image'),
+            ]),
+        ]);
     }
 
     public function create()

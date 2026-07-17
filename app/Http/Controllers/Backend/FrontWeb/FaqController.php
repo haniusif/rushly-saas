@@ -8,6 +8,7 @@ use App\Http\Requests\FrontWeb\Faq\UpdateRequest;
 use App\Repositories\FrontWeb\Faq\FaqInterface;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class FaqController extends Controller
 {
@@ -20,7 +21,26 @@ class FaqController extends Controller
     public function index()
     {
         $faqs = $this->repo->get();
-        return view('backend.front_web.faq.index', compact('faqs'));
+
+        return Inertia::render('Admin/FrontWeb/Faq/Index', [
+            'rows' => collect($faqs->items())->map(fn ($f) => [
+                'id'          => $f->id,
+                'question'    => (string) $f->question,
+                'answer_html' => (string) $f->answer,
+                'position'    => (int) $f->position,
+                'status_html' => $f->my_status ?? '',
+                'urls'        => [
+                    'edit'   => route('faq.edit',   $f->id),
+                    'delete' => route('faq.delete', $f->id),
+                ],
+            ])->values(),
+            'pagination'  => paginate_shape($faqs),
+            'permissions' => front_web_permissions('faq'),
+            'urls'        => [
+                'create' => route('faq.create'),
+            ],
+            't' => front_web_t(__('levels.faq'), 'Do you want to delete faq ?'),
+        ]);
     }
 
     public function create()

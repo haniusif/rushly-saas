@@ -8,6 +8,7 @@ use App\Http\Requests\FrontWeb\Blog\UpdateRequest;
 use App\Repositories\FrontWeb\Blogs\BlogsInterface;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class BlogController extends Controller
 {
@@ -21,7 +22,34 @@ class BlogController extends Controller
     public function index()
     {
         $blogs = $this->repo->get();
-        return view('backend.front_web.blogs.index', compact('blogs'));
+
+        return Inertia::render('Admin/FrontWeb/Blog/Index', [
+            'rows' => collect($blogs->items())->map(fn ($b) => [
+                'id'               => $b->id,
+                'title'            => (string) $b->title,
+                'description_plain'=> strip_tags((string) $b->description),
+                'image'            => $b->image,
+                'position'         => (int) $b->position,
+                'author'           => optional($b->user)->name,
+                'created_at'       => dateFormat($b->created_at),
+                'status_html'      => $b->my_status ?? '',
+                'urls'             => [
+                    'edit'   => route('blogs.edit',   $b->id),
+                    'delete' => route('blogs.delete', $b->id),
+                ],
+            ])->values(),
+            'pagination'  => paginate_shape($blogs),
+            'permissions' => front_web_permissions('blogs'),
+            'urls'        => [
+                'create' => route('blogs.create'),
+            ],
+            't' => array_merge(front_web_t(__('menus.blogs') ?: 'Blogs', 'Do you want to delete blog ?'), [
+                'blog_title'   => __('levels.title'),
+                'description'  => __('levels.description'),
+                'created_by'   => __('levels.created_by'),
+                'date'         => __('levels.date'),
+            ]),
+        ]);
     }
 
     public function create()

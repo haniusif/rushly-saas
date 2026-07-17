@@ -7,6 +7,7 @@ use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
 use App\Http\Requests\FrontWeb\SocialLink\StoreRequest;
 use App\Repositories\FrontWeb\SocialLink\SocialLinkInterface;
+use Inertia\Inertia;
 
 class SocialLinkController extends Controller
 {
@@ -19,7 +20,30 @@ class SocialLinkController extends Controller
     public function index()
     {
         $socialLinks = $this->repo->get();
-        return view('backend.front_web.social_link.index', compact('socialLinks'));
+
+        return Inertia::render('Admin/FrontWeb/SocialLink/Index', [
+            'rows' => collect($socialLinks->items())->map(fn ($s) => [
+                'id'          => $s->id,
+                'name'        => (string) $s->name,
+                'icon'        => (string) $s->icon,
+                'link'        => (string) $s->link,
+                'status_html' => $s->my_status ?? '',
+                'urls'        => [
+                    'edit'   => route('social.link.edit',   $s->id),
+                    'delete' => route('social.link.delete', $s->id),
+                ],
+            ])->values(),
+            'pagination'  => paginate_shape($socialLinks),
+            'permissions' => front_web_permissions('social_link'),
+            'urls'        => [
+                'create' => route('social.link.create'),
+            ],
+            't' => array_merge(front_web_t(__('levels.social_link') ?: 'Social links', 'Do you want to delete social link ?'), [
+                'name' => __('levels.name'),
+                'icon' => __('levels.icon'),
+                'link' => __('levels.link'),
+            ]),
+        ]);
     }
 
     public function create()

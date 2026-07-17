@@ -198,6 +198,9 @@ return array (
   'logout_confirm'               => 'Sign out of this portal?',
   'impersonate'                  => 'Login as merchant',
   'impersonate_confirm'          => 'Sign in as :name? Your admin session is preserved and you can return at any time.',
+  'send_credentials'              => 'Send login info by email',
+  'send_credentials_confirm'      => 'Email the login link to this merchant?',
+  'no_email_on_file'              => 'No email on file for this merchant.',
   'search_placeholder'           => 'Search…',
 
   // Tenant + per-merchant login layout picker

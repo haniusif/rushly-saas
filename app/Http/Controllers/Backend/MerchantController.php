@@ -10,8 +10,11 @@ use App\Http\Requests\Merchant\SignUpRequest;
 use App\Http\Requests\Merchant\UpdateRequest;
 use App\Http\Requests\Merchant\OtpRequest;
 use App\Mail\MerchantSignup;
+use App\Mail\UserCredentialsMail;
+use App\Models\Backend\Merchant;
 use App\Repositories\Invoice\InvoiceInterface;
 use App\Repositories\Merchant\MerchantInterface;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Brian2694\Toastr\Facades\Toastr;
 use Inertia\Inertia;
@@ -59,10 +62,11 @@ class MerchantController extends Controller
                 'current_balance' => (float) ($m->current_balance ?? 0),
                 'computed_balance'=> (float) ($m->computed_balance ?? 0),
                 'urls' => [
-                    'view'        => route('merchant.view', $m->id),
-                    'edit'        => route('merchant.edit', $m->id),
-                    'invoice'     => route('merchant.invoice.generate', $m->id),
-                    'impersonate' => route('merchant.impersonate', $m->id),
+                    'view'             => route('merchant.view', $m->id),
+                    'edit'             => route('merchant.edit', $m->id),
+                    'invoice'          => route('merchant.invoice.generate', $m->id),
+                    'impersonate'      => route('merchant.impersonate', $m->id),
+                    'send_credentials' => route('merchant.send-credentials', $m->id),
                 ],
                 'impersonate_name'=> $m->business_name ?: (optional($m->user)->name ?: 'merchant'),
             ];
@@ -118,6 +122,9 @@ class MerchantController extends Controller
                 'copy_apply_link'  => __('merchant.copy_apply_link') ?: 'Copy apply link',
                 'copied'           => __('levels.copied') ?: 'Copied',
                 'impersonate'      => __('merchant.impersonate') ?: 'View as',
+                'send_credentials' => __('merchant.send_credentials') ?: 'Send login info by email',
+                'send_credentials_confirm' => __('merchant.send_credentials_confirm') ?: 'Email the login link to this merchant?',
+                'no_email_on_file' => __('merchant.no_email_on_file') ?: 'No email on file for this merchant.',
                 // String template — placeholder is substituted client-side
                 // per row (the row carries impersonate_name).
                 'impersonate_confirm' => __('merchant.index_impersonate_confirm'),
@@ -197,6 +204,35 @@ class MerchantController extends Controller
 
         $hubs       = $this->repo->all_hubs();
         return view('backend.merchant.sign_up',compact('hubs','request'));
+    }
+
+    /**
+     * Send a "sign in to <brand>" invite to the merchant's on-file email.
+     * Never includes a plaintext password — the recipient uses the login
+     * link + forgot-password flow if they've lost their credentials.
+     * Reuses UserCredentialsMail because merchants log in through the same
+     * /login endpoint as everyone else on this tenant.
+     */
+    public function sendCredentials(Request $request, $id)
+    {
+        $merchant = Merchant::companywise()->with('user:id,name,email')->find($id);
+        abort_unless($merchant, 404);
+        $email = optional($merchant->user)->email;
+        abort_if(empty($email), 422, 'This merchant has no email on file.');
+
+        try {
+            Mail::to($email)->send(new UserCredentialsMail(
+                userName: (string) (optional($merchant->user)->name ?: ($merchant->business_name ?: 'there')),
+                email:    (string) $email,
+                password: null, // no plaintext available — admin-triggered invite
+                loginUrl: url('/login'),
+            ));
+        } catch (\Throwable $e) {
+            Log::error('Merchant credentials mail failed: '.$e->getMessage(), ['merchant_id' => $merchant->id]);
+            return back()->with('error', __('Could not send the email. Check the mail configuration.'));
+        }
+
+        return back()->with('success', __('Login info emailed to the merchant.'));
     }
 
 

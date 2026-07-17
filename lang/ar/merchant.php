@@ -197,6 +197,9 @@ return array (
   'logout_confirm'               => 'هل تريد تسجيل الخروج؟',
   'impersonate'                  => 'دخول كتاجر',
   'impersonate_confirm'          => 'تسجيل الدخول باسم :name؟ ستبقى جلسة المشرف محفوظة ويمكنك العودة في أي وقت.',
+  'send_credentials'              => 'إرسال بيانات الدخول عبر البريد',
+  'send_credentials_confirm'      => 'إرسال رابط الدخول إلى بريد التاجر؟',
+  'no_email_on_file'              => 'لا يوجد بريد إلكتروني مسجَّل لهذا التاجر.',
   'search_placeholder'           => 'بحث...',
 
   // Tenant + per-merchant login layout picker

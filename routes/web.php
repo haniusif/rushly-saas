@@ -471,6 +471,10 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         // Impersonate the merchant's user for support/debugging.
                         // Gated on merchant_update so any admin who can edit a merchant can also log in as them.
                         Route::post('merchant/impersonate/{id}',          [MerchantController::class, 'impersonate'])->name('merchant.impersonate')->middleware('hasPermission:merchant_update');
+                        // Emails a "sign in to <brand>" invite to the merchant's on-file
+                        // email. Never ships a plaintext password — the recipient uses
+                        // the login link + forgot-password flow if they don't remember.
+                        Route::post('merchant/send-credentials/{id}',     [MerchantController::class, 'sendCredentials'])->name('merchant.send-credentials')->middleware('hasPermission:merchant_update');
                         //Merchent delivery charge routes
                         Route::post('merchant/delivery-charge/info',                    [MerchantDeliveryChargeController::class, 'deliveryChargeInfo'])->name('merchant.deliveryCharge.deliveryChargeInfo');
                         Route::get('merchant/{merchant}/delivery-charge/index',         [MerchantDeliveryChargeController::class, 'index'])->name('merchant.deliveryCharge.index')->middleware('hasPermission:merchant_delivery_charge_read');

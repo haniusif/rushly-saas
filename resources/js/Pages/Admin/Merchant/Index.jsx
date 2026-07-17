@@ -3,7 +3,7 @@ import { Head, router } from '@inertiajs/react';
 import {
     Search, Plus, Edit, ChevronLeft, ChevronRight, MoreVertical,
     Store, Eye, Phone, Mail, Building2, Globe, FileText,
-    UserCog, LayoutGrid, List, Link2, Check, Wallet,
+    UserCog, LayoutGrid, List, Link2, Check, Wallet, Send,
 } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
@@ -68,7 +68,7 @@ function CoverageCell({ row, t }) {
     );
 }
 
-function MerchantCard({ row, currency, permissions, t, onImpersonate }) {
+function MerchantCard({ row, currency, permissions, t, onImpersonate, onSendCredentials }) {
     return (
         <Card className="overflow-hidden">
             <CardContent className="p-0">
@@ -102,6 +102,9 @@ function MerchantCard({ row, currency, permissions, t, onImpersonate }) {
                                     <>
                                         <DropdownMenuItem onClick={() => { window.location.href = row.urls.edit; }}>
                                             <Edit className="h-4 w-4 me-2" /> {t.edit}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => onSendCredentials(row)}>
+                                            <Send className="h-4 w-4 me-2" /> {t.send_credentials}
                                         </DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => onImpersonate(row)} className="text-amber-600 focus:text-amber-700">
                                             <UserCog className="h-4 w-4 me-2" /> {t.impersonate}
@@ -168,6 +171,14 @@ export default function Index({
         inp.type = 'hidden'; inp.name = '_token'; inp.value = csrf;
         form.appendChild(inp);
         document.body.appendChild(form); form.submit();
+    };
+    // Emails the login link to the merchant's on-file address. Guards on
+    // an empty email up front so a click on a bad row doesn't hit the
+    // server just to bounce with a 422.
+    const onSendCredentials = (row) => {
+        if (!row.email) { window.alert(t.no_email_on_file || 'No email on file for this merchant.'); return; }
+        if (!window.confirm(t.send_credentials_confirm || 'Email the login link to this merchant?')) return;
+        router.post(row.urls.send_credentials, {}, { preserveScroll: true });
     };
 
     const copyApplyLink = () => {
@@ -240,7 +251,7 @@ export default function Index({
             ) : view === 'card' ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {filtered.map((r) => (
-                        <MerchantCard key={r.id} row={r} currency={currency} permissions={permissions} t={t} onImpersonate={onImpersonate} />
+                        <MerchantCard key={r.id} row={r} currency={currency} permissions={permissions} t={t} onImpersonate={onImpersonate} onSendCredentials={onSendCredentials} />
                     ))}
                 </div>
             ) : (
@@ -310,6 +321,9 @@ export default function Index({
                                                                 <>
                                                                     <DropdownMenuItem onClick={() => { window.location.href = r.urls.edit; }}>
                                                                         <Edit className="h-4 w-4 me-2" /> {t.edit}
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => onSendCredentials(r)}>
+                                                                        <Send className="h-4 w-4 me-2" /> {t.send_credentials}
                                                                     </DropdownMenuItem>
                                                                     <DropdownMenuItem onClick={() => onImpersonate(r)} className="text-amber-600 focus:text-amber-700">
                                                                         <UserCog className="h-4 w-4 me-2" /> {t.impersonate}

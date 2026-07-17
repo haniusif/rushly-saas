@@ -164,38 +164,44 @@ export default function Details({
         <AdminLayout title={t.title}>
             <Head title={`${t.title} · ${parcel.tracking_id || ''}`} />
 
-            {/* Header strip */}
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                    <a href={urls.index} className="inline-flex h-9 items-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent">
-                        <ArrowLeft className="h-4 w-4 me-1" /> {t.back_to_list}
-                    </a>
-                    <div className="inline-flex items-center gap-2">
-                        <Package className="h-5 w-5 text-primary" />
-                        <CopyableTracking value={parcel.tracking_id} />
-                        <StatusPill label={parcel.status_label} color={parcel.status_color} />
-                        {parcel.priority === 1 && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 text-rose-700 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5">
-                                <Flame className="h-3 w-3" /> High
-                            </span>
+            {/* Sticky header strip — pins the primary CTAs while the operator
+                scrolls through the timeline. `-mx-4 md:-mx-8` cancels the
+                AdminLayout's main padding so the strip spans edge-to-edge;
+                inner padding restores it. Backdrop-blur keeps the content
+                below legible on light + dark themes. */}
+            <div className="sticky top-0 z-20 mb-5 -mx-4 md:-mx-8 px-4 md:px-8 py-3 bg-background/95 backdrop-blur border-b border-border">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <a href={urls.index} className="inline-flex h-9 items-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent shrink-0">
+                            <ArrowLeft className="h-4 w-4 me-1" /> {t.back_to_list}
+                        </a>
+                        <div className="inline-flex items-center gap-2 min-w-0">
+                            <Package className="h-5 w-5 text-primary shrink-0" />
+                            <CopyableTracking value={parcel.tracking_id} />
+                            <StatusPill label={parcel.status_label} color={parcel.status_color} />
+                            {parcel.priority === 1 && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 text-rose-700 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 shrink-0">
+                                    <Flame className="h-3 w-3" /> High
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <a href={urls.logs} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent">
+                            <Clock className="h-4 w-4 me-1" /> {t.logs}
+                        </a>
+                        <a href={urls.print_label} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center rounded-md border border-rose-200 bg-rose-50 text-rose-700 px-3 text-sm font-medium hover:bg-rose-100">
+                            <Printer className="h-4 w-4 me-1" /> {t.print}
+                        </a>
+                        <a href={urls.print} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center rounded-md border border-rose-200 bg-rose-50 text-rose-700 px-3 text-sm font-medium hover:bg-rose-100">
+                            <Printer className="h-4 w-4 me-1" /> {t.print_with_tracking}
+                        </a>
+                        {permissions.edit && (
+                            <a href={urls.edit} className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90">
+                                <Edit className="h-4 w-4 me-1" /> {t.edit}
+                            </a>
                         )}
                     </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    <a href={urls.logs} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent">
-                        <Clock className="h-4 w-4 me-1" /> {t.logs}
-                    </a>
-                    <a href={urls.print_label} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center rounded-md border border-rose-200 bg-rose-50 text-rose-700 px-3 text-sm font-medium hover:bg-rose-100">
-                        <Printer className="h-4 w-4 me-1" /> {t.print}
-                    </a>
-                    <a href={urls.print} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center rounded-md border border-rose-200 bg-rose-50 text-rose-700 px-3 text-sm font-medium hover:bg-rose-100">
-                        <Printer className="h-4 w-4 me-1" /> {t.print_with_tracking}
-                    </a>
-                    {permissions.edit && (
-                        <a href={urls.edit} className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90">
-                            <Edit className="h-4 w-4 me-1" /> {t.edit}
-                        </a>
-                    )}
                 </div>
             </div>
 

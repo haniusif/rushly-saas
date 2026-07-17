@@ -249,14 +249,22 @@ function Sidebar({ open, onClose, currentUrl, brand, appName }) {
                      * where the whole tile is intentionally hidden.
                      */}
                     {(() => {
-                        const style = brand?.logo_style || 'logo_text';
+                        const style  = brand?.logo_style || 'logo_text';
+                        const source = brand?.logo_source || 'logo';
+                        // Pick which uploaded image to render. Falls back to the
+                        // regular logo when the tenant hasn't uploaded a light
+                        // variant, so choosing "light logo" never leaves the
+                        // sidebar with a broken image.
+                        const imageUrl = source === 'light_logo'
+                            ? (brand?.light_logo || brand?.logo)
+                            : brand?.logo;
                         const showImage = style !== 'text_only';
                         const showText  = style !== 'logo_only';
                         return (
                             <Link href={homeUrl} className="flex min-w-0 items-center gap-2 font-semibold">
-                                {showImage && (brand?.logo ? (
+                                {showImage && (imageUrl ? (
                                     <img
-                                        src={brand.logo}
+                                        src={imageUrl}
                                         alt=""
                                         className={cn(
                                             'shrink-0 rounded-lg bg-white/5 object-contain',

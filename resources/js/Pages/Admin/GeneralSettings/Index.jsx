@@ -234,18 +234,31 @@ function LogoUploadCard({ label, hint, recommended, currentUrl, error, onPick, d
  * form.data.logo_style; the empty value ("") means "inherit" — same as every
  * other enum on this page.
  */
-function LogoStylePreview({ value, onChange, options, logoUrl, brandName, inheritLabel }) {
+function LogoStylePreview({
+    value, onChange, options,
+    sourceValue, onSourceChange, sourceOptions,
+    logoUrl, lightLogoUrl, brandName, inheritLabel, sourceLabel,
+}) {
     const initial = (brandName || 'R').trim().charAt(0).toUpperCase();
     if (!options?.length) return null;
+
+    // Which image to actually feed each preview tile. Same fallback rule the
+    // AdminLayout uses on the server: choosing "light logo" without one
+    // uploaded silently falls back to the primary logo so the preview never
+    // shows a broken image.
+    const effectiveSource = sourceValue || 'logo';
+    const previewLogoUrl  = effectiveSource === 'light_logo'
+        ? (lightLogoUrl || logoUrl)
+        : logoUrl;
 
     const Header = ({ style }) => {
         const showImage = style !== 'text_only';
         const showText  = style !== 'logo_only';
         return (
             <div className="flex h-10 items-center gap-2 rounded-md bg-slate-900 px-3 text-white">
-                {showImage && (logoUrl
+                {showImage && (previewLogoUrl
                     ? <img
-                        src={logoUrl}
+                        src={previewLogoUrl}
                         alt=""
                         className={style === 'logo_only'
                             ? 'h-7 w-auto max-w-[130px] object-contain'
@@ -259,39 +272,79 @@ function LogoStylePreview({ value, onChange, options, logoUrl, brandName, inheri
     };
 
     return (
-        <div className="pt-3">
-            <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Sidebar header preview
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <button
-                    type="button"
-                    onClick={() => onChange('')}
-                    className={cn(
-                        'rounded-lg border p-3 text-start transition',
-                        value === '' ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/60'
-                    )}
-                >
-                    <div className="flex h-10 items-center rounded-md border border-dashed border-muted-foreground/30 px-3 text-[11px] text-muted-foreground">
-                        {inheritLabel}
-                    </div>
-                    <div className="mt-2 text-xs font-medium">{inheritLabel}</div>
-                </button>
-                {options.map((opt) => (
+        <div className="pt-3 space-y-3">
+            <div>
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {sourceLabel || 'Logo image'}
+                </div>
+                {/* Segmented control: inherit / logo / light_logo. Selecting a
+                    source updates every preview tile below immediately. */}
+                <div className="inline-flex rounded-md border border-border bg-muted/30 p-0.5">
                     <button
-                        key={opt.value}
                         type="button"
-                        onClick={() => onChange(opt.value)}
+                        onClick={() => onSourceChange('')}
                         className={cn(
-                            'rounded-lg border p-3 text-start transition',
-                            value === opt.value ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/60'
+                            'px-3 py-1.5 text-xs font-medium rounded transition',
+                            (sourceValue || '') === '' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                         )}
                     >
-                        <Header style={opt.value} />
-                        <div className="mt-2 text-xs font-medium">{opt.label}</div>
-                        {opt.hint && <div className="text-[11px] text-muted-foreground mt-0.5">{opt.hint}</div>}
+                        {inheritLabel}
                     </button>
-                ))}
+                    {(sourceOptions || []).map((o) => (
+                        <button
+                            key={o.value}
+                            type="button"
+                            onClick={() => onSourceChange(o.value)}
+                            className={cn(
+                                'px-3 py-1.5 text-xs font-medium rounded transition',
+                                sourceValue === o.value ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                            )}
+                        >
+                            {o.label}
+                        </button>
+                    ))}
+                </div>
+                {(sourceOptions || []).find((o) => o.value === effectiveSource)?.hint && (
+                    <p className="text-[11px] text-muted-foreground mt-1.5">
+                        {(sourceOptions || []).find((o) => o.value === effectiveSource)?.hint}
+                    </p>
+                )}
+            </div>
+
+            <div>
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Sidebar header preview
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <button
+                        type="button"
+                        onClick={() => onChange('')}
+                        className={cn(
+                            'rounded-lg border p-3 text-start transition',
+                            value === '' ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/60'
+                        )}
+                    >
+                        <div className="flex h-10 items-center rounded-md border border-dashed border-muted-foreground/30 px-3 text-[11px] text-muted-foreground">
+                            {inheritLabel}
+                        </div>
+                        <div className="mt-2 text-xs font-medium">{inheritLabel}</div>
+                    </button>
+                    {options.map((opt) => (
+                        <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => onChange(opt.value)}
+                            className={cn(
+                                'rounded-lg border p-3 text-start transition',
+                                value === opt.value ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/60'
+                            )}
+                        >
+                            <Header style={opt.value} />
+                            <div className="mt-2 text-xs font-medium">{opt.label}</div>
+                            {opt.hint && <div className="text-[11px] text-muted-foreground mt-0.5">{opt.hint}</div>}
+                        </button>
+                    ))}
+                </div>
             </div>
         </div>
     );
@@ -431,6 +484,7 @@ export default function Index({ settings = {}, lookups = {}, theme_fallbacks = {
         accent_color: settings.accent_color ?? '',
         sidebar_style: settings.sidebar_style ?? '',
         logo_style: settings.logo_style ?? '',
+        logo_source: settings.logo_source ?? '',
         font_family: settings.font_family ?? '',
         border_radius: settings.border_radius ?? '',
         density: settings.density ?? '',
@@ -647,15 +701,23 @@ export default function Index({ settings = {}, lookups = {}, theme_fallbacks = {
                                             </Field>
                                         </div>
 
-                                        {/* Visual picker for logo_style — mirrors the AdminLayout sidebar
-                                            header so tenants can see what they're choosing before saving. */}
+                                        {/* Visual picker for logo_style + logo_source — mirrors the
+                                            AdminLayout sidebar header so tenants can see what they're
+                                            choosing before saving. Source (primary vs light logo) is a
+                                            radio row above the style tiles; tiles re-render using the
+                                            currently-selected image. */}
                                         <LogoStylePreview
                                             value={form.data.logo_style}
                                             onChange={(v) => form.setData('logo_style', v)}
                                             options={lookups.logo_styles || []}
+                                            sourceValue={form.data.logo_source}
+                                            onSourceChange={(v) => form.setData('logo_source', v)}
+                                            sourceOptions={lookups.logo_sources || []}
                                             logoUrl={settings.logo_image}
+                                            lightLogoUrl={settings.light_logo_image}
                                             brandName={form.data.name || settings.name || 'Your brand'}
                                             inheritLabel={t.theme_inherit}
+                                            sourceLabel={t.logo_source}
                                         />
                                     </CardContent>
                                 </Card>

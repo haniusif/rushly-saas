@@ -53,6 +53,7 @@ class GeneralSettingsController extends Controller
                 'accent_color'        => (string) ($s->accent_color ?? ''),
                 'sidebar_style'       => (string) ($s->sidebar_style ?? ''),
                 'logo_style'          => (string) ($s->logo_style ?? ''),
+                'logo_source'         => (string) ($s->logo_source ?? ''),
                 'font_family'         => (string) ($s->font_family ?? ''),
                 'border_radius'       => (string) ($s->border_radius ?? ''),
                 'density'             => (string) ($s->density ?? ''),
@@ -84,6 +85,15 @@ class GeneralSettingsController extends Controller
                 ])->map(fn ($v, $k) => [
                     'value' => $k,
                     'label' => __('merchant.logo_style_' . $k) ?: $v['label'],
+                    'hint'  => $v['hint'],
+                ])->values(),
+                // Which uploaded logo image to feed into the sidebar widget.
+                'logo_sources' => collect([
+                    'logo'       => ['label' => 'Primary logo', 'hint' => 'Colored logo used on light backgrounds.'],
+                    'light_logo' => ['label' => 'Light logo',   'hint' => 'Inverted/light variant, ideal on dark sidebars.'],
+                ])->map(fn ($v, $k) => [
+                    'value' => $k,
+                    'label' => __('merchant.logo_source_' . $k) ?: $v['label'],
                     'hint'  => $v['hint'],
                 ])->values(),
                 'fonts' => collect(['inter','cairo','tajawal','roboto','system'])->map(fn ($k) => [
@@ -145,6 +155,8 @@ class GeneralSettingsController extends Controller
                 'sidebar_style' => __('merchant.sidebar_style') ?: 'Sidebar style',
                 'logo_style'    => __('merchant.logo_style') ?: 'Sidebar logo style',
                 'logo_style_help' => __('merchant.logo_style_help') ?: 'Controls how the logo widget appears at the top of the sidebar.',
+                'logo_source'   => __('merchant.logo_source') ?: 'Logo image',
+                'logo_source_help' => __('merchant.logo_source_help') ?: 'Which uploaded logo image feeds the sidebar widget.',
                 'font_family'   => __('merchant.font_family') ?: 'Font',
                 'border_radius' => __('merchant.border_radius') ?: 'Corner radius',
                 'density'       => __('merchant.density') ?: 'Density',

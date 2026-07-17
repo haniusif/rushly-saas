@@ -75,6 +75,7 @@ class GeneralSettingsRepository implements GeneralSettingsInterface{
         $enums = [
             'sidebar_style' => ['dark','light','brand'],
             'logo_style'    => ['logo_only','logo_text','text_only'],
+            'logo_source'   => ['logo','light_logo'],
             'font_family'   => ['inter','cairo','tajawal','roboto','system'],
             'border_radius' => ['sharp','default','rounded'],
             'density'       => ['dense','comfortable'],

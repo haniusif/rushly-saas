@@ -188,6 +188,7 @@ if(!function_exists('merchantBrand')){
             'accent_color'       => $s->accent_color ?? null,
             'sidebar_style'      => $s->sidebar_style ?? null,
             'logo_style'         => $s->logo_style ?? null,
+            'logo_source'        => $s->logo_source ?? null,
             'font_family'        => $s->font_family ?? null,
             'border_radius'      => $s->border_radius ?? null,
             'density'            => $s->density ?? null,

@@ -1,19 +1,26 @@
 
 
 <!doctype html>
-<html lang="en">
+@php
+    // Match the app locale + direction so error pages don't force LTR/EN
+    // on an Arabic session. Fallback to en/ltr when locale detection fails.
+    $__errLocale = app()->getLocale() ?: 'en';
+    $__errDir    = in_array($__errLocale, ['ar','he','fa','ur'], true) ? 'rtl' : 'ltr';
+@endphp
+<html lang="{{ $__errLocale }}" dir="{{ $__errDir }}">
 
 <head>
     <!-- Required meta tags -->
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <!-- Bootstrap CSS -->
 
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css">
     <link href="{{static_asset('backend')}}/vendor/fonts/circular-std/style.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{static_asset('backend')}}/libs/css/style.css"> 
-    <link rel="stylesheet" href="{{static_asset('backend')}}/vendor/fonts/fontawesome/css/fontawesome-all.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"   />
+    <link rel="stylesheet" href="{{static_asset('backend')}}/libs/css/style.css">
+    {{-- Single FA build (CDN v6). The local fontawesome-all.css was FA5 and
+         was duplicating the same icons at ~200 KB extra. --}}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <title>@yield('title')</title>
 </head> 
 <body class="bg-light">
@@ -53,16 +60,16 @@
                                 <h1 class="text-secondary">@yield('message-headline')</h1>
                                 <h2  >@yield('message-title')</h2>
                                 <div> @yield('message')</div>
+                                @php
+                                    // Try tenant name first; fall back to the app config name so
+                                    // this never renders as "Contact with " on a broken tenant.
+                                    try { $__errBrand = optional(\App\Models\Backend\GeneralSettings::find(1))->name; } catch (\Throwable $e) { $__errBrand = null; }
+                                    $__errBrand = $__errBrand ?: config('app.name');
+                                @endphp
                                 @if(isset($administrator_contact))
-                                    <a href="{{ url(env('APP_URL')) }}" class="btn btn-secondary btn-lg">Contact with {{ App\Models\Backend\GeneralSettings::find(1)->name }}</a>
-                                @elseif(isset($purchase_verify))
-                                    <a href="https://wa.me/+8801912938002" class="btn btn-secondary btn-lg ">
-                                        <div class="d-flex align-items-center">
-                                            <i class="fa-brands fa-whatsapp me-3" style="font-size: 30px;margin-right:5px"></i> <span>Contact with WemaxDevs</span>
-                                        </div>
-                                    </a>
+                                    <a href="{{ url(config('app.url')) }}" class="btn btn-secondary btn-lg">{{ __('Contact') }} {{ $__errBrand }}</a>
                                 @else
-                                    <a href="{{ url('/') }}" class="btn btn-secondary btn-lg">Back to homepage</a>
+                                    <a href="{{ url('/') }}" class="btn btn-secondary btn-lg">{{ __('Back to homepage') }}</a>
                                 @endif
                             </div>
                         </div>
@@ -78,7 +85,7 @@
             <div class="container-fluid">
                 <div class="row">
                     <div class=" col-12">
-                            Copyright © {{ date('Y') }} Concept. All rights reserved. Development by <a href="https://rushly-logistic.com">Rushly Logistic</a>.
+                            &copy; {{ date('Y') }} {{ $__errBrand }}. {{ __('All rights reserved.') }}
                     </div>
 
                 </div>
@@ -95,11 +102,9 @@
     <!-- ============================================================== -->
     <!-- end main wrapper -->
     <!-- ============================================================== -->
-    <!-- Optional JavaScript -->
-    <script src="../assets/vendor/jquery/jquery-3.3.1.min.js"></script>
-    <script src="../assets/vendor/bootstrap/js/bootstrap.bundle.js"></script>
-    <script src="../assets/vendor/slimscroll/jquery.slimscroll.js"></script>
-    <script src="../assets/libs/js/main-js.js"></script>
+    {{-- No JS on error pages. The previous ../assets/vendor/… paths were
+         relative and 404'd from any URL that wasn't at depth-1; the pages
+         don't rely on JS to render anyway. --}}
 </body>
 
 </html>

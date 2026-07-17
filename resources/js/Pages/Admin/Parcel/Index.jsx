@@ -148,6 +148,7 @@ function PriorityToggle({ id, initial, url }) {
 
 export default function Index({
     rows = [],
+    kpi_counts = {},
     pagination = {},
     filters = {},
     lookups = {},
@@ -464,8 +465,18 @@ export default function Index({
                 </div>
             </div>
 
-            {/* Bulk action panel */}
-            {permissions.status_update && (
+            {/* KPI chip strip — clickable status filters. Each chip re-runs
+                parcel.filter with the corresponding parcel_status value. */}
+            <KpiChips
+                counts={kpi_counts}
+                filterUrl={urls.filter}
+                activeStatus={filters.parcel_status}
+                t={t}
+            />
+
+            {/* Bulk action panel — hidden until at least one row is selected,
+                so it doesn't eat vertical real estate on every visit. */}
+            {permissions.status_update && selected.length > 0 && (
                 <Card className="mb-4">
                     <CardContent className="pt-4 pb-4">
                         <div className="flex flex-wrap items-end gap-3">
@@ -561,7 +572,7 @@ export default function Index({
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-border bg-muted/30 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                    <th className="px-3 py-3 text-start">
+                                    <th className="px-2.5 py-2 text-start">
                                         <input
                                             type="checkbox"
                                             checked={selected.length > 0 && selected.length === rows.length}
@@ -569,19 +580,19 @@ export default function Index({
                                             className="h-4 w-4 rounded border-input"
                                         />
                                     </th>
-                                    <th className="px-3 py-3 text-start">{t.actions}</th>
-                                    <th className="px-3 py-3 text-start">{t.tracking_id}</th>
-                                    <th className="px-3 py-3 text-start">{t.print_label}</th>
-                                    <th className="px-3 py-3 text-start">{t.recipient_info}</th>
-                                    <th className="px-3 py-3 text-start">{t.merchant}</th>
-                                    <th className="px-3 py-3 text-end">{t.amount}</th>
-                                    <th className="px-3 py-3 text-center">{t.priority}</th>
-                                    <th className="px-3 py-3 text-start">{t.status}</th>
+                                    <th className="px-2.5 py-2 text-start">{t.actions}</th>
+                                    <th className="px-2.5 py-2 text-start">{t.tracking_id}</th>
+                                    <th className="px-2.5 py-2 text-start">{t.print_label}</th>
+                                    <th className="px-2.5 py-2 text-start">{t.recipient_info}</th>
+                                    <th className="px-2.5 py-2 text-start">{t.merchant}</th>
+                                    <th className="px-2.5 py-2 text-end">{t.amount}</th>
+                                    <th className="px-2.5 py-2 text-center">{t.priority}</th>
+                                    <th className="px-2.5 py-2 text-start">{t.status}</th>
                                     {permissions.status_update && <th className="px-3 py-3 text-start">{t.status_update}</th>}
-                                    <th className="px-3 py-3 text-start">{t.invoice}</th>
-                                    <th className="px-3 py-3 text-center">{t.attempts}</th>
-                                    <th className="px-3 py-3 text-start">{t.pod}</th>
-                                    <th className="px-3 py-3 text-start">{t.courier_name}</th>
+                                    <th className="px-2.5 py-2 text-start">{t.invoice}</th>
+                                    <th className="px-2.5 py-2 text-center">{t.attempts}</th>
+                                    <th className="px-2.5 py-2 text-start">{t.pod}</th>
+                                    <th className="px-2.5 py-2 text-start">{t.courier_name}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -597,10 +608,10 @@ export default function Index({
                                         'border-b border-border last:border-0 hover:bg-muted/20 transition-colors',
                                         selected.includes(r.id) && 'bg-primary/5',
                                     )}>
-                                        <td className="px-3 py-3 align-top">
+                                        <td className="px-2.5 py-2 align-top">
                                             <input type="checkbox" checked={selected.includes(r.id)} onChange={() => toggle(r.id)} className="h-4 w-4 rounded border-input" />
                                         </td>
-                                        <td className="px-3 py-3 align-top">
+                                        <td className="px-2.5 py-2 align-top">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -627,19 +638,19 @@ export default function Index({
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </td>
-                                        <td className="px-3 py-3 align-top">
+                                        <td className="px-2.5 py-2 align-top">
                                             <TrackingCell value={r.tracking_id} parcelId={r.id} onTrack={openTracking} />
                                             {r.code && <div className="text-xs text-muted-foreground mt-1">{t.awb}: {r.code}</div>}
                                             {r.courier_name && (
                                                 <div className="mt-1 text-[10px] text-rose-600 font-medium">3PL: {r.courier_name}</div>
                                             )}
                                         </td>
-                                        <td className="px-3 py-3 align-top">
+                                        <td className="px-2.5 py-2 align-top">
                                             <a href={r.urls.print_label} title={t.print_label} className="text-rose-600">
                                                 <FileText className="h-5 w-5" />
                                             </a>
                                         </td>
-                                        <td className="px-3 py-3 align-top">
+                                        <td className="px-2.5 py-2 align-top">
                                             <div className="space-y-0.5 max-w-[220px]">
                                                 {r.customer_name && (
                                                     <div className="flex items-center gap-1 text-sm font-medium">
@@ -663,14 +674,14 @@ export default function Index({
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-3 py-3 align-top">
+                                        <td className="px-2.5 py-2 align-top">
                                             <div className="max-w-[180px] space-y-0.5">
                                                 <div className="font-medium">{r.merchant_name || '—'}</div>
                                                 {r.merchant_mobile && <div className="text-xs text-muted-foreground">{r.merchant_mobile}</div>}
                                                 {r.merchant_address && <div className="text-xs text-muted-foreground truncate">{r.merchant_address}</div>}
                                             </div>
                                         </td>
-                                        <td className="px-3 py-3 align-top">
+                                        <td className="px-2.5 py-2 align-top">
                                             <div className="min-w-[150px]">
                                                 {/* Headline: COD */}
                                                 <div className="flex items-baseline justify-between gap-2">
@@ -698,10 +709,10 @@ export default function Index({
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-3 py-3 align-top text-center">
+                                        <td className="px-2.5 py-2 align-top text-center">
                                             <PriorityToggle id={r.id} initial={r.priority} url={urls.priority_status} />
                                         </td>
-                                        <td className="px-3 py-3 align-top">
+                                        <td className="px-2.5 py-2 align-top">
                                             <div className="space-y-1">
                                                 <StatusPill label={r.status_label} color={r.status_color} />
                                                 {r.partial_delivered && r.status !== 10 && (
@@ -713,7 +724,7 @@ export default function Index({
                                             </div>
                                         </td>
                                         {permissions.status_update && (
-                                            <td className="px-3 py-3 align-top">
+                                            <td className="px-2.5 py-2 align-top">
                                                 {r.allowed_transitions?.length ? (
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
@@ -743,7 +754,7 @@ export default function Index({
                                                 )}
                                             </td>
                                         )}
-                                        <td className="px-3 py-3 align-top">
+                                        <td className="px-2.5 py-2 align-top">
                                             {r.invoice ? (
                                                 <div className="text-xs space-y-0.5">
                                                     <div className="font-medium">{r.invoice.status_label}</div>
@@ -756,8 +767,8 @@ export default function Index({
                                                 <span className="text-muted-foreground text-xs">N/A</span>
                                             )}
                                         </td>
-                                        <td className="px-3 py-3 align-top text-center font-medium tabular-nums">{r.attempts ?? 0}</td>
-                                        <td className="px-3 py-3 align-top">
+                                        <td className="px-2.5 py-2 align-top text-center font-medium tabular-nums">{r.attempts ?? 0}</td>
+                                        <td className="px-2.5 py-2 align-top">
                                             {r.urls.delivered_info ? (
                                                 <a href={r.urls.delivered_info} className="inline-flex items-center gap-1 rounded-md bg-amber-100 text-amber-800 px-2 py-1 text-xs font-medium hover:bg-amber-200 transition-colors">
                                                     <Eye className="h-3 w-3" /> {t.view}
@@ -766,7 +777,7 @@ export default function Index({
                                                 <span className="text-muted-foreground text-xs">—</span>
                                             )}
                                         </td>
-                                        <td className="px-3 py-3 align-top">
+                                        <td className="px-2.5 py-2 align-top">
                                             <div className="space-y-1 text-xs">
                                                 {r.courier_name && (
                                                     <div className="text-rose-600 font-medium">{r.courier_name}</div>
@@ -838,6 +849,76 @@ function BulkInput({ label, children }) {
         <div className="min-w-[160px]">
             <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</label>
             <div className="mt-1.5">{children}</div>
+        </div>
+    );
+}
+
+/**
+ * Status filter chips above the table. Each chip carries a per-status
+ * count that comes prebaked from the controller (one grouped query, not
+ * eleven). Clicking a chip navigates to parcel.filter with the status
+ * value; "Total" clears the status filter and re-fetches the full list.
+ *
+ * The "active" tint sticks so the operator can see at a glance which
+ * status they're looking at when the toolbar sits below the chip strip.
+ */
+function KpiChips({ counts = {}, filterUrl, activeStatus, t = {} }) {
+    // Status codes align with App\Enums\ParcelStatus. Kept inline (rather
+    // than shared as a constant) so the color assignments live next to the
+    // labels they belong to.
+    const chips = [
+        { key: 'total',     label: t.chip_total     ?? 'Total',       tone: 'primary', status: '' },
+        { key: 'pending',   label: t.chip_pending   ?? 'Pending',     tone: 'slate',   status: 1  },
+        { key: 'assigned',  label: t.chip_assigned  ?? 'Assigned',    tone: 'sky',     status: 2  },
+        { key: 'picked_up', label: t.chip_picked_up ?? 'Picked up',   tone: 'indigo',  status: 5  },
+        { key: 'ofd',       label: t.chip_ofd       ?? 'OFD',         tone: 'amber',   status: 7  },
+        { key: 'delivered', label: t.chip_delivered ?? 'Delivered',   tone: 'emerald', status: 9  },
+        { key: 'returned',  label: t.chip_returned  ?? 'Returned',    tone: 'orange',  status: 30 },
+        { key: 'cancelled', label: t.chip_cancelled ?? 'Cancelled',   tone: 'rose',    status: 41 },
+        { key: 'failed',    label: t.chip_failed    ?? 'Failed',      tone: 'red',     status: 8  },
+        { key: 'ndr',       label: t.chip_ndr       ?? 'NDR',         tone: 'red',     status: 35 },
+    ];
+    const tones = {
+        primary: { pill: 'bg-primary/10 text-primary border-primary/30', dot: 'bg-primary' },
+        slate:   { pill: 'bg-slate-100 text-slate-700 border-slate-200', dot: 'bg-slate-400' },
+        sky:     { pill: 'bg-sky-100 text-sky-700 border-sky-200',       dot: 'bg-sky-500' },
+        indigo:  { pill: 'bg-indigo-100 text-indigo-700 border-indigo-200', dot: 'bg-indigo-500' },
+        amber:   { pill: 'bg-amber-100 text-amber-700 border-amber-200', dot: 'bg-amber-500' },
+        emerald: { pill: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+        orange:  { pill: 'bg-orange-100 text-orange-700 border-orange-200', dot: 'bg-orange-500' },
+        rose:    { pill: 'bg-rose-100 text-rose-700 border-rose-200', dot: 'bg-rose-500' },
+        red:     { pill: 'bg-red-100 text-red-700 border-red-200', dot: 'bg-red-500' },
+    };
+
+    return (
+        <div className="mb-4 -mx-1 overflow-x-auto">
+            <div className="flex items-center gap-1.5 px-1 min-w-max">
+                {chips.map((c) => {
+                    const isActive = String(activeStatus ?? '') === String(c.status);
+                    const tone = tones[c.tone] || tones.slate;
+                    const href = c.status === ''
+                        ? filterUrl
+                        : `${filterUrl}${filterUrl.includes('?') ? '&' : '?'}parcel_status=${c.status}`;
+                    return (
+                        <a
+                            key={c.key}
+                            href={href}
+                            className={cn(
+                                'inline-flex items-center gap-2 rounded-full border px-3 h-8 text-xs font-medium whitespace-nowrap transition-all',
+                                tone.pill,
+                                isActive ? 'ring-2 ring-offset-1 ring-offset-background' : 'opacity-80 hover:opacity-100',
+                            )}
+                            style={isActive ? { '--tw-ring-color': 'var(--primary)' } : undefined}
+                        >
+                            <span className={cn('h-1.5 w-1.5 rounded-full', tone.dot)} />
+                            <span>{c.label}</span>
+                            <span className="tabular-nums font-semibold">
+                                {Number(counts[c.key] ?? 0).toLocaleString()}
+                            </span>
+                        </a>
+                    );
+                })}
+            </div>
         </div>
     );
 }

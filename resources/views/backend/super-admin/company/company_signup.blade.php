@@ -58,6 +58,14 @@
                     </div>
 
                     <!-- Domain Name -->
+                    @php
+                        // Derive the tenant-subdomain suffix from APP_URL so
+                        // we don't hard-code a stale domain like the previous
+                        // ".rushly-logistic.com" placeholder.
+                        $__host = parse_url(config('app.url'), PHP_URL_HOST) ?: 'rushly.tech';
+                        $__host = preg_replace('/^www\./i', '', $__host);
+                        $__domainSuffix = '.'.$__host;
+                    @endphp
                     <div class="form-group">
                         <label class="form-label" data-en="Subdomain" data-ar="النطاق الفرعي">Subdomain</label>
                         <div class="input-wrapper domain-wrapper">
@@ -68,7 +76,7 @@
                                 placeholder="your-company"
                                 data-en-placeholder="your-company"
                                 data-ar-placeholder="شركتك">
-                            <span class="domain-suffix">.rushly-logistic.com</span>
+                            <span class="domain-suffix">{{ $__domainSuffix }}</span>
                         </div>
                         @error('domain')
                             <span class="invalid-feedback" role="alert">

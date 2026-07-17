@@ -126,7 +126,7 @@
                                             @endif
                                             @if (hasPermission('company_subscribe'))
                                                 <button class="modalBtn tw-inline-flex tw-items-center tw-justify-center tw-h-7 tw-px-2.5 tw-text-xs tw-font-medium tw-text-brand-700 tw-bg-brand-50 hover:tw-bg-brand-100 tw-rounded-md tw-border-0 tw-w-fit"
-                                                        data-bs-toggle="modal" data-bs-target="#dynamic-modal"
+                                                        data-toggle="modal" data-target="#dynamic-modal"
                                                         data-title="{{ @$company->company->name }}"
                                                         data-url="{{ route('company.subscription.switch', $company->id) }}">
                                                     {{ __('Subscribe Now') }}
@@ -170,7 +170,7 @@
                                 <tr>
                                     <td colspan="8" class="tw-px-5 tw-py-12 tw-text-center">
                                         <div class="tw-text-gray-300 tw-mb-2"><i class="fa fa-building tw-text-3xl"></i></div>
-                                        <p class="tw-text-sm tw-text-gray-500 tw-m-0">No companies yet.</p>
+                                        <p class="tw-text-sm tw-text-gray-500 tw-m-0">{{ __('levels.no_data_found') }}</p>
                                     </td>
                                 </tr>
                             @endforelse

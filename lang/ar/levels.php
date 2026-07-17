@@ -485,6 +485,7 @@ return [
     'confirm'                  => 'تأكيد',
     'select_file'              => 'اختر ملف Excel',
     'no_data_found'            => 'لا توجد بيانات',
+    'min'                      => 'حد أدنى',
     'updating'                 => 'جارٍ التحديث…',
     'created_at'               => 'تاريخ الإنشاء',
     'income'                   => 'الإيرادات',

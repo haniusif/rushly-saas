@@ -527,6 +527,7 @@ return [
     'confirm'                  => 'Confirm',
     'select_file'              => 'Select Excel file',
     'no_data_found'            => 'No data found',
+    'min'                      => 'min',
     'updating'                 => 'Updating…',
     'created_at'               => 'Created',
     'income'                   => 'Income',

@@ -102,7 +102,7 @@
                                 <tr>
                                     <td colspan="9" class="tw-px-5 tw-py-12 tw-text-center">
                                         <div class="tw-text-gray-300 tw-mb-2"><i class="fa fa-grip-vertical tw-text-3xl"></i></div>
-                                        <p class="tw-text-sm tw-text-gray-500 tw-m-0">No plans yet.</p>
+                                        <p class="tw-text-sm tw-text-gray-500 tw-m-0">{{ __('levels.no_data_found') }}</p>
                                     </td>
                                 </tr>
                             @endforelse
@@ -129,20 +129,6 @@
     </div>
 @endsection()
 
-@push('styles')
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
-@endpush
-
 @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <script src="{{ static_asset('backend/js/filter/index.js') }}"></script>
-    <script type="text/javascript">
-        $("#month").datepicker({
-            format: "yyyy-mm",
-            startView: "months",
-            minViewMode: "months"
-        });
-    </script>
 @endpush

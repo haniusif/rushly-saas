@@ -25,7 +25,7 @@ export default function Create({
     };
 
     return (
-        <AdminLayout title={t.create} breadcrumbs={[t.title, t.create]}>
+        <AdminLayout title={t.create}>
             <Head title={t.create} />
             <ParcelForm
                 form={form}

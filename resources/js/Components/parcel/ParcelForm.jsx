@@ -391,24 +391,19 @@ export default function ParcelForm({
 
     return (
         <form onSubmit={onSubmit} encType="multipart/form-data" noValidate className="pb-24 lg:pb-0">
-            {/* ── Page header ─────────────────────────────────────────── */}
-            <div className="mb-6">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                            {mode === 'edit' ? (t.edit || 'Edit shipment') : (t.create || 'Create shipment')}
-                        </h1>
-                        {headerBadges}
-                    </div>
-                    <div className="hidden lg:flex items-center gap-2">
-                        <a href={urls.cancel} className="inline-flex h-10 items-center rounded-lg border border-input bg-background px-4 text-sm font-medium hover:bg-accent transition-colors">
-                            <ArrowLeft className="h-4 w-4 me-1.5" /> {t.cancel}
-                        </a>
-                        <Button type="submit" disabled={form.processing} className="rounded-lg">
-                            <Save className="h-4 w-4 me-1.5" />
-                            {form.processing ? '…' : (mode === 'edit' ? (t.update || t.save) : t.save)}
-                        </Button>
-                    </div>
+            {/* Compact context strip — AdminLayout already renders the title
+                as the top-level H1, so we skip the redundant heading and
+                surface only the identity badges + primary CTAs here. */}
+            <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">{headerBadges}</div>
+                <div className="hidden lg:flex items-center gap-2">
+                    <a href={urls.cancel} className="inline-flex h-10 items-center rounded-lg border border-input bg-background px-4 text-sm font-medium hover:bg-accent transition-colors">
+                        <ArrowLeft className="h-4 w-4 me-1.5" /> {t.cancel}
+                    </a>
+                    <Button type="submit" disabled={form.processing} className="rounded-lg">
+                        <Save className="h-4 w-4 me-1.5" />
+                        {form.processing ? '…' : (mode === 'edit' ? (t.update || t.save) : t.save)}
+                    </Button>
                 </div>
             </div>
 

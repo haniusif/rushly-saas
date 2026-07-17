@@ -3208,15 +3208,71 @@ public function exportShipments(Request $request)
 
     public function deliveredInfo($id)
     {
-        $parcel         = $this->repo->get($id);
-
+        $parcel = $this->repo->get($id);
         if (! $parcel) {
             Toastr::error(__('Parcel not found.'));
             return redirect()->back();
         }
 
-        $parcelevents   = $this->repo->parcelEvents($id);
-        return view('backend.parcel.parcel-delivered-info', compact('parcel','parcelevents'));
+        // Proof-of-Delivery view: only the DELIVERED / PARTIAL_DELIVERED
+        // events carry the recipient photo + signature, so filter the full
+        // events feed down to those.
+        $events = collect($this->repo->parcelEvents($id))
+            ->whereIn('parcel_status', [\App\Enums\ParcelStatus::DELIVERED, \App\Enums\ParcelStatus::PARTIAL_DELIVERED])
+            ->map(fn ($e) => [
+                'id'               => (int) $e->id,
+                'parcel_status'    => (int) $e->parcel_status,
+                'status_label'     => __('parcelLogs.'.$e->parcel_status) ?: 'Status #'.$e->parcel_status,
+                'note'             => (string) ($e->note ?? ''),
+                'created_at'       => (string) $e->created_at,
+                'created_at_date'  => optional($e->created_at)->format('d M Y'),
+                'created_at_time'  => optional($e->created_at)->format('h:i a'),
+                // static_asset() prefixes with the CDN / storage root; matches the
+                // convention already used everywhere else for these two fields.
+                'delivered_image'  => $e->delivered_image  ? static_asset($e->delivered_image)  : null,
+                'signature_image'  => $e->signature_image  ? static_asset($e->signature_image)  : null,
+            ])
+            ->values();
+
+        // Parcel-level attached images. `image_path` lives under the public
+        // storage disk, so the browser URL is /storage/<path> (Laravel's
+        // storage:link makes public/storage → storage/app/public). The old
+        // Blade double-nested the path via url('storage/app/public/...'),
+        // which returned a URL that only worked when the operator was
+        // running under a specific route prefix — brittle and wrong.
+        $parcelImages = collect($parcel->images ?? [])
+            ->map(fn ($img) => [
+                'id'   => (int) $img->id,
+                'type' => (string) ($img->type ?? ''),
+                'url'  => \Storage::disk('public')->url((string) $img->image_path),
+            ])
+            ->values();
+
+        return \Inertia\Inertia::render('Admin/Parcel/DeliveredInfo', [
+            'parcel' => [
+                'id'          => (int) $parcel->id,
+                'tracking_id' => (string) ($parcel->tracking_id ?? ''),
+                'status_label'=> \App\Support\ParcelStatusHelper::label((int) $parcel->status),
+                'status_color'=> \App\Support\ParcelStatusHelper::color((int) $parcel->status),
+            ],
+            'events'         => $events,
+            'parcel_images'  => $parcelImages,
+            'urls' => [
+                'parcel_index'   => route('parcel.index'),
+                'parcel_details' => route('parcel.details', $parcel->id),
+                'print_label'    => route('parcel.print-label', $parcel->id),
+            ],
+            't' => [
+                'title'             => __('View Proof of Delivery'),
+                'back_to_details'   => __('Back to shipment'),
+                'no_pod'            => __('No proof of delivery available for this shipment yet.'),
+                'delivered_photo'   => __('Delivered photo'),
+                'signature'         => __('Signature'),
+                'note'              => __('levels.note') ?: 'Note',
+                'parcel_images'     => __('Parcel images'),
+                'print_label'       => __('Print label'),
+            ],
+        ]);
     }
     
     

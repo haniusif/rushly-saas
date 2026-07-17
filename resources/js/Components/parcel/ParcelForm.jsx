@@ -507,7 +507,7 @@ export default function ParcelForm({
                         title={t.pickup_section_title || 'Pickup'}
                         subtitle={t.pickup_section_hint || 'Merchant, shop, and pickup contact'}
                         collapsedSummary={merchant?.name}
-                        defaultOpen={!stepCompletion.pickup}
+                        defaultOpen={mode !== 'create' || !stepCompletion.pickup}
                     >
                         <div className="grid gap-4 md:grid-cols-2">
                             <Field label={t.merchant} required error={form.errors.merchant_id} icon={Store}>
@@ -542,7 +542,7 @@ export default function ParcelForm({
                         title={t.receiver_section_title || 'Receiver'}
                         subtitle={t.receiver_section_hint || 'Customer contact + drop-off location'}
                         collapsedSummary={form.data.customer_name || undefined}
-                        defaultOpen={!stepCompletion.receiver}
+                        defaultOpen={mode !== 'create' || !stepCompletion.receiver}
                     >
                         <div className="grid gap-4 md:grid-cols-2">
                             <Field label={t.customer_name} required error={form.errors.customer_name} icon={User}>
@@ -592,7 +592,7 @@ export default function ParcelForm({
                         title={t.shipping_section_title || 'Shipping'}
                         subtitle={t.shipping_section_hint || 'Delivery type, priority, packaging, and item category'}
                         collapsedSummary={[selectedDeliveryTy?.name, selectedCategory?.name, form.data.weight && `${form.data.weight} kg`].filter(Boolean).join(' · ') || undefined}
-                        defaultOpen={!stepCompletion.shipping}
+                        defaultOpen={mode !== 'create' || !stepCompletion.shipping}
                     >
                         <div className="grid gap-4 md:grid-cols-3">
                             <Field label={t.delivery_type} required error={form.errors.delivery_type_id} icon={Truck}>
@@ -651,7 +651,7 @@ export default function ParcelForm({
                         title={t.amounts_section_title || 'Amounts'}
                         subtitle={t.amounts_section_hint || 'Cash collection and invoice reference'}
                         collapsedSummary={cashCollection ? `${currency} ${cashCollection.toFixed(2)}` : undefined}
-                        defaultOpen={!stepCompletion.amounts}
+                        defaultOpen={mode !== 'create' || !stepCompletion.amounts}
                     >
                         <div className="grid gap-4 md:grid-cols-3">
                             <Field label={t.cash_collection} required error={form.errors.cash_collection} icon={Banknote}>

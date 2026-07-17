@@ -78,6 +78,56 @@ class WmsFulfillmentApiController extends Controller
     }
 
     /**
+     * GET /api/v10/wms/fulfillment/ready-to-dispatch
+     * Lists fulfillments in READY state — the warehouse hand-off queue.
+     */
+    public function readyToDispatch()
+    {
+        $tasks = WmsFulfillment::companywise()
+            ->where('status', FulfillmentStatus::READY)
+            ->with(['parcel', 'hub', 'items'])
+            ->orderBy('packed_at')
+            ->limit(50)
+            ->get();
+
+        return $this->responseWithSuccess('Ready-to-dispatch queue', [
+            'count' => $tasks->count(),
+            'tasks' => $tasks->map(fn ($f) => [
+                'id'                 => $f->id,
+                'fulfillment_number' => $f->fulfillment_number,
+                'status'             => $f->status,
+                'parcel'             => optional($f->parcel)->tracking_id,
+                'hub'                => optional($f->hub)->name,
+                'sla_deadline'       => (string) $f->sla_deadline,
+                'sla_breached'       => $f->isSlaBreached(),
+                'items_remaining'    => 0,
+                'items_total'        => $f->items->count(),
+                'next_item'          => null,
+            ]),
+        ], 200);
+    }
+
+    /**
+     * POST /api/v10/wms/fulfillment/{id}/dispatch
+     * Called by warehouse worker at courier hand-off — flips READY → DISPATCHED
+     * and hands off to delivery-man workflow.
+     */
+    public function dispatch(int $id)
+    {
+        $f = $this->repo->find($id);
+        if (!$f) return $this->responseWithError('Fulfillment not found', [], 404);
+        if ($f->status !== FulfillmentStatus::READY) {
+            return $this->responseWithError('Not in ready state', ['status' => $f->status], 409);
+        }
+        $this->repo->dispatch($f);
+        $f->refresh();
+        return $this->responseWithSuccess('Dispatched', [
+            'fulfillment_id' => $f->id,
+            'status'         => $f->status,
+        ], 200);
+    }
+
+    /**
      * POST /api/v10/wms/fulfillment/{id}/pack
      */
     public function confirmPack(int $id)

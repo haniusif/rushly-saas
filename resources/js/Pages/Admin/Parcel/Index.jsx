@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Head, router } from '@inertiajs/react';
 import {
-    Search, Plus, Filter, Eraser, Edit, ChevronLeft, ChevronRight,
+    Search, Plus, Filter, Eraser, Edit, ChevronLeft, ChevronRight, ChevronDown,
     MoreVertical, Package, Eye, History, Copy, Printer, Trash2, User,
     Phone, MapPin, Truck, Flame, Map, Download, Upload, FileText,
     Receipt, RefreshCcw, Check, Route as RouteIcon, LayoutGrid, List,
@@ -190,6 +190,32 @@ export default function Index({
         setViewMode(v);
         if (typeof window !== 'undefined') window.localStorage.setItem('parcel.view_mode', v);
     };
+
+    // Filters are collapsed by default so the KPI chip strip + table sit
+    // above the fold. If the operator has a non-empty filter set (arrived
+    // via a filter link from /summary, for example) auto-open so the
+    // active filters are visible without an extra click. The user's own
+    // expand choice sticks via localStorage after the first toggle.
+    const hasActiveFilters = React.useMemo(() => (
+        Object.entries(filters).some(([k, v]) => k !== 'search' && String(v ?? '').trim() !== '')
+    ), [filters]);
+    const [filtersOpen, setFiltersOpen] = React.useState(() => {
+        if (typeof window === 'undefined') return false;
+        const stored = window.localStorage.getItem('parcel.filters_open');
+        if (stored !== null) return stored === '1';
+        return hasActiveFilters;
+    });
+    const toggleFilters = () => {
+        setFiltersOpen((v) => {
+            const next = !v;
+            if (typeof window !== 'undefined') window.localStorage.setItem('parcel.filters_open', next ? '1' : '0');
+            return next;
+        });
+    };
+    const activeFilterCount = React.useMemo(() => (
+        Object.entries(filters).filter(([k, v]) => k !== 'search' && String(v ?? '').trim() !== '').length
+    ), [filters]);
+
     const [bulkInputs, setBulkInputs] = React.useState({ pickup_date: '', deliveryman_id: '', hub_id: '' });
     const [trackingId, setTrackingId] = React.useState(null);
     const openTracking = (id) => setTrackingId(id);
@@ -318,9 +344,30 @@ export default function Index({
         <AdminLayout title={t.title} breadcrumbs={[t.title, t.list]}>
             <Head title={`${t.title} · ${t.list}`} />
 
-            {/* Filters */}
-            <Card className="mb-5">
-                <CardContent className="pt-6">
+            {/* Filters — collapsed by default so the KPI strip + table sit
+                above the fold. Header row stays visible with an active-filter
+                count chip so the operator sees at a glance whether the list
+                is filtered. */}
+            <Card className="mb-4">
+                <button
+                    type="button"
+                    onClick={toggleFilters}
+                    className="w-full flex items-center justify-between gap-3 px-5 py-3 text-start hover:bg-muted/30 transition-colors"
+                    aria-expanded={filtersOpen}
+                >
+                    <div className="flex items-center gap-2">
+                        <Filter className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-semibold">{t.filter}</span>
+                        {activeFilterCount > 0 && (
+                            <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[11px] font-medium">
+                                {activeFilterCount} active
+                            </span>
+                        )}
+                    </div>
+                    <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', filtersOpen && 'rotate-180')} />
+                </button>
+                {filtersOpen && (
+                <CardContent className="pt-2 pb-5 border-t border-border">
                     <form onSubmit={submitFilter} className="grid gap-3 md:grid-cols-12">
                         <FilterField className="md:col-span-3" label={t.date_label}>
                             <div className="flex items-center gap-1.5">
@@ -377,22 +424,7 @@ export default function Index({
                         </div>
                     </form>
                 </CardContent>
-            </Card>
-
-            {/* Specific search bar */}
-            <Card className="mb-4">
-                <CardContent className="pt-6">
-                    <form onSubmit={submitSearch} className="flex flex-wrap items-center gap-2">
-                        <div className="text-lg font-semibold me-2">{t.title}</div>
-                        <div className="relative flex-1 min-w-[260px]">
-                            <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t.specific_search}…`} className="ps-9" />
-                        </div>
-                        <Button type="submit">
-                            <Filter className="h-4 w-4 me-1" /> {t.specific_search}
-                        </Button>
-                    </form>
-                </CardContent>
+                )}
             </Card>
 
             {/* Header strip */}

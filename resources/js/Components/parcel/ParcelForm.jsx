@@ -2,6 +2,7 @@ import * as React from 'react';
 import {
     User, Store, Phone, MapPin, Banknote, Tag, Package, Truck,
     StickyNote, Box, Flame, Save, ArrowLeft, Calculator, ChevronRight, ChevronDown,
+    Check, Circle, Printer, Copy, FileText,
 } from 'lucide-react';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { Button } from '@/Components/ui/Button';
@@ -389,8 +390,49 @@ export default function ParcelForm({
         </div>
     );
 
+    // ── Wizard: five sections + a live "is required subset filled" check.
+    // Completion drives the left nav checkmarks and the right summary's
+    // progress line, and lets us auto-collapse a section once its required
+    // fields are green so the operator's eye moves down the form.
+    const isFilled = (v) => v !== undefined && v !== null && String(v).trim() !== '';
+    const stepCompletion = {
+        pickup:   isFilled(form.data.merchant_id) && isFilled(form.data.pickup_phone) && isFilled(form.data.pickup_address),
+        receiver: isFilled(form.data.customer_name) && isFilled(form.data.customer_phone) && isFilled(form.data.city_id) && isFilled(form.data.customer_address),
+        shipping: isFilled(form.data.delivery_type_id) && isFilled(form.data.category_id),
+        amounts:  isFilled(form.data.cash_collection),
+        notes:    true, // optional — always "complete"
+    };
+    const steps = [
+        { key: 'pickup',   icon: Store,      label: t.pickup_section_title   || 'Pickup' },
+        { key: 'receiver', icon: User,       label: t.receiver_section_title || 'Receiver' },
+        { key: 'shipping', icon: Truck,      label: t.shipping_section_title || 'Shipping' },
+        { key: 'amounts',  icon: Banknote,   label: t.amounts_section_title  || 'Amounts' },
+        { key: 'notes',    icon: StickyNote, label: t.notes_section_title    || 'Notes' },
+    ];
+    const requiredCompleted = steps.filter((s) => s.key !== 'notes' && stepCompletion[s.key]).length;
+    const requiredTotal = steps.length - 1; // notes doesn't count
+    const scrollToSection = (key) => {
+        const el = document.getElementById(`section-${key}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    // Ctrl/Cmd+Enter submit shortcut — matches the "keyboard shortcuts" spec.
+    // Scoped to the form so we don't hijack keys from unrelated inputs elsewhere.
+    const formRef = React.useRef(null);
+    React.useEffect(() => {
+        const onKey = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !form.processing) {
+                e.preventDefault();
+                formRef.current?.requestSubmit?.();
+            }
+        };
+        const node = formRef.current;
+        node?.addEventListener('keydown', onKey);
+        return () => node?.removeEventListener('keydown', onKey);
+    }, [form.processing]);
+
     return (
-        <form onSubmit={onSubmit} encType="multipart/form-data" noValidate className="pb-24 lg:pb-0">
+        <form ref={formRef} onSubmit={onSubmit} encType="multipart/form-data" noValidate className="pb-24 lg:pb-0">
             {/* Compact context strip — AdminLayout already renders the title
                 as the top-level H1, so we skip the redundant heading and
                 surface only the identity badges + primary CTAs here. */}
@@ -407,15 +449,65 @@ export default function ParcelForm({
                 </div>
             </div>
 
-            {/* ── Two-column layout: 75% form / 25% sticky sidebar ────── */}
-            <div className="grid gap-6 lg:grid-cols-4">
-                {/* Left: form */}
-                <div className="lg:col-span-3 space-y-5">
+            {/* ── 3-column layout: 2 wizard nav / 7 form / 3 sticky summary.
+                On <lg the wizard collapses to a compact horizontal strip and
+                the summary drops below the form (mobile bottom bar takes over
+                the primary action instead of the sticky sidebar). ─────────── */}
+            <div className="grid gap-5 lg:grid-cols-12">
+                {/* ── Left: wizard nav (create mode only — Edit skips the
+                    wizard because operators rarely fill an existing shipment
+                    section-by-section). ───────────────────────────────────── */}
+                {mode === 'create' && (
+                    <aside className="lg:col-span-2 order-first lg:order-none">
+                        <div className="lg:sticky lg:top-20">
+                            <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                {t.wizard_title || 'Progress'}
+                                <span className="ms-2 rounded-full bg-primary/10 text-primary px-1.5 py-0.5 tabular-nums">
+                                    {requiredCompleted}/{requiredTotal}
+                                </span>
+                            </div>
+                            <nav className="rounded-xl border border-border bg-card p-1 lg:p-2 flex lg:flex-col gap-1 overflow-x-auto">
+                                {steps.map((s) => {
+                                    const done = stepCompletion[s.key];
+                                    return (
+                                        <button
+                                            key={s.key}
+                                            type="button"
+                                            onClick={() => scrollToSection(s.key)}
+                                            className={cn(
+                                                'flex items-center gap-2 rounded-lg px-2.5 py-2 text-start text-sm transition-colors',
+                                                'hover:bg-muted/60 whitespace-nowrap lg:whitespace-normal',
+                                                done ? 'text-foreground' : 'text-muted-foreground',
+                                            )}
+                                        >
+                                            <span className={cn(
+                                                'inline-grid place-items-center h-6 w-6 rounded-full shrink-0 transition-colors',
+                                                done ? 'bg-emerald-500 text-white' : 'bg-muted text-muted-foreground'
+                                            )}>
+                                                {done ? <Check className="h-3.5 w-3.5" /> : <s.icon className="h-3 w-3" />}
+                                            </span>
+                                            <span className="hidden lg:inline text-xs font-medium truncate">{s.label}</span>
+                                            <span className="lg:hidden text-[11px] font-medium">{s.label}</span>
+                                        </button>
+                                    );
+                                })}
+                            </nav>
+                            <div className="mt-3 hidden lg:block text-[11px] text-muted-foreground leading-relaxed">
+                                <span className="font-mono bg-muted px-1.5 py-0.5 rounded">Ctrl</span> + <span className="font-mono bg-muted px-1.5 py-0.5 rounded">Enter</span> {t.shortcut_save_hint || 'to save'}
+                            </div>
+                        </div>
+                    </aside>
+                )}
+
+                {/* Center: form. col-span shrinks when the wizard column is on. */}
+                <div className={cn('space-y-5', mode === 'create' ? 'lg:col-span-7' : 'lg:col-span-9')}>
+                    <div id="section-pickup" className="scroll-mt-24">
                     <SectionCard
                         icon={Store}
                         title={t.pickup_section_title || 'Pickup'}
                         subtitle={t.pickup_section_hint || 'Merchant, shop, and pickup contact'}
                         collapsedSummary={merchant?.name}
+                        defaultOpen={!stepCompletion.pickup}
                     >
                         <div className="grid gap-4 md:grid-cols-2">
                             <Field label={t.merchant} required error={form.errors.merchant_id} icon={Store}>
@@ -442,12 +534,15 @@ export default function ParcelForm({
                             </Field>
                         </div>
                     </SectionCard>
+                    </div>
 
+                    <div id="section-receiver" className="scroll-mt-24">
                     <SectionCard
                         icon={User}
                         title={t.receiver_section_title || 'Receiver'}
                         subtitle={t.receiver_section_hint || 'Customer contact + drop-off location'}
                         collapsedSummary={form.data.customer_name || undefined}
+                        defaultOpen={!stepCompletion.receiver}
                     >
                         <div className="grid gap-4 md:grid-cols-2">
                             <Field label={t.customer_name} required error={form.errors.customer_name} icon={User}>
@@ -489,12 +584,15 @@ export default function ParcelForm({
                             </div>
                         </div>
                     </SectionCard>
+                    </div>
 
+                    <div id="section-shipping" className="scroll-mt-24">
                     <SectionCard
                         icon={Truck}
                         title={t.shipping_section_title || 'Shipping'}
                         subtitle={t.shipping_section_hint || 'Delivery type, priority, packaging, and item category'}
                         collapsedSummary={[selectedDeliveryTy?.name, selectedCategory?.name, form.data.weight && `${form.data.weight} kg`].filter(Boolean).join(' · ') || undefined}
+                        defaultOpen={!stepCompletion.shipping}
                     >
                         <div className="grid gap-4 md:grid-cols-3">
                             <Field label={t.delivery_type} required error={form.errors.delivery_type_id} icon={Truck}>
@@ -545,12 +643,15 @@ export default function ParcelForm({
                             </label>
                         </div>
                     </SectionCard>
+                    </div>
 
+                    <div id="section-amounts" className="scroll-mt-24">
                     <SectionCard
                         icon={Banknote}
                         title={t.amounts_section_title || 'Amounts'}
                         subtitle={t.amounts_section_hint || 'Cash collection and invoice reference'}
                         collapsedSummary={cashCollection ? `${currency} ${cashCollection.toFixed(2)}` : undefined}
+                        defaultOpen={!stepCompletion.amounts}
                     >
                         <div className="grid gap-4 md:grid-cols-3">
                             <Field label={t.cash_collection} required error={form.errors.cash_collection} icon={Banknote}>
@@ -564,7 +665,9 @@ export default function ParcelForm({
                             </Field>
                         </div>
                     </SectionCard>
+                    </div>
 
+                    <div id="section-notes" className="scroll-mt-24">
                     <SectionCard
                         icon={StickyNote}
                         title={t.notes_section_title || 'Notes'}
@@ -576,10 +679,11 @@ export default function ParcelForm({
                             <Textarea rows={4} value={form.data.note} onChange={(e) => form.setData('note', e.target.value)} />
                         </Field>
                     </SectionCard>
+                    </div>
                 </div>
 
-                {/* Right: sticky sidebar summary + primary action */}
-                <div className="lg:col-span-1">
+                {/* Right: sticky sidebar summary + primary actions */}
+                <div className="lg:col-span-3">
                     <div className="lg:sticky lg:top-20 space-y-4">
                         <Card className="rounded-xl shadow-sm border border-border">
                             <CardContent className="pt-6">
@@ -608,12 +712,30 @@ export default function ParcelForm({
                                     </p>
                                 )}
 
-                                {/* Primary action inside the sidebar (desktop) */}
-                                <div className="mt-5 hidden lg:block">
+                                {/* Primary actions inside the sidebar (desktop).
+                                    Ctrl+Enter shortcut targets the form ref and
+                                    fires the same submit. */}
+                                <div className="mt-5 hidden lg:block space-y-2">
                                     <Button type="submit" disabled={form.processing} className="w-full h-11 rounded-lg text-sm font-semibold">
                                         <Save className="h-4 w-4 me-1.5" />
                                         {form.processing ? '…' : (mode === 'edit' ? (t.update || t.save) : (t.create_shipment || t.save))}
                                     </Button>
+                                    {mode === 'create' && requiredCompleted < requiredTotal && (
+                                        <div className="rounded-lg border border-amber-200 bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:border-amber-900/50 dark:text-amber-200 px-3 py-2 text-[11px] leading-relaxed flex items-start gap-2">
+                                            <Circle className="h-3 w-3 mt-0.5 shrink-0" />
+                                            <span>
+                                                {(requiredTotal - requiredCompleted)}{' '}
+                                                {t.missing_required_hint || 'required section(s) still incomplete.'}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {mode === 'create' && (
+                                        <div className="text-[11px] text-muted-foreground text-center pt-1">
+                                            <span className="font-mono bg-muted px-1.5 py-0.5 rounded">Ctrl</span>
+                                            +
+                                            <span className="font-mono bg-muted px-1.5 py-0.5 rounded ms-1">Enter</span>
+                                        </div>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>

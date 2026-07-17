@@ -25,6 +25,7 @@ import TourLauncher from '@/Tour/TourLauncher';
 const NAV = [
     { group: 'menu_main', items: [
         { tKey: 'menu_summary',        icon: Home,            route: 'summary.index',       match: ['summary'] },
+        { tKey: 'menu_ops_dashboard',  icon: Activity,        route: 'operations.index',    match: ['operations-dashboard'] },
         { tKey: 'menu_dashboard',      icon: LayoutDashboard, route: 'dashboard.index',     match: ['admin/dashboard', 'dashboard'] },
         { tKey: 'menu_performance',    icon: BarChart3,       route: 'performance.index',   match: ['admin/performance'] },
         { tKey: 'menu_knowledge_base', icon: BookOpen,        route: 'admin.kb.index',      match: ['admin/knowledge-base'] },

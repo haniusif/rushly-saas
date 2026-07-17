@@ -287,6 +287,11 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                 Route::get('/dashboard',             [DashbordController::class, 'index'])->name('dashboard.index');
                 // Lightweight home for tenant admins — KPIs, 7-day trend, recent shipments.
                 Route::get('/summary',               [\App\Http\Controllers\Backend\SummaryController::class, 'index'])->name('summary.index');
+                // Executive Operations Command Center — expanded KPI grid, health
+                // gauges, 14-day timeline, funnel, alerts, activity feed, quick
+                // actions. Same permission set as /summary since it's the same
+                // audience (tenant admins).
+                Route::get('/operations-dashboard',  [\App\Http\Controllers\Backend\OperationsController::class, 'index'])->name('operations.index');
 
                 // Onboarding tour engine — JSON endpoints consumed by the React
                 // TourProvider. Session-auth'd, tenant-scoped. Open to any

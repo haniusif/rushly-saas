@@ -10,29 +10,44 @@ import { cn } from '@/lib/utils';
 
 // -------------- KPI --------------
 
-function KpiCard({ icon: Icon, label, value, tone = 'primary', hint }) {
+function KpiCard({ icon: Icon, label, value, tone = 'primary', hint, href }) {
     const tones = {
         primary: 'from-primary/10 to-primary/5  text-primary',
         success: 'from-emerald-100 to-emerald-50 text-emerald-700 dark:from-emerald-950/40 dark:to-emerald-950/10 dark:text-emerald-300',
         warning: 'from-amber-100 to-amber-50 text-amber-700 dark:from-amber-950/40 dark:to-amber-950/10 dark:text-amber-200',
         info:    'from-sky-100 to-sky-50 text-sky-700 dark:from-sky-950/40 dark:to-sky-950/10 dark:text-sky-300',
     };
+    const inner = (
+        <CardContent className="p-5">
+            <div className="flex items-start justify-between gap-3">
+                <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+                    <div className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-foreground">
+                        {Number(value ?? 0).toLocaleString()}
+                    </div>
+                    {hint && <div className="mt-1 text-xs text-muted-foreground">{hint}</div>}
+                </div>
+                <span className={cn('inline-grid place-items-center h-10 w-10 rounded-xl bg-gradient-to-br', tones[tone])}>
+                    <Icon className="h-5 w-5" />
+                </span>
+            </div>
+        </CardContent>
+    );
+    // Render as an anchor when there's a drill-in URL; the whole card
+    // becomes a click target. Keeps the reader's mental model simple:
+    // number = link → filtered list.
+    if (href) {
+        return (
+            <a href={href} className="block group no-underline text-inherit">
+                <Card className="rounded-xl shadow-sm border border-border overflow-hidden transition-all hover:shadow-md hover:-translate-y-0.5">
+                    {inner}
+                </Card>
+            </a>
+        );
+    }
     return (
         <Card className="rounded-xl shadow-sm border border-border overflow-hidden">
-            <CardContent className="p-5">
-                <div className="flex items-start justify-between gap-3">
-                    <div>
-                        <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
-                        <div className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-foreground">
-                            {Number(value ?? 0).toLocaleString()}
-                        </div>
-                        {hint && <div className="mt-1 text-xs text-muted-foreground">{hint}</div>}
-                    </div>
-                    <span className={cn('inline-grid place-items-center h-10 w-10 rounded-xl bg-gradient-to-br', tones[tone])}>
-                        <Icon className="h-5 w-5" />
-                    </span>
-                </div>
-            </CardContent>
+            {inner}
         </Card>
     );
 }
@@ -169,13 +184,22 @@ function StatusDonut({ items = [], t = {} }) {
                     // Map server label keys to i18n strings; falls back to
                     // the label the server sent.
                     const label = (t[`status_${key}`]) || it.label;
+                    const Row = it.url ? 'a' : 'li';
+                    const rowProps = it.url ? { href: it.url } : {};
                     return (
-                        <li key={key} className="flex items-center gap-2">
+                        <Row
+                            key={key}
+                            {...rowProps}
+                            className={cn(
+                                'flex items-center gap-2 py-1 px-1 -mx-1 rounded transition-colors',
+                                it.url && 'hover:bg-muted/60 no-underline text-inherit cursor-pointer',
+                            )}
+                        >
                             <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: STATUS_COLOR[key] || '#94A3B8' }} />
                             <span className="flex-1 truncate">{label}</span>
                             <span className="tabular-nums font-medium">{Number(it.value).toLocaleString()}</span>
                             <span className="text-[11px] text-muted-foreground w-8 text-end tabular-nums">{pct}%</span>
-                        </li>
+                        </Row>
                     );
                 })}
             </ul>
@@ -240,8 +264,20 @@ function TopByShipmentsCard({ items = [], icon: RowIcon = Store, imageKey, title
                         </div>
                         {items.map((m, i) => {
                             const pct = Math.max(2, Math.round((m.shipments / max) * 100));
+                            // Each row optionally carries its own drill-in
+                            // URL from the server; when set, wrap the row
+                            // in an <a> so the whole row is clickable.
+                            const Row = m.url ? 'a' : 'div';
+                            const rowProps = m.url ? { href: m.url } : {};
                             return (
-                                <div key={m.id} className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3 px-5 py-2.5 hover:bg-muted/30 transition-colors">
+                                <Row
+                                    key={m.id}
+                                    {...rowProps}
+                                    className={cn(
+                                        'grid grid-cols-[auto_1fr_auto_auto] items-center gap-3 px-5 py-2.5 hover:bg-muted/30 transition-colors',
+                                        m.url && 'no-underline text-inherit',
+                                    )}
+                                >
                                     <span className="w-6 text-center text-xs font-semibold text-muted-foreground tabular-nums">
                                         {i + 1}
                                     </span>
@@ -264,7 +300,7 @@ function TopByShipmentsCard({ items = [], icon: RowIcon = Store, imageKey, title
                                         <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
                                     </div>
                                     <span className="justify-self-end text-sm tabular-nums font-medium">{Number(m.shipments).toLocaleString()}</span>
-                                </div>
+                                </Row>
                             );
                         })}
                     </div>
@@ -303,34 +339,45 @@ function DeliverymenPerformanceCard({ items = [], t = {} }) {
                             <span className="justify-self-end w-16">{t.top_deliverymen_col_delivered}</span>
                             <span className="justify-self-end w-20">{t.top_deliverymen_col_performance}</span>
                         </div>
-                        {items.map((d, i) => (
-                            <div key={d.id} className="grid grid-cols-[auto_1fr_repeat(3,auto)] items-center gap-3 px-5 py-2.5 hover:bg-muted/30 transition-colors">
-                                <span className="w-6 text-center text-xs font-semibold text-muted-foreground tabular-nums">
-                                    {i + 1}
-                                </span>
-                                <div className="flex items-center gap-2 min-w-0">
-                                    {d.photo_url ? (
-                                        <img src={d.photo_url} alt="" loading="lazy" className="h-7 w-7 rounded-full object-cover shrink-0 bg-muted" />
-                                    ) : (
-                                        <span className="inline-grid place-items-center h-7 w-7 rounded-full bg-primary/10 text-primary shrink-0">
-                                            <Bike className="h-3.5 w-3.5" />
-                                        </span>
+                        {items.map((d, i) => {
+                            const Row = d.url ? 'a' : 'div';
+                            const rowProps = d.url ? { href: d.url } : {};
+                            return (
+                                <Row
+                                    key={d.id}
+                                    {...rowProps}
+                                    className={cn(
+                                        'grid grid-cols-[auto_1fr_repeat(3,auto)] items-center gap-3 px-5 py-2.5 hover:bg-muted/30 transition-colors',
+                                        d.url && 'no-underline text-inherit',
                                     )}
-                                    <span className="text-sm font-medium truncate">{d.name}</span>
-                                </div>
-                                <span className="justify-self-end w-16 text-sm tabular-nums text-muted-foreground">
-                                    {Number(d.assigned).toLocaleString()}
-                                </span>
-                                <span className="justify-self-end w-16 text-sm tabular-nums font-medium">
-                                    {Number(d.delivered).toLocaleString()}
-                                </span>
-                                <span className="justify-self-end w-20 flex justify-end">
-                                    <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums', bandTone(d.performance))}>
-                                        {Number(d.performance).toFixed(1)}%
+                                >
+                                    <span className="w-6 text-center text-xs font-semibold text-muted-foreground tabular-nums">
+                                        {i + 1}
                                     </span>
-                                </span>
-                            </div>
-                        ))}
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        {d.photo_url ? (
+                                            <img src={d.photo_url} alt="" loading="lazy" className="h-7 w-7 rounded-full object-cover shrink-0 bg-muted" />
+                                        ) : (
+                                            <span className="inline-grid place-items-center h-7 w-7 rounded-full bg-primary/10 text-primary shrink-0">
+                                                <Bike className="h-3.5 w-3.5" />
+                                            </span>
+                                        )}
+                                        <span className="text-sm font-medium truncate">{d.name}</span>
+                                    </div>
+                                    <span className="justify-self-end w-16 text-sm tabular-nums text-muted-foreground">
+                                        {Number(d.assigned).toLocaleString()}
+                                    </span>
+                                    <span className="justify-self-end w-16 text-sm tabular-nums font-medium">
+                                        {Number(d.delivered).toLocaleString()}
+                                    </span>
+                                    <span className="justify-self-end w-20 flex justify-end">
+                                        <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums', bandTone(d.performance))}>
+                                            {Number(d.performance).toFixed(1)}%
+                                        </span>
+                                    </span>
+                                </Row>
+                            );
+                        })}
                     </div>
                 )}
             </CardContent>
@@ -342,6 +389,7 @@ function DeliverymenPerformanceCard({ items = [], t = {} }) {
 
 export default function Index({
     kpis = {},
+    kpi_urls = {},
     trend = [],
     status_breakdown = [],
     week_summary = {},
@@ -356,12 +404,12 @@ export default function Index({
         <AdminLayout title={t.title} breadcrumbs={[]}>
             <Head title={t.title} />
 
-            {/* Row 1 — KPIs */}
+            {/* Row 1 — KPIs (each card links to the corresponding filtered list) */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-                <KpiCard icon={Package}      tone="primary" label={t.kpi_today}     value={kpis.today_shipments} />
-                <KpiCard icon={Truck}        tone="info"    label={t.kpi_ofd}       value={kpis.ofd} />
-                <KpiCard icon={CheckCircle2} tone="success" label={t.kpi_delivered} value={kpis.delivered_today} />
-                <KpiCard icon={Clock}        tone="warning" label={t.kpi_pending}   value={kpis.pending} />
+                <KpiCard icon={Package}      tone="primary" label={t.kpi_today}     value={kpis.today_shipments} href={kpi_urls.today_shipments} />
+                <KpiCard icon={Truck}        tone="info"    label={t.kpi_ofd}       value={kpis.ofd}             href={kpi_urls.ofd} />
+                <KpiCard icon={CheckCircle2} tone="success" label={t.kpi_delivered} value={kpis.delivered_today} href={kpi_urls.delivered_today} />
+                <KpiCard icon={Clock}        tone="warning" label={t.kpi_pending}   value={kpis.pending}         href={kpi_urls.pending} />
             </div>
 
             {/* Row 2 — Charts: 7-day area (wide) + Status donut + Week success ring */}

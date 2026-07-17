@@ -28,6 +28,19 @@ class SummaryController extends Controller
         $todayTo   = $now->endOfDay();
         $weekFrom  = $now->subDays(6)->startOfDay();
 
+        // Every "drill-in" link is built through this closure so a stale
+        // route cache or a rename in web.php can't crash the page — it
+        // just falls back to a plain path string.
+        $safe = function (string $name, array $params = [], string $fallback = ''): string {
+            try { return route($name, $params); }
+            catch (\Throwable $e) { return $fallback ?: url('/'); }
+        };
+        $parcelIndex  = $safe('parcel.index',  [], '/admin/parcel/index');
+        $parcelFilter = fn (array $q) => $this->buildFilterUrl(
+            $safe('parcel.filter', [], '/admin/parcel/filter'),
+            $q
+        );
+
         // -------- KPI cards (all scoped to TODAY) ----------------
         // Every KPI is the count of parcels created between start-of-day
         // and end-of-day, further filtered by status where applicable.
@@ -46,6 +59,16 @@ class SummaryController extends Controller
             'pending'         => (int) Parcel::companywise()
                 ->whereBetween('created_at', [$todayFrom, $todayTo])
                 ->where('status', ParcelStatus::PENDING)->count(),
+        ];
+
+        // Per-KPI drill-in link. Sitting alongside the count keeps JSX
+        // trivial ({kpis.today_shipments_url}) and lets us centralize
+        // the query-param shape here.
+        $kpi_urls = [
+            'today_shipments' => $parcelIndex,
+            'ofd'             => $parcelFilter(['parcel_status' => ParcelStatus::DELIVERY_MAN_ASSIGN]),
+            'delivered_today' => $parcelFilter(['parcel_status' => ParcelStatus::DELIVERED]),
+            'pending'         => $parcelFilter(['parcel_status' => ParcelStatus::PENDING]),
         ];
 
         // -------- 7-day trend (created_at bucketed by day) -------
@@ -107,14 +130,15 @@ class SummaryController extends Controller
         $other          = max(0, $kpis['today_shipments'] - $accounted);
 
         // Order matters — donut renders slices in this sequence going
-        // clockwise from 12 o'clock.
+        // clockwise from 12 o'clock. Each slice carries its own drill-in
+        // link so a click jumps straight to the filtered shipments list.
         $statusBreakdown = [
-            ['key' => 'delivered', 'label' => 'Delivered', 'value' => $delivered],
-            ['key' => 'ofd',       'label' => 'Out for delivery', 'value' => $ofd],
-            ['key' => 'pending',   'label' => 'Pending pickup',   'value' => $pending],
-            ['key' => 'returned',  'label' => 'Returned',         'value' => $returnedCount],
-            ['key' => 'cancelled', 'label' => 'Cancelled',        'value' => $cancelledCount],
-            ['key' => 'other',     'label' => 'In transit',       'value' => $other],
+            ['key' => 'delivered', 'label' => 'Delivered',         'value' => $delivered,      'url' => $parcelFilter(['parcel_status' => ParcelStatus::DELIVERED])],
+            ['key' => 'ofd',       'label' => 'Out for delivery',  'value' => $ofd,            'url' => $parcelFilter(['parcel_status' => ParcelStatus::DELIVERY_MAN_ASSIGN])],
+            ['key' => 'pending',   'label' => 'Pending pickup',    'value' => $pending,        'url' => $parcelFilter(['parcel_status' => ParcelStatus::PENDING])],
+            ['key' => 'returned',  'label' => 'Returned',          'value' => $returnedCount,  'url' => $parcelFilter(['parcel_status' => ParcelStatus::RETURN_RECEIVED_BY_MERCHANT])],
+            ['key' => 'cancelled', 'label' => 'Cancelled',         'value' => $cancelledCount, 'url' => $parcelFilter(['parcel_status' => ParcelStatus::CANCELLED])],
+            ['key' => 'other',     'label' => 'In transit',        'value' => $other,          'url' => $parcelIndex],
         ];
 
         // -------- Weekly success ring (small gauge) --------
@@ -161,6 +185,7 @@ class SummaryController extends Controller
                 'name'      => (string) ($m->business_name ?: 'Merchant #'.$m->id),
                 'logo_url'  => $m->logo_url, // null when the merchant hasn't uploaded a logo
                 'shipments' => (int) $m->shipments,
+                'url'       => $safe('merchant.view', ['id' => $m->id], '/admin/merchant/view/'.$m->id),
             ])
             ->values();
 
@@ -180,6 +205,7 @@ class SummaryController extends Controller
                 'id'        => (int) $h->id,
                 'name'      => (string) ($h->name ?: 'Hub #'.$h->id),
                 'shipments' => (int) $h->shipments,
+                'url'       => $safe('hub.view', ['id' => $h->id], '/admin/hub/view/'.$h->id),
             ])
             ->values();
 
@@ -202,6 +228,9 @@ class SummaryController extends Controller
                 'id'        => (int) $c->id,
                 'name'      => (string) ($c->en_name ?: $c->name ?: 'City #'.$c->id),
                 'shipments' => (int) $c->shipments,
+                // No city-detail page — click drills into the shipments
+                // list filtered by this city.
+                'url'       => $parcelFilter(['city_id' => $c->id]),
             ])
             ->values();
 
@@ -235,7 +264,7 @@ class SummaryController extends Controller
             ->limit(10)
             ->get()
             ->filter(fn ($d) => (int) $d->assigned > 0) // hide drivers with no activity this month
-            ->map(function ($d) {
+            ->map(function ($d) use ($safe) {
                 $assigned  = (int) $d->assigned;
                 $delivered = (int) $d->delivered;
                 return [
@@ -248,6 +277,9 @@ class SummaryController extends Controller
                     'assigned'    => $assigned,
                     'delivered'   => $delivered,
                     'performance' => $assigned > 0 ? round(($delivered / $assigned) * 100, 1) : 0.0,
+                    // No dedicated driver-view page — jump to edit which
+                    // shows the driver's identity + all their assignments.
+                    'url'         => $safe('deliveryman.edit', ['id' => $d->id], '/admin/deliveryman/edit/'.$d->id),
                 ];
             })
             ->values();
@@ -273,11 +305,13 @@ class SummaryController extends Controller
                 'id'        => (int) $h->id,
                 'name'      => (string) ($h->name ?: 'Hub #'.$h->id),
                 'shipments' => (int) $h->shipments,
+                'url'       => $safe('hub.view', ['id' => $h->id], '/admin/hub/view/'.$h->id),
             ])
             ->values();
 
         return Inertia::render('Admin/Summary/Index', [
             'kpis'           => $kpis,
+            'kpi_urls'       => $kpi_urls,
             'trend'          => $trend,
             'status_breakdown' => $statusBreakdown,
             'week_summary'   => [
@@ -342,4 +376,15 @@ class SummaryController extends Controller
         ]);
     }
 
+    /**
+     * Append a query string to a route URL, preserving any existing query
+     * the resolver put in place (fallback paths from the safe closure are
+     * plain strings with no query, so this handles both).
+     */
+    private function buildFilterUrl(string $base, array $query): string
+    {
+        if (empty($query)) return $base;
+        $sep = str_contains($base, '?') ? '&' : '?';
+        return $base . $sep . http_build_query($query);
+    }
 }

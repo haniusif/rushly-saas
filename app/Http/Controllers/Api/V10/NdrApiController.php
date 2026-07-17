@@ -128,4 +128,40 @@ class NdrApiController extends Controller
             return $this->responseWithError('Could not load stats', ['error' => $e->getMessage()], 500);
         }
     }
+
+    /**
+     * GET /ndr/merchant
+     *
+     * Merchant-scoped NDR feed. Filters by parcels belonging to the
+     * caller's merchant so a merchant only sees failed-delivery reports
+     * against their own shipments. Same shape as `index()` plus a
+     * trimmed parcel projection (tracking_id, customer_name, address).
+     */
+    public function merchantIndex(Request $request)
+    {
+        $merchantId = Auth::user()->merchant->id ?? null;
+        if (!$merchantId) {
+            return $this->responseWithError('No merchant scope', [], 403);
+        }
+
+        try {
+            $ndrs = Ndr::companywise()
+                ->with([
+                    'parcel:id,tracking_id,customer_name,customer_phone,customer_address,merchant_id',
+                    'deliveryman.user:id,name,mobile',
+                    'createdBy:id,name',
+                ])
+                ->whereHas('parcel', fn ($q) => $q->where('merchant_id', $merchantId))
+                ->when($request->filled('status'), fn ($q) =>
+                    $q->where('status', $request->input('status')))
+                ->latest('id')
+                ->paginate(25);
+
+            return $this->responseWithSuccess('Merchant NDRs',
+                ['ndrs' => $ndrs], 200);
+        } catch (\Throwable $e) {
+            return $this->responseWithError('Failed to load NDRs',
+                ['error' => $e->getMessage()], 500);
+        }
+    }
 }

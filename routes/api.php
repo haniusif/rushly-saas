@@ -279,6 +279,7 @@ Route::prefix('v10')->group(function() {
 
             // NDR API (deliveryman mobile app)
             Route::get('ndr',                                           [NdrApiController::class,'index']);
+            Route::get('ndr/merchant',                                  [NdrApiController::class,'merchantIndex']);
             Route::get('ndr/stats',                                     [NdrApiController::class,'stats']);
             Route::get('ndr/parcel/{parcelId}',                         [NdrApiController::class,'byParcel']);
             Route::get('ndr/{id}',                                      [NdrApiController::class,'show']);
@@ -316,6 +317,7 @@ Route::prefix('v10')->group(function() {
             Route::post('parcel/store',                                 [ParcelController::class,'store']);
             Route::post('parcel/bulk-store',                            [ParcelController::class,'bulkStore']);
             Route::get('reports/shipments',                             [\App\Http\Controllers\Api\V10\MerchantReportsController::class,'shipments']);
+            Route::get('store-connections',                             [\App\Http\Controllers\Api\V10\MerchantStoreConnectionsController::class,'index']);
             Route::get('parcel/details/{id}',                           [ParcelController::class,'details']);
             Route::get('parcel/edit/{id}',                              [ParcelController::class,'edit']);
             Route::put('parcel/update/{id}',                            [ParcelController::class,'update']);

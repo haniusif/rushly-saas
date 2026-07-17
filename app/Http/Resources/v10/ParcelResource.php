@@ -103,6 +103,13 @@ private function formatUaePhone(?string $raw): ?string
             'parcel_time'           => date('h:i a', strtotime($this->created_at)) ,
             
             'wa_msg'           => $wa_msg ?? "" ,
+
+            // Geo fields for the merchant + admin app tracking maps.
+            // Nullable — merchants aren't required to geocode addresses.
+            'customer_lat'          => $this->customer_lat !== null ? (float) $this->customer_lat : null,
+            'customer_long'         => $this->customer_long !== null ? (float) $this->customer_long : null,
+            'pickup_lat'            => $this->pickup_lat !== null ? (float) $this->pickup_lat : null,
+            'pickup_long'           => $this->pickup_long !== null ? (float) $this->pickup_long : null,
         ];
     }
     

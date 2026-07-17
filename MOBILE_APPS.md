@@ -122,17 +122,19 @@ Merchant slice of `/api/v10/*`. ~70 endpoints across 9 groups.
 | Support | 7 | list, create, store, view/{id}, edit, update, reply (supports `attached_file` multipart), delete |
 | Reports | 1 | `GET /reports/shipments?from=&to=` — totals + by_driver + by_city + by_status + daily timeseries |
 | Bulk | 1 | `POST /parcel/bulk-store` — accepts `{rows: [...]}`, validates each row with the same `StoreRequest` rules, returns `{created, error_count, errors: [{row, errors}]}` |
+| NDR | 1 | `GET /ndr/merchant` — paginated NDR feed scoped to the caller's merchant (joined on `parcels.merchant_id`) |
+| Store connections | 1 | `GET /store-connections` — the merchant's connected Salla / Zid / WooCommerce / Shopify shops with sync + last-event timestamps (secrets hidden by the model) |
 | Helpers | 6 | `/hub`, `/general-settings`, `/all-currencies`, `/settings/cod-charges`, `/settings/delivery-charges`, `/news-offer/index` |
 
 ### Current features
 - **Tenant-aware / SaaS-wise install** — first launch prompts for a workspace subdomain (or full URL in advanced mode); pings `/general-settings` before persisting; profile screen shows current workspace + "Change workspace" action. One APK, any tenant. (Same design as admin and driver apps — all three share the tenant-select pattern.)
 - Signup with OTP verification and password reset flows
 - Bottom-nav shell: Dashboard, Parcels, Shops, Payments, Support (+ drawer for Fraud, News, Settings, Invoices)
-- Dashboard: balance card, pending/delivered counts, analytics via `fl_chart`, "Reports" button in AppBar
+- Dashboard: balance card, pending/delivered counts, analytics via `fl_chart`, "Reports" button in AppBar. **All KPI cards clickable** — balance opens the payments hub; parcel-count tiles open pre-filtered parcel lists (`/parcels?status=X`); status-list rows do the same.
 - **Reports screen** — date-range picker + 4 tabs: Overview (KPI cards), By driver, By city, Trend (line chart)
 - Parcel create/edit form (recipient, address, items, COD, payment method) + **live charge preview** (delivery + COD + fragile/liquid + VAT + net) computed client-side from the same reference data the server uses
 - **Bulk parcel import (CSV)** — file picker → parse → preview with per-row issue highlighting → submit → per-row error report from backend
-- Parcel detail with tracking timeline (`/parcel/logs/{id}`)
+- Parcel detail with tracking timeline (`/parcel/logs/{id}`) + **live tracking map** (`flutter_map` on OSM tiles): plots pickup point, customer destination, and driver's latest known position from the most recent parcel event's `delivery_lat/long`. Empty-state card renders when no coords are available. Backend `ParcelResource` + `ParcelLogsResource` now expose the geo fields.
 - Shops CRUD
 - Payment accounts CRUD + withdrawal (payment request) flow
 - Statements + account transactions + **PDF export** (Statements tab FAB → `pdf` + `printing` → native share sheet)
@@ -140,13 +142,13 @@ Merchant slice of `/api/v10/*`. ~70 endpoints across 9 groups.
 - Fraud: check a phone number, view / add / delete flagged customers
 - News / offers feed
 - Support tickets with **client-side search** and **image attachments** on replies (multipart to existing `/support/reply`)
+- **NDR (failed attempts) feed** — profile entry opens a merchant-scoped list from `/ndr/merchant`, coloured by status (open/resolved/returned), tap a row to jump to the parcel details.
+- **Store connections view** — profile entry showing the merchant's connected Salla / Zid / WooCommerce / Shopify shops with per-provider badge, connection domain, sync + last-event + last-tested timestamps, and a "Default" star.
 - Push notifications via FCM
 
 ### Known gaps (candidates for new features)
-- Live tracking map for a specific parcel (currently timeline text only)
 - In-app onboarding tour (`TOURS.md` copy exists but not wired here)
 - Wallet top-up / online payment inside the app (currently redirect-only in web)
-- Salla / Zid / WooCommerce store connection status view (read-only widget of connected shops)
 - WMS visibility (stock levels for merchants using the warehousing service)
 - Return / NDR consent screen (currently only in web merchant panel)
 - Multi-shop switcher header (currently one flat parcel list)

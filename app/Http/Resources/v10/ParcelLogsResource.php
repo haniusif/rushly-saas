@@ -29,6 +29,11 @@ class ParcelLogsResource extends JsonResource
             "parcel_status_name"        => __('parcelLogs.'.$this->parcel_status),
             'date'                      => dateFormat($this->created_at) ,
             'time_date'                 => date('h:i a', strtotime($this->created_at)) ,
+
+            // Geo fields for the tracking map — populated when the driver
+            // reported their location for this event. Nullable.
+            'delivery_lat'              => $this->delivery_lat !== null ? (float) $this->delivery_lat : null,
+            'delivery_long'             => $this->delivery_long !== null ? (float) $this->delivery_long : null,
         ];
     }
 

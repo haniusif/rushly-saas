@@ -169,7 +169,7 @@ Dedicated `/api/v10/admin/*` namespace — gated by `CheckApiKey` + `auth:sanctu
 | Push | 2 | `POST /admin/fcm-subscribe`, `POST /admin/fcm-unsubscribe` (topic derived server-side from authenticated user email) |
 | Map | 2 | `GET /admin/map/parcels` (unassigned + geo), `GET /admin/map/drivers` (last-known location from most recent ParcelEvent) |
 | Hub cash | 4 | `GET /admin/hub-cash` (recent entries), `GET /admin/hub-cash/drivers` (with current_balance), `GET /admin/hub-cash/accounts` (caller's deposit accounts), `POST /admin/hub-cash` (record; HUB/INCHARGE only — delegates to ReceivedRepository) |
-| WMS | 2 admin + 5 shared | `GET /admin/wms/grns` (open GRNs with received/expected totals), `GET /admin/wms/locations`. The scanner flow reuses `/wms/products/lookup`, `/wms/stock/{id}`, `/wms/grn/{id}/scan`, `/wms/grn/{id}/complete`, `/wms/adjustments` from the shared driver-facing API. |
+| WMS | 6 admin + 5 shared | `GET /admin/wms/grns` (open GRNs with received/expected totals), `GET /admin/wms/locations`, `GET /admin/wms/cycle-counts` + `POST` (open a new counting session), `GET /admin/wms/damage-reports` + `POST` (record damage: product/location/qty/cause/action/notes). The scanner flow reuses `/wms/products/lookup`, `/wms/stock/{id}`, `/wms/grn/{id}/scan`, `/wms/grn/{id}/complete`, `/wms/adjustments` from the shared driver-facing API. |
 | Dashboard | 2 | `GET /admin/dashboard`, `/admin/dashboard/timeseries` |
 | Parcels | 7 | `GET /admin/parcels`, `/parcels/{id}`, `/parcels/{id}/logs`, `POST /parcels/{id}/assign-driver`, `POST /parcels/{id}/status`, `GET /parcels/{id}/3pl` (provider status + past assignments), `POST /parcels/{id}/3pl-assign` (delegates to `ParcelController::ThirdPartyLogistics`) |
 | Drivers | 2 | `GET /admin/drivers`, `/drivers/{id}` |
@@ -187,7 +187,7 @@ Controllers: `app/Http/Controllers/Api/V10/Admin/*Controller.php`.
 - Dashboard with KPI cards + time-series chart
 - Bottom nav: **Dashboard**, **Parcels**, **Drivers**, **Profile** (+ drawer for Merchants, Approvals, Hubs, Support, Fraud)
 - **Role-gated navigation**: `Merchants` and `Approvals` only visible to `admin` / `super_admin` (hub users are automatically clamped server-side too)
-- Parcel list with filters + detail view + assign-driver + force-status actions
+- Parcel list with filters + detail view + assign-driver + force-status actions. **Detail screen now includes a live tracking map** (`flutter_map` on OSM tiles) plotting pickup + customer + driver's last-known position — same widget shape as the merchant and driver apps.
 - Driver list + detail (with GPS + daily stats)
 - Merchant list + detail + activate/deactivate toggle
 - Hub list + detail
@@ -195,14 +195,13 @@ Controllers: `app/Http/Controllers/Api/V10/Admin/*Controller.php`.
 - **Merchant onboarding approval queue** — dedicated drawer entry for `admin` / `super_admin`. Reads `/admin/merchants/pending`, renders KYC (CR, tax, IBAN, national address, uploaded documents) on a review screen, and posts to `/merchants/{id}/approve` or `/merchants/{id}/reject`. Approving sets `merchant.status = 1` + `user.status = 1` + `user.verification_status = 1`; rejecting sets `merchant.status = 2` so the row drops out of the pending list without touching the user record beyond `status = 0`.
 - **Driver assignment map** — OSM-tiled `flutter_map` view with two toggleable marker layers: unassigned parcels (from `customer_lat/long`) and drivers (last-known location derived from their most recent `ParcelEvent`). Tap a parcel → bottom sheet lists drivers sorted by haversine distance → tap `Assign` → posts to existing `/admin/parcels/{id}/assign-driver`. Hub-scoped users are auto-clamped by the backend to their own hub.
 - **Hub cash reconciliation** — shows drivers holding outstanding COD (sorted by amount owed) alongside the recent-reconciliations feed. HUB/INCHARGE users get a FAB to record a new deposit (driver + account + amount + date + note); admin/super_admin get read-only history across all hubs. Write path delegates to the same `ReceivedRepository` the web panel uses, so hub balances, deliveryman statements, and bank-transaction ledgers all stay in sync.
-- **Warehouse (WMS) mobile** — drawer entry opens a hub with two tiles: **Stock lookup** (barcode scanner via `mobile_scanner`, falls back to typed SKU/barcode; shows on-hand / available / reorder point + per-location stock rows), and **Receive goods** (list of open GRNs; tap opens a scan session where each scanned item pops a bottom sheet for location + qty + batch + condition, POSTs to `/wms/grn/{id}/scan`, and a Complete action finalises via `/wms/grn/{id}/complete`). Reuses the existing driver-facing WMS API for all writes.
+- **Warehouse (WMS) mobile** — drawer entry opens a hub with four tiles: **Stock lookup** (barcode scanner via `mobile_scanner`, falls back to typed SKU/barcode; shows on-hand / available / reorder point + per-location stock rows), **Receive goods** (list of open GRNs; tap opens a scan session where each scanned item pops a bottom sheet for location + qty + batch + condition, POSTs to `/wms/grn/{id}/scan`, and a Complete action finalises via `/wms/grn/{id}/complete`), **Cycle count** (session list + a bottom-sheet form to open a new session with hub/scope/zone), and **Damage reports** (list of past reports + a form to record product/location/qty/cause/action/notes). Reuses the existing driver-facing WMS API for scan writes; new admin endpoints back the cycle-count + damage flows.
 - **3PL assignment from mobile** — parcel detail screen has an "Assign to 3PL" action. The bottom sheet lists all five providers (Panda / Zajel / Aramex / Jet / Logestechs) with a live `configured` flag driven by each provider service's `isConfigured()`. Past assignments are shown with AWB + tappable label URL. The write endpoint delegates to the existing web `ParcelController::ThirdPartyLogistics` so behavior is identical to the web panel — same payload, same `parcels_3pl` audit trail.
 - Support tickets (reply + close)
 - Fraud flag list (add / delete)
 - Foreground push notifications via FCM
 
 ### Known gaps (candidates for new features)
-- WMS: cycle count + damage report screens (stock lookup + GRN receiving already shipped)
 - Invoicing / billing views for super_admin
 - Cross-tenant view for super_admin (currently one tenant per session)
 

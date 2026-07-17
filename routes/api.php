@@ -200,6 +200,10 @@ Route::prefix('v10/admin')->middleware(['CheckApiKey'])->group(function () {
 
         Route::get('/wms/grns',                             [AdminWmsController::class,          'grns']);
         Route::get('/wms/locations',                        [AdminWmsController::class,          'locations']);
+        Route::get('/wms/cycle-counts',                     [AdminWmsController::class,          'cycleCounts']);
+        Route::post('/wms/cycle-counts',                    [AdminWmsController::class,          'cycleCountsStore']);
+        Route::get('/wms/damage-reports',                   [AdminWmsController::class,          'damageReports']);
+        Route::post('/wms/damage-reports',                  [AdminWmsController::class,          'damageReportsStore']);
 
         Route::get('/parcels/{id}/3pl',                     [AdminParcel3plController::class,    'status']);
         Route::post('/parcels/{id}/3pl-assign',             [AdminParcel3plController::class,    'assign']);

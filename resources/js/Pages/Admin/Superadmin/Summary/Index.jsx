@@ -134,10 +134,10 @@ export default function Index({
         <AdminLayout title={t.title} breadcrumbs={[]}>
             <Head title={t.title} />
 
-            <div className="mb-5">
-                <h1 className="text-lg font-semibold">{t.title}</h1>
-                <p className="text-sm text-muted-foreground">{t.subtitle}</p>
-            </div>
+            {/* Subtitle only — AdminLayout already renders {t.title} as the H1. */}
+            {t.subtitle && (
+                <p className="text-sm text-muted-foreground mb-5 -mt-2">{t.subtitle}</p>
+            )}
 
             {/* SaaS KPI row */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-4">

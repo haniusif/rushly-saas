@@ -9,6 +9,7 @@ use App\Repositories\HubInCharge\HubInChargeInterface;
 use Illuminate\Http\Request;
 use App\Http\Requests\HubInCharge\HubInChargeRequest;
 use Brian2694\Toastr\Facades\Toastr;
+use Inertia\Inertia;
 
 class HubInChargeController extends Controller
 {
@@ -22,7 +23,67 @@ class HubInChargeController extends Controller
     {
         $hubInCharges = $this->repo->all($hubID);
         $hub          = $this->repo->hub($hubID);
-        return view('backend.hubincharge.index',compact('hubInCharges','hub'));
+        if (!$hub) {
+            return redirect()->route('hubs.index');
+        }
+
+        $rows = collect($hubInCharges)->map(fn ($ic) => [
+            'id'        => $ic->id,
+            'user_id'   => $ic->user_id,
+            'name'      => optional($ic->user)->name,
+            'email'     => optional($ic->user)->email,
+            'mobile'    => optional($ic->user)->mobile,
+            'unique_id' => optional($ic->user)->unique_id,
+            'image'     => optional($ic->user)->image,
+            'status'    => (int) $ic->status,
+            'is_active' => (int) $ic->status === Status::ACTIVE,
+            'urls' => [
+                'edit'     => route('hub-incharge.edit',     ['hubID' => $hubID, 'id' => $ic->id]),
+                'destroy'  => route('hub-incharge.destroy',  ['hubID' => $hubID, 'id' => $ic->id]),
+                'assigned' => route('hub-incharge.assigned', ['hubID' => $hubID, 'id' => $ic->id]),
+            ],
+        ])->values();
+
+        return Inertia::render('Admin/HubInCharge/Index', [
+            'hub' => [
+                'id'      => $hub->id,
+                'name'    => $hub->name,
+                'phone'   => $hub->phone,
+                'address' => $hub->address,
+            ],
+            'rows'        => $rows,
+            'permissions' => [
+                'create'   => hasPermission('hub_incharge_create'),
+                'update'   => hasPermission('hub_incharge_update'),
+                'delete'   => hasPermission('hub_incharge_delete'),
+                'assigned' => hasPermission('hub_incharge_assigned'),
+            ],
+            'urls' => [
+                'hubs'    => route('hubs.index'),
+                'hub_view'=> route('hub.view', $hub->id),
+                'create'  => route('hub-incharge.create', $hub->id),
+            ],
+            't' => [
+                'title'           => __('incharge.title') ?: 'Hub in-charges',
+                'hubs'            => __('hub.title') ?: 'Hubs',
+                'hub'             => __('levels.hub') ?: 'Hub',
+                'back_to_hub'     => 'Back to hub',
+                'add'             => __('levels.add') ?: 'Add in-charge',
+                'name'            => __('levels.name') ?: 'Name',
+                'email'           => __('levels.email') ?: 'Email',
+                'phone'           => __('levels.phone') ?: 'Phone',
+                'unique_id'       => __('levels.unique_id') ?: 'ID',
+                'status'          => __('levels.status') ?: 'Status',
+                'active'          => __('levels.active') ?: 'Active',
+                'inactive'        => __('levels.inactive') ?: 'Inactive',
+                'edit'            => __('levels.edit') ?: 'Edit',
+                'delete'          => __('levels.delete') ?: 'Delete',
+                'delete_confirm'  => 'Remove this in-charge?',
+                'assign_active'   => 'Set as active in-charge',
+                'no_rows'         => 'No in-charges assigned yet.',
+                'actions'         => __('levels.actions') ?: 'Actions',
+            ],
+        ]);
     }
 
     /**
@@ -32,9 +93,63 @@ class HubInChargeController extends Controller
      */
     public function create($hubID)
     {
-        $hub    = $this->repo->hub($hubID);
+        $hub = $this->repo->hub($hubID);
+        if (! $hub) return redirect()->route('hubs.index');
+        return Inertia::render('Admin/HubInCharge/Form', $this->formProps($hub, null));
+    }
+
+    /**
+     * Shared props for the create + edit Inertia form. Only differs in the
+     * submit URL/method and the seed values; the users lookup is the same
+     * pool in both modes (all users who could be assigned).
+     */
+    private function formProps($hub, $inCharge): array
+    {
+        $isEdit = $inCharge !== null;
         $users  = $this->repo->users();
-      return view('backend.hubincharge.create',compact('hub','users'));
+
+        return [
+            'mode' => $isEdit ? 'edit' : 'create',
+            'hub'  => [
+                'id'      => $hub->id,
+                'name'    => (string) $hub->name,
+                'phone'   => (string) $hub->phone,
+                'address' => (string) $hub->address,
+            ],
+            'row'  => [
+                'id'      => $isEdit ? $inCharge->id : null,
+                'user_id' => $isEdit ? (string) $inCharge->user_id : '',
+                'status'  => $isEdit ? (string) $inCharge->status  : (string) Status::ACTIVE,
+            ],
+            'lookups' => [
+                'users' => collect($users)->map(fn ($u) => [
+                    'value' => (string) $u->id,
+                    'label' => $u->name . ($u->mobile ? ' (' . $u->mobile . ')' : ''),
+                ])->values(),
+                'statuses' => collect(trans('status'))->map(fn ($label, $key) => [
+                    'value' => (string) $key,
+                    'label' => $label,
+                ])->values(),
+            ],
+            'urls' => [
+                'submit' => $isEdit
+                    ? route('hub-incharge.update', ['hubID' => $hub->id, 'id' => $inCharge->id])
+                    : route('hub-incharge.store',  $hub->id),
+                'index'  => route('hub-incharge.index', $hub->id),
+                'hubs'   => route('hubs.index'),
+            ],
+            't' => [
+                'title'      => ($isEdit ? __('levels.edit') : __('levels.create')) . ' · ' . (__('incharge.title') ?: 'Hub in-charge'),
+                'section'    => ($isEdit ? __('levels.edit') : __('levels.create')) . ' ' . (__('incharge.title') ?: 'in-charge'),
+                'hubs'       => __('hubs.title') ?: 'Hubs',
+                'incharge'   => __('incharge.title') ?: 'In-charges',
+                'user'       => __('levels.user') ?: 'User',
+                'status'     => __('levels.status') ?: 'Status',
+                'save'       => __('levels.save') ?: 'Save',
+                'cancel'     => __('levels.cancel') ?: 'Cancel',
+                'select_user'=> '-- Select user --',
+            ],
+        ];
     }
 
     /**
@@ -73,12 +188,13 @@ class HubInChargeController extends Controller
      * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function edit($hubID,$id)
+    public function edit($hubID, $id)
     {
-        $hub        = $this->repo->hub($hubID);
-        $users      = $this->repo->users();
-        $inCharge   = $this->repo->get($hubID,$id);
-        return view('backend.hubincharge.edit',compact('inCharge','hub','users'));
+        $hub      = $this->repo->hub($hubID);
+        $inCharge = $this->repo->get($hubID, $id);
+        if (! $hub) return redirect()->route('hubs.index');
+        if (! $inCharge) return redirect()->route('hub-incharge.index', $hubID);
+        return Inertia::render('Admin/HubInCharge/Form', $this->formProps($hub, $inCharge));
     }
 
 

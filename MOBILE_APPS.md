@@ -71,7 +71,7 @@ Driver-specific slice of `/api/v10/*`. All routes gated by `CheckApiKey` (static
 |---|---|---|
 | Auth | 7 | `POST /deliveryman/login`, `POST /otp-verification`, `POST /resend-otp`, `POST /password/email`, `POST /password/reset`, `POST /fcm-subscribe`, `POST /fcm-unsubscribe` |
 | Driver dashboard | 7 | `GET /deliveryman/dashboard`, `/profile`, `/cash` (COD balance + handover history), `/payment-logs`, `/parcel-payment-logs`, `/parcel-status`, `/income-expense` |
-| Parcels | 7 | `GET /deliveryman/parcel/index`, `/details/{id}`, `/by-tracking/{tracking}` (server-side lookup for scanned AWBs), `POST /delivered/{id}`, `POST /partial-delivered/{id}`, `POST /deliveryman/parcel-location-update` |
+| Parcels | 7 | `GET /deliveryman/parcel/index`, `/details/{id}`, `/by-tracking/{tracking}` (server-side lookup for scanned AWBs), `POST /delivered/{id}`, `POST /partial-delivered/{id}`, `POST /deliveryman/parcel-location-update` (now inside auth:sanctum — driver derived from the token, no more spoofable `deliveryID` in the body) |
 | NDR | 6 | `GET /ndr/index`, `/stats`, `/{id}`, `/parcel/{parcelId}`, `POST /` (create — driver reports a failed attempt), `POST /notify` |
 | Support | 7 | `GET /support/index`, `POST /support/create`, `/store`, `/view/{id}`, `/edit/{id}`, `/update/{id}`, `/reply`, `DELETE /delete/{id}` |
 | Helpers | 5 | `GET /hub`, `/general-settings`, `/all-currencies`, `/settings/cod-charges`, `/settings/delivery-charges` |
@@ -82,12 +82,14 @@ Controller stack on the backend: `app/Http/Controllers/Api/V10/{Auth,Deliveryman
 - **Tenant-aware / SaaS-wise install** — first launch prompts for a workspace subdomain (or full URL in advanced mode); pings `/general-settings` before persisting; profile screen shows current workspace + "Change workspace" action. One APK, any tenant.
 - Login with driver id + password → Sanctum bearer stored in secure storage
 - 5-tab shell: **Dashboard**, **Parcels**, **Earnings**, **Support**, **Profile**
-- Parcel list with status badges + detail view
+- Parcel list with status badges + detail view. **Detail screen now includes a live tracking map** (`flutter_map` on OSM tiles) plotting pickup + customer + the driver's own latest known position. Same widget shape as the merchant app.
 - **AWB barcode scan** — camera scanner in the parcels AppBar (`mobile_scanner`); detected code is matched against the cached assigned list first, then falls back to a server lookup at `/deliveryman/parcel/by-tracking/{tracking}` which guards that the parcel is actually assigned to the caller.
 - Delivery outcome flows with photo capture and rejection reasons (delivered / partial / not-delivered)
 - **NDR create flow** — "Report NDR" action on parcel details opens a form (failure-reason dropdown from the backend enum + optional notes + optional next-attempt date), posts to `/ndr` and refreshes the list.
 - Live location ping via `geolocator` (foreground only)
-- Earnings dashboard: income / expense breakdown, payment logs, per-parcel settlement view
+- Earnings dashboard: income / expense breakdown, payment logs, per-parcel settlement view + coloured summary (income/expense/net) with parcel-deep-link chips and day-grouped Parcels tab.
+- **Dashboard KPI cards are clickable** — balance/earnings/COD tiles open the earnings or cash screen; in-progress/delivered tiles open the parcel list pre-filtered to that status. Bucket sections have a "View all" shortcut. `/parcels?status=X&label=Y` and `/earnings` are now first-class deep-linkable routes.
+- **Route-optimised runsheet** — new screen accessed from the parcels list AppBar. Grabs the driver's current GPS via `geolocator`, then greedily orders today's assigned parcels using nearest-neighbor haversine. Each stop shows the leg distance in km + a Google Maps "directions" shortcut. Not the optimal TSP solution but plenty good for a half-day 5-30 stop run.
 - **Cash reconciliation screen** — profile entry showing outstanding COD (positive-normalised for display) + total handed over + a chronological handover history from `/deliveryman/cash`. Read-only; mirrors what the hub sees in `AdminHubCashController`.
 - Support ticket create/reply/view
 - NDR list + stats + notify
@@ -95,10 +97,8 @@ Controller stack on the backend: `app/Http/Controllers/Api/V10/{Auth,Deliveryman
 
 ### Known gaps (candidates for new features)
 - Background / persistent location tracking (currently foreground only)
-- Route-optimised delivery batching (multi-parcel runsheet in-app)
 - Offline queueing for delivery outcome submissions (photo + status)
 - Chat with hub incharge or merchant on a specific parcel
-- Server-side fix: `POST /deliveryman/parcel-location-update` is currently unauthenticated (identifier passed in body)
 
 ---
 

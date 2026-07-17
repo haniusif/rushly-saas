@@ -173,22 +173,44 @@ class DeliverymanController extends Controller
         }
     }
 
-    public function parcelLocationUpdate(Request $request){
-        try {
+    /**
+     * Driver posts their current GPS position; we stamp it onto their
+     * parcel events so the tracking map (admin + merchant) has a
+     * latest-known position for this driver.
+     *
+     * Auth: the driver is derived from the authenticated user token; we
+     * no longer accept a `deliveryID` in the body (previously this
+     * endpoint was open, letting anyone spoof any driver's location).
+     */
+    public function parcelLocationUpdate(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'lat'  => 'required|numeric|between:-90,90',
+            'long' => 'required|numeric|between:-180,180',
+        ]);
+        if ($validator->fails()) {
+            return $this->responseWithError(
+                __('parcel.status'),
+                ['message' => $validator->errors()],
+                422
+            );
+        }
 
-            $user = User::find($request->deliveryID)->deliveryman->id;
-            $parcelEvents = ParcelEvent::where('delivery_man_id',$user)->get();
-            if(!blank($parcelEvents)) {
-                foreach ($parcelEvents as $parcelEvent) {
-                    $parcelEvent->delivery_lat = $request->lat;
-                    $parcelEvent->delivery_long = $request->long;
-                    $parcelEvent->save();
-                }
+        try {
+            $driver = Auth::user()->deliveryman ?? null;
+            if (!$driver) {
+                return $this->responseWithError(__('parcel.error_msg'), [], 403);
             }
 
-            return $this->responseWithSuccess(__('parcel.status'),[],200);
+            ParcelEvent::where('delivery_man_id', $driver->id)->update([
+                'delivery_lat'  => $request->lat,
+                'delivery_long' => $request->long,
+            ]);
+
+            return $this->responseWithSuccess(__('parcel.status'), [], 200);
         } catch (\Throwable $th) {
-            return $this->responseWithError(__('parcel.error_msg'), [],500);
+            return $this->responseWithError(__('parcel.error_msg'),
+                ['error' => $th->getMessage()], 500);
         }
     }
     public function parcelStatusUpdate(Request $request){

@@ -364,10 +364,12 @@ Route::prefix('v10')->group(function() {
             Route::post('deliveryman/parcel-delivered',[DeliverymanController::class, 'parcelDelivered']);
             Route::post('deliveryman/parcel-not-delivered',[DeliverymanController::class, 'parcelNotDelivered']);
 
- 
+            // Was previously outside auth:sanctum — driver id in body meant
+            // anyone with the shared apiKey could spoof a driver's GPS.
+            // Now token-scoped: driver derived from Auth::user().
+            Route::post('deliveryman/parcel-location-update',            [DeliverymanController::class, 'parcelLocationUpdate']);
 
         });
-        Route::post('deliveryman/parcel-location-update',            [DeliverymanController::class, 'parcelLocationUpdate']);
 
     });
     Route::get('customer/installation',                               [InstallerController::class,'customerInstallation']);

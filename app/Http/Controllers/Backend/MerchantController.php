@@ -212,6 +212,12 @@ class MerchantController extends Controller
      * link + forgot-password flow if they've lost their credentials.
      * Reuses UserCredentialsMail because merchants log in through the same
      * /login endpoint as everyone else on this tenant.
+     *
+     * Resolves the tenant subdomain via Stancl's Domain table so the
+     * login link always points at the tenant portal (e.g.
+     * https://smile.rushly.tech/login) instead of the central host.
+     * Enriches the mail with tenant support contact info pulled from
+     * general_settings so the "Need help?" block is populated.
      */
     public function sendCredentials(Request $request, $id)
     {
@@ -220,12 +226,21 @@ class MerchantController extends Controller
         $email = optional($merchant->user)->email;
         abort_if(empty($email), 422, 'This merchant has no email on file.');
 
+        $settings = settings();
+        $loginUrl = $this->tenantLoginUrl();
+
         try {
             Mail::to($email)->send(new UserCredentialsMail(
-                userName: (string) (optional($merchant->user)->name ?: ($merchant->business_name ?: 'there')),
-                email:    (string) $email,
-                password: null, // no plaintext available — admin-triggered invite
-                loginUrl: url('/login'),
+                userName:       (string) (optional($merchant->user)->name ?: ($merchant->business_name ?: 'there')),
+                email:          (string) $email,
+                password:       null, // no plaintext available — admin-triggered invite
+                loginUrl:       $loginUrl,
+                tenantDomain:   $loginUrl,
+                supportEmail:   $settings?->email    ?: null,
+                supportPhone:   $settings?->phone    ?: null,
+                supportAddress: $settings?->address  ?: null,
+                portalName:     __('Merchant portal'),
+                brandLogo:      $settings?->logo_image ?: null,
             ));
         } catch (\Throwable $e) {
             Log::error('Merchant credentials mail failed: '.$e->getMessage(), ['merchant_id' => $merchant->id]);
@@ -233,6 +248,28 @@ class MerchantController extends Controller
         }
 
         return back()->with('success', __('Login info emailed to the merchant.'));
+    }
+
+    /**
+     * Full https://<subdomain>/login URL for the current tenant. Falls back
+     * to the app-wide login URL when tenancy isn't initialized (CLI /
+     * queue). Prefers the first row of the tenant's domains table so a
+     * tenant with a custom vanity host (e.g. wms.navix.com.sa) gets that
+     * host on the invite instead of the platform default.
+     */
+    private function tenantLoginUrl(): string
+    {
+        try {
+            $t = tenant();
+            if ($t) {
+                $dom = \Stancl\Tenancy\Database\Models\Domain::where('tenant_id', $t->id)
+                    ->orderBy('id')->value('domain');
+                if ($dom) {
+                    return rtrim(scheme_name($dom), '/').'/login';
+                }
+            }
+        } catch (\Throwable $e) {}
+        return url('/login');
     }
 
 

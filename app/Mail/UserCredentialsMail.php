@@ -7,10 +7,15 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Sent by an admin from Users → Change password with the "email the user"
- * toggle on, or from the "Send login info" button on the user view page.
- * When $password is null we only ship the login URL — used for invites
- * where we don't know the plaintext (any pre-existing user).
+ * Rich sign-in invite email. Sent by an admin from Users → Change password
+ * (with the "email the user" toggle on), the "Send login info" button on
+ * the user view page, or Merchants → row action "Send login info by email".
+ *
+ * When $password is null the template renders the invite (link only) copy;
+ * when it's set it renders the password + security-tips section. All the
+ * contact/brand fields are optional — an unset field silently drops its
+ * block, so a bare (userName, email, null, url) call still produces a
+ * clean, minimal email.
  */
 class UserCredentialsMail extends Mailable
 {
@@ -21,23 +26,39 @@ class UserCredentialsMail extends Mailable
         public string  $email,
         public ?string $password,
         public string  $loginUrl,
+        /** Full "https://smile.rushly.tech" style URL — surfaced next to the CTA button. */
+        public ?string $tenantDomain    = null,
+        /** Rendered as the "Need help?" contact block. */
+        public ?string $supportEmail    = null,
+        public ?string $supportPhone    = null,
+        public ?string $supportAddress  = null,
+        /** Portal label ("Merchant portal", "Admin portal", …). */
+        public ?string $portalName      = null,
+        /** Absolute URL to the tenant/brand logo — 32-56px tall renders best. */
+        public ?string $brandLogo       = null,
     ) {}
 
     public function build()
     {
-        $from = settings()?->email ?: config('mail.from.address');
-        $brand = settings()?->company_name ?? settings()?->name ?? config('app.name');
+        $from  = settings()?->email ?: config('mail.from.address');
+        $brand = settings()?->name ?: config('app.name');
 
         return $this->from($from)
             ->subject($this->password
                 ? __('Your new password for :brand', ['brand' => $brand])
                 : __('Sign in to :brand', ['brand' => $brand]))
             ->view('emails.user-credentials', [
-                'userName' => $this->userName,
-                'email'    => $this->email,
-                'password' => $this->password,
-                'loginUrl' => $this->loginUrl,
-                'brand'    => (string) $brand,
+                'userName'       => $this->userName,
+                'email'          => $this->email,
+                'password'       => $this->password,
+                'loginUrl'       => $this->loginUrl,
+                'brand'          => (string) $brand,
+                'tenantDomain'   => $this->tenantDomain,
+                'supportEmail'   => $this->supportEmail,
+                'supportPhone'   => $this->supportPhone,
+                'supportAddress' => $this->supportAddress,
+                'portalName'     => $this->portalName ?: __('Portal'),
+                'brandLogo'      => $this->brandLogo,
             ]);
     }
 }

@@ -141,11 +141,7 @@ class CompanyController extends Controller
 
     public function create()
     {
-        $departments  = $this->userRepo->departments();
-        $designations = $this->userRepo->designations();
-        $currencies   = $this->currencyRepo->getActive();
-        $plans        = $this->planRepo->getActive();
-        return view('backend.super-admin.company.create', compact('designations', 'departments', 'currencies', 'plans'));
+        return Inertia::render('Admin/Superadmin/Company/Form', $this->formProps(null));
     }
 
     public function store(StoreRequest $request)
@@ -161,15 +157,107 @@ class CompanyController extends Controller
 
     public function edit($id)
     {
-       
-        $departments  = $this->userRepo->departments();
-        $designations = $this->userRepo->designations();
-        $currencies   = $this->currencyRepo->getActive();
-        $plans        = $this->planRepo->getActive();
-        $company      = $this->repo->getFind($id);
-        
-          
-        return view('backend.super-admin.company.edit', compact('designations', 'departments', 'currencies', 'plans', 'company'));
+        $company = $this->repo->getFind($id);
+        if (! $company) abort(404);
+        return Inertia::render('Admin/Superadmin/Company/Form', $this->formProps($company));
+    }
+
+    /**
+     * Shared props for the tenant create + edit Inertia form.
+     * $user=null → fresh create (all fields empty, joining_date=today).
+     * $user set  → seed from the company-owner User row + its tenant + owned GeneralSettings.
+     */
+    private function formProps($user): array
+    {
+        $isEdit       = $user !== null;
+        $general      = $isEdit ? optional($user->company) : null;
+        $tenant       = $isEdit ? optional($user->tenantDetails) : null;
+        $firstDomain  = $isEdit && $tenant ? optional(collect($tenant->domains ?? [])->first()) : null;
+
+        return [
+            'mode'   => $isEdit ? 'edit' : 'create',
+            'user'   => [
+                'id'                 => $isEdit ? $user->id : null,
+                'company_name'       => $isEdit ? (string) ($general?->name ?? '')             : '',
+                'domain'             => $isEdit ? (string) ($firstDomain?->domain_name ?? '')  : '',
+                'domain_id'          => $isEdit ? ($firstDomain?->id ?? null)                  : null,
+                'currency'           => $isEdit ? (string) ($general?->currency ?? '')         : '',
+                'plan_id'            => $isEdit ? (string) ($general?->plan_id ?? '')          : '',
+                'par_track_prefix'   => $isEdit ? (string) ($general?->par_track_prefix ?? '') : '',
+                'invoice_prefix'     => $isEdit ? (string) ($general?->invoice_prefix ?? '')   : '',
+                'name'               => $isEdit ? (string) $user->name  : '',
+                'email'              => $isEdit ? (string) $user->email : '',
+                'mobile'             => $isEdit ? (string) $user->mobile: '',
+                'address'            => $isEdit ? (string) $user->address : '',
+                'nid_number'         => $isEdit ? (string) $user->nid_number : '',
+                'designation_id'     => $isEdit ? (string) ($user->designation_id ?? '') : '',
+                'department_id'      => $isEdit ? (string) ($user->department_id ?? '')  : '',
+                'joining_date'       => $isEdit ? (string) $user->joining_date : date('Y-m-d'),
+                'status'             => $isEdit ? (string) $user->status : (string) \App\Enums\Status::ACTIVE,
+            ],
+            'lookups' => [
+                'currencies'   => collect($this->currencyRepo->getActive())->map(fn ($c) => [
+                    'value' => $c->symbol,
+                    'label' => $c->name.' '.$c->symbol,
+                ])->values(),
+                'plans'        => collect($this->planRepo->getActive())->map(fn ($p) => [
+                    'value' => (string) $p->id,
+                    'label' => $p->name,
+                ])->values(),
+                'designations' => collect($this->userRepo->designations())->map(fn ($d) => [
+                    'value' => (string) $d->id,
+                    'label' => $d->title,
+                ])->values(),
+                'departments'  => collect($this->userRepo->departments())->map(fn ($d) => [
+                    'value' => (string) $d->id,
+                    'label' => $d->title,
+                ])->values(),
+                'statuses'     => collect(trans('status'))->map(fn ($label, $key) => [
+                    'value' => (string) $key,
+                    'label' => $label,
+                ])->values(),
+            ],
+            'assets' => [
+                'logo_url'   => $isEdit ? ($general?->LogoImage ?: null) : null,
+                'avatar_url' => $isEdit ? ($user->image ?: null) : null,
+            ],
+            'domain_suffix' => '.'.get_host(),
+            'urls'   => [
+                'submit' => $isEdit ? route('company.update') : route('company.store'),
+                'index'  => route('company.index'),
+            ],
+            't'      => [
+                'title'          => $isEdit ? __('levels.edit').' '.__('levels.company') : __('levels.create').' '.__('levels.company'),
+                'breadcrumb'     => __('levels.dashboard'),
+                'company_list'   => __('menus.company'),
+                'save'           => __('levels.save'),
+                'cancel'         => __('levels.cancel'),
+                'company_info'   => __('levels.company').' '.__('levels.information'),
+                'company_hint'   => 'Basic identity, domain, and plan.',
+                'user_info'      => __('levels.user').' '.__('levels.information'),
+                'user_hint'      => 'Primary admin user for this tenant.',
+                'company_name'   => __('levels.company').' '.__('levels.name'),
+                'domain'         => __('levels.domain'),
+                'currency'       => __('levels.currency'),
+                'plan'           => __('levels.plan'),
+                'par_track_prefix' => __('settings.parcel_tracking').' '.__('levels.prefix'),
+                'invoice_prefix' => __('invoice.invoice').' '.__('levels.prefix'),
+                'logo'           => __('levels.logo'),
+                'name'           => __('levels.name'),
+                'email'          => __('levels.email'),
+                'phone'          => __('levels.phone'),
+                'password'       => __('levels.password'),
+                'password_edit_hint' => __('Leave empty to keep current'),
+                'address'        => __('levels.address'),
+                'nid'            => __('levels.nid'),
+                'designation'    => __('levels.designation'),
+                'department'     => __('levels.department'),
+                'opening_date'   => __('levels.opening_date'),
+                'status'         => __('levels.status'),
+                'image'          => __('levels.image'),
+                'select_currency'=> 'Select currency',
+            ],
+        ];
     }
 
     public function update(UpdateRequest $request)
@@ -200,11 +288,40 @@ class CompanyController extends Controller
 
     public function switchSubscription($id)
     {
-        $user_id      = $id;
-        $user         = User::find($id);
-        $plan         = Plan::find($user->company->plan_id);
-        $plans        = $this->planRepo->getActive();
-        return view('backend.super-admin.company.switch_subscription', compact('user_id', 'plans', 'plan'));
+        $user        = User::find($id);
+        if (! $user) abort(404);
+        $currentPlan = Plan::find(optional($user->company)->plan_id);
+        $plans       = $this->planRepo->getActive();
+
+        return Inertia::render('Admin/Superadmin/Company/SwitchSubscription', [
+            'user_id'      => (int) $id,
+            'company_name' => optional($user->company)->name ?? $user->name,
+            'current_plan' => $currentPlan ? [
+                'id'   => $currentPlan->id,
+                'name' => $currentPlan->name,
+            ] : null,
+            'plans'        => collect($plans)->map(fn ($p) => [
+                'value' => (string) $p->id,
+                'label' => $p->name,
+                'price' => (float) $p->price,
+                'days'  => (int)   $p->days_count,
+            ])->values(),
+            'currency'     => settings()->currency ?: '$',
+            'urls'         => [
+                'submit' => route('company.subscription.switch.store'),
+                'index'  => route('company.index'),
+            ],
+            't'            => [
+                'title'        => __('levels.subscription'),
+                'breadcrumb'   => __('levels.dashboard'),
+                'company_list' => __('menus.company'),
+                'current_plan' => __('levels.current_plan'),
+                'plan'         => __('levels.plan'),
+                'save'         => __('levels.save'),
+                'cancel'       => __('levels.cancel'),
+                'switching_for'=> 'Changing subscription for',
+            ],
+        ]);
     }
 
     public function switchSubscriptionStore(Request $request)

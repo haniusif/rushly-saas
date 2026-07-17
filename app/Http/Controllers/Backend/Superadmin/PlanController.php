@@ -105,9 +105,9 @@ class PlanController extends Controller
             ],
         ]);
     }
-    public function create (){
-        $modules = $this->roleRepo->adminPermissionsModules();
-        return view('backend.super-admin.plan.create',compact('modules'));
+    public function create()
+    {
+        return Inertia::render('Admin/Superadmin/Plan/Form', $this->formProps(null));
     }
     public function store (StoreRequest $request){
 
@@ -120,10 +120,78 @@ class PlanController extends Controller
         }
         
     }
-    public function edit ($id){
+    public function edit($id)
+    {
         $plan = $this->repo->getFind($id);
-        $modules = $this->roleRepo->adminPermissionsModules();
-        return view('backend.super-admin.plan.edit',compact('plan','modules'));
+        if (! $plan) abort(404);
+        return Inertia::render('Admin/Superadmin/Plan/Form', $this->formProps($plan));
+    }
+
+    /**
+     * Shared props for the create + edit Inertia form. Passing $plan=null
+     * leaves the form empty for a fresh create; passing a Plan row seeds
+     * every field. The two modes only differ in submit URL and method.
+     */
+    private function formProps($plan): array
+    {
+        $modules      = $this->roleRepo->adminPermissionsModules();
+        $currency     = settings()->currency ?: '$';
+        $isEdit       = $plan !== null;
+        $selected     = $isEdit && is_array($plan->modules) ? $plan->modules : [];
+
+        return [
+            'mode'       => $isEdit ? 'edit' : 'create',
+            'plan'       => [
+                'id'                 => $isEdit ? $plan->id : null,
+                'name'                => $isEdit ? (string) $plan->name        : '',
+                'price'               => $isEdit ? (string) $plan->price       : '',
+                'parcel_count'        => $isEdit ? (string) $plan->parcel_count : '',
+                'deliveryman_count'   => $isEdit ? (string) $plan->deliveryman_count : '',
+                'user_count'          => $isEdit && $plan->user_count !== null ? (string) $plan->user_count : '',
+                'days_count'          => $isEdit ? (string) $plan->days_count   : '',
+                'position'            => $isEdit ? (string) $plan->position     : '',
+                'status'              => $isEdit ? (string) $plan->status       : (string) \App\Enums\Status::ACTIVE,
+                'description'         => $isEdit ? (string) $plan->description  : '',
+                'modules'             => array_values(array_map('strval', $selected)),
+            ],
+            'lookups'    => [
+                'statuses' => collect(trans('status'))->map(fn ($label, $key) => [
+                    'value' => (string) $key,
+                    'label' => $label,
+                ])->values(),
+                'modules'  => collect($modules)->map(fn ($m) => [
+                    'value' => $m,
+                    'label' => __('permissions.' . $m) ?: $m,
+                ])->values(),
+            ],
+            'currency'   => $currency,
+            'urls'       => [
+                'submit' => $isEdit ? route('plan.update') : route('plan.store'),
+                'index'  => route('plan.index'),
+            ],
+            't'          => [
+                'title'          => $isEdit ? __('levels.edit').' '.__('levels.plans') : __('levels.create').' '.__('levels.plans'),
+                'breadcrumb'     => __('levels.dashboard'),
+                'plans'          => __('levels.plans'),
+                'save'           => __('levels.save'),
+                'cancel'         => __('levels.cancel'),
+                'name'           => __('levels.name'),
+                'price'          => __('levels.price'),
+                'price_hint'     => __('levels.min') . ' ' . $currency . ' 0.50',
+                'parcel_count'   => __('levels.parcel_count'),
+                'max_deliveryman'=> __('levels.max_deliveryman'),
+                'user_count'     => __('levels.user_count'),
+                'days_count'     => __('levels.days_count'),
+                'position'       => __('levels.position'),
+                'status'         => __('levels.status'),
+                'description'    => __('levels.description'),
+                'modules'        => __('levels.select_modules'),
+                'select_all'     => __('levels.select_all'),
+                'plan_section'   => $isEdit ? __('levels.edit').' '.__('levels.plans') : __('levels.create').' '.__('levels.plans'),
+                'plan_section_hint' => 'Subscription tier configuration.',
+                'modules_hint'   => 'Which modules this plan includes.',
+            ],
+        ];
     }
     public function update (StoreRequest $request){
         if($this->repo->update($request->id,$request)){
@@ -144,9 +212,38 @@ class PlanController extends Controller
         }
     }
 
-    public function modulesView($plan_id){
-        $plan = $this->repo->getFind($plan_id);
-        return view('backend.super-admin.plan.plan_modules',compact('plan'));
+    public function modulesView($plan_id)
+    {
+        // Retained for direct-link visitors; the ported Plan/Index page now
+        // shows the same info inline via a popover. This surface just
+        // renders the same information in a full page for reference.
+        $plan    = $this->repo->getFind($plan_id);
+        if (! $plan) abort(404);
+        $modules = is_array($plan->modules) ? $plan->modules : [];
+
+        return Inertia::render('Admin/Superadmin/Plan/Modules', [
+            'plan' => [
+                'id'   => $plan->id,
+                'name' => $plan->name,
+            ],
+            'modules' => collect($modules)->map(fn ($m) => [
+                'key'   => $m,
+                'label' => __('permissions.' . $m) ?: $m,
+            ])->values(),
+            'urls' => [
+                'index' => route('plan.index'),
+                'edit'  => route('plan.edit', $plan->id),
+            ],
+            't' => [
+                'title'      => $plan->name.' · '.__('levels.modules'),
+                'breadcrumb' => __('levels.dashboard'),
+                'plans'      => __('levels.plans'),
+                'modules'    => __('levels.modules'),
+                'edit'       => __('levels.edit'),
+                'back'       => __('levels.cancel'),
+                'no_modules' => __('levels.no_data_found'),
+            ],
+        ]);
     }
  
     public function subscription(){

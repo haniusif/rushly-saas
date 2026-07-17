@@ -125,6 +125,7 @@ Merchant slice of `/api/v10/*`. ~70 endpoints across 9 groups.
 | Helpers | 6 | `/hub`, `/general-settings`, `/all-currencies`, `/settings/cod-charges`, `/settings/delivery-charges`, `/news-offer/index` |
 
 ### Current features
+- **Tenant-aware / SaaS-wise install** — first launch prompts for a workspace subdomain (or full URL in advanced mode); pings `/general-settings` before persisting; profile screen shows current workspace + "Change workspace" action. One APK, any tenant. (Same design as admin and driver apps — all three share the tenant-select pattern.)
 - Signup with OTP verification and password reset flows
 - Bottom-nav shell: Dashboard, Parcels, Shops, Payments, Support (+ drawer for Fraud, News, Settings, Invoices)
 - Dashboard: balance card, pending/delivered counts, analytics via `fl_chart`, "Reports" button in AppBar

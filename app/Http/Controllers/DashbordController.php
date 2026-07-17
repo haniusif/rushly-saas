@@ -100,8 +100,71 @@ class DashbordController extends Controller
 
 
 
-            $data['request']   = $request;
-            return view('backend.super-admin.dashboard',$data);
+            $currencySymbol = settings()->currency ?: '$';
+
+            return Inertia::render('Admin/Superadmin/Dashboard/Index', [
+                'kpis' => [
+                    'total_company'             => (int) $data['total_company'],
+                    'total_plans'               => (int) $data['total_plans'],
+                    'total_subscription'        => (int) $data['total_subscription'],
+                    'total_subscription_amount' => (float) $data['total_subscription_amount'],
+                ],
+                'currency' => $currencySymbol,
+                'recent_companies' => collect($data['recent_companies'])->map(fn ($c) => [
+                    'id'          => $c->id,
+                    'name'        => $c->name,
+                    'email'       => $c->email,
+                    'avatar'      => $c->image,
+                    'status_html' => $c->my_status,
+                    'company'     => [
+                        'name' => optional($c->company)->name,
+                        'logo' => optional($c->company)->LogoImage,
+                    ],
+                    'plan'        => optional($c->company)->plan ? [
+                        'name'         => optional($c->company)->plan->name,
+                        'module_count' => is_array(optional($c->company)->plan->modules)
+                            ? count(optional($c->company)->plan->modules)
+                            : 0,
+                    ] : null,
+                ])->values(),
+                'recent_subscriptions' => collect($data['subscriptions'])->map(fn ($s) => [
+                    'id'           => $s->id,
+                    'company_name' => optional($s->company)->name,
+                    'plan_name'    => optional($s->plan)->name,
+                    'price'        => (float) $s->price,
+                    'expired_date' => (string) $s->expired_date,
+                ])->values(),
+                'filter' => [
+                    'from_date' => $request->filter_date,
+                ],
+                'urls' => [
+                    'submit'          => route('dashboard.index'),
+                    'companies_index' => route('company.index'),
+                    'plans_index'     => route('plan.index'),
+                ],
+                't' => [
+                    'title'                 => __('merchant.dashboard'),
+                    'subtitle'              => __('levels.dashboard'),
+                    'filter'                => __('levels.filter'),
+                    'date_ph'               => 'YYYY-MM-DD ~ YYYY-MM-DD',
+                    'total_company'         => __('dashboard.total_company'),
+                    'total_plans'           => __('dashboard.total_plans'),
+                    'total_subscription'    => __('dashboard.total_subscription'),
+                    'total_subscription_price' => __('dashboard.total_subscription_price'),
+                    'recent_company'        => __('levels.recent_company'),
+                    'recent_subscriptions'  => __('levels.recent_subscriptions'),
+                    'name'                  => __('levels.name'),
+                    'user_details'          => __('levels.user_details'),
+                    'modules'               => __('levels.modules'),
+                    'status'                => __('levels.status'),
+                    'company'               => __('levels.company'),
+                    'plan'                  => __('levels.plan'),
+                    'price'                 => __('levels.price'),
+                    'expired_date'          => __('levels.expired_date'),
+                    'view_all'              => __('levels.list'),
+                    'no_data'               => __('levels.no_data_found'),
+                ],
+            ]);
         }elseif(Auth::user()->user_type == UserType::MERCHANT){
 
             if(!subscriptionCheck()):
@@ -187,40 +250,83 @@ class DashbordController extends Controller
             $piedata['total_delivered']        = Parcel::where(['merchant_id'=> $merchant_id,'status'=>ParcelStatus::DELIVERED])->count();
             $piedata['total_partial_delivered']= Parcel::where(['merchant_id'=> $merchant_id,'status'=>ParcelStatus::PARTIAL_DELIVERED])->count();
             $piedata['total_return']           = Parcel::where(['merchant_id'=> $merchant_id,'status'=>ParcelStatus::RETURN_RECEIVED_BY_MERCHANT])->count();
-            return view('backend.merchant_panel.dashboard',
-            compact(
-                't_parcel',
-                't_delivered',
-                't_return',
-                't_sale',
-                't_delivery_fee',
-                'ts_vat',
-                't_balance_proc',
-                't_balance_paid',
-                't_request',
-                'merchant',
-                't_fraud',
-                't_shop',
-                't_parcel_bank',
 
-                't_cash_collection',
-                't_selling_price',
-                't_liquid_fragile',
-                't_vat_amount',
-                't_delivery_charge',
-                't_cod_amount',
-                't_packaging',
-                't_delivery_amount',
-                't_current_payable',
+            $currency      = settings()->currency;
+            $rlMerchant    = Auth::user()->merchant;
+            $rlServices    = $rlMerchant ? $rlMerchant->activeServices() : [];
 
-                'dates',
-                'totals',
-                'pendings',
-                'delivers',
-                'par_delivers',
-                'returns',
-                'piedata'
-            ));
+            $netProfit     = ((float) $t_cash_collection) - ((float) $t_selling_price);
+            $totalProfit   = ((float) $t_sale) - ((float) $t_delivery_fee) - ((float) $ts_vat);
+            $inTransit     = max(0, (int) $t_parcel - ((int) $t_delivered + (int) $t_return));
+            $computedBal   = (float) (optional($rlMerchant)->computed_balance ?? 0);
+            $openingBal    = (float) (optional($rlMerchant)->opening_balance ?? 0);
+            $merchantVat   = (float) (optional($rlMerchant)->vat ?? 0);
+
+            return Inertia::render('Merchant/Dashboard/Index', [
+                'currency'      => $currency,
+                'merchant'      => $rlMerchant ? [
+                    'id'            => $rlMerchant->id,
+                    'business_name' => $rlMerchant->business_name,
+                ] : null,
+                'services'      => array_values($rlServices),
+                'request_date'  => $request->date ?? null,
+                'parcel_kpis'   => [
+                    'total'     => (int) $t_parcel,
+                    'delivered' => (int) $t_delivered,
+                    'returned'  => (int) $t_return,
+                    'in_transit'=> (int) $inTransit,
+                ],
+                'active_amounts' => [
+                    'cash_collection' => (float) $t_cash_collection,
+                    'selling_price'   => (float) $t_selling_price,
+                    'net_profit'      => (float) $netProfit,
+                ],
+                'fees_amounts' => [
+                    'liquid_fragile' => (float) $t_liquid_fragile,
+                    'packaging'      => (float) $t_packaging,
+                    'vat'            => (float) $t_vat_amount,
+                ],
+                'delivery_amounts' => [
+                    'delivery_charge'  => (float) $t_delivery_charge,
+                    'cod'              => (float) $t_cod_amount,
+                    'delivery_total'   => (float) $t_delivery_amount,
+                ],
+                'reports' => [
+                    'total_sales'         => (float) $t_sale,
+                    'total_delivery_fees' => (float) $t_delivery_fee,
+                    'total_vat'           => (float) $ts_vat,
+                    'net_profit'          => (float) $totalProfit,
+                    'current_balance'     => (float) $computedBal,
+                    'opening_balance'     => (float) $openingBal,
+                    'merchant_vat'        => (float) $merchantVat,
+                    'payment_processing'  => (float) $t_balance_proc,
+                    'paid_amount'         => (float) $t_balance_paid,
+                    'total_shop'          => (int) $t_shop,
+                    'total_parcel_bank'   => (int) $t_parcel_bank,
+                    'total_payment_req'   => (int) $t_request,
+                ],
+                'series' => [
+                    'dates'         => $dates,
+                    'totals'        => array_map('intval', $totals),
+                    'pendings'      => array_map('intval', $pendings),
+                    'delivers'      => array_map('intval', $delivers),
+                    'par_delivers'  => array_map('intval', $par_delivers),
+                    'returns'       => array_map('intval', $returns),
+                ],
+                'pie' => [
+                    'pending'           => (int) ($piedata['total_pending'] ?? 0),
+                    'delivered'         => (int) ($piedata['total_delivered'] ?? 0),
+                    'partial_delivered' => (int) ($piedata['total_partial_delivered'] ?? 0),
+                    'returned'          => (int) ($piedata['total_return'] ?? 0),
+                ],
+                'urls' => [
+                    'filter'           => route('merchant-panel.dashboard.filter'),
+                    'parcels'          => route('merchant-panel.parcel.index'),
+                    'parcels_delivered'=> route('merchant-panel.parcel.filter', ['parcel_status' => ParcelStatus::DELIVERED]),
+                    'parcels_returned' => route('merchant-panel.parcel.filter', ['parcel_status' => ParcelStatus::RETURN_RECEIVED_BY_MERCHANT]),
+                ],
+                't' => $this->merchantDashboardLabels(),
+            ]);
         }else{
 
             if(!subscriptionCheck()):
@@ -403,6 +509,67 @@ class DashbordController extends Controller
         ];
     }
 
+    /**
+     * Flat translation map for the merchant dashboard. Mirrors the admin
+     * variant so the React component can render with no raw lang-keys
+     * leaking through when an underlying language file is missing entries.
+     */
+    private function merchantDashboardLabels(): array
+    {
+        return [
+            'dashboard'                   => __('merchant.dashboard') ?: 'Dashboard',
+            'merchant_dashboard'          => __('merchant.merchant_dashboard') ?: 'Client Dashboard',
+            'services'                    => __('merchant.services') ?: 'Services',
+            'service_last_mile'           => __('merchant.service_last_mile') ?: 'Last mile',
+            'service_fulfillment'         => __('merchant.service_fulfillment') ?: 'Fulfillment',
+            'service_storage'             => __('merchant.service_storage') ?: 'Storage',
+            'filter'                      => __('levels.filter') ?: 'Filter',
+            'date_ph'                     => __('merchantPlaceholder.date') ?: 'YYYY-MM-DD ~ YYYY-MM-DD',
+            // Parcel KPI tiles
+            'total_parcel'                => __('dashboard.total_parcel') ?: 'Total shipments',
+            'total_delivered'             => __('dashboard.total_deliverd_') ?: 'Total delivered',
+            'total_return'                => __('dashboard.total_return') ?: 'Total return',
+            'total_transit'               => __('dashboard.total_transit') ?: 'Total transit',
+            // Active shipment amounts card
+            'active_amounts_title'        => __('dashboard.active_shipments_amount') ?: 'Active Shipments Amount',
+            'active_shipments_amount'     => __('dashboard.active_shipments_amount') ?: 'Active Shipments Amount',
+            'total_selling_price'         => __('dashboard.total_selling_price') ?: 'Total selling price',
+            'net_profit_amount'           => __('dashboard.net_profit_ammount') ?: 'Net profit amount',
+            // Liquid / packaging / VAT card
+            'liquid_amounts_title'        => __('dashboard.total_liquid_fragile_amount') ?: 'Total liquid fragile amount',
+            'total_liquid_fragile_amount' => __('dashboard.total_liquid_fragile_amount') ?: 'Total liquid fragile amount',
+            'total_packaging_amount'      => __('dashboard.total_packaging_amount') ?: 'Total packaging amount',
+            'total_vat_amount'            => __('dashboard.total_vat_amount') ?: 'Total VAT amount',
+            // Delivery / COD card
+            'delivery_amounts_title'      => __('dashboard.total_total_delivery_amount') ?: 'Total delivery amount',
+            'total_delivery_charge'       => __('dashboard.total_delivery_charge') ?: 'Total delivery charge',
+            'total_cod_amount'            => __('dashboard.total_cod_amount') ?: 'Total COD amount',
+            'total_total_delivery_amount' => __('dashboard.total_total_delivery_amount') ?: 'Total delivery amount',
+            // Charts
+            'parcels_chart'               => __('dashboard.parcels_chart') ?: 'Parcels — last 8 days',
+            'parcels_breakdown'           => __('dashboard.parcels_breakdown') ?: 'Parcels by status',
+            'series_total'                => __('dashboard.series_total') ?: 'Total',
+            'series_pending'              => __('dashboard.status_pending') ?: 'Pending',
+            'series_delivered'            => __('dashboard.status_delivered') ?: 'Delivered',
+            'series_partial'              => __('dashboard.status_partial') ?: 'Partial',
+            'series_returned'             => __('dashboard.total_return') ?: 'Returned',
+            // All reports
+            'all_reports'                 => __('dashboard.all_reports') ?: 'All reports',
+            'total_sales_amount'          => __('dashboard.total_sales_amount') ?: 'Total sales amount',
+            'total_delivery_fees_paid'    => __('dashboard.total_delivery_fees_paid') ?: 'Total delivery fees paid',
+            'total_vat'                   => __('levels.total_vat') ?: 'Total VAT',
+            'net_profit'                  => __('dashboard.net_profit_ammount') ?: 'Net profit',
+            'current_balance'             => __('dashboard.current_balance') ?: 'Current balance',
+            'opening_balance'             => __('dashboard.opening_balance') ?: 'Opening balance',
+            'vat'                         => __('dashboard.vat') ?: 'VAT',
+            'payment_processing'          => __('dashboard.payment_processing') ?: 'Payment processing',
+            'paid_amount'                 => __('dashboard.paid_amount') ?: 'Paid amount',
+            'total_shop'                  => __('dashboard.total_shop') ?: 'Total shops',
+            'total_parcel_bank_items'     => __('dashboard.total_parcel_bank_items') ?: 'Total parcel bank items',
+            'total_payment_request'       => __('dashboard.total_payment_request') ?: 'Total payment requests',
+        ];
+    }
+
     public function searchCharts(Request $request){
         $data    = [];
         $data['dates']                      = $this->repo->dates($request);
@@ -517,39 +684,82 @@ class DashbordController extends Controller
         $piedata['total_return']           = Parcel::where(['merchant_id'=> $merchant_id,'status'=>ParcelStatus::RETURN_RECEIVED_BY_MERCHANT])->whereBetween('updated_at', [$from, $to])->count();
           
                
-        return view('backend.merchant_panel.dashboard',
-        compact(
-            'request',
-            'ts_vat',
-            'piedata',
-            't_parcel',
-            't_delivered',
-            't_return',
-            't_sale',
-            't_delivery_fee',
-            't_balance_proc',
-            't_balance_paid',
-            't_request',
-            'merchant',
-            't_fraud',
-            't_shop',
-            't_parcel_bank',
-            't_cash_collection',
-            't_selling_price',
-            't_liquid_fragile',
-            't_vat_amount',
-            't_delivery_charge',
-            't_cod_amount',
-            't_packaging',
-            't_delivery_amount',
-            't_current_payable',
-            'dates',
-            'totals',
-            'pendings',
-            'delivers',
-            'par_delivers',
-            'returns',
-        ));
+        // ── Inertia: re-render the same dashboard component with filtered values.
+        $rlMerchant  = Auth::user()->merchant;
+        $rlServices  = $rlMerchant ? $rlMerchant->activeServices() : [];
+
+        $netProfit   = ((float) $t_cash_collection) - ((float) $t_selling_price);
+        $totalProfit = ((float) $t_sale) - ((float) $t_delivery_fee) - ((float) $ts_vat);
+        $inTransit   = max(0, (int) $t_parcel - ((int) $t_delivered + (int) $t_return));
+        $computedBal = (float) (optional($rlMerchant)->computed_balance ?? 0);
+        $openingBal  = (float) (optional($rlMerchant)->opening_balance ?? 0);
+        $merchantVat = (float) (optional($rlMerchant)->vat ?? 0);
+
+        return Inertia::render('Merchant/Dashboard/Index', [
+            'currency'      => settings()->currency,
+            'merchant'      => $rlMerchant ? [
+                'id'            => $rlMerchant->id,
+                'business_name' => $rlMerchant->business_name,
+            ] : null,
+            'services'      => array_values($rlServices),
+            'request_date'  => $request->date ?? null,
+            'parcel_kpis'   => [
+                'total'      => (int) $t_parcel,
+                'delivered'  => (int) $t_delivered,
+                'returned'   => (int) $t_return,
+                'in_transit' => (int) $inTransit,
+            ],
+            'active_amounts' => [
+                'cash_collection' => (float) $t_cash_collection,
+                'selling_price'   => (float) $t_selling_price,
+                'net_profit'      => (float) $netProfit,
+            ],
+            'fees_amounts' => [
+                'liquid_fragile' => (float) $t_liquid_fragile,
+                'packaging'      => (float) $t_packaging,
+                'vat'            => (float) $t_vat_amount,
+            ],
+            'delivery_amounts' => [
+                'delivery_charge' => (float) $t_delivery_charge,
+                'cod'             => (float) $t_cod_amount,
+                'delivery_total'  => (float) $t_delivery_amount,
+            ],
+            'reports' => [
+                'total_sales'         => (float) $t_sale,
+                'total_delivery_fees' => (float) $t_delivery_fee,
+                'total_vat'           => (float) $ts_vat,
+                'net_profit'          => (float) $totalProfit,
+                'current_balance'     => (float) $computedBal,
+                'opening_balance'     => (float) $openingBal,
+                'merchant_vat'        => (float) $merchantVat,
+                'payment_processing'  => (float) $t_balance_proc,
+                'paid_amount'         => (float) $t_balance_paid,
+                'total_shop'          => (int) $t_shop,
+                'total_parcel_bank'   => (int) $t_parcel_bank,
+                'total_payment_req'   => (int) $t_request,
+            ],
+            'series' => [
+                'dates'        => $dates,
+                'totals'       => array_map('intval', $totals),
+                'pendings'     => array_map('intval', $pendings),
+                'delivers'     => array_map('intval', $delivers),
+                'par_delivers' => array_map('intval', $par_delivers),
+                'returns'      => array_map('intval', $returns),
+            ],
+            'pie' => [
+                'pending'           => (int) ($piedata['total_pending'] ?? 0),
+                'delivered'         => (int) ($piedata['total_delivered'] ?? 0),
+                'partial_delivered' => (int) ($piedata['total_partial_delivered'] ?? 0),
+                'returned'          => (int) ($piedata['total_return'] ?? 0),
+            ],
+            'urls' => [
+                'filter'            => route('merchant-panel.dashboard.filter'),
+                'parcels'           => route('merchant-panel.parcel.index'),
+                'parcels_delivered' => route('merchant-panel.parcel.filter', ['parcel_status' => ParcelStatus::DELIVERED]),
+                'parcels_returned'  => route('merchant-panel.parcel.filter', ['parcel_status' => ParcelStatus::RETURN_RECEIVED_BY_MERCHANT]),
+            ],
+            't' => $this->merchantDashboardLabels(),
+        ]);
     }
 
  

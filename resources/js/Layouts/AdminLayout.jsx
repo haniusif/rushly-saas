@@ -133,7 +133,7 @@ const SUPER_NAV = [
         { tKey: 'menu_users_roles', icon: UserCog, route: 'users.index', match: ['admin/users','admin/roles'] },
     ]},
     { group: 'menu_billing', items: [
-        { tKey: 'menu_company',              icon: Building2, route: 'company.index',             match: ['admin/company'] },
+        { tKey: 'menu_company',              icon: Building2, route: 'company.index',             match: ['super-admin/company','admin/company'] },
         { tKey: 'menu_plans',                icon: Layers,    route: 'plan.index',                match: ['super-admin/plan','admin/plans'] },
         { tKey: 'menu_subscribe',            icon: Bell,      route: 'subscribe.index',           match: ['admin/subscribe'] },
         { tKey: 'menu_subscription_history', icon: Receipt,   route: 'admin.subscription.history',match: ['admin/subscription/history'] },

@@ -228,6 +228,76 @@ function LogoUploadCard({ label, hint, recommended, currentUrl, error, onPick, d
 }
 
 /**
+ * Radio-tile picker for the sidebar logo widget. Each tile is a miniature of
+ * the exact rendering that AdminLayout emits, so what you see here is what
+ * the sidebar will look like on save. Clicking a tile writes the value into
+ * form.data.logo_style; the empty value ("") means "inherit" — same as every
+ * other enum on this page.
+ */
+function LogoStylePreview({ value, onChange, options, logoUrl, brandName, inheritLabel }) {
+    const initial = (brandName || 'R').trim().charAt(0).toUpperCase();
+    if (!options?.length) return null;
+
+    const Header = ({ style }) => {
+        const showImage = style !== 'text_only';
+        const showText  = style !== 'logo_only';
+        return (
+            <div className="flex h-10 items-center gap-2 rounded-md bg-slate-900 px-3 text-white">
+                {showImage && (logoUrl
+                    ? <img
+                        src={logoUrl}
+                        alt=""
+                        className={style === 'logo_only'
+                            ? 'h-7 w-auto max-w-[130px] object-contain'
+                            : 'h-6 w-6 rounded object-contain bg-white/5'}
+                    />
+                    : <span className="grid h-6 w-6 shrink-0 place-items-center rounded bg-primary text-[10px] font-bold text-primary-foreground">{initial}</span>
+                )}
+                {showText && <span className="truncate text-[13px] font-semibold">{brandName}</span>}
+            </div>
+        );
+    };
+
+    return (
+        <div className="pt-3">
+            <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Sidebar header preview
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <button
+                    type="button"
+                    onClick={() => onChange('')}
+                    className={cn(
+                        'rounded-lg border p-3 text-start transition',
+                        value === '' ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/60'
+                    )}
+                >
+                    <div className="flex h-10 items-center rounded-md border border-dashed border-muted-foreground/30 px-3 text-[11px] text-muted-foreground">
+                        {inheritLabel}
+                    </div>
+                    <div className="mt-2 text-xs font-medium">{inheritLabel}</div>
+                </button>
+                {options.map((opt) => (
+                    <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => onChange(opt.value)}
+                        className={cn(
+                            'rounded-lg border p-3 text-start transition',
+                            value === opt.value ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/60'
+                        )}
+                    >
+                        <Header style={opt.value} />
+                        <div className="mt-2 text-xs font-medium">{opt.label}</div>
+                        {opt.hint && <div className="text-[11px] text-muted-foreground mt-0.5">{opt.hint}</div>}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+/**
  * Miniature, in-browser mock of the pre-auth login page. Reads the current
  * form values (not just what's saved) so admins can see unsaved changes to
  * layout, colors, and background image before clicking Save. Deliberately
@@ -360,6 +430,7 @@ export default function Index({ settings = {}, lookups = {}, theme_fallbacks = {
         topbar_text_color: settings.topbar_text_color ?? '',
         accent_color: settings.accent_color ?? '',
         sidebar_style: settings.sidebar_style ?? '',
+        logo_style: settings.logo_style ?? '',
         font_family: settings.font_family ?? '',
         border_radius: settings.border_radius ?? '',
         density: settings.density ?? '',
@@ -543,6 +614,19 @@ export default function Index({ settings = {}, lookups = {}, theme_fallbacks = {
                                                     {(lookups.sidebar_styles || []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                                                 </Select>
                                             </Field>
+                                            <Field
+                                                label={t.logo_style}
+                                                hint={
+                                                    (lookups.logo_styles || []).find(o => o.value === form.data.logo_style)?.hint
+                                                    || t.logo_style_help
+                                                }
+                                                error={form.errors.logo_style}
+                                            >
+                                                <Select value={form.data.logo_style} onChange={(e) => form.setData('logo_style', e.target.value)}>
+                                                    <option value="">{t.theme_inherit}</option>
+                                                    {(lookups.logo_styles || []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                                </Select>
+                                            </Field>
                                             <Field label={t.font_family} error={form.errors.font_family}>
                                                 <Select value={form.data.font_family} onChange={(e) => form.setData('font_family', e.target.value)}>
                                                     <option value="">{t.theme_inherit}</option>
@@ -562,6 +646,17 @@ export default function Index({ settings = {}, lookups = {}, theme_fallbacks = {
                                                 </Select>
                                             </Field>
                                         </div>
+
+                                        {/* Visual picker for logo_style — mirrors the AdminLayout sidebar
+                                            header so tenants can see what they're choosing before saving. */}
+                                        <LogoStylePreview
+                                            value={form.data.logo_style}
+                                            onChange={(v) => form.setData('logo_style', v)}
+                                            options={lookups.logo_styles || []}
+                                            logoUrl={settings.logo_image}
+                                            brandName={form.data.name || settings.name || 'Your brand'}
+                                            inheritLabel={t.theme_inherit}
+                                        />
                                     </CardContent>
                                 </Card>
                             </>

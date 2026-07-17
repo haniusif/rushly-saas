@@ -238,14 +238,38 @@ function Sidebar({ open, onClose, currentUrl, brand, appName }) {
                 )}
             >
                 <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-5">
-                    <Link href={homeUrl} className="flex min-w-0 items-center gap-2 font-semibold">
-                        {brand?.logo ? (
-                            <img src={brand.logo} alt="" className="h-8 w-8 shrink-0 rounded-lg bg-white/5 object-contain" />
-                        ) : (
-                            <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground shrink-0">{initial}</span>
-                        )}
-                        <span className="truncate">{brandName}</span>
-                    </Link>
+                    {/*
+                     * Sidebar header widget. Layout is driven by
+                     * general_settings.logo_style (surfaced on brand.logo_style):
+                     *   logo_text (default) — icon + name
+                     *   logo_only           — image only, sized up for the row
+                     *   text_only           — hide image; show wordmark only
+                     * When the tenant hasn't uploaded a logo we fall back to
+                     * the primary-colored initial tile — except in text_only,
+                     * where the whole tile is intentionally hidden.
+                     */}
+                    {(() => {
+                        const style = brand?.logo_style || 'logo_text';
+                        const showImage = style !== 'text_only';
+                        const showText  = style !== 'logo_only';
+                        return (
+                            <Link href={homeUrl} className="flex min-w-0 items-center gap-2 font-semibold">
+                                {showImage && (brand?.logo ? (
+                                    <img
+                                        src={brand.logo}
+                                        alt=""
+                                        className={cn(
+                                            'shrink-0 rounded-lg bg-white/5 object-contain',
+                                            style === 'logo_only' ? 'h-10 w-auto max-w-[168px]' : 'h-8 w-8',
+                                        )}
+                                    />
+                                ) : (
+                                    <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground shrink-0">{initial}</span>
+                                ))}
+                                {showText && <span className="truncate">{brandName}</span>}
+                            </Link>
+                        );
+                    })()}
                     <Button variant="ghost" size="icon" className="md:hidden hover:bg-white/10" onClick={onClose}>
                         <X className="h-4 w-4" />
                     </Button>

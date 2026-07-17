@@ -52,6 +52,7 @@ class GeneralSettingsController extends Controller
                 'topbar_text_color'   => (string) ($s->topbar_text_color ?? ''),
                 'accent_color'        => (string) ($s->accent_color ?? ''),
                 'sidebar_style'       => (string) ($s->sidebar_style ?? ''),
+                'logo_style'          => (string) ($s->logo_style ?? ''),
                 'font_family'         => (string) ($s->font_family ?? ''),
                 'border_radius'       => (string) ($s->border_radius ?? ''),
                 'density'             => (string) ($s->density ?? ''),
@@ -74,6 +75,16 @@ class GeneralSettingsController extends Controller
                 'sidebar_styles' => collect(['dark','light','brand'])->map(fn ($k) => [
                     'value' => $k,
                     'label' => __('merchant.sidebar_style_' . $k) ?: ucfirst($k),
+                ])->values(),
+                // Controls the sidebar header widget: logo image, wordmark, or both.
+                'logo_styles' => collect([
+                    'logo_text' => ['label' => 'Logo + name',   'hint' => 'Icon on the left, brand name beside it (default).'],
+                    'logo_only' => ['label' => 'Logo only',     'hint' => 'Just the logo image — no text.'],
+                    'text_only' => ['label' => 'Name only',     'hint' => 'Hide the logo image; show only the brand name.'],
+                ])->map(fn ($v, $k) => [
+                    'value' => $k,
+                    'label' => __('merchant.logo_style_' . $k) ?: $v['label'],
+                    'hint'  => $v['hint'],
                 ])->values(),
                 'fonts' => collect(['inter','cairo','tajawal','roboto','system'])->map(fn ($k) => [
                     'value' => $k,
@@ -132,6 +143,8 @@ class GeneralSettingsController extends Controller
                 'topbar_text_color' => __('merchant.topbar_text_color') ?: 'Topbar text',
                 'accent_color'  => __('merchant.accent_color') ?: 'Accent',
                 'sidebar_style' => __('merchant.sidebar_style') ?: 'Sidebar style',
+                'logo_style'    => __('merchant.logo_style') ?: 'Sidebar logo style',
+                'logo_style_help' => __('merchant.logo_style_help') ?: 'Controls how the logo widget appears at the top of the sidebar.',
                 'font_family'   => __('merchant.font_family') ?: 'Font',
                 'border_radius' => __('merchant.border_radius') ?: 'Corner radius',
                 'density'       => __('merchant.density') ?: 'Density',

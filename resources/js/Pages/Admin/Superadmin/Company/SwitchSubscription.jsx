@@ -34,12 +34,9 @@ export default function SwitchSubscription({ user_id, company_name, current_plan
                             <span className="shrink-0 grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
                                 <CreditCard className="h-4 w-4" />
                             </span>
-                            <div className="min-w-0">
-                                <h2 className="text-base font-semibold m-0">{t.title}</h2>
-                                <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                                    {t.switching_for} <span className="font-medium text-foreground">{company_name}</span>
-                                </p>
-                            </div>
+                            <p className="text-xs text-muted-foreground m-0 truncate">
+                                {t.switching_for} <span className="font-medium text-foreground">{company_name}</span>
+                            </p>
                         </div>
 
                         <div className="p-6 space-y-4">

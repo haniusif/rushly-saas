@@ -32,15 +32,14 @@ export default function SuperadminDashboard({ kpis, currency = '$', recent_compa
     ];
 
     return (
-        <AdminLayout title={t.title} breadcrumbs={[t.title]}>
+        // Layout renders its own H1 from `title` + breadcrumb strip; passing
+        // undefined breadcrumbs here so the dashboard (a top-level surface)
+        // doesn't get a redundant "Dashboard / Dashboard" trail.
+        <AdminLayout title={t.title}>
             <Head title={t.title} />
 
-            {/* Header + filter */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-                <div>
-                    <h1 className="text-2xl font-semibold m-0">{t.title}</h1>
-                    <p className="text-sm text-muted-foreground m-0">{t.subtitle}</p>
-                </div>
+            {/* Filter — right-aligned, no duplicate H1 (layout already shows the title). */}
+            <div className="flex items-center justify-end mb-6">
                 <form onSubmit={applyFilter} className="flex items-center gap-2">
                     <div className="relative">
                         <Calendar className="absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground h-4 w-4" />

@@ -36,17 +36,13 @@ export default function CompanyIndex({ rows = [], pagination = {}, permissions =
 
             <Card>
                 <CardContent className="p-0">
-                    {/* Header */}
+                    {/* Header — AdminLayout already renders the H1 title,
+                        so we only show the row-count meta + primary CTA here. */}
                     <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
-                        <div>
-                            <h1 className="text-lg font-semibold text-foreground m-0 flex items-center gap-2">
-                                <Building2 className="h-4 w-4 text-primary" />
-                                {t.title}
-                            </h1>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                                {pagination.total ?? 0} {t.count_suffix}
-                            </p>
-                        </div>
+                        <p className="text-xs text-muted-foreground m-0 inline-flex items-center gap-1.5">
+                            <Building2 className="h-3.5 w-3.5" />
+                            {pagination.total ?? 0} {t.count_suffix}
+                        </p>
                         {permissions.create && (
                             <Button asChild size="sm">
                                 <a href={urls.create}>

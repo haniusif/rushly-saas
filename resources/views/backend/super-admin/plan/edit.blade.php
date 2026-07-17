@@ -44,7 +44,7 @@
                         <div>
                             <label for="price" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">
                                 {{ __('levels.price') }} <span class="tw-text-red-500">*</span>
-                                <span class="tw-text-xs tw-font-normal tw-text-gray-400">({{ __('levels.min') }} {{ settings()->currency }} 0.50)</span>
+                                <span class="tw-text-xs tw-font-normal tw-text-gray-400">({{ __('levels.min') }} {{ settings()->currency ?: '$' }} 0.50)</span>
                             </label>
                             <input type="text" id="price" name="price"
                                    placeholder="{{ __('levels.price') }}"

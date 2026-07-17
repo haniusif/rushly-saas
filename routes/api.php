@@ -157,6 +157,16 @@ Route::prefix('v10/admin')->middleware(['CheckApiKey'])->group(function () {
         Route::get('/dashboard',                            [AdminDashboardController::class,    'index']);
         Route::get('/dashboard/timeseries',                 [AdminDashboardController::class,    'timeseries']);
 
+        // Fleet driver mobile app
+        Route::get('/fleet/vehicle',                        [\App\Http\Controllers\Api\V10\Fleet\FleetDriverApiController::class, 'myVehicle']);
+        Route::get('/fleet/trips',                          [\App\Http\Controllers\Api\V10\Fleet\FleetDriverApiController::class, 'trips']);
+        Route::post('/fleet/trips',                         [\App\Http\Controllers\Api\V10\Fleet\FleetDriverApiController::class, 'startTrip']);
+        Route::post('/fleet/trips/{id}/end',                [\App\Http\Controllers\Api\V10\Fleet\FleetDriverApiController::class, 'endTrip']);
+        Route::get('/fleet/fuel',                           [\App\Http\Controllers\Api\V10\Fleet\FleetDriverApiController::class, 'fuelLogs']);
+        Route::post('/fleet/fuel',                          [\App\Http\Controllers\Api\V10\Fleet\FleetDriverApiController::class, 'logFuel']);
+        Route::get('/fleet/maintenance',                    [\App\Http\Controllers\Api\V10\Fleet\FleetDriverApiController::class, 'maintenanceReports']);
+        Route::post('/fleet/maintenance',                   [\App\Http\Controllers\Api\V10\Fleet\FleetDriverApiController::class, 'reportMaintenance']);
+
         Route::get('/sorting/lookup/{tracking}',            [\App\Http\Controllers\Api\V10\Admin\AdminSortingController::class, 'lookup']);
         Route::get('/sorting/hubs',                         [\App\Http\Controllers\Api\V10\Admin\AdminSortingController::class, 'hubs']);
         Route::post('/sorting/handover',                    [\App\Http\Controllers\Api\V10\Admin\AdminSortingController::class, 'handover']);

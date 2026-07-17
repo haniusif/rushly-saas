@@ -47,8 +47,39 @@ class PageController extends Controller
 
     public function edit($id)
     {
-        $page  = $this->repo->getFind($id);
-        return view('backend.front_web.pages.edit', compact('page'));
+        $page = $this->repo->getFind($id);
+        if (! $page) abort(404);
+
+        return Inertia::render('Admin/FrontWeb/Page/Form', [
+            'mode' => 'edit',
+            'row'  => [
+                'id'          => $page->id,
+                'title'        => (string) $page->title,
+                'description'  => (string) $page->description,
+                'status'       => (string) $page->status,
+            ],
+            'lookups' => [
+                'statuses' => collect(trans('status'))->map(fn ($label, $key) => [
+                    'value' => (string) $key,
+                    'label' => $label,
+                ])->values(),
+            ],
+            'urls' => [
+                'submit' => route('pages.update', $page->id),
+                'index'  => route('pages.index'),
+            ],
+            't' => [
+                'title'       => __('levels.edit') . ' ' . (__('levels.pages') ?: 'Page'),
+                'front_web'   => __('levels.front_web'),
+                'pages'       => __('levels.pages') ?: 'Pages',
+                'page_title'  => __('levels.title'),
+                'description' => __('levels.description'),
+                'status'      => __('levels.status'),
+                'save'        => __('levels.save'),
+                'cancel'      => __('levels.cancel'),
+                'section'     => __('levels.edit') . ' ' . (__('levels.pages') ?: 'Page'),
+            ],
+        ]);
     }
 
     public function update(UpdateRequest $request, $id)

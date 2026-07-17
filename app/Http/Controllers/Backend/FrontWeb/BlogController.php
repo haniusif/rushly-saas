@@ -54,7 +54,48 @@ class BlogController extends Controller
 
     public function create()
     {
-        return view('backend.front_web.blogs.create');
+        return Inertia::render('Admin/FrontWeb/Blog/Form', $this->formProps(null));
+    }
+
+    private function formProps($row): array
+    {
+        $isEdit = $row !== null;
+        return [
+            'mode' => $isEdit ? 'edit' : 'create',
+            'row'  => [
+                'id'          => $isEdit ? $row->id : null,
+                'title'        => $isEdit ? (string) $row->title       : '',
+                'description'  => $isEdit ? (string) $row->description : '',
+                'position'     => $isEdit ? (string) $row->position    : '',
+                'status'       => $isEdit ? (string) $row->status      : (string) \App\Enums\Status::ACTIVE,
+            ],
+            'lookups' => [
+                'statuses' => collect(trans('status'))->map(fn ($label, $key) => [
+                    'value' => (string) $key,
+                    'label' => $label,
+                ])->values(),
+            ],
+            'assets' => [
+                'image_url' => $isEdit ? $row->image : null,
+            ],
+            'urls' => [
+                'submit' => $isEdit ? route('blogs.update', $row->id) : route('blogs.store'),
+                'index'  => route('blogs.index'),
+            ],
+            't' => [
+                'title'       => ($isEdit ? __('levels.edit') : __('levels.create')) . ' ' . (__('menus.blogs') ?: 'Blog'),
+                'front_web'   => __('levels.front_web'),
+                'blogs'       => __('menus.blogs') ?: 'Blogs',
+                'blog_title'  => __('levels.title'),
+                'description' => __('levels.description'),
+                'image'       => __('levels.image'),
+                'position'    => __('levels.position'),
+                'status'      => __('levels.status'),
+                'save'        => __('levels.save'),
+                'cancel'      => __('levels.cancel'),
+                'section'     => ($isEdit ? __('levels.edit') : __('levels.create')) . ' ' . (__('menus.blogs') ?: 'Blog'),
+            ],
+        ];
     }
 
     public function store(StoreRequest $request)
@@ -70,8 +111,9 @@ class BlogController extends Controller
 
     public function edit($id)
     {
-        $blog  = $this->repo->getFind($id);
-        return view('backend.front_web.blogs.edit', compact('blog'));
+        $blog = $this->repo->getFind($id);
+        if (! $blog) abort(404);
+        return Inertia::render('Admin/FrontWeb/Blog/Form', $this->formProps($blog));
     }
 
     public function update(UpdateRequest $request, $id)

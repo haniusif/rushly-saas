@@ -48,7 +48,46 @@ class SocialLinkController extends Controller
 
     public function create()
     {
-        return view('backend.front_web.social_link.create');
+        return Inertia::render('Admin/FrontWeb/SocialLink/Form', $this->formProps(null));
+    }
+
+    private function formProps($row): array
+    {
+        $isEdit = $row !== null;
+        return [
+            'mode' => $isEdit ? 'edit' : 'create',
+            'row'  => [
+                'id'       => $isEdit ? $row->id : null,
+                'name'     => $isEdit ? (string) $row->name     : '',
+                'icon'     => $isEdit ? (string) $row->icon     : '',
+                'link'     => $isEdit ? (string) $row->link     : '',
+                'position' => $isEdit ? (string) $row->position : '',
+                'status'   => $isEdit ? (string) $row->status   : (string) \App\Enums\Status::ACTIVE,
+            ],
+            'lookups' => [
+                'statuses' => collect(trans('status'))->map(fn ($label, $key) => [
+                    'value' => (string) $key,
+                    'label' => $label,
+                ])->values(),
+            ],
+            'urls' => [
+                'submit' => $isEdit ? route('social.link.update', $row->id) : route('social.link.store'),
+                'index'  => route('social.link.index'),
+            ],
+            't' => [
+                'title'      => ($isEdit ? __('levels.edit') : __('levels.create')) . ' ' . (__('levels.social_link') ?: 'Social link'),
+                'front_web'  => __('levels.front_web'),
+                'social_link'=> __('levels.social_link') ?: 'Social links',
+                'name'       => __('levels.name'),
+                'icon'       => __('levels.icon'),
+                'link'       => __('levels.link'),
+                'position'   => __('levels.position'),
+                'status'     => __('levels.status'),
+                'save'       => __('levels.save'),
+                'cancel'     => __('levels.cancel'),
+                'section'    => ($isEdit ? __('levels.edit') : __('levels.create')) . ' ' . (__('levels.social_link') ?: 'Social link'),
+            ],
+        ];
     }
 
     public function store(StoreRequest $request)
@@ -64,8 +103,9 @@ class SocialLinkController extends Controller
 
     public function edit($id)
     {
-        $socialLink  = $this->repo->getFind($id);
-        return view('backend.front_web.social_link.edit', compact('socialLink'));
+        $socialLink = $this->repo->getFind($id);
+        if (! $socialLink) abort(404);
+        return Inertia::render('Admin/FrontWeb/SocialLink/Form', $this->formProps($socialLink));
     }
 
     public function update(StoreRequest $request, $id)

@@ -48,7 +48,46 @@ class WhyCourierController extends Controller
 
     public function create()
     {
-        return view('backend.front_web.why_courier.create');
+        return Inertia::render('Admin/FrontWeb/WhyRushly/Form', $this->formProps(null));
+    }
+
+    private function formProps($row): array
+    {
+        $isEdit = $row !== null;
+        return [
+            'mode' => $isEdit ? 'edit' : 'create',
+            'row'  => [
+                'id'        => $isEdit ? $row->id : null,
+                'title'      => $isEdit ? (string) $row->title    : '',
+                'position'   => $isEdit ? (string) $row->position : '',
+                'status'     => $isEdit ? (string) $row->status   : (string) \App\Enums\Status::ACTIVE,
+            ],
+            'lookups' => [
+                'statuses' => collect(trans('status'))->map(fn ($label, $key) => [
+                    'value' => (string) $key,
+                    'label' => $label,
+                ])->values(),
+            ],
+            'assets' => [
+                'image_url' => $isEdit ? $row->image : null,
+            ],
+            'urls' => [
+                'submit' => $isEdit ? route('why.rushly.update', $row->id) : route('why.rushly.store'),
+                'index'  => route('why.rushly.index'),
+            ],
+            't' => [
+                'title'      => ($isEdit ? __('levels.edit') : __('levels.create')) . ' ' . (__('menus.why_rushly') ?: 'Why Rushly'),
+                'front_web'  => __('levels.front_web'),
+                'why_rushly' => __('menus.why_rushly') ?: 'Why Rushly',
+                'entry_title'=> __('levels.title'),
+                'image'      => __('levels.image'),
+                'position'   => __('levels.position'),
+                'status'     => __('levels.status'),
+                'save'       => __('levels.save'),
+                'cancel'     => __('levels.cancel'),
+                'section'    => ($isEdit ? __('levels.edit') : __('levels.create')) . ' ' . (__('menus.why_rushly') ?: 'Why Rushly'),
+            ],
+        ];
     }
 
     public function store(StoreRequest $request)
@@ -64,8 +103,9 @@ class WhyCourierController extends Controller
 
     public function edit($id)
     {
-        $whycourier  = $this->repo->getFind($id);
-        return view('backend.front_web.why_courier.edit', compact('whycourier'));
+        $whycourier = $this->repo->getFind($id);
+        if (! $whycourier) abort(404);
+        return Inertia::render('Admin/FrontWeb/WhyRushly/Form', $this->formProps($whycourier));
     }
 
     public function update(UpdateRequest $request, $id)

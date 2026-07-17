@@ -49,7 +49,48 @@ class PartnerController extends Controller
 
     public function create()
     {
-        return view('backend.front_web.partner.create');
+        return Inertia::render('Admin/FrontWeb/Partner/Form', $this->formProps(null));
+    }
+
+    private function formProps($row): array
+    {
+        $isEdit = $row !== null;
+        return [
+            'mode' => $isEdit ? 'edit' : 'create',
+            'row'  => [
+                'id'        => $isEdit ? $row->id : null,
+                'name'       => $isEdit ? (string) $row->name     : '',
+                'link'       => $isEdit ? (string) ($row->link ?? '') : '',
+                'position'   => $isEdit ? (string) $row->position : '',
+                'status'     => $isEdit ? (string) $row->status   : (string) \App\Enums\Status::ACTIVE,
+            ],
+            'lookups' => [
+                'statuses' => collect(trans('status'))->map(fn ($label, $key) => [
+                    'value' => (string) $key,
+                    'label' => $label,
+                ])->values(),
+            ],
+            'assets' => [
+                'image_url' => $isEdit ? $row->image : null,
+            ],
+            'urls' => [
+                'submit' => $isEdit ? route('partner.update', $row->id) : route('partner.store'),
+                'index'  => route('partner.index'),
+            ],
+            't' => [
+                'title'      => ($isEdit ? __('levels.edit') : __('levels.create')) . ' ' . (__('menus.partner') ?: 'Partner'),
+                'front_web'  => __('levels.front_web'),
+                'partners'   => __('menus.partner') ?: 'Partners',
+                'name'       => __('levels.name'),
+                'link'       => __('levels.link'),
+                'image'      => __('levels.image'),
+                'position'   => __('levels.position'),
+                'status'     => __('levels.status'),
+                'save'       => __('levels.save'),
+                'cancel'     => __('levels.cancel'),
+                'section'    => ($isEdit ? __('levels.edit') : __('levels.create')) . ' ' . (__('menus.partner') ?: 'Partner'),
+            ],
+        ];
     }
 
     public function store(StoreRequest $request)
@@ -65,8 +106,9 @@ class PartnerController extends Controller
 
     public function edit($id)
     {
-        $partner  = $this->repo->getFind($id);
-        return view('backend.front_web.partner.edit', compact('partner'));
+        $partner = $this->repo->getFind($id);
+        if (! $partner) abort(404);
+        return Inertia::render('Admin/FrontWeb/Partner/Form', $this->formProps($partner));
     }
 
     public function update(UpdateRequest $request, $id)

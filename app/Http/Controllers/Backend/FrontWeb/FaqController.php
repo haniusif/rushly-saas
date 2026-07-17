@@ -45,7 +45,44 @@ class FaqController extends Controller
 
     public function create()
     {
-        return view('backend.front_web.faq.create');
+        return Inertia::render('Admin/FrontWeb/Faq/Form', $this->formProps(null));
+    }
+
+    private function formProps($row): array
+    {
+        $isEdit = $row !== null;
+        return [
+            'mode' => $isEdit ? 'edit' : 'create',
+            'row'  => [
+                'id'       => $isEdit ? $row->id : null,
+                'question' => $isEdit ? (string) $row->question : '',
+                'answer'   => $isEdit ? (string) $row->answer   : '',
+                'position' => $isEdit ? (string) $row->position : '',
+                'status'   => $isEdit ? (string) $row->status   : (string) \App\Enums\Status::ACTIVE,
+            ],
+            'lookups' => [
+                'statuses' => collect(trans('status'))->map(fn ($label, $key) => [
+                    'value' => (string) $key,
+                    'label' => $label,
+                ])->values(),
+            ],
+            'urls' => [
+                'submit' => $isEdit ? route('faq.update', $row->id) : route('faq.store'),
+                'index'  => route('faq.index'),
+            ],
+            't' => [
+                'title'      => ($isEdit ? __('levels.edit') : __('levels.create')) . ' ' . __('levels.faq'),
+                'front_web'  => __('levels.front_web'),
+                'faq'        => __('levels.faq'),
+                'question'   => __('levels.question'),
+                'answer'     => __('levels.answer'),
+                'position'   => __('levels.position'),
+                'status'     => __('levels.status'),
+                'save'       => __('levels.save'),
+                'cancel'     => __('levels.cancel'),
+                'section'    => ($isEdit ? __('levels.edit') : __('levels.create')) . ' ' . __('levels.faq'),
+            ],
+        ];
     }
 
     public function store(StoreRequest $request)
@@ -61,8 +98,9 @@ class FaqController extends Controller
 
     public function edit($id)
     {
-        $faq  = $this->repo->getFind($id);
-        return view('backend.front_web.faq.edit', compact('faq'));
+        $faq = $this->repo->getFind($id);
+        if (! $faq) abort(404);
+        return Inertia::render('Admin/FrontWeb/Faq/Form', $this->formProps($faq));
     }
 
     public function update(UpdateRequest $request, $id)

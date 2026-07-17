@@ -45,11 +45,14 @@ class UserController extends Controller
             'status'   => (int) ($u->status ?? 1),
             'is_locked'=> $u->id == 1 || (string) $u->company_owner === 'yes',
             'urls' => [
-                'view'        => route('users.show', $u->id),
-                'edit'        => route('users.edit', $u->id),
-                'delete'      => route('user.delete', $u->id),
-                'permissions' => route('users.edit', $u->id),
-                'change_password' => route('users.change-password.form', $u->id),
+                // safeRoute so a stale route cache or an accidentally-missing
+                // route name never crashes the whole /admin/users listing —
+                // the row still renders with a fallback URL.
+                'view'            => $this->safeRoute('users.show',                 $u->id, "/admin/users/view/{$u->id}"),
+                'edit'            => $this->safeRoute('users.edit',                 $u->id, "/admin/users/edit/{$u->id}"),
+                'delete'          => $this->safeRoute('user.delete',                $u->id, "/admin/users/{$u->id}"),
+                'permissions'     => $this->safeRoute('users.edit',                 $u->id, "/admin/users/edit/{$u->id}"),
+                'change_password' => $this->safeRoute('users.change-password.form', $u->id, "/admin/users/change-password/{$u->id}"),
             ],
         ])->values();
 

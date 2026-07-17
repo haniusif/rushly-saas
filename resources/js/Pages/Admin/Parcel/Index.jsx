@@ -341,7 +341,7 @@ export default function Index({
     const exportLabel = (t.export_label || 'Export :TOTAL Shipments').replace(':TOTAL', pagination.total ?? 0);
 
     return (
-        <AdminLayout title={t.title} breadcrumbs={[t.title, t.list]}>
+        <AdminLayout title={t.title}>
             <Head title={`${t.title} · ${t.list}`} />
 
             {/* Filters — collapsed by default so the KPI strip + table sit

@@ -1,18 +1,27 @@
 # Rushly Mobile Apps
 
-Companion doc to `RUSHLY_APPS_OVERVIEW.md`. That file covers the storefront bridges (Salla / Zid / WooCommerce / Shopify). This file covers the **three Flutter mobile apps** that consume `rushly-saas` `/api/v10/*` endpoints.
+Companion doc to `RUSHLY_APPS_OVERVIEW.md`. That file covers the storefront bridges (Salla / Zid / WooCommerce / Shopify). This file covers the **eight Flutter mobile apps** that consume `rushly-saas` `/api/v10/*` endpoints.
 
-- `rushly-driver-app` — for delivery drivers (deliverymen)
-- `rushly-merchant-app` — for merchants (shop owners)
-- `rushly-admin-app` — for back-office roles (super_admin, admin, hub_incharge, hub_manager)
+## The 8 apps at a glance
 
-All three apps live as sibling repositories to `rushly-saas/` (i.e. `/var/www/rushly-driver-app`, `/var/www/rushly-merchant-app`, `/var/www/rushly-admin-app`).
+| # | Repo | User | State | What it does |
+|---|---|---|---|---|
+| 1 | `rushly-driver-app` | Delivery drivers (deliverymen) | **Feature-complete** | Assigned parcels, delivery outcomes (delivered/partial/not-delivered with photo), NDR, earnings, cash reconciliation, live tracking map, AWB scan, route-optimised runsheet |
+| 2 | `rushly-merchant-app` | Merchants / shop owners | **Feature-complete** | Parcel CRUD, bulk CSV import, tracking map, shops, payments (accounts + requests + statements PDF), invoices, fraud, NDR, store connections, reports |
+| 3 | `rushly-admin-app` | Back-office (super_admin, admin, incharge, hub) | **Feature-complete** | Dashboard, parcels, drivers, merchants (including onboarding approval queue), hubs, payouts, support, fraud, driver-assignment map, hub cash, WMS (stock lookup + GRN receiving + cycle count + damage reports), 3PL assign |
+| 4 | `rushly-supervisor-app` | Field supervisors | **Scaffold** | Monitor drivers, assign deliveries, live tracking, performance dashboards, exception management |
+| 5 | `rushly-warehouse-app` | Warehouse staff | **Scaffold** | Receiving, put-away, picking, packing, inventory counting, barcode scanning, dispatch, returns |
+| 6 | `rushly-sorting-app` | Hub sorting operations | **Scaffold** | Shipment sorting, scan-in/scan-out, bag & container management, route assignment |
+| 7 | `rushly-fleet-app` | Long-haul fleet drivers | **Scaffold** | Trips, vehicle inspection, fuel logging, GPS tracking, maintenance, checkpoints |
+| 8 | `rushly-scanner-app` | Any pipeline staff | **Scaffold** | Dedicated barcode / RFID scanning — shipments, inventory, asset tracking |
+
+All eight live as sibling repositories to `rushly-saas/` (e.g. `/var/www/rushly-supervisor-app`, etc.). The three feature-complete apps ship as `main`-branch repos on GitHub; the five scaffolds are checked into local worktrees only — commit + push whenever you want to publish them.
 
 ---
 
 ## 1. Shared architecture
 
-All three apps share the same tech baseline:
+All apps share the same tech baseline:
 
 | Concern | Choice |
 |---|---|
@@ -269,3 +278,37 @@ Quick pointers back into `rushly-saas` for anyone tracing a mobile call:
 | Admin | `app/Http/Controllers/Api/V10/Admin/*Controller.php` | `routes/api.php` (v10/admin group) |
 
 WMS mobile endpoints (used by the driver app in the field, and eventually by an admin warehouse view) live in `app/Http/Controllers/Api/V10/Wms/*` and are also mounted inside the `/api/v10` group with `auth:sanctum`.
+
+---
+
+## 8. Scaffolded apps (Supervisor / Warehouse / Sorting / Fleet / Scanner)
+
+Five apps scaffolded in one pass (see `/tmp/scaffold_apps.py`). Each is a working Flutter project sharing the same architecture as the three feature-complete apps:
+
+- **Tenant-aware install** — TenantStorage + `/tenant` route + `/general-settings` ping before persisting. One APK per app, any tenant.
+- **Login screen** — email/password → Sanctum token (posts to `/admin/login`, shared endpoint; each app's real user type will be wired when features land).
+- **Home shell** — bottom-nav with per-app placeholder tabs (each tab is a `PlaceholderScreen` rendering the feature label + description + a "coming soon" chip).
+- **Router redirect** — same 2-gate pattern (tenant → auth) as admin/driver/merchant.
+- **Change workspace** — AppBar action confirms + wipes token+tenant → back to `/tenant`.
+- **AR/EN l10n** with `LanguageToggleButton` in the login AppBar.
+- **Theming** — Material 3, per-app primary seed colour.
+
+### Per-app placeholder tabs
+
+| App | Seed colour | Bottom tabs |
+|---|---|---|
+| Supervisor | teal 800 | Drivers · Assignments · Reports · Exceptions |
+| Warehouse | brown 700 | Receive · Pick & Pack · Inventory · Dispatch |
+| Sorting | deep purple 700 | Scan In · Sort · Bags · Routes |
+| Fleet | indigo 700 | Trips · Vehicle · Fuel · Maintenance |
+| Scanner | deep orange 700 | Scan · History |
+
+### Follow-up work per app
+
+None of these have backend endpoints wired to their tabs yet. Turning a scaffold into a functional app means, per tab:
+
+1. Backend controller under `app/Http/Controllers/Api/V10/<AppName>/` (or reuse admin/driver equivalents).
+2. Routes in `routes/api.php` inside the appropriate auth group.
+3. Mobile: `features/<tab>/` module with domain + repo + presentation, wire into home shell (replace `PlaceholderScreen` with the real widget).
+
+The scaffolds already have `dio_client`, `providers.dart`, `api_endpoints.dart`, and `auth_repository.dart` in place so each new feature only needs its own repository method + screen — no plumbing.

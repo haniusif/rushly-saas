@@ -18,6 +18,7 @@ use App\Repositories\Superadmin\Plan\PlanInterface;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class PlanController extends Controller
 {
@@ -28,9 +29,81 @@ class PlanController extends Controller
         $this->roleRepo = $roleRepo;
         $this->companyRepo = $companyRepo;
     }
-    public function index (){
+    public function index()
+    {
         $plans = $this->repo->get();
-        return view('backend.super-admin.plan.index',compact('plans'));
+
+        $rows = collect($plans->items())->map(function ($p) {
+            $modules = is_array($p->modules) ? $p->modules : [];
+            return [
+                'id'                => $p->id,
+                'name'               => $p->name,
+                'description'        => $p->description,
+                'price'              => (float) $p->price,
+                'parcel_count'       => (int) $p->parcel_count,
+                'deliveryman_count'  => (int) $p->deliveryman_count,
+                'user_count'         => $p->user_count !== null ? (int) $p->user_count : null,
+                'days_count'         => (int) $p->days_count,
+                'position'           => (int) $p->position,
+                'module_count'       => count($modules),
+                'modules_preview'    => collect($modules)->take(8)->map(fn ($m) => [
+                    'key'   => $m,
+                    'label' => __('permissions.' . $m) ?: $m,
+                ])->values(),
+                'status_html'        => $p->my_status,
+                'urls'               => [
+                    'edit'    => route('plan.edit', $p->id),
+                    'delete'  => route('plan.delete', $p->id),
+                    'modules' => route('plan.modules.view', $p->id),
+                ],
+            ];
+        })->values();
+
+        return Inertia::render('Admin/Superadmin/Plan/Index', [
+            'rows'        => $rows,
+            'currency'    => settings()->currency ?: '$',
+            'pagination'  => [
+                'current_page' => $plans->currentPage(),
+                'per_page'     => $plans->perPage(),
+                'total'        => $plans->total(),
+                'from'         => $plans->firstItem(),
+                'to'           => $plans->lastItem(),
+                'last_page'    => $plans->lastPage(),
+                'links'        => collect($plans->linkCollection())->map(fn ($l) => [
+                    'url'    => $l['url'],
+                    'label'  => $l['label'],
+                    'active' => (bool) $l['active'],
+                ])->values(),
+            ],
+            'permissions' => [
+                'create' => hasPermission('plans_create'),
+                'update' => hasPermission('plans_update'),
+                'delete' => hasPermission('plans_delete'),
+            ],
+            'urls'        => [
+                'create'    => route('plan.create'),
+                'dashboard' => route('dashboard.index'),
+            ],
+            't'           => [
+                'title'          => __('levels.plans'),
+                'breadcrumb'     => __('levels.dashboard'),
+                'count_suffix'   => __('Showing') ?: 'total',
+                'add'            => __('levels.add'),
+                'name'           => __('levels.name'),
+                'price'          => __('levels.price'),
+                'parcel_count'   => __('levels.parcel_count'),
+                'max_deliveryman'=> __('levels.max_deliveryman'),
+                'days_count'     => __('levels.days_count'),
+                'modules'        => __('levels.modules'),
+                'status'         => __('levels.status'),
+                'actions'        => __('levels.actions'),
+                'edit'           => __('levels.edit'),
+                'delete'         => __('levels.delete'),
+                'no_data'        => __('levels.no_data_found'),
+                'confirm_delete' => __('delete.plan') ?: 'Delete this plan?',
+                'more_modules'   => __('more') ?: 'more',
+            ],
+        ]);
     }
     public function create (){
         $modules = $this->roleRepo->adminPermissionsModules();

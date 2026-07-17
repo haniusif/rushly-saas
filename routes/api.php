@@ -157,6 +157,10 @@ Route::prefix('v10/admin')->middleware(['CheckApiKey'])->group(function () {
         Route::get('/dashboard',                            [AdminDashboardController::class,    'index']);
         Route::get('/dashboard/timeseries',                 [AdminDashboardController::class,    'timeseries']);
 
+        Route::get('/sorting/lookup/{tracking}',            [\App\Http\Controllers\Api\V10\Admin\AdminSortingController::class, 'lookup']);
+        Route::get('/sorting/hubs',                         [\App\Http\Controllers\Api\V10\Admin\AdminSortingController::class, 'hubs']);
+        Route::post('/sorting/handover',                    [\App\Http\Controllers\Api\V10\Admin\AdminSortingController::class, 'handover']);
+
         Route::get('/parcels',                              [AdminParcelController::class,       'index']);
         Route::get('/parcels/{id}',                         [AdminParcelController::class,       'show']);
         Route::get('/parcels/{id}/logs',                    [AdminParcelController::class,       'logs']);

@@ -76,6 +76,63 @@ class SummaryController extends Controller
         }
         $trend = array_values($days);
 
+        // -------- Today's status breakdown (donut chart) --------
+        // Buckets today's parcels into five ops-facing groups so the donut
+        // reads at a glance: still to pick up / in-flight / done / bounced.
+        // "Other" catches everything not in the four primary states so the
+        // total always equals kpis.today_shipments (no missing slice).
+        $cancelled  = [
+            ParcelStatus::PICKUP_ASSIGN_CANCEL, ParcelStatus::RECEIVED_BY_PICKUP_MAN_CANCEL,
+            ParcelStatus::RECEIVED_WAREHOUSE_CANCEL, ParcelStatus::DELIVERY_MAN_ASSIGN_CANCEL,
+            ParcelStatus::DELIVERY_RE_SCHEDULE_CANCEL, ParcelStatus::TRANSFER_TO_HUB_CANCEL,
+            ParcelStatus::RECEIVED_BY_HUB_CANCEL, ParcelStatus::DELIVERED_CANCEL,
+            ParcelStatus::PICKUP_RE_SCHEDULE_CANCEL, ParcelStatus::CANCELLED,
+        ];
+        $returned   = [
+            ParcelStatus::RETURN_RECEIVED_BY_MERCHANT, ParcelStatus::RETURN_TO_COURIER,
+            ParcelStatus::RETURN_ASSIGN_TO_MERCHANT,
+        ];
+        $todayByStatus = Parcel::companywise()
+            ->selectRaw('status, COUNT(*) as c')
+            ->whereBetween('created_at', [$todayFrom, $todayTo])
+            ->groupBy('status')
+            ->pluck('c', 'status');
+
+        $cancelledCount = 0; foreach ($cancelled as $s) $cancelledCount += (int) ($todayByStatus[$s] ?? 0);
+        $returnedCount  = 0; foreach ($returned  as $s) $returnedCount  += (int) ($todayByStatus[$s] ?? 0);
+        $delivered      = (int) ($todayByStatus[ParcelStatus::DELIVERED] ?? 0);
+        $ofd            = (int) ($todayByStatus[ParcelStatus::DELIVERY_MAN_ASSIGN] ?? 0);
+        $pending        = (int) ($todayByStatus[ParcelStatus::PENDING] ?? 0);
+        $accounted      = $delivered + $ofd + $pending + $cancelledCount + $returnedCount;
+        $other          = max(0, $kpis['today_shipments'] - $accounted);
+
+        // Order matters — donut renders slices in this sequence going
+        // clockwise from 12 o'clock.
+        $statusBreakdown = [
+            ['key' => 'delivered', 'label' => 'Delivered', 'value' => $delivered],
+            ['key' => 'ofd',       'label' => 'Out for delivery', 'value' => $ofd],
+            ['key' => 'pending',   'label' => 'Pending pickup',   'value' => $pending],
+            ['key' => 'returned',  'label' => 'Returned',         'value' => $returnedCount],
+            ['key' => 'cancelled', 'label' => 'Cancelled',        'value' => $cancelledCount],
+            ['key' => 'other',     'label' => 'In transit',       'value' => $other],
+        ];
+
+        // -------- Weekly success ring (small gauge) --------
+        // Success = delivered this week / (delivered + returned + cancelled)
+        // over the same seven-day window. Zero-denominator guard leaves it
+        // at 0.0 so the ring shows an empty state instead of NaN.
+        $weekTotals = Parcel::companywise()
+            ->selectRaw('status, COUNT(*) as c')
+            ->whereBetween('updated_at', [$weekFrom, $todayTo])
+            ->groupBy('status')
+            ->pluck('c', 'status');
+        $weekDelivered = (int) ($weekTotals[ParcelStatus::DELIVERED] ?? 0);
+        $weekReturned  = 0; foreach ($returned  as $s) $weekReturned  += (int) ($weekTotals[$s] ?? 0);
+        $weekCancelled = 0; foreach ($cancelled as $s) $weekCancelled += (int) ($weekTotals[$s] ?? 0);
+        $weekTerminal  = $weekDelivered + $weekReturned + $weekCancelled;
+        $weekSuccess   = $weekTerminal > 0 ? round(($weekDelivered / $weekTerminal) * 100, 1) : 0.0;
+        $weekCreated   = (int) Parcel::companywise()->whereBetween('created_at', [$weekFrom, $todayTo])->count();
+
         // TEMP: leaderboards are unwindowed (lifetime) for now — revert by
         // re-adding `->whereBetween('parcels.created_at', [$monthFrom, $monthTo])`
         // to each correlated subquery below. $monthFrom / $monthTo are still
@@ -222,6 +279,12 @@ class SummaryController extends Controller
         return Inertia::render('Admin/Summary/Index', [
             'kpis'           => $kpis,
             'trend'          => $trend,
+            'status_breakdown' => $statusBreakdown,
+            'week_summary'   => [
+                'success_rate' => $weekSuccess,
+                'delivered'    => $weekDelivered,
+                'created'      => $weekCreated,
+            ],
             'ofd_by_hub'     => $ofdByHub,
             'top_merchants'  => $topMerchants,
             'top_hubs'       => $topHubs,
@@ -236,6 +299,20 @@ class SummaryController extends Controller
                 'seven_day_title' => __('summary.seven_day_title') ?: 'Last 7 days',
                 'legend_created'   => __('summary.legend_created')   ?: 'Created',
                 'legend_delivered' => __('summary.legend_delivered') ?: 'Delivered',
+                // New chart blocks: today's status donut + weekly success ring.
+                'status_donut_title'    => __('summary.status_donut_title')    ?: "Today's shipment mix",
+                'status_donut_subtitle' => __('summary.status_donut_subtitle') ?: 'By current status',
+                'status_donut_empty'    => __('summary.status_donut_empty')    ?: 'No shipments created today yet.',
+                'status_delivered'      => __('summary.status_delivered')      ?: 'Delivered',
+                'status_ofd'            => __('summary.status_ofd')            ?: 'Out for delivery',
+                'status_pending'        => __('summary.status_pending')        ?: 'Pending pickup',
+                'status_returned'       => __('summary.status_returned')       ?: 'Returned',
+                'status_cancelled'      => __('summary.status_cancelled')      ?: 'Cancelled',
+                'status_other'          => __('summary.status_other')          ?: 'In transit',
+                'week_ring_title'       => __('summary.week_ring_title')       ?: 'Success this week',
+                'week_ring_subtitle'    => __('summary.week_ring_subtitle')    ?: 'Delivered vs terminal, last 7 days',
+                'week_ring_delivered'   => __('summary.week_ring_delivered')   ?: 'delivered',
+                'week_ring_created'     => __('summary.week_ring_created')     ?: 'created',
                 'top_merchants_title'    => __('summary.top_merchants_title') ?: 'Top merchants by shipments',
                 'top_merchants_col_name' => __('summary.top_merchants_col_name') ?: 'Merchant',
                 'top_merchants_col_qty'  => __('summary.top_merchants_col_qty')  ?: 'Shipments',

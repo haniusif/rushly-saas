@@ -45,42 +45,24 @@ class Handler extends ExceptionHandler
 
     public function render($request, Throwable $e)
     {
+        if ($this->isHttpException($e)) {
+            $code    = $e->getStatusCode();
+            // Only 401/403/404/405/419/429/500 have branded Blade templates;
+            // anything else (400, 502, 503, …) falls through to Laravel's
+            // default renderer, which still emits the correct status code.
+            $handled = [401, 403, 404, 405, 419, 429, 500];
 
-        // dd($e->getPrevious());
-
-
-        if($this->isHttpException($e)){
-
-            if($e->getStatusCode()       == 401){
-
-                return response()->view('errors.401');
-            }elseif($e->getStatusCode()   == 404){
-
-                return response()->view('errors.404');
-
-            }elseif($e->getStatusCode()  == 403){
-
-                return response()->view('errors.403');
-
-            }elseif($e->getStatusCode() == 405){
-
-                return response()->view('errors.405');
-
-            }elseif($e->getStatusCode() == 419){
-
-                return response()->view('errors.419');
-
-            }elseif($e->getStatusCode() == 429){
-
-                return response()->view('errors.429');
-
-            }elseif($e->getStatusCode() == 500){
-
-                return response()->view('errors.500');
-
+            if (in_array($code, $handled, true)) {
+                // IMPORTANT: response()->view() defaults to HTTP 200 unless
+                // the status code is passed explicitly. Preserving the real
+                // status matters for SEO (404s must be 404) and for monitors.
+                return response()->view("errors.$code", [
+                    // Preserve any headers Symfony attached to the underlying
+                    // HttpException so `Allow`, `Retry-After`, etc. survive.
+                ], $code, method_exists($e, 'getHeaders') ? $e->getHeaders() : []);
             }
-        }else{
-           return  parent::render($request,$e);
         }
+
+        return parent::render($request, $e);
     }
 }

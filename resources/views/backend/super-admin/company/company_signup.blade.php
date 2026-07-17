@@ -2,17 +2,19 @@
 @section('title','Company Signup')
 @section('content')
 
+@php $__locale = app()->getLocale(); @endphp
 <div class="company-register-page-wrapper " style="width: 100%; padding: 20px;">
-    <!-- Language Toggle -->
+    {{-- Locale switcher — server-side setlocalization so the choice
+         persists into /company/otp-verification-form + /login. --}}
     <div class="lang-switcher-fixed">
-        <button class="lang-btn active" onclick="setLanguage('en')" id="lang-en">
+        <a href="{{ route('setlocalization', 'en') }}" class="lang-btn {{ $__locale === 'en' ? 'active' : '' }}" id="lang-en">
             <img src="https://flagcdn.com/w20/gb.png" class="w-5 h-4 rounded-sm" alt="EN">
             <span>EN</span>
-        </button>
-        <button class="lang-btn" onclick="setLanguage('ar')" id="lang-ar">
+        </a>
+        <a href="{{ route('setlocalization', 'ar') }}" class="lang-btn {{ $__locale === 'ar' ? 'active' : '' }}" id="lang-ar">
             <img src="https://flagcdn.com/w20/sa.png" class="w-5 h-4 rounded-sm" alt="AR">
             <span>عربي</span>
-        </button>
+        </a>
     </div>
 
     <div class="auth-container">
@@ -781,12 +783,15 @@
         localStorage.setItem('rushly-company-register-lang', lang);
     }
 
-    // Initialize language on load
+    // Initialize language on load. Server-side locale (from
+    // route('setlocalization')) wins so choices made on /login or in
+    // the switcher persist here. Falls back to browser lang otherwise.
     document.addEventListener('DOMContentLoaded', () => {
+        const serverLang = (document.documentElement.lang || '').toLowerCase().startsWith('ar') ? 'ar' : 'en';
         const savedLang = localStorage.getItem('rushly-company-register-lang');
         const browserLang = navigator.language.startsWith('ar') ? 'ar' : 'en';
-        const initialLang = savedLang || browserLang;
-        
+        const initialLang = serverLang || savedLang || browserLang;
+
         if (initialLang === 'ar') {
             setLanguage('ar');
         }

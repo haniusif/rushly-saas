@@ -374,13 +374,24 @@ class OperationsController extends Controller
             ->values();
 
         // -------- Quick actions (deep-links only, all-perm safe) -------
+        // Every href is resolved via route() through a small closure that
+        // falls back to a canonical URL string if the route name isn't
+        // registered in the current request context. Earlier iterations of
+        // this list hardcoded URLs (/admin/parcel/bulk-upload, /admin/invoice,
+        // /admin/pickup-requests) that don't exist — the real endpoints are
+        // /admin/parcel/import-parcel, /admin/paid/invoice, and
+        // /admin/pickup-request/regular respectively.
+        $safeUrl = function (string $name, string $fallback): string {
+            try { return route($name); }
+            catch (\Throwable $e) { return url($fallback); }
+        };
         $quickActions = [
-            ['key' => 'create_shipment', 'label' => 'Create shipment',   'icon' => 'Plus',       'href' => url('/admin/parcel/create')],
-            ['key' => 'bulk_upload',     'label' => 'Bulk import',       'icon' => 'Upload',     'href' => url('/admin/parcel/bulk-upload')],
-            ['key' => 'schedule_pickup', 'label' => 'Schedule pickup',   'icon' => 'CalendarClock','href' => url('/admin/pickup-requests')],
-            ['key' => 'print_labels',    'label' => 'Print labels',      'icon' => 'Printer',    'href' => url('/admin/parcel')],
-            ['key' => 'ndr',             'label' => 'Review NDR',        'icon' => 'AlertTriangle','href' => url('/admin/ndr')],
-            ['key' => 'invoices',        'label' => 'Generate invoices', 'icon' => 'FileText',   'href' => url('/admin/invoice')],
+            ['key' => 'create_shipment', 'label' => 'Create shipment',   'icon' => 'Plus',         'href' => $safeUrl('parcel.create',           '/admin/parcel/create')],
+            ['key' => 'bulk_upload',     'label' => 'Bulk import',       'icon' => 'Upload',       'href' => $safeUrl('parcel.parcel-import',    '/admin/parcel/import-parcel')],
+            ['key' => 'schedule_pickup', 'label' => 'Schedule pickup',   'icon' => 'CalendarClock','href' => $safeUrl('pickup.request.regular',  '/admin/pickup-request/regular')],
+            ['key' => 'print_labels',    'label' => 'Print labels',      'icon' => 'Printer',      'href' => $safeUrl('parcel.index',            '/admin/parcel/index')],
+            ['key' => 'ndr',             'label' => 'Review NDR',        'icon' => 'AlertTriangle','href' => $safeUrl('ndr.index',               '/admin/ndr')],
+            ['key' => 'invoices',        'label' => 'Invoices',          'icon' => 'FileText',     'href' => $safeUrl('paid.invoice.index',      '/admin/paid/invoice')],
         ];
 
         return Inertia::render('Admin/Operations/Index', [

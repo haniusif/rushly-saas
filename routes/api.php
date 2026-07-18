@@ -319,7 +319,7 @@ Route::prefix('v10')->group(function() {
                 Route::post('/fulfillment/{id}/pick',  [WmsFulfillmentApiController::class,'confirmPick']);
                 Route::post('/fulfillment/{id}/pack',  [WmsFulfillmentApiController::class,'confirmPack']);
                 Route::get('/fulfillment/ready-to-dispatch', [WmsFulfillmentApiController::class,'readyToDispatch']);
-                Route::post('/fulfillment/{id}/dispatch', [WmsFulfillmentApiController::class,'dispatch']);
+                Route::post('/fulfillment/{id}/dispatch', [WmsFulfillmentApiController::class,'confirmDispatch']);
                 Route::post('/adjustments',            [WmsAdjustmentApiController::class, 'store']);
             });
 

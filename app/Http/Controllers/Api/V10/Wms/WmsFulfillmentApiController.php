@@ -111,8 +111,12 @@ class WmsFulfillmentApiController extends Controller
      * POST /api/v10/wms/fulfillment/{id}/dispatch
      * Called by warehouse worker at courier hand-off — flips READY → DISPATCHED
      * and hands off to delivery-man workflow.
+     *
+     * Named confirmDispatch (not dispatch) to avoid colliding with the base
+     * Controller::dispatch($job) method inherited from the framework — PHP
+     * throws a fatal on class-load if the signatures don't match.
      */
-    public function dispatch(int $id)
+    public function confirmDispatch(int $id)
     {
         $f = $this->repo->find($id);
         if (!$f) return $this->responseWithError('Fulfillment not found', [], 404);

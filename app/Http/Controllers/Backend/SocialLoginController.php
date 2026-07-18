@@ -117,9 +117,42 @@ class SocialLoginController extends Controller
         }
     }
 
-    public function socialLoginSettingsIndex(){
-
-        return view('backend.setting.social_login_settings.index');
+    public function socialLoginSettingsIndex()
+    {
+        return \Inertia\Inertia::render('Admin/SocialLoginSettings/Index', [
+            'facebook' => [
+                'client_id'     => (string) (globalSettings('facebook_client_id') ?? ''),
+                'client_secret' => (string) (globalSettings('facebook_client_secret') ?? ''),
+                'status'        => (int) (globalSettings('facebook_status') ?? 0) === Status::ACTIVE,
+            ],
+            'google' => [
+                'client_id'     => (string) (globalSettings('google_client_id') ?? ''),
+                'client_secret' => (string) (globalSettings('google_client_secret') ?? ''),
+                'status'        => (int) (globalSettings('google_status') ?? 0) === Status::ACTIVE,
+            ],
+            'permissions' => [
+                'update' => hasPermission('social_login_settings_update'),
+            ],
+            'urls' => [
+                'submit_facebook' => route('social.login.settings.update', 'facebook'),
+                'submit_google'   => route('social.login.settings.update', 'google'),
+            ],
+            't' => [
+                'title'         => __('menus.social_login_settings') ?: 'Social login settings',
+                'facebook'      => __('levels.facebook') ?: 'Facebook',
+                'google'        => __('levels.google') ?: 'Google',
+                'app_id'        => __('levels.app_id') ?: 'App ID',
+                'app_secret'    => __('levels.app_secret') ?: 'App secret',
+                'client_id'     => __('levels.client_id') ?: 'Client ID',
+                'client_secret' => __('levels.client_secret') ?: 'Client secret',
+                'status'        => __('levels.status') ?: 'Status',
+                'enabled'       => __('levels.active') ?: 'Enabled',
+                'disabled'      => __('levels.inactive') ?: 'Disabled',
+                'save'          => __('levels.save_change') ?: 'Save changes',
+                'fb_hint'       => 'From Facebook Developers → App → Settings → Basic. Toggle Status off to hide the Facebook button on the login screen.',
+                'google_hint'   => 'From Google Cloud Console → APIs & Services → Credentials. Toggle Status off to hide the Google button on the login screen.',
+            ],
+        ]);
     }
 
     public function socialLoginSettingsUpdate(Request $request,$social){

@@ -142,17 +142,34 @@ class MerchantInvoiceController extends Controller
         endif; 
     }
  
-    public function InvoiceGenerateMenuallyIndex(){
-        return view('backend.setting.invoice_generate.index');
+    public function InvoiceGenerateMenuallyIndex()
+    {
+        return \Inertia\Inertia::render('Admin/Settings/InvoiceGenerate/Index', [
+            'urls' => [
+                'generate' => route('invoice.generate.menually'),
+                'invoices' => route('paid.invoice.index'),
+            ],
+            't' => [
+                'title'       => __('invoice.invoice_generate_menually') ?: 'Generate invoices manually',
+                'settings'    => __('menus.settings') ?: 'Settings',
+                'description' => __('invoice.invoice_description')
+                    ?: 'Trigger invoice generation for the current billing cycle without waiting for the scheduled job. Merchants with pending charges will get a fresh invoice.',
+                'generate'    => __('invoice.generate') ?: 'Generate invoices',
+                'invoices'    => __('menus.invoice') ?: 'Invoices',
+                'note_title'  => 'How it runs',
+                'note_body'   => 'This calls the same `invoice:generate` artisan command that the cron would call at end-of-cycle. Safe to run more than once — merchants without pending charges are skipped.',
+            ],
+        ]);
     }
 
-    public function InvoiceGenerateMenually(){
+    public function InvoiceGenerateMenually()
+    {
         try {
             Artisan::call('invoice:generate');
-            Toastr::success(__('invoice.invoice_generated_successfully'),__('message.success'));
+            Toastr::success(__('invoice.invoice_generated_successfully'), __('message.success'));
             return redirect()->back();
         } catch (\Throwable $th) {
-            Toastr::error(__('parcel.error_msg'),__('message.error'));
+            Toastr::error(__('parcel.error_msg'), __('message.error'));
             return redirect()->back();
         }
     }

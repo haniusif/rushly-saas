@@ -210,7 +210,7 @@ export default function BulkAction({
     const reset = () => form.reset();
 
     return (
-        <AdminLayout title={t.title} breadcrumbs={[t.parcels, t.title]}>
+        <AdminLayout>
             <Head title={t.title} />
 
             <form onSubmit={submit} className="space-y-5">

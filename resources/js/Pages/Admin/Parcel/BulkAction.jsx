@@ -411,7 +411,214 @@ export default function BulkAction({
                     )}
                 </div>
 
-                {/* 2. Shipment IDs */}
+                {/* 2. Action-specific fields — placed directly under the pill
+                    row so the operator configures the intent before pasting
+                    IDs. Previously only rendered for change_status /
+                    assign_3pl; widened so add_note, send_sms, export_excel,
+                    print_awbs also surface their inputs/hints (they never
+                    rendered before, silently confusing the operator). */}
+                {form.data.action_type && (
+                    <Card>
+                        <CardContent className="pt-6">
+                            {(showStatusSelect || showCompanySelect) && (
+                            <div className="grid gap-4 md:grid-cols-2">
+                                {showStatusSelect && (
+                                    <Field icon={RefreshCcw} label={t.select_status} required error={form.errors.status}>
+                                        <Select
+                                            value={form.data.status}
+                                            onChange={(e) => form.setData('status', e.target.value)}
+                                        >
+                                            <option value="">—</option>
+                                            {statuses.map((s) => (
+                                                <option key={s.id} value={s.id}>{s.label}</option>
+                                            ))}
+                                        </Select>
+                                        {selectedStatus && (
+                                            <span className={cn(
+                                                'mt-2 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium',
+                                                COLOR_TO_CLASSES.blue,
+                                            )}>
+                                                {selectedStatus.label}
+                                            </span>
+                                        )}
+                                    </Field>
+                                )}
+
+                                {showCompanySelect && (
+                                    <Field icon={Network} label={t.select_3pl_company} required error={form.errors.company}>
+                                        <Select
+                                            value={form.data.company}
+                                            onChange={(e) => form.setData('company', e.target.value)}
+                                        >
+                                            <option value="">{t.select_3pl_company}</option>
+                                            {companies.map((c) => (
+                                                <option key={c.value} value={c.value}>{c.label}</option>
+                                            ))}
+                                        </Select>
+                                    </Field>
+                                )}
+                            </div>
+                            )}
+
+                            {showLogestechs && (
+                                <div className="mt-4 rounded-md border border-violet-200 bg-violet-50/40 p-4 space-y-2">
+                                    {logestechs_connections.length > 0 ? (
+                                        <Field
+                                            icon={Network}
+                                            label={t.logestechs_connection_label}
+                                            required
+                                            error={form.errors.connection_id}
+                                            hint={t.logestechs_connection_hint}
+                                        >
+                                            <Select
+                                                value={form.data.connection_id}
+                                                onChange={(e) => form.setData('connection_id', e.target.value)}
+                                            >
+                                                {logestechs_connections.map((c) => (
+                                                    <option key={c.id} value={c.id}>
+                                                        {c.connection_name}
+                                                        {c.email ? ` — ${c.email}` : ''}
+                                                        {c.is_default ? ` ${t.logestechs_default_marker}` : ''}
+                                                    </option>
+                                                ))}
+                                            </Select>
+                                        </Field>
+                                    ) : (
+                                        <div className="text-sm text-rose-700">
+                                            {t.logestechs_no_connections}{' '}
+                                            <a href={logestechs_manage_url} className="font-medium underline">
+                                                {t.logestechs_manage_link}
+                                            </a>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {showAddNote && (
+                                <div className="mt-4 rounded-md border border-amber-200 bg-amber-50/40 p-4">
+                                    <Field
+                                        icon={PenLine}
+                                        label={t.add_note_label}
+                                        required
+                                        error={form.errors.bulk_note}
+                                        hint={t.add_note_hint}
+                                    >
+                                        <Textarea
+                                            value={form.data.bulk_note}
+                                            onChange={(e) => form.setData('bulk_note', e.target.value)}
+                                            rows={4}
+                                            maxLength={2000}
+                                            placeholder="Pickup arranged for tomorrow morning…"
+                                        />
+                                    </Field>
+                                </div>
+                            )}
+
+                            {showSendSms && (
+                                <div className="mt-4 rounded-md border border-indigo-200 bg-indigo-50/40 p-4 space-y-2">
+                                    <Field
+                                        icon={MessageSquare}
+                                        label={t.sms_message_label}
+                                        required
+                                        error={form.errors.sms_message}
+                                        hint={t.sms_message_hint}
+                                    >
+                                        <Textarea
+                                            value={form.data.sms_message}
+                                            onChange={(e) => form.setData('sms_message', e.target.value)}
+                                            rows={3}
+                                            maxLength={480}
+                                            placeholder="Hi {customer_name}, your package {tracking_id} is out for delivery."
+                                        />
+                                    </Field>
+                                    <p className="text-[11px] text-muted-foreground tabular-nums">
+                                        {smsCharCount}/480 chars · {smsSegments} SMS segment{smsSegments > 1 ? 's' : ''}
+                                    </p>
+                                </div>
+                            )}
+
+                            {showExport && (
+                                <p className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-2.5 text-xs text-emerald-800 flex items-start gap-2">
+                                    <FileSpreadsheet className="h-3.5 w-3.5 mt-0.5 shrink-0" /> {t.export_hint}
+                                </p>
+                            )}
+
+                            {showPrint && (
+                                <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-800 flex items-start gap-2">
+                                    <Printer className="h-3.5 w-3.5 mt-0.5 shrink-0" /> {t.print_awbs_hint}
+                                </p>
+                            )}
+
+                            {showStatusGroup && (needsDriver || needsDate || needsHub || needsMerchant) && (
+                                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                                    {needsDriver && (
+                                        <Field icon={UserIcon} label={t.select_driver} required error={form.errors.driver_id}>
+                                            <Select
+                                                value={form.data.driver_id}
+                                                onChange={(e) => form.setData('driver_id', e.target.value)}
+                                            >
+                                                <option value="">—</option>
+                                                {deliverymen.map((d) => (
+                                                    <option key={d.id} value={d.id}>{d.name}</option>
+                                                ))}
+                                            </Select>
+                                        </Field>
+                                    )}
+                                    {needsDate && (
+                                        <Field icon={Calendar} label={t.schedule_at} required error={form.errors.schedule_at}>
+                                            <Input
+                                                type="date"
+                                                value={form.data.schedule_at}
+                                                onChange={(e) => form.setData('schedule_at', e.target.value)}
+                                            />
+                                        </Field>
+                                    )}
+                                    {needsHub && (
+                                        <Field icon={Building2} label={t.select_hub} required error={form.errors.hub_id}>
+                                            <Select
+                                                value={form.data.hub_id}
+                                                onChange={(e) => form.setData('hub_id', e.target.value)}
+                                            >
+                                                <option value="">—</option>
+                                                {hubs.map((h) => (
+                                                    <option key={h.id} value={h.id}>{h.name}</option>
+                                                ))}
+                                            </Select>
+                                        </Field>
+                                    )}
+                                    {needsMerchant && (
+                                        <Field icon={Store} label={t.select_merchant} required error={form.errors.merchant_id}>
+                                            <Select
+                                                value={form.data.merchant_id}
+                                                onChange={(e) => form.setData('merchant_id', e.target.value)}
+                                            >
+                                                <option value="">—</option>
+                                                {merchants.map((m) => (
+                                                    <option key={m.id} value={m.id}>{m.name}</option>
+                                                ))}
+                                            </Select>
+                                        </Field>
+                                    )}
+                                </div>
+                            )}
+
+                            {showStatusGroup && (
+                                <div className="mt-4">
+                                    <Field icon={StickyNote} label={`${t.note} (${t.optional})`} error={form.errors.note}>
+                                        <Textarea
+                                            rows={2}
+                                            value={form.data.note}
+                                            onChange={(e) => form.setData('note', e.target.value)}
+                                            placeholder={t.note_placeholder}
+                                        />
+                                    </Field>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* 3. Shipment IDs */}
                 <Card>
                     <CardContent className="pt-6">
                         <Field icon={Boxes} label={t.shipment_ids} required error={form.errors.shipment_ids} hint={t.shipment_ids_hint}>
@@ -605,205 +812,6 @@ export default function BulkAction({
                     </Card>
                 )}
 
-                {/* 3. Action-specific fields */}
-                {(showStatusSelect || showCompanySelect) && (
-                    <Card>
-                        <CardContent className="pt-6">
-                            <div className="grid gap-4 md:grid-cols-2">
-                                {showStatusSelect && (
-                                    <Field icon={RefreshCcw} label={t.select_status} required error={form.errors.status}>
-                                        <Select
-                                            value={form.data.status}
-                                            onChange={(e) => form.setData('status', e.target.value)}
-                                        >
-                                            <option value="">—</option>
-                                            {statuses.map((s) => (
-                                                <option key={s.id} value={s.id}>{s.label}</option>
-                                            ))}
-                                        </Select>
-                                        {selectedStatus && (
-                                            <span className={cn(
-                                                'mt-2 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium',
-                                                COLOR_TO_CLASSES.blue,
-                                            )}>
-                                                {selectedStatus.label}
-                                            </span>
-                                        )}
-                                    </Field>
-                                )}
-
-                                {showCompanySelect && (
-                                    <Field icon={Network} label={t.select_3pl_company} required error={form.errors.company}>
-                                        <Select
-                                            value={form.data.company}
-                                            onChange={(e) => form.setData('company', e.target.value)}
-                                        >
-                                            <option value="">{t.select_3pl_company}</option>
-                                            {companies.map((c) => (
-                                                <option key={c.value} value={c.value}>{c.label}</option>
-                                            ))}
-                                        </Select>
-                                    </Field>
-                                )}
-                            </div>
-
-                            {showLogestechs && (
-                                <div className="mt-4 rounded-md border border-violet-200 bg-violet-50/40 p-4 space-y-2">
-                                    {logestechs_connections.length > 0 ? (
-                                        <Field
-                                            icon={Network}
-                                            label={t.logestechs_connection_label}
-                                            required
-                                            error={form.errors.connection_id}
-                                            hint={t.logestechs_connection_hint}
-                                        >
-                                            <Select
-                                                value={form.data.connection_id}
-                                                onChange={(e) => form.setData('connection_id', e.target.value)}
-                                            >
-                                                {logestechs_connections.map((c) => (
-                                                    <option key={c.id} value={c.id}>
-                                                        {c.connection_name}
-                                                        {c.email ? ` — ${c.email}` : ''}
-                                                        {c.is_default ? ` ${t.logestechs_default_marker}` : ''}
-                                                    </option>
-                                                ))}
-                                            </Select>
-                                        </Field>
-                                    ) : (
-                                        <div className="text-sm text-rose-700">
-                                            {t.logestechs_no_connections}{' '}
-                                            <a href={logestechs_manage_url} className="font-medium underline">
-                                                {t.logestechs_manage_link}
-                                            </a>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {showAddNote && (
-                                <div className="mt-4 rounded-md border border-amber-200 bg-amber-50/40 p-4">
-                                    <Field
-                                        icon={PenLine}
-                                        label={t.add_note_label}
-                                        required
-                                        error={form.errors.bulk_note}
-                                        hint={t.add_note_hint}
-                                    >
-                                        <Textarea
-                                            value={form.data.bulk_note}
-                                            onChange={(e) => form.setData('bulk_note', e.target.value)}
-                                            rows={4}
-                                            maxLength={2000}
-                                            placeholder="Pickup arranged for tomorrow morning…"
-                                        />
-                                    </Field>
-                                </div>
-                            )}
-
-                            {showSendSms && (
-                                <div className="mt-4 rounded-md border border-indigo-200 bg-indigo-50/40 p-4 space-y-2">
-                                    <Field
-                                        icon={MessageSquare}
-                                        label={t.sms_message_label}
-                                        required
-                                        error={form.errors.sms_message}
-                                        hint={t.sms_message_hint}
-                                    >
-                                        <Textarea
-                                            value={form.data.sms_message}
-                                            onChange={(e) => form.setData('sms_message', e.target.value)}
-                                            rows={3}
-                                            maxLength={480}
-                                            placeholder="Hi {customer_name}, your package {tracking_id} is out for delivery."
-                                        />
-                                    </Field>
-                                    <p className="text-[11px] text-muted-foreground tabular-nums">
-                                        {smsCharCount}/480 chars · {smsSegments} SMS segment{smsSegments > 1 ? 's' : ''}
-                                    </p>
-                                </div>
-                            )}
-
-                            {showExport && (
-                                <p className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-2.5 text-xs text-emerald-800 flex items-start gap-2">
-                                    <FileSpreadsheet className="h-3.5 w-3.5 mt-0.5 shrink-0" /> {t.export_hint}
-                                </p>
-                            )}
-
-                            {showPrint && (
-                                <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-800 flex items-start gap-2">
-                                    <Printer className="h-3.5 w-3.5 mt-0.5 shrink-0" /> {t.print_awbs_hint}
-                                </p>
-                            )}
-
-                            {showStatusGroup && (needsDriver || needsDate || needsHub || needsMerchant) && (
-                                <div className="mt-4 grid gap-4 md:grid-cols-2">
-                                    {needsDriver && (
-                                        <Field icon={UserIcon} label={t.select_driver} required error={form.errors.driver_id}>
-                                            <Select
-                                                value={form.data.driver_id}
-                                                onChange={(e) => form.setData('driver_id', e.target.value)}
-                                            >
-                                                <option value="">—</option>
-                                                {deliverymen.map((d) => (
-                                                    <option key={d.id} value={d.id}>{d.name}</option>
-                                                ))}
-                                            </Select>
-                                        </Field>
-                                    )}
-                                    {needsDate && (
-                                        <Field icon={Calendar} label={t.schedule_at} required error={form.errors.schedule_at}>
-                                            <Input
-                                                type="date"
-                                                value={form.data.schedule_at}
-                                                onChange={(e) => form.setData('schedule_at', e.target.value)}
-                                            />
-                                        </Field>
-                                    )}
-                                    {needsHub && (
-                                        <Field icon={Building2} label={t.select_hub} required error={form.errors.hub_id}>
-                                            <Select
-                                                value={form.data.hub_id}
-                                                onChange={(e) => form.setData('hub_id', e.target.value)}
-                                            >
-                                                <option value="">—</option>
-                                                {hubs.map((h) => (
-                                                    <option key={h.id} value={h.id}>{h.name}</option>
-                                                ))}
-                                            </Select>
-                                        </Field>
-                                    )}
-                                    {needsMerchant && (
-                                        <Field icon={Store} label={t.select_merchant} required error={form.errors.merchant_id}>
-                                            <Select
-                                                value={form.data.merchant_id}
-                                                onChange={(e) => form.setData('merchant_id', e.target.value)}
-                                            >
-                                                <option value="">—</option>
-                                                {merchants.map((m) => (
-                                                    <option key={m.id} value={m.id}>{m.name}</option>
-                                                ))}
-                                            </Select>
-                                        </Field>
-                                    )}
-                                </div>
-                            )}
-
-                            {showStatusGroup && (
-                                <div className="mt-4">
-                                    <Field icon={StickyNote} label={`${t.note} (${t.optional})`} error={form.errors.note}>
-                                        <Textarea
-                                            rows={2}
-                                            value={form.data.note}
-                                            onChange={(e) => form.setData('note', e.target.value)}
-                                            placeholder={t.note_placeholder}
-                                        />
-                                    </Field>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                )}
 
                 {/* 4. Apply */}
                 <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 shadow-sm">

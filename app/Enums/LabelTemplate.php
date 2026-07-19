@@ -27,12 +27,16 @@ enum LabelTemplate: string
 
     public function label(): string
     {
+        // Names describe the LAYOUT (density, structure) rather than which
+        // external courier the visual originally imitated — the picker sits
+        // in a tenant-facing settings page and mixing third-party brands in
+        // there confused operators about ownership.
         return match ($this) {
-            self::Aramex     => 'Aramex-style',
-            self::Jet        => 'JET-style',
-            self::Smsa       => 'SMSA-style',
+            self::Aramex     => 'High-density',
+            self::Jet        => 'Two-zone',
+            self::Smsa       => 'Bold barcode',
             self::Generic    => 'Generic',
-            self::Internal   => 'Internal (Rushly)',
+            self::Internal   => 'Internal',
             self::Modern     => 'Modern',
             self::Compact    => 'Compact',
             self::Colorful   => 'Colorful',
@@ -44,11 +48,11 @@ enum LabelTemplate: string
     public function description(): string
     {
         return match ($this) {
-            self::Aramex     => 'High-density layout mimicking Aramex AWB labels. Good for direct hand-offs to Aramex pickup.',
-            self::Jet        => 'Clean two-zone layout used by JET / Saudi local couriers.',
-            self::Smsa       => 'SMSA-flavoured layout with bold barcode and large COD highlight.',
+            self::Aramex     => 'High-density AWB layout with side-by-side sender/receiver blocks. Good when the label has to carry a lot of fine print.',
+            self::Jet        => 'Clean two-zone layout with a prominent barcode strip. Works well for most local-courier hand-offs.',
+            self::Smsa       => 'Compact layout with a bold barcode and a large COD-amount highlight — hard to miss on the loading dock.',
             self::Generic    => 'Neutral, brand-agnostic layout. Safe default for any carrier.',
-            self::Internal   => 'Rushly-branded internal label for in-house delivery teams.',
+            self::Internal   => 'Tenant-branded layout for in-house delivery teams.',
             self::Modern     => 'High-contrast bold header with a jumbo barcode. Best for warehouse scanners.',
             self::Compact    => 'Everything squeezed into a small 4×6 zone for thermal label printers.',
             self::Colorful   => 'Uses the tenant primary/secondary colors for the header, COD block, and dividers.',

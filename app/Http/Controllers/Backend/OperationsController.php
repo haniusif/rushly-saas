@@ -391,7 +391,6 @@ class OperationsController extends Controller
             ['key' => 'schedule_pickup', 'label' => 'Schedule pickup',   'icon' => 'CalendarClock','href' => $safeUrl('pickup.request.regular',  '/admin/pickup-request/regular')],
             ['key' => 'print_labels',    'label' => 'Print labels',      'icon' => 'Printer',      'href' => $safeUrl('parcel.index',            '/admin/parcel/index')],
             ['key' => 'ndr',             'label' => 'Review NDR',        'icon' => 'AlertTriangle','href' => $safeUrl('ndr.index',               '/admin/ndr')],
-            ['key' => 'invoices',        'label' => 'Invoices',          'icon' => 'FileText',     'href' => $safeUrl('paid.invoice.index',      '/admin/paid/invoice')],
         ];
 
         return Inertia::render('Admin/Operations/Index', [

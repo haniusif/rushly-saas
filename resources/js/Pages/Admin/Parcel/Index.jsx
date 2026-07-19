@@ -472,8 +472,16 @@ export default function Index({
                         </button>
                     </div>
                     {selected.length > 0 && (
-                        <Button type="button" variant="outline" size="sm" onClick={printSelectedLabels}>
-                            <Printer className="h-4 w-4 me-1" /> {t.print_label}
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={printSelectedLabels}
+                            className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                            title={`Print AWBs for ${selected.length} selected`}
+                        >
+                            <Printer className="h-4 w-4 me-1" />
+                            {t.print_awbs || 'Print AWBs'} ({selected.length})
                         </Button>
                     )}
                     <a href={urls.parcel_map} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent transition-colors">

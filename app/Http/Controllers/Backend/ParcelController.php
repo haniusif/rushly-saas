@@ -356,6 +356,9 @@ class ParcelController extends Controller
             'clone'             => __('levels.clone') ?: 'Clone',
             'print'             => __('levels.print') ?: 'Print',
             'print_label'       => __('levels.print_label') ?: 'Print label',
+            // Same underlying action as `print_label` but the button reads
+            // "Print AWBs" to match the terminology on /admin/bulk_action.
+            'print_awbs'        => 'Print AWBs',
             'delete_confirm'    => 'Delete this parcel?',
             'date_label'        => __('parcel.parcel_date') ?: 'Date',
             'status_label'      => __('parcel.status') ?: 'Status',

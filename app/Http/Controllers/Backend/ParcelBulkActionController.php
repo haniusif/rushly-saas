@@ -158,6 +158,9 @@ public function check(Request $request)
             'status'       => $s,
             'status_label' => ParcelStatusHelper::label($s),
             'status_class' => ParcelStatusHelper::badgeClass($s),
+            // Hex color from the curated palette — matches /admin/parcel/index
+            // so the pill tint stays consistent across the app.
+            'status_color' => ParcelStatusHelper::color($s),
         ];
     })->values();
 
@@ -165,10 +168,12 @@ public function check(Request $request)
     $allStatuses = ParcelStatusHelper::getStatusList(); // [id, name, label, class]
     $countsIndex = [];
     foreach ($allStatuses as $st) {
-        $countsIndex[(int)$st['id']] = [
-            'id'    => (int)$st['id'],
+        $sid = (int) $st['id'];
+        $countsIndex[$sid] = [
+            'id'    => $sid,
             'label' => $st['label'],
             'class' => $st['class'],
+            'color' => ParcelStatusHelper::color($sid),
             'count' => 0,
         ];
     }

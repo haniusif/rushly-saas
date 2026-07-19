@@ -26,6 +26,28 @@ const COLOR_TO_CLASSES = {
     teal:   'bg-teal-100 text-teal-700 border-teal-200',
 };
 
+// Backend (ParcelStatusHelper::color) sends a curated hex per status:
+// e.g. PENDING #6c757d, DELIVERED #16a34a, NDR_CREATED #ef4444, *_CANCEL #475569.
+// Rendered as a soft tint pill (12% alpha fill + 30% alpha border + solid text)
+// so the pill colour matches /admin/parcel/index for cross-page consistency.
+const STATUS_FALLBACK_HEX = '#6c757d';
+const isStatusHex = (s) => typeof s === 'string' && /^#[0-9a-fA-F]{6}$/.test(s);
+const statusHexToRgba = (hex, alpha) => {
+    const h = isStatusHex(hex) ? hex : STATUS_FALLBACK_HEX;
+    const r = parseInt(h.slice(1, 3), 16);
+    const g = parseInt(h.slice(3, 5), 16);
+    const b = parseInt(h.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+const statusPillStyle = (hex, active = false) => {
+    const h = isStatusHex(hex) ? hex : STATUS_FALLBACK_HEX;
+    return {
+        backgroundColor: statusHexToRgba(h, active ? 0.20 : 0.12),
+        borderColor:     statusHexToRgba(h, active ? 0.60 : 0.30),
+        color:           h,
+    };
+};
+
 // Tailwind JIT discovers classes by string-matching the source. Dynamic
 // classes like `bg-${color}-50` only work if the resolved class literal
 // appears somewhere — list each pill color combo here so the scanner sees
@@ -192,6 +214,7 @@ export default function BulkAction({
                     id:     r.status,
                     label:  r.status_label,
                     class:  r.status_class,
+                    color:  r.status_color,
                     count:  0,
                 });
             }
@@ -472,10 +495,10 @@ export default function BulkAction({
                                                 key={g.id}
                                                 type="button"
                                                 onClick={() => toggleStatusFilter(g.id)}
+                                                style={statusPillStyle(g.color, active)}
                                                 className={cn(
-                                                    'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-all',
-                                                    g.class || COLOR_TO_CLASSES.grey,
-                                                    active ? 'ring-2 ring-primary/30 shadow-sm' : 'opacity-70 hover:opacity-100',
+                                                    'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium whitespace-nowrap transition-all',
+                                                    active ? 'ring-2 ring-offset-1 ring-primary/30 shadow-sm' : 'opacity-80 hover:opacity-100',
                                                 )}
                                                 title={active ? 'Click to clear filter' : `Filter to ${g.label}`}
                                             >
@@ -517,10 +540,10 @@ export default function BulkAction({
                                                         <button
                                                             type="button"
                                                             onClick={() => toggleStatusFilter(r.status)}
+                                                            style={statusPillStyle(r.status_color, String(statusFilter) === String(r.status))}
                                                             className={cn(
-                                                                'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium transition-all hover:shadow-sm hover:-translate-y-px cursor-pointer',
-                                                                r.status_class || COLOR_TO_CLASSES.grey,
-                                                                String(statusFilter) === String(r.status) && 'ring-2 ring-primary/30',
+                                                                'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium whitespace-nowrap transition-all hover:shadow-sm hover:-translate-y-px cursor-pointer',
+                                                                String(statusFilter) === String(r.status) && 'ring-2 ring-offset-1 ring-primary/30',
                                                             )}
                                                             title={
                                                                 String(statusFilter) === String(r.status)

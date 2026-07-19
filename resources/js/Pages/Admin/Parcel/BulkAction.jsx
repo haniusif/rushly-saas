@@ -134,6 +134,9 @@ export default function BulkAction({
     // stays client-side — 30 per page as requested.
     const PER_PAGE = 30;
     const [preview, setPreview] = React.useState({ rows: [], counts: null, loading: false, error: null, page: 1 });
+    // Which status ID the operator has drilled into. `null` = show all.
+    // Clicking a status badge (row-level or chip) toggles the filter.
+    const [statusFilter, setStatusFilter] = React.useState(null);
     const abortRef = React.useRef(null);
 
     React.useEffect(() => {
@@ -177,14 +180,57 @@ export default function BulkAction({
         return () => clearTimeout(timer);
     }, [form.data.shipment_ids, ids.length, urls.check]);
 
-    const totalPages   = Math.max(1, Math.ceil(preview.rows.length / PER_PAGE));
+    // Group rows by status so we can render a chip row above the table
+    // (with counts) that mirrors the row-level badges. Preserving encounter
+    // order matches how the operator scanned the rows.
+    const statusGroups = React.useMemo(() => {
+        const seen = new Map();
+        for (const r of preview.rows) {
+            const key = String(r.status);
+            if (!seen.has(key)) {
+                seen.set(key, {
+                    id:     r.status,
+                    label:  r.status_label,
+                    class:  r.status_class,
+                    count:  0,
+                });
+            }
+            seen.get(key).count += 1;
+        }
+        return Array.from(seen.values());
+    }, [preview.rows]);
+
+    // Clear an active filter if the underlying id list no longer has any
+    // rows of that status — otherwise the chip would highlight an empty
+    // filter and confuse the operator.
+    React.useEffect(() => {
+        if (statusFilter !== null && !statusGroups.some((g) => String(g.id) === String(statusFilter))) {
+            setStatusFilter(null);
+        }
+    }, [statusFilter, statusGroups]);
+
+    const filteredRows = React.useMemo(() => {
+        if (statusFilter === null) return preview.rows;
+        return preview.rows.filter((r) => String(r.status) === String(statusFilter));
+    }, [preview.rows, statusFilter]);
+
+    const totalPages   = Math.max(1, Math.ceil(filteredRows.length / PER_PAGE));
     const currentPage  = Math.min(preview.page, totalPages);
     const previewSlice = React.useMemo(() => {
         const start = (currentPage - 1) * PER_PAGE;
-        return preview.rows.slice(start, start + PER_PAGE);
-    }, [preview.rows, currentPage]);
-    const previewFrom  = preview.rows.length ? (currentPage - 1) * PER_PAGE + 1 : 0;
-    const previewTo    = Math.min(currentPage * PER_PAGE, preview.rows.length);
+        return filteredRows.slice(start, start + PER_PAGE);
+    }, [filteredRows, currentPage]);
+    const previewFrom  = filteredRows.length ? (currentPage - 1) * PER_PAGE + 1 : 0;
+    const previewTo    = Math.min(currentPage * PER_PAGE, filteredRows.length);
+
+    // Reset to page 1 whenever the active status filter changes so the
+    // operator doesn't land on an empty page-3 they didn't scroll to.
+    React.useEffect(() => { setPreview((p) => ({ ...p, page: 1 })); }, [statusFilter]);
+
+    // Click handler for status badges — toggle the filter (same status
+    // clicked twice = clear).
+    const toggleStatusFilter = (sid) =>
+        setStatusFilter((cur) => (String(cur) === String(sid) ? null : sid));
     // Set of matched tracking IDs — used to flag missing rows the operator
     // pasted but the server couldn't find. Comparison is case-insensitive
     // because the server persists tracking_id in mixed case.
@@ -392,9 +438,53 @@ export default function BulkAction({
                                     Shipments preview
                                 </div>
                                 <div className="text-xs text-muted-foreground tabular-nums">
-                                    {preview.rows.length > 0 && `${previewFrom}–${previewTo} of ${preview.rows.length}`}
+                                    {filteredRows.length > 0 && `${previewFrom}–${previewTo} of ${filteredRows.length}`}
+                                    {statusFilter !== null && preview.rows.length !== filteredRows.length && (
+                                        <span className="ms-1 text-muted-foreground/70">(filtered from {preview.rows.length})</span>
+                                    )}
                                 </div>
                             </div>
+
+                            {/* Status chip row — click a chip to filter the table
+                                to that status. Same status clicked twice clears
+                                the filter. Only renders when there's more than
+                                one status in the result set (otherwise the
+                                chip row is redundant with the badges in the
+                                table itself). */}
+                            {statusGroups.length > 1 && (
+                                <div className="flex flex-wrap items-center gap-1.5 border-b border-border px-4 py-2.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => setStatusFilter(null)}
+                                        className={cn(
+                                            'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors',
+                                            statusFilter === null
+                                                ? 'border-primary/40 bg-primary/10 text-primary'
+                                                : 'border-border bg-background text-muted-foreground hover:bg-muted',
+                                        )}
+                                    >
+                                        All <span className="tabular-nums opacity-60">{preview.rows.length}</span>
+                                    </button>
+                                    {statusGroups.map((g) => {
+                                        const active = String(statusFilter) === String(g.id);
+                                        return (
+                                            <button
+                                                key={g.id}
+                                                type="button"
+                                                onClick={() => toggleStatusFilter(g.id)}
+                                                className={cn(
+                                                    'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-all',
+                                                    g.class || COLOR_TO_CLASSES.grey,
+                                                    active ? 'ring-2 ring-primary/30 shadow-sm' : 'opacity-70 hover:opacity-100',
+                                                )}
+                                                title={active ? 'Click to clear filter' : `Filter to ${g.label}`}
+                                            >
+                                                {g.label} <span className="tabular-nums opacity-70">{g.count}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
 
                             {preview.error && (
                                 <div className="px-4 py-6 text-sm text-rose-700 flex items-center gap-2">
@@ -424,14 +514,22 @@ export default function BulkAction({
                                                     <td className="px-4 py-2">{r.city || '—'}</td>
                                                     <td className="px-4 py-2">{r.area || '—'}</td>
                                                     <td className="px-4 py-2">
-                                                        <span
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => toggleStatusFilter(r.status)}
                                                             className={cn(
-                                                                'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium',
+                                                                'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium transition-all hover:shadow-sm hover:-translate-y-px cursor-pointer',
                                                                 r.status_class || COLOR_TO_CLASSES.grey,
+                                                                String(statusFilter) === String(r.status) && 'ring-2 ring-primary/30',
                                                             )}
+                                                            title={
+                                                                String(statusFilter) === String(r.status)
+                                                                    ? 'Click to clear filter'
+                                                                    : `Filter to ${r.status_label}`
+                                                            }
                                                         >
                                                             {r.status_label || '—'}
-                                                        </span>
+                                                        </button>
                                                     </td>
                                                 </tr>
                                             ))}

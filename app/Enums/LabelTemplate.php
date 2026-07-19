@@ -8,9 +8,12 @@ namespace App\Enums;
  */
 enum LabelTemplate: string
 {
-    case Aramex     = 'aramex';
-    case Jet        = 'jet';
-    case Smsa       = 'smsa';
+    // String values also become the URL slug and the blade view name — kept
+    // as layout descriptors instead of the courier brand each layout used
+    // to imitate, so operators don't see "…/preview/aramex" in the browser.
+    case Aramex     = 'high-density';
+    case Jet        = 'two-zone';
+    case Smsa       = 'bold-barcode';
     case Generic    = 'generic';
     case Internal   = 'internal';
     // ---- 2026-07 additions: five extra visual styles ----

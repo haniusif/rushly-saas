@@ -3,7 +3,7 @@ import { Head, useForm } from '@inertiajs/react';
 import {
     Boxes, Truck, RefreshCcw, XCircle, ArrowLeft, Send, Eraser,
     Building2, User as UserIcon, Calendar, StickyNote, Store,
-    AlertCircle, Network, FileSpreadsheet, Printer, MessageSquare, PenLine,
+    AlertCircle, Network, FileSpreadsheet, Printer,
     ChevronLeft, ChevronRight, Loader2, PackageSearch,
 } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
@@ -142,9 +142,6 @@ export default function BulkAction({
         hub_id: '',
         merchant_id: '',
         note: '',
-        // Bulk-only inputs for the new actions.
-        bulk_note: '',
-        sms_message: '',
     });
 
     const ids = React.useMemo(() => parseShipmentIds(form.data.shipment_ids), [form.data.shipment_ids]);
@@ -275,8 +272,6 @@ export default function BulkAction({
         form.setData('hub_id', '');
         form.setData('merchant_id', '');
         form.setData('schedule_at', '');
-        form.setData('bulk_note', '');
-        form.setData('sms_message', '');
     };
 
     const selectedStatus = React.useMemo(
@@ -295,21 +290,14 @@ export default function BulkAction({
     const showCompanySelect  = form.data.action_type === 'assign_3pl';
     const showLogestechs     = form.data.action_type === 'assign_3pl' && form.data.company === 'logestechs';
     const showCancelHint     = form.data.action_type === 'cancel';
-    const showAddNote        = form.data.action_type === 'add_note';
-    const showSendSms        = form.data.action_type === 'send_sms';
     const showExport         = form.data.action_type === 'export_excel';
     const showPrint          = form.data.action_type === 'print_awbs';
-
-    const smsCharCount = (form.data.sms_message || '').length;
-    const smsSegments  = Math.max(1, Math.ceil(smsCharCount / 160));
 
     const canSubmit = (
         ids.length > 0 &&
         form.data.action_type &&
         (form.data.action_type !== 'change_status' || !!form.data.status) &&
         (form.data.action_type !== 'assign_3pl'    || (!!form.data.company && (form.data.company !== 'logestechs' || !!form.data.connection_id))) &&
-        (form.data.action_type !== 'add_note'      || !!form.data.bulk_note.trim()) &&
-        (form.data.action_type !== 'send_sms'      || !!form.data.sms_message.trim()) &&
         (!needsDriver   || !!form.data.driver_id) &&
         (!needsDate     || !!form.data.schedule_at) &&
         (!needsHub      || !!form.data.hub_id) &&
@@ -387,16 +375,6 @@ export default function BulkAction({
                             icon={FileSpreadsheet} label={t.export_excel}
                             value="export_excel" current={form.data.action_type}
                             onClick={setActionType} color="emerald"
-                        />
-                        <ActionPill
-                            icon={PenLine} label={t.add_note}
-                            value="add_note" current={form.data.action_type}
-                            onClick={setActionType} color="amber"
-                        />
-                        <ActionPill
-                            icon={MessageSquare} label={t.send_sms}
-                            value="send_sms" current={form.data.action_type}
-                            onClick={setActionType} color="indigo"
                         />
                     </div>
                     {form.errors.action_type && (
@@ -491,49 +469,6 @@ export default function BulkAction({
                                             </a>
                                         </div>
                                     )}
-                                </div>
-                            )}
-
-                            {showAddNote && (
-                                <div className="mt-4 rounded-md border border-amber-200 bg-amber-50/40 p-4">
-                                    <Field
-                                        icon={PenLine}
-                                        label={t.add_note_label}
-                                        required
-                                        error={form.errors.bulk_note}
-                                        hint={t.add_note_hint}
-                                    >
-                                        <Textarea
-                                            value={form.data.bulk_note}
-                                            onChange={(e) => form.setData('bulk_note', e.target.value)}
-                                            rows={4}
-                                            maxLength={2000}
-                                            placeholder="Pickup arranged for tomorrow morning…"
-                                        />
-                                    </Field>
-                                </div>
-                            )}
-
-                            {showSendSms && (
-                                <div className="mt-4 rounded-md border border-indigo-200 bg-indigo-50/40 p-4 space-y-2">
-                                    <Field
-                                        icon={MessageSquare}
-                                        label={t.sms_message_label}
-                                        required
-                                        error={form.errors.sms_message}
-                                        hint={t.sms_message_hint}
-                                    >
-                                        <Textarea
-                                            value={form.data.sms_message}
-                                            onChange={(e) => form.setData('sms_message', e.target.value)}
-                                            rows={3}
-                                            maxLength={480}
-                                            placeholder="Hi {customer_name}, your package {tracking_id} is out for delivery."
-                                        />
-                                    </Field>
-                                    <p className="text-[11px] text-muted-foreground tabular-nums">
-                                        {smsCharCount}/480 chars · {smsSegments} SMS segment{smsSegments > 1 ? 's' : ''}
-                                    </p>
                                 </div>
                             )}
 

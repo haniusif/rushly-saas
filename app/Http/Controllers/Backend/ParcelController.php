@@ -279,6 +279,12 @@ class ParcelController extends Controller
                 'bulk_pickup_assign'       => route('parcel.assign-pickup-bulk'),
                 'bulk_transfer_to_hub'     => route('parcel.transfer-to-hub-multiple-parcel'),
                 'bulk_deliveryman_assign'  => route('parcel.delivery-man-assign-multiple-parcel'),
+                // Modern unified endpoint — used by the "Received by hub" and
+                // "Assign return to merchant" bulk actions which don't have
+                // dedicated legacy routes. Accepts shipment_ids (string) +
+                // action_type=change_status + status + the fields the target
+                // status requires (hub_id / delivery_man_id / date).
+                'bulk_action_apply'        => route('parcel.bulk_action_apply'),
                 'tracking_json'            => route('parcel.tracking_json', ['id' => 0]),
                 'status'                   => [
                     'pickup_assign'                => route('parcel.pickup.man-assigned'),

@@ -291,10 +291,22 @@ export default function Index({
         if (!selected.length) { window.alert(t.bulk_select_first || 'Select at least one parcel first.'); return; }
         const parcels = selected.map((id) => ({ [id]: id }));
         const data = { parcels };
+        // Modern change_status flow: shipment_ids is a plain string of numeric
+        // parcel IDs joined by commas. The apply endpoint's splitIds() picks
+        // those up via the numeric-id branch — no tracking-id lookup needed.
+        const shipmentIdsString = selected.join(',');
+
         if (bulkType === 'received_by_hub_multiple_parcel') {
-            // No extra input — POST to hub-transfer endpoint with received flag handled server-side.
-            // The legacy modal sends a hub_id; without UI we fall back to instructing user.
-            window.alert(t.bulk_open_legacy);
+            if (!bulkInputs.hub_id) { window.alert(t.bulk_pick_hub || 'Pick a hub.'); return; }
+            router.post(urls.bulk_action_apply, {
+                shipment_ids: shipmentIdsString,
+                action_type:  'change_status',
+                status:       19, // ParcelStatus::RECEIVED_BY_HUB
+                hub_id:       bulkInputs.hub_id,
+            }, {
+                preserveScroll: false,
+                onSuccess: () => { setSelected([]); setBulkType(''); },
+            });
             return;
         }
         if (bulkType === 'delivery_man_assign_multiple_parcel') {
@@ -328,7 +340,20 @@ export default function Index({
             return;
         }
         if (bulkType === 'assign_return_merchant') {
-            window.alert(t.bulk_open_legacy);
+            // Return-flow parcels need a courier + date, same as pickup.
+            if (!bulkInputs.deliveryman_id || !bulkInputs.pickup_date) {
+                window.alert(t.bulk_pick_date || 'Pick courier + date.'); return;
+            }
+            router.post(urls.bulk_action_apply, {
+                shipment_ids:    shipmentIdsString,
+                action_type:     'change_status',
+                status:          26, // ParcelStatus::RETURN_ASSIGN_TO_MERCHANT
+                delivery_man_id: bulkInputs.deliveryman_id,
+                date:            bulkInputs.pickup_date,
+            }, {
+                preserveScroll: false,
+                onSuccess: () => { setSelected([]); setBulkType(''); },
+            });
             return;
         }
     };
@@ -553,13 +578,26 @@ export default function Index({
                                     </Select>
                                 </BulkInput>
                             )}
-                            {bulkType === 'transfer_to_hub_multiple_parcel' && (
+                            {(bulkType === 'transfer_to_hub_multiple_parcel' || bulkType === 'received_by_hub_multiple_parcel') && (
                                 <BulkInput label={t.hub}>
                                     <Select value={bulkInputs.hub_id} onChange={(e) => setBulkInputs((b) => ({ ...b, hub_id: e.target.value }))}>
                                         <option value="">—</option>
                                         {(lookups.hubs || []).map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
                                     </Select>
                                 </BulkInput>
+                            )}
+                            {bulkType === 'assign_return_merchant' && (
+                                <>
+                                    <BulkInput label={t.deliveryman_label}>
+                                        <Select value={bulkInputs.deliveryman_id} onChange={(e) => setBulkInputs((b) => ({ ...b, deliveryman_id: e.target.value }))}>
+                                            <option value="">—</option>
+                                            {(lookups.deliverymen || []).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                        </Select>
+                                    </BulkInput>
+                                    <BulkInput label={t.date_label}>
+                                        <Input type="date" value={bulkInputs.pickup_date} onChange={(e) => setBulkInputs((b) => ({ ...b, pickup_date: e.target.value }))} />
+                                    </BulkInput>
+                                </>
                             )}
 
                             <Button type="button" onClick={applyBulk} disabled={!bulkType || !selected.length}>

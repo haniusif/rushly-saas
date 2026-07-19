@@ -4,6 +4,7 @@ import {
     Boxes, Truck, RefreshCcw, XCircle, ArrowLeft, Send, Eraser,
     Building2, User as UserIcon, Calendar, StickyNote, Store,
     AlertCircle, Network, FileSpreadsheet, Printer, MessageSquare, PenLine,
+    ChevronLeft, ChevronRight, Loader2, PackageSearch,
 } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
@@ -125,6 +126,76 @@ export default function BulkAction({
     });
 
     const ids = React.useMemo(() => parseShipmentIds(form.data.shipment_ids), [form.data.shipment_ids]);
+
+    // ---- Preview state ----
+    // When the user pastes shipment IDs, hit the `check` endpoint (debounced
+    // 350ms so keystrokes don't hammer the server) and render matched
+    // parcels in a table below. Server returns up to 500 rows, so pagination
+    // stays client-side — 30 per page as requested.
+    const PER_PAGE = 30;
+    const [preview, setPreview] = React.useState({ rows: [], counts: null, loading: false, error: null, page: 1 });
+    const abortRef = React.useRef(null);
+
+    React.useEffect(() => {
+        // No IDs → clear preview.
+        if (ids.length === 0) {
+            setPreview((p) => (p.rows.length || p.loading || p.error) ? { rows: [], counts: null, loading: false, error: null, page: 1 } : p);
+            return;
+        }
+        // Debounce.
+        const timer = setTimeout(async () => {
+            if (abortRef.current) abortRef.current.abort();
+            abortRef.current = new AbortController();
+            setPreview((p) => ({ ...p, loading: true, error: null }));
+            try {
+                const res = await fetch(urls.check, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                    },
+                    body: JSON.stringify({ ids: form.data.shipment_ids }),
+                    signal: abortRef.current.signal,
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const json = await res.json();
+                setPreview({
+                    rows: Array.isArray(json.data) ? json.data : [],
+                    counts: json.counts || null,
+                    loading: false,
+                    error: null,
+                    page: 1, // reset to first page when the id list changes
+                });
+            } catch (e) {
+                if (e.name === 'AbortError') return; // superseded by newer request
+                setPreview((p) => ({ ...p, loading: false, error: e.message || 'Check failed' }));
+            }
+        }, 350);
+        return () => clearTimeout(timer);
+    }, [form.data.shipment_ids, ids.length, urls.check]);
+
+    const totalPages   = Math.max(1, Math.ceil(preview.rows.length / PER_PAGE));
+    const currentPage  = Math.min(preview.page, totalPages);
+    const previewSlice = React.useMemo(() => {
+        const start = (currentPage - 1) * PER_PAGE;
+        return preview.rows.slice(start, start + PER_PAGE);
+    }, [preview.rows, currentPage]);
+    const previewFrom  = preview.rows.length ? (currentPage - 1) * PER_PAGE + 1 : 0;
+    const previewTo    = Math.min(currentPage * PER_PAGE, preview.rows.length);
+    // Set of matched tracking IDs — used to flag missing rows the operator
+    // pasted but the server couldn't find. Comparison is case-insensitive
+    // because the server persists tracking_id in mixed case.
+    const matchedSet = React.useMemo(
+        () => new Set(preview.rows.map((r) => String(r.tracking_id || '').toLowerCase())),
+        [preview.rows],
+    );
+    const missingIds = React.useMemo(() => {
+        if (preview.rows.length === 0) return [];
+        return ids.filter((id) => !matchedSet.has(id.toLowerCase()) && !preview.rows.some((r) => String(r.id) === id));
+    }, [ids, matchedSet, preview.rows]);
 
     // Reset dependent fields when action type or status changes.
     const setActionType = (v) => {
@@ -287,12 +358,131 @@ export default function BulkAction({
                             <span className="rounded-full bg-primary/10 text-primary px-2 py-0.5 font-medium">
                                 {ids.length} shipment{ids.length === 1 ? '' : 's'}
                             </span>
+                            {preview.loading && (
+                                <span className="inline-flex items-center gap-1 text-muted-foreground">
+                                    <Loader2 className="h-3 w-3 animate-spin" /> Checking…
+                                </span>
+                            )}
+                            {!preview.loading && preview.rows.length > 0 && (
+                                <span className="text-emerald-700">
+                                    {preview.rows.length} matched
+                                </span>
+                            )}
+                            {!preview.loading && missingIds.length > 0 && (
+                                <span className="text-rose-700">
+                                    {missingIds.length} not found
+                                </span>
+                            )}
                             <button type="button" onClick={() => form.setData('shipment_ids', '')} className="hover:text-foreground inline-flex items-center gap-1">
                                 <Eraser className="h-3 w-3" /> {t.clear}
                             </button>
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* 2b. Preview table — populated by the debounced /check call.
+                    Client-side pagination (30/page) since the server caps at
+                    500 rows total and we already have them all in memory. */}
+                {ids.length > 0 && (preview.rows.length > 0 || preview.loading || preview.error || missingIds.length > 0) && (
+                    <Card>
+                        <CardContent className="p-0">
+                            <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+                                <div className="flex items-center gap-2 text-sm font-medium">
+                                    <PackageSearch className="h-4 w-4 text-primary" />
+                                    Shipments preview
+                                </div>
+                                <div className="text-xs text-muted-foreground tabular-nums">
+                                    {preview.rows.length > 0 && `${previewFrom}–${previewTo} of ${preview.rows.length}`}
+                                </div>
+                            </div>
+
+                            {preview.error && (
+                                <div className="px-4 py-6 text-sm text-rose-700 flex items-center gap-2">
+                                    <AlertCircle className="h-4 w-4" /> {preview.error}
+                                </div>
+                            )}
+
+                            {!preview.error && preview.rows.length > 0 && (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b border-border bg-muted/30 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                                <th className="px-4 py-2.5 text-start w-12">#</th>
+                                                <th className="px-4 py-2.5 text-start">Tracking</th>
+                                                <th className="px-4 py-2.5 text-start">Merchant</th>
+                                                <th className="px-4 py-2.5 text-start">City</th>
+                                                <th className="px-4 py-2.5 text-start">Area</th>
+                                                <th className="px-4 py-2.5 text-start">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {previewSlice.map((r, idx) => (
+                                                <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/20">
+                                                    <td className="px-4 py-2 text-muted-foreground tabular-nums">{previewFrom + idx}</td>
+                                                    <td className="px-4 py-2 font-mono text-xs font-medium">{r.tracking_id}</td>
+                                                    <td className="px-4 py-2">{r.merchant || '—'}</td>
+                                                    <td className="px-4 py-2">{r.city || '—'}</td>
+                                                    <td className="px-4 py-2">{r.area || '—'}</td>
+                                                    <td className="px-4 py-2">
+                                                        <span
+                                                            className={cn(
+                                                                'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium',
+                                                                r.status_class || COLOR_TO_CLASSES.grey,
+                                                            )}
+                                                        >
+                                                            {r.status_label || '—'}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+
+                            {!preview.error && !preview.loading && preview.rows.length === 0 && (
+                                <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                                    No matching shipments found.
+                                </div>
+                            )}
+
+                            {/* Missing IDs — help the operator spot typos before applying. */}
+                            {missingIds.length > 0 && (
+                                <details className="border-t border-border px-4 py-3">
+                                    <summary className="text-xs font-medium text-rose-700 cursor-pointer">
+                                        {missingIds.length} ID{missingIds.length === 1 ? '' : 's'} not found — view
+                                    </summary>
+                                    <div className="mt-2 flex flex-wrap gap-1">
+                                        {missingIds.map((id) => (
+                                            <span key={id} className="rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 font-mono text-[11px] text-rose-700">
+                                                {id}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </details>
+                            )}
+
+                            {/* Pagination — only shows when >1 page of matches. */}
+                            {totalPages > 1 && (
+                                <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-sm">
+                                    <div className="text-xs text-muted-foreground">
+                                        Page {currentPage} / {totalPages}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Button type="button" variant="outline" size="sm" disabled={currentPage <= 1}
+                                                onClick={() => setPreview((p) => ({ ...p, page: Math.max(1, p.page - 1) }))}>
+                                            <ChevronLeft className="h-4 w-4 me-1" /> Prev
+                                        </Button>
+                                        <Button type="button" variant="outline" size="sm" disabled={currentPage >= totalPages}
+                                                onClick={() => setPreview((p) => ({ ...p, page: Math.min(totalPages, p.page + 1) }))}>
+                                            Next <ChevronRight className="h-4 w-4 ms-1" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* 3. Action-specific fields */}
                 {(showStatusSelect || showCompanySelect) && (

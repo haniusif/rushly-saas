@@ -1250,6 +1250,7 @@ public function parcel_bulk_action(Request $request)
         'logestechs_manage_url' => route('shipping.connections.index'),
         'urls' => [
             'apply'  => route('parcel.bulk_action_apply'),
+            'check'  => route('parcel.check_bulk_action'),
             'index'  => route('parcel.index'),
         ],
         't' => [

@@ -67,19 +67,19 @@ function PortalCell({ url, domain, labels }) {
 
 export default function Index({ children = [], urls = {}, labels = {} }) {
     return (
-        <AdminLayout title={labels.title} breadcrumbs={[labels.title]}>
+        <AdminLayout title={labels.title}>
             <Head title={labels.title} />
 
-            <div className="mb-4 flex items-center justify-between">
-                <div>
-                    <h1 className="text-lg font-semibold flex items-center gap-2">
-                        <Building2 className="h-5 w-5" /> {labels.title}
-                    </h1>
-                    <p className="text-sm text-muted-foreground">{labels.subtitle}</p>
-                </div>
+            {/* Layout already renders the "Sub-accounts" h1 via `title`; the
+                inline h1 that used to live here plus the breadcrumb of the
+                same word made "Sub-accounts" show three times in a row. */}
+            <div className="mb-4 flex items-center justify-between gap-3">
+                <p className="text-sm text-muted-foreground m-0 inline-flex items-center gap-2">
+                    <Building2 className="h-4 w-4" /> {labels.subtitle}
+                </p>
                 <a
                     href={urls.create}
-                    className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                    className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 shrink-0"
                 >
                     <Plus className="h-4 w-4 me-1" /> {labels.create}
                 </a>

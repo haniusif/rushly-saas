@@ -513,6 +513,8 @@ return [
     'select'                   => 'Select',
     'copied'                   => 'Copied',
     'open'                     => 'Open',
+    'copy'                     => 'Copy',
+    'portal'                   => 'Portal',
     'merchant'                 => 'Merchant',
     'customer'                 => 'Customer',
     'deliveryman'              => 'Deliveryman',

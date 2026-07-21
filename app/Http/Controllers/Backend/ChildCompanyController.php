@@ -42,9 +42,27 @@ class ChildCompanyController extends Controller
 
     public function index()
     {
-        $children = GeneralSettings::where('parent_company_id', settings()->id)
-            ->orderByDesc('id')
-            ->get(['id', 'name', 'email', 'phone', 'status', 'created_at']);
+        // JOIN through tenants + domains to surface each child's portal URL.
+        // Left-joins so a general_settings row with no tenant/domain yet
+        // still shows up in the list (portal_url just comes back null).
+        $rows = \Illuminate\Support\Facades\DB::table('general_settings as gs')
+            ->leftJoin('tenants as t', 't.company_id', '=', 'gs.id')
+            ->leftJoin('domains as d', 'd.tenant_id', '=', 't.id')
+            ->where('gs.parent_company_id', settings()->id)
+            ->orderByDesc('gs.id')
+            ->select('gs.id', 'gs.name', 'gs.email', 'gs.phone', 'gs.status', 'gs.created_at', 'd.domain')
+            ->get();
+
+        $children = $rows->map(fn ($r) => [
+            'id'         => $r->id,
+            'name'       => $r->name,
+            'email'      => $r->email,
+            'phone'      => $r->phone,
+            'status'     => (int) $r->status,
+            'created_at' => $r->created_at,
+            'domain'     => $r->domain,
+            'portal_url' => $r->domain ? scheme_name($r->domain).'/admin/login' : null,
+        ])->values();
 
         return Inertia::render('Admin/ChildCompanies/Index', [
             'children' => $children,
@@ -63,6 +81,10 @@ class ChildCompanyController extends Controller
                 'empty'    => __('levels.no_data_found'),
                 'active'   => __('levels.active'),
                 'inactive' => __('levels.inactive'),
+                'portal'   => __('levels.portal'),
+                'open'     => __('levels.open'),
+                'copy'     => __('levels.copy'),
+                'copied'   => __('levels.copied'),
             ],
         ]);
     }

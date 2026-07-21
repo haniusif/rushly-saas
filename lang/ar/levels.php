@@ -470,6 +470,8 @@ return [
     'select'                   => 'اختر',
     'copied'                   => 'تم النسخ',
     'open'                     => 'فتح',
+    'copy'                     => 'نسخ',
+    'portal'                   => 'الرابط',
     'merchant'                 => 'التاجر',
     'customer'                 => 'العميل',
     'deliveryman'              => 'مندوب التوصيل',

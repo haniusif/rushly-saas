@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import { Building2 } from 'lucide-react';
+import { Building2, ChevronDown, X } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { Button } from '@/Components/ui/Button';
@@ -15,6 +15,91 @@ function FormField({ label, error, required, children }) {
             </Label>
             <div className="mt-1.5">{children}</div>
             {error && <p className="mt-1 text-[11px] text-rose-600">{error}</p>}
+        </div>
+    );
+}
+
+// Lightweight typeahead — currency lists can be long (100+ rows) and a
+// native <select> forces a linear scroll. Filters options as the user
+// types across name / code / symbol. No extra deps.
+function SearchableCurrencySelect({ currencies, value, onChange, invalid }) {
+    const [query, setQuery] = React.useState('');
+    const [open, setOpen] = React.useState(false);
+    const wrapRef = React.useRef(null);
+
+    const optionValue = (c) => c.code || c.symbol || c.name;
+    const optionLabel = (c) => `${c.name}${c.code ? ` (${c.code})` : ''}`;
+
+    const selected = React.useMemo(
+        () => currencies.find((c) => optionValue(c) === value),
+        [currencies, value],
+    );
+
+    const filtered = React.useMemo(() => {
+        const q = query.trim().toLowerCase();
+        if (!q) return currencies;
+        return currencies.filter((c) => {
+            const hay = `${c.name || ''} ${c.code || ''} ${c.symbol || ''}`.toLowerCase();
+            return hay.includes(q);
+        });
+    }, [currencies, query]);
+
+    React.useEffect(() => {
+        const handler = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const pick = (c) => { onChange(optionValue(c)); setQuery(''); setOpen(false); };
+    const clear = (e) => { e.stopPropagation(); onChange(''); setQuery(''); };
+
+    return (
+        <div ref={wrapRef} className="relative">
+            <div
+                onClick={() => setOpen(true)}
+                className={`flex h-9 items-center gap-1 rounded-md border px-3 text-sm cursor-text ${invalid ? 'border-rose-300' : 'border-input'} bg-background`}
+            >
+                {open ? (
+                    <input
+                        autoFocus
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder={selected ? optionLabel(selected) : 'Search currency…'}
+                        className="flex-1 bg-transparent outline-none"
+                    />
+                ) : (
+                    <span className={`flex-1 truncate ${selected ? '' : 'text-muted-foreground'}`}>
+                        {selected ? optionLabel(selected) : '—'}
+                    </span>
+                )}
+                {selected && (
+                    <button type="button" onClick={clear} className="p-0.5 text-muted-foreground hover:text-foreground" title="Clear">
+                        <X className="h-3.5 w-3.5" />
+                    </button>
+                )}
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            </div>
+            {open && (
+                <div className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-input bg-popover shadow-md">
+                    {filtered.length === 0 && (
+                        <div className="px-3 py-2 text-xs text-muted-foreground">No matches</div>
+                    )}
+                    {filtered.map((c) => {
+                        const v = optionValue(c);
+                        const isSel = v === value;
+                        return (
+                            <button
+                                type="button"
+                                key={c.id ?? v}
+                                onClick={() => pick(c)}
+                                className={`block w-full truncate px-3 py-1.5 text-start text-sm hover:bg-muted ${isSel ? 'bg-muted/70 font-medium' : ''}`}
+                            >
+                                {optionLabel(c)}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }
@@ -65,18 +150,12 @@ export default function Create({ plans = [], currencies = [], defaultCurrency = 
                             </FormField>
 
                             <FormField label={labels.currency} error={errors.currency} required>
-                                <select
+                                <SearchableCurrencySelect
+                                    currencies={currencies}
                                     value={data.currency}
-                                    onChange={(e) => setData('currency', e.target.value)}
-                                    className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                                >
-                                    <option value="">—</option>
-                                    {currencies.map((c) => (
-                                        <option key={c.id ?? c.code} value={c.code || c.symbol || c.name}>
-                                            {c.name} {c.code ? `(${c.code})` : ''}
-                                        </option>
-                                    ))}
-                                </select>
+                                    onChange={(v) => setData('currency', v)}
+                                    invalid={!!errors.currency}
+                                />
                             </FormField>
 
                             <FormField label={labels.plan} error={errors.plan_id} required>

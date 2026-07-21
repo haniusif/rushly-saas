@@ -530,6 +530,9 @@ return [
     'min'                      => 'min',
     'updating'                 => 'Updating…',
     'created_at'               => 'Created',
+    'add_new'                  => 'Add new',
+    'company_name'             => 'Company name',
+    'owner_details'            => 'Owner login',
     'income'                   => 'Income',
     'expense'                  => 'Expense',
 

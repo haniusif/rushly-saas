@@ -4,11 +4,11 @@ import { Building2, Plus } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 
-function StatusPill({ status }) {
+function StatusPill({ status, labels }) {
     const ok = Number(status) === 1;
     return (
         <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${ok ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-rose-100 text-rose-700 border-rose-200'}`}>
-            {ok ? 'Active' : 'Inactive'}
+            {ok ? labels.active : labels.inactive}
         </span>
     );
 }
@@ -61,7 +61,7 @@ export default function Index({ children = [], urls = {}, labels = {} }) {
                                         <td className="px-4 py-3 font-medium">{c.name}</td>
                                         <td className="px-4 py-3">{c.email}</td>
                                         <td className="px-4 py-3">{c.phone}</td>
-                                        <td className="px-4 py-3"><StatusPill status={c.status} /></td>
+                                        <td className="px-4 py-3"><StatusPill status={c.status} labels={labels} /></td>
                                         <td className="px-4 py-3 text-muted-foreground">
                                             {c.created_at ? new Date(c.created_at).toLocaleDateString() : ''}
                                         </td>

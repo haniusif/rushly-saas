@@ -128,4 +128,7 @@ return [
    'performance'               => 'الأداء',
    'knowledge_base'            => 'قاعدة المعرفة',
    'users_management'          => 'إدارة المستخدمين',
+   'child_companies'           => 'الحسابات الفرعية',
+   'child_companies_new'       => 'حساب فرعي جديد',
+   'child_companies_subtitle'  => 'الشركات التي أنشأتها تحت حسابك.',
 ];

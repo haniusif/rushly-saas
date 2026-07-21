@@ -130,4 +130,7 @@ return [
    'performance'                 => 'Performance',
    'knowledge_base'              => 'Knowledge Base',
    'users_management'            => 'Users Management',
+   'child_companies'             => 'Sub-accounts',
+   'child_companies_new'         => 'New sub-account',
+   'child_companies_subtitle'    => 'Companies you have created under your account.',
 ];

@@ -52,15 +52,17 @@ class ChildCompanyController extends Controller
                 'create' => route('child-companies.create'),
             ],
             'labels'   => [
-                'title'    => __('menus.child_companies') ?: 'Sub-accounts',
-                'subtitle' => 'Companies you have created under your account.',
-                'create'   => __('levels.add_new') ?: 'Add new',
-                'name'     => __('levels.name') ?: 'Name',
-                'email'    => __('levels.email') ?: 'Email',
-                'phone'    => __('levels.phone') ?: 'Phone',
-                'status'   => __('levels.status') ?: 'Status',
-                'created'  => __('levels.created_at') ?: 'Created',
-                'empty'    => __('levels.no_data_found') ?: 'No sub-accounts yet.',
+                'title'    => __('menus.child_companies'),
+                'subtitle' => __('menus.child_companies_subtitle'),
+                'create'   => __('levels.add_new'),
+                'name'     => __('levels.name'),
+                'email'    => __('levels.email'),
+                'phone'    => __('levels.phone'),
+                'status'   => __('levels.status'),
+                'created'  => __('levels.created_at'),
+                'empty'    => __('levels.no_data_found'),
+                'active'   => __('levels.active'),
+                'inactive' => __('levels.inactive'),
             ],
         ]);
     }
@@ -80,19 +82,19 @@ class ChildCompanyController extends Controller
                 'index'  => route('child-companies.index'),
             ],
             'labels'         => [
-                'title'        => __('menus.child_companies_new') ?: 'New sub-account',
-                'company_name' => __('levels.company_name') ?: 'Company name',
-                'domain'       => __('levels.domain') ?: 'Subdomain',
-                'currency'     => __('levels.currency') ?: 'Currency',
-                'plan'         => __('levels.plan') ?: 'Plan',
-                'address'      => __('levels.address') ?: 'Address',
-                'owner'        => __('levels.owner_details') ?: 'Owner login',
-                'name'         => __('levels.name') ?: 'Full name',
-                'email'        => __('levels.email') ?: 'Email',
-                'password'     => __('levels.password') ?: 'Password',
-                'mobile'       => __('levels.mobile') ?: 'Mobile',
-                'submit'       => __('levels.submit') ?: 'Create sub-account',
-                'cancel'       => __('levels.cancel') ?: 'Cancel',
+                'title'        => __('menus.child_companies_new'),
+                'company_name' => __('levels.company_name'),
+                'domain'       => __('levels.domain'),
+                'currency'     => __('levels.currency'),
+                'plan'         => __('levels.plan'),
+                'address'      => __('levels.address'),
+                'owner'        => __('levels.owner_details'),
+                'name'         => __('levels.name'),
+                'email'        => __('levels.email'),
+                'password'     => __('levels.password'),
+                'mobile'       => __('levels.mobile'),
+                'submit'       => __('levels.submit'),
+                'cancel'       => __('levels.cancel'),
             ],
         ]);
     }
@@ -102,11 +104,11 @@ class ChildCompanyController extends Controller
         $parentCompanyId = settings()->id;
 
         if ($this->repo->store($request, $parentCompanyId)) {
-            Toastr::success('Sub-account created successfully.', __('message.success'));
+            Toastr::success(__('child_company.created_msg'), __('message.success'));
             return redirect()->route('child-companies.index');
         }
 
-        Toastr::error('Something went wrong.', __('message.error'));
+        Toastr::error(__('child_company.error_msg'), __('message.error'));
         return redirect()->back()->withInput();
     }
 }

@@ -69,7 +69,13 @@ class ChildCompanyController extends Controller
 
     public function create()
     {
-        $plans      = Plan::where('status', \App\Enums\Status::ACTIVE)->orderBy('position')->get(['id', 'name', 'user_count', 'deliveryman_count', 'parcel_count', 'days_count', 'price']);
+        // Sub-accounts are restricted to the Vendor plan by product decision.
+        // Falls back to any active plan if Vendor has been renamed / removed
+        // so the page doesn't 500 in that edge case.
+        $plans      = Plan::where('status', \App\Enums\Status::ACTIVE)
+            ->where('name', 'Vendor')
+            ->orderBy('position')
+            ->get(['id', 'name', 'user_count', 'deliveryman_count', 'parcel_count', 'days_count', 'price']);
         $currencies = $this->currencyRepo->getActive();
 
         return Inertia::render('Admin/ChildCompanies/Create', [
@@ -102,6 +108,16 @@ class ChildCompanyController extends Controller
     public function store(StoreRequest $request)
     {
         $parentCompanyId = settings()->id;
+
+        // Guard against tampered POSTs picking a non-Vendor plan.
+        $plan = Plan::where('id', $request->plan_id)
+            ->where('status', \App\Enums\Status::ACTIVE)
+            ->where('name', 'Vendor')
+            ->first();
+        if (! $plan) {
+            Toastr::error(__('child_company.error_msg'), __('message.error'));
+            return redirect()->back()->withInput();
+        }
 
         if ($this->repo->store($request, $parentCompanyId)) {
             Toastr::success(__('child_company.created_msg'), __('message.success'));

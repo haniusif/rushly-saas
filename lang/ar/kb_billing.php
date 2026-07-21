@@ -38,6 +38,26 @@ return [
             'notes'       => 'فئة الباقة تُشتق من عدد الشحنات + وصول الوحدات (مصفوفة Plan.modules). Stripe محكوم بإعداد stripe_status العام. العملة تتبع الإعدادات العامة. المسارات: subscription.index، admin.subscription.history (PlanController@subscription / @subscriptionHistory).',
         ],
 
+        'child-companies' => [
+            'icon'    => 'Building2',
+            'label'   => 'الحسابات الفرعية (باقة Vendor)',
+            'purpose' => 'تدفق إعادة البيع / العلامة البيضاء — مسؤول المستأجر الذي يمتلك صلاحية company_create يمكنه إنشاء حسابات مستأجر جديدة تحت حسابه، لكل منها نطاق فرعي خاص ومستخدم مالك واشتراك مستقل. باقة "Vendor" هي الحجم الافتراضي المعدّ لهذه الحسابات الفرعية.',
+            'pages' => [
+                ['path' => 'القائمة', 'desc' => 'قائمة بالحسابات الفرعية التي أنشأتها (الاسم، البريد، الهاتف، الحالة، تاريخ الإنشاء). تقرأ من general_settings حيث parent_company_id = معرّف شركتك.'],
+                ['path' => 'إنشاء',   'desc' => 'نموذج ببطاقتين: بطاقة الشركة (الاسم، النطاق الفرعي، العملة، الباقة، العنوان) وبطاقة المالك (الاسم، البريد، كلمة المرور، الجوّال). معاينة النطاق الفرعي تعرض المسار الكامل "{sub}.{APP_HOST}" الذي سيُحلّ إليه. الباقة المختارة تعرض حدودها (المستخدمون / السائقون / الشحنات / الأيام) مباشرة.'],
+            ],
+            'fields' => [
+                'company_name', 'domain (subdomain)', 'currency', 'plan_id', 'address',
+                'owner_name', 'owner_email', 'owner_password', 'owner_mobile',
+            ],
+            'status_flow' => [
+                ['label' => 'Active',   'tone' => 'ok'],
+                ['label' => 'Inactive', 'tone' => 'bad'],
+            ],
+            'cross_links' => 'المستخدمون والأدوار (Super admin يمنح صلاحية company_create لدور، ثم يُسنِد الدور لمسؤول المستأجر)؛ الاشتراك (يحصل الحساب الفرعي على سجل اشتراك خاص به مقابل الباقة المختارة)؛ الموقع الأمامي (يرث الحساب الفرعي المحتوى الافتراضي عبر CompanyFrontendDataSeeder).',
+            'notes'       => 'المسار: child-companies.{index,create,store}. القائمة الجانبية: تحت إدارة المستخدمين → الحسابات الفرعية (تظهر فقط مع صلاحية company_create). مواصفات باقة Vendor: 5 مستخدمين، 100 سائق، 5000 شحنة، 30 يومًا، الوحدات = [dashboard, delivery_man, tms, reports]. يرتبط الحساب الفرعي بالوالد عبر general_settings.parent_company_id. ملاحظة الفوترة: يحصل الحساب الفرعي على اشتراك خاص به؛ لا يوجد ربط تلقائي "الوالد يدفع عن الأبناء" — يتولى الوالد الدفع خارج النظام. البنية قاعدة بيانات واحدة (Stancl DatabaseTenancyBootstrapper معطّل) — بيانات الحساب الفرعي تعيش في نفس القاعدة ويتم عزلها عبر companywise() scopes.',
+        ],
+
         'reports' => [
             'icon'    => 'ScrollText',
             'label'   => 'التقارير',

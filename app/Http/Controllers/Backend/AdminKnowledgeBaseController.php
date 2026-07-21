@@ -50,7 +50,7 @@ class AdminKnowledgeBaseController extends Controller
         ],
         'billing' => [
             'icon' => 'Receipt',
-            'subs' => ['subscribe', 'subscription', 'reports'],
+            'subs' => ['subscribe', 'subscription', 'child-companies', 'reports'],
         ],
         'zatca' => [
             'icon' => 'FileText',

@@ -38,6 +38,26 @@ return [
             'notes'       => 'Plan tier derived from parcel-count + module access (Plan.modules array). Stripe is gated by the global stripe_status setting. Currency reflects general settings. Routes: subscription.index, admin.subscription.history (PlanController@subscription / @subscriptionHistory).',
         ],
 
+        'child-companies' => [
+            'icon'    => 'Building2',
+            'label'   => 'Sub-accounts (Vendor plan)',
+            'purpose' => 'Reseller / white-label flow — a tenant admin with the company_create permission can spin up new tenant accounts under their own account, each with its own subdomain, owner user, and subscription. The "Vendor" plan is the default sizing intended for these sub-accounts.',
+            'pages' => [
+                ['path' => 'Index',  'desc' => 'List of sub-accounts you have created (name, email, phone, status, created date). Reads general_settings WHERE parent_company_id = your company id.'],
+                ['path' => 'Create', 'desc' => 'Two-card form: company block (name, subdomain, currency, plan, address) and owner block (name, email, password, mobile). Subdomain preview shows the full "{sub}.{APP_HOST}" it will resolve to. Selected plan shows its user / driver / parcel / days caps inline.'],
+            ],
+            'fields' => [
+                'company_name', 'domain (subdomain)', 'currency', 'plan_id', 'address',
+                'owner_name', 'owner_email', 'owner_password', 'owner_mobile',
+            ],
+            'status_flow' => [
+                ['label' => 'Active',   'tone' => 'ok'],
+                ['label' => 'Inactive', 'tone' => 'bad'],
+            ],
+            'cross_links' => 'Users & Roles (super-admin grants the company_create permission to a role, then assigns it to the tenant admin); Subscription (child gets its own subscription row against the selected plan); Front Web (child inherits its own default frontend content via CompanyFrontendDataSeeder).',
+            'notes'       => 'Route: child-companies.{index,create,store}. Menu: sidebar under Users Management → Sub-accounts (only visible with company_create). Vendor plan spec: 5 users, 100 drivers, 5000 parcels, 30 days, modules = [dashboard, delivery_man, tms, reports]. Child links back via general_settings.parent_company_id. Billing note: the child gets its own subscription; there is no automatic parent-pays-for-children wiring yet — parent handles payment out-of-band. Single-DB architecture (Stancl DatabaseTenancyBootstrapper is disabled) — child rows live in the same database and are isolated by companywise() scopes.',
+        ],
+
         'reports' => [
             'icon'    => 'ScrollText',
             'label'   => 'Reports',

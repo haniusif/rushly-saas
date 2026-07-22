@@ -245,7 +245,7 @@ Reuses the shared WMS API and admin WMS endpoints. Adds two dispatch endpoints.
 | Inventory | `GET /admin/wms/damage-reports` + `POST` | Damage report list + submit |
 | Inventory | `POST /wms/adjustments` | Stock adjustment (auto-flags ≥20 % delta for supervisor approval) |
 | Dispatch (new) | `GET /wms/fulfillment/ready-to-dispatch` | READY queue |
-| Dispatch (new) | `POST /wms/fulfillment/{id}/dispatch` | Flip READY → DISPATCHED, release reservations, hand off to delivery-man workflow |
+| Dispatch (new) | `POST /wms/fulfillment/{id}/dispatch` | Flip READY → DISPATCHED, release reservations, hand off to delivery-man workflow. Routes to `WmsFulfillmentApiController::confirmDispatch` — not `dispatch`, which collides with the base `Illuminate\Routing\Controller::dispatch($job)` signature and fatals on class load. |
 
 ### Current features
 - Seed colour: brown 700

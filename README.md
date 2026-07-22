@@ -1,68 +1,95 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Rushly SaaS
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Multi-tenant logistics + order-management platform. Laravel 12 monolith with a scoped-namespace module architecture (`app/<Module>/`) — each module documented in its own .md file at the repo root.
 
-## About Laravel
+## Documentation index
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### Core
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+| Doc | What's inside |
+|---|---|
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Codebase tour — stack, tenancy, directory map, controllers, database (~112 tables), key services |
+| [`ROUTES.md`](ROUTES.md) | Every registered route across `routes/web.php`, `superadmin.php`, `api.php`, `admin.php` |
+| [`RUSHLY_APPS_OVERVIEW.md`](RUSHLY_APPS_OVERVIEW.md) | System-of-systems view: this app + Salla / Zid / Woo / Shopify bridge apps + driver app |
+| [`INTEGRATIONS.md`](INTEGRATIONS.md) | External-perspective view: `/api/v10/*` surface, webhooks, auth model, bridge patterns |
+| [`GAPS.md`](GAPS.md) | Known bugs / open items / recent closures |
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Modules
 
-## Learning Laravel
+| Doc | Module | Status |
+|---|---|---|
+| [`docs/shipping-architecture.md`](docs/shipping-architecture.md) | `app/Shipping/` — generic courier abstraction | Production. First provider: Logestechs (verified end-to-end). |
+| [`COMMERCE.md`](COMMERCE.md) | `app/Commerce/` — generic storefront abstraction | Scaffold + Salla provider. Feature-flag gated. |
+| [`OMS.md`](OMS.md) | `app/Oms/` — canonical orders + normalization pipeline | Wired. Consumers: Fulfillment listener. |
+| [`FULFILLMENT.md`](FULFILLMENT.md) | `app/Fulfillment/` — router + strategies (WMS / 3PL / vendor / merchant-self) | Wired. Strategies dispatch to Shipping + WMS modules. |
+| [`3PL.md`](3PL.md) | Legacy per-provider 3PL services (Aramex / Jet / Zajel / Panda) + Logestechs migration notes | Legacy live; new providers use the Shipping module instead. |
+| [`ACCOUNTING.md`](ACCOUNTING.md) | Qoyod / Daftra / Odoo accounting sync | Live per-tenant. |
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### UI + operator surfaces
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+| Doc | Audience |
+|---|---|
+| [`MERCHANT_DASHBOARD.md`](MERCHANT_DASHBOARD.md) | Merchant-facing dashboard tour |
+| [`super-admin.md`](super-admin.md) | SaaS owner (super-admin) surfaces |
+| [`VENDOR.md`](VENDOR.md) | Vendor / supplier management surface |
+| [`MOBILE_APPS.md`](MOBILE_APPS.md) | Driver mobile app (Flutter) |
+| [`KNOWLEDGE_BASE.md`](KNOWLEDGE_BASE.md) | In-app knowledge base engine |
+| [`TOURS.md`](TOURS.md) | Onboarding tours |
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 2000 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Inertia migration
 
-## Laravel Sponsors
+`docs/inertia/` contains the ongoing Blade → React + Inertia migration guide + setup notes.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+---
 
-### Premium Partners
+## Quick module map
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[Many](https://www.many.co.uk)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[OP.GG](https://op.gg)**
-- **[WebReinvent](https://webreinvent.com/?utm_source=laravel&utm_medium=github&utm_campaign=patreon-sponsors)**
-- **[Lendio](https://lendio.com)**
+```
+app/
+├── Shipping/          → outbound couriers (docs/shipping-architecture.md)
+├── Commerce/          → storefront ingestion (COMMERCE.md)
+├── Oms/               → canonical order model (OMS.md)
+├── Fulfillment/       → routing + strategies (FULFILLMENT.md)
+├── Salla/             → Salla-specific bridge (INTEGRATIONS.md §4)
+├── Wms/               → warehouse management (observers for StockChanged)
+├── Zatca/             → Saudi e-invoicing Phase 1 generator
+├── Qoyod/, Daftra/, Odoo/  → per-tenant accounting sync (ACCOUNTING.md)
+├── Logestechs/        → legacy Logestechs settings model (superseded by Shipping module — see 3PL.md)
+├── Http/              → controllers, middleware, resources
+├── Models/            → Eloquent models
+├── Repositories/      → data access
+├── Services/          → per-provider legacy 3PL services (Aramex, Jet, Zajel, Panda)
+├── Exports/           → Excel exports (Maatwebsite)
+├── Jobs/              → app-wide queued jobs
+├── Console/Commands/  → artisan commands + scheduled tasks
+└── Providers/         → service providers (Route, Event, Tenancy, etc.)
+```
 
-## Contributing
+Every module follows the same shape: `Contracts/` + `DTOs/` + `Providers/` (or `Strategies/`) + `Services/` + `Models/` + `Events/` + `Listeners/`. Adding a new capability is a "drop a class in, add a config row" exercise — no business-logic changes.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+---
 
-## Code of Conduct
+## Standard flows
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+- **Storefront → parcel**: Commerce webhook → OMS OrderReceived → Fulfillment strategy → Shipping / WMS / vendor
+- **Bulk operations**: `/admin/bulk_action` — Assign 3PL, Change Status, Cancel, Print AWBs, Export XLSX
+- **Shipping tracking sync**: `shipping:sync-tracking` cron, dispatches one job per active connection every 5 min
+- **Log retention**: `commerce:prune-logs` (03:00) + `shipping:prune-logs` (03:15) daily
 
-## Security Vulnerabilities
+---
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Getting started
 
-## License
+Standard Laravel 12 application. See [`ARCHITECTURE.md`](ARCHITECTURE.md) §3 for the full local + tenant setup.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
-# rushly-logistic
-# rushly-logistic
+```bash
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate         # central + tenant tables
+npm run dev                 # or `npm run build` for prod
+php artisan serve
+```
+
+Multi-tenancy uses [stancl/tenancy](https://tenancyforlaravel.com/) with per-subdomain identification (`{tenant}.rushly.tech`). See `config/tenancy.php` for the resolver config.

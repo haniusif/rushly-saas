@@ -5,11 +5,13 @@ namespace App\Salla\Jobs;
 use App\Salla\Models\Order;
 use App\Salla\Models\Shipment;
 use App\Salla\Services\ParcelCreationService;
+use App\Salla\Services\SallaWmsFulfillmentService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
@@ -83,5 +85,30 @@ class CreateParcelJob implements ShouldQueue
             'last_rushly_status'     => $parcel->status ?? 'pending',
             'last_synced_at'         => now(),
         ]);
+
+        // Optionally create a WMS pick/pack fulfillment for tenants whose
+        // Salla integration_settings.meta.service_type is
+        // 'delivery_and_fulfillment'. Delivery-only tenants skip WMS
+        // entirely — their parcel goes straight to a courier.
+        if ($this->tenantWantsWmsFulfillment($parcel->company_id)) {
+            app(SallaWmsFulfillmentService::class)->createFor($order, $parcel);
+        }
+    }
+
+    /**
+     * Read the tenant's Salla service_type from integration_settings.meta
+     * without needing a full tenant scope initialization — queue jobs run
+     * without HTTP request context, so settings()/tenant() are unreliable.
+     */
+    private function tenantWantsWmsFulfillment(int $companyId): bool
+    {
+        $row = DB::table('integration_settings')
+            ->where('company_id', $companyId)
+            ->where('platform', 'salla')
+            ->first();
+
+        if (! $row || ! $row->meta) return false;
+        $meta = json_decode($row->meta, true) ?: [];
+        return ($meta['service_type'] ?? 'delivery') === 'delivery_and_fulfillment';
     }
 }

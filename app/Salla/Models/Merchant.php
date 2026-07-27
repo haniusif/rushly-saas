@@ -50,4 +50,15 @@ class Merchant extends Model
         return $this->token_expires_at !== null
             && $this->token_expires_at->isPast();
     }
+
+    /**
+     * True when the access token has already expired OR expires within
+     * $bufferSeconds. Used by ApiClient to refresh proactively so an
+     * in-flight request doesn't race the expiry.
+     */
+    public function tokenExpiresSoon(int $bufferSeconds = 60): bool
+    {
+        return $this->token_expires_at !== null
+            && $this->token_expires_at->subSeconds($bufferSeconds)->isPast();
+    }
 }

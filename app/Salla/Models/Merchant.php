@@ -12,6 +12,7 @@ class Merchant extends Model
 
     protected $fillable = [
         'salla_merchant_id',
+        'company_id',
         'store_name',
         'store_domain',
         'owner_email',

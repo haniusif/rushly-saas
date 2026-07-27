@@ -29,7 +29,11 @@ class SallaStoresController extends Controller
         $companyId = settings()->id ?? null;
         $companyMerchantIds = Merchant::where('company_id', $companyId)->pluck('id')->all();
 
+        // Only surface stores that installed through THIS tenant's Salla app.
+        // company_id is stamped on the salla_merchants row by OAuthController
+        // (custom mode) and AppStoreAuthorizeHandler (easy mode).
         $stores = SallaMerchant::with('settings')
+            ->where('company_id', $companyId)
             ->orderByDesc('installed')
             ->orderBy('store_name')
             ->get()
@@ -102,10 +106,15 @@ class SallaStoresController extends Controller
 
     public function edit(int $id)
     {
-        $store = SallaMerchant::with('settings')->findOrFail($id);
-        $settings = $store->settings ?: SallaSettings::firstOrCreate(['salla_merchant_id' => $store->id]);
-
         $companyId = settings()->id ?? null;
+
+        // Tenant scope guard — a Salla store belongs to exactly one Rushly
+        // tenant (the one whose subdomain owned the OAuth callback). Refuse
+        // cross-tenant reads even if someone crafts the id in the URL.
+        $store = SallaMerchant::with('settings')
+            ->where('company_id', $companyId)
+            ->findOrFail($id);
+        $settings = $store->settings ?: SallaSettings::firstOrCreate(['salla_merchant_id' => $store->id]);
 
         $merchants = Merchant::where('company_id', $companyId)
             ->orderBy('business_name')
@@ -185,7 +194,7 @@ class SallaStoresController extends Controller
 
     public function update(Request $request, int $id)
     {
-        $store = SallaMerchant::findOrFail($id);
+        $store = SallaMerchant::where('company_id', settings()->id ?? null)->findOrFail($id);
 
         $data = $request->validate([
             'rushly_merchant_id'        => ['nullable', 'integer', 'exists:merchants,id'],

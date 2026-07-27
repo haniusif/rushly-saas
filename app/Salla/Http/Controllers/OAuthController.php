@@ -70,10 +70,15 @@ class OAuthController extends Controller
         if (! $request->filled('code')) {
             return $this->fail('Missing authorization code from Salla', $request->query(), 400);
         }
-        if ($sessionState === null) {
-            return $this->fail('OAuth state cookie missing — session was lost between redirect and callback. Check that browser cookies are enabled and APP_URL matches the host you visited.', [], 400);
-        }
-        if (! hash_equals($sessionState, (string) $request->input('state'))) {
+        // CSRF state check only applies when WE initiated the flow via
+        // /oauth/redirect (a session cookie exists). Merchants installing
+        // from the Salla App Store bypass our redirect entirely — Salla is
+        // the initiator and lands on our callback directly, so there's no
+        // session state to validate. Enforce the check only when we have
+        // one to compare against.
+        if ($sessionState !== null
+            && ! hash_equals($sessionState, (string) $request->input('state'))
+        ) {
             return $this->fail('OAuth state mismatch — possible CSRF or stale session.', [
                 'session_state' => $sessionState,
                 'query_state'   => $request->input('state'),
@@ -103,6 +108,9 @@ class OAuthController extends Controller
         $merchant = Merchant::updateOrCreate(
             ['salla_merchant_id' => $sallaMerchantId],
             [
+                // Stamp the tenant that owned this callback URL so
+                // /admin/integrations/salla/stores can filter by company_id.
+                'company_id'       => settings()->id ?? null,
                 'store_name'       => $data['merchant']['name'] ?? null,
                 'store_domain'     => $data['merchant']['domain'] ?? null,
                 'owner_email'      => $data['email'] ?? null,

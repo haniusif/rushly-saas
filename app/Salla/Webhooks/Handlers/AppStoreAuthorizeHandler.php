@@ -15,6 +15,10 @@ class AppStoreAuthorizeHandler implements Handler
         Merchant::updateOrCreate(
             ['salla_merchant_id' => $event['merchant'] ?? $data['merchant'] ?? 0],
             [
+                // The webhook_url per app is per-tenant, so settings()->id
+                // is the tenant this authorize event belongs to. Keeps
+                // /admin/integrations/salla/stores tenant-scoped.
+                'company_id'       => settings()->id ?? null,
                 'access_token'     => $data['access_token'] ?? null,
                 'refresh_token'    => $data['refresh_token'] ?? null,
                 'token_expires_at' => isset($data['expires'])

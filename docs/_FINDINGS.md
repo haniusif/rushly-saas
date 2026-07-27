@@ -1,0 +1,498 @@
+# Aggregated Findings — Doc-vs-Code Conflicts & Gaps
+
+_Compiled from documentation-agent structured returns (Runs A + B/C). Grounded observations flagged while writing each doc._
+
+## Doc-vs-Code Conflicts (243)
+
+- [01-Workspace-Inventory.md] README.md claims Laravel 12 but composer.json pins laravel/framework ^10.10 — code wins (rushly-saas is Laravel 10)
+- [01-Workspace-Inventory.md] rushly-saas frontend is mid-migration: package.json contains both legacy Bootstrap/Sass and new React/Inertia/Tailwind
+- [01-Workspace-Inventory.md] Salla integration exists in two places: standalone rushly-salla bridge app AND in-platform app/Salla/ + app/Commerce/ Salla provider
+- [03-Business-Domain.md] README claims Laravel 12 but composer.json pins ^10.10 (Laravel 10) — code wins.
+- [03-Business-Domain.md] OMS/Fulfillment/Commerce presented as primary order flow, but it is feature-flag gated and off by default; production courier flow remains Parcel-centric.
+- [03-Business-Domain.md] parcels_3pl has no company_id and several 3PL endpoints are unauthenticated (documented multi-tenant leak, 3PL.md issues #1/#3).
+- [03-Business-Domain.md] Accounting is not double-entry despite ledger appearance; per-party scalar balances are source of truth and can drift (ACCOUNTING.md §8).
+- [04-Business-Logic.md] README.md claims Laravel 12 but composer.json pins ^10.10 (code wins) — noted in doc intro.
+- [04-Business-Logic.md] parcelStatus.php labels contradict constant semantics: RETURN_TO_COURIER renders 'Not Delivered', RECEIVED_BY_PICKUP_MAN renders 'Received By Courier', RETURNED_MERCHANT renders 'RTC'.
+- [04-Business-Logic.md] parcelDelivered() and returnReceivedByMerchant() and ReceivedRepository::store() are NOT wrapped in DB transactions (unlike store/receivedWarehouse/payout repos), risking balance drift on partial failure.
+- [04-Business-Logic.md] Wallet parcel-create debit in ParcelRepository::store() has no overdraft guard — wallet_balance can go negative, unlike merchant/hub payout requests which do check current_balance.
+- [04-Business-Logic.md] ApprovalStatus::APPROVED (2) is defined but unused by payout flows, which move PENDING->PROCESSED/REJECT directly.
+- [04-Business-Logic.md] Invoice numbering uses a company-wide invoice count rather than per-merchant sequence, a potential collision under concurrent generation.
+- [05-System-Architecture.md] Laravel version: ARCHITECTURE.md and README.md claim Laravel 12 / PHP 8.4, but composer.json pins laravel/framework ^10.10 and php ^8.1 — code wins, it is Laravel 10 on PHP 8.1+ (bootstrap/app.php uses the classic L10 form, confirming this).
+- [05-System-Architecture.md] Tenant databases: ARCHITECTURE.md hints at per-tenant migrations (config/tenancy.php migration_parameters), but DatabaseTenancyBootstrapper is commented out in config/tenancy.php — tenancy is shared-DB with app-layer company_id scoping; the tenants:migrate machinery is dormant scaffolding.
+- [05-System-Architecture.md] FCM: PushNotificationService uses Google's deprecated legacy fcm/send server-key API, not FCM HTTP v1.
+- [05-System-Architecture.md] Broadcasting: config/broadcasting.php default is null (env sets log) and BroadcastServiceProvider is commented out of config/app.php — no live websocket broadcasting is active despite the provider/channels files existing.
+- [06-Database.md — Rushly database schema documentation: tenancy model, 6 domain ER diagrams, ~55-table data dictionary, relationship overview, enum/soft-delete reference, and Doc-vs-Code notes.] DatabaseTenancyBootstrapper commented out in config/tenancy.php => tenancy is single-DB column-scoped, contradicting any assumption of per-tenant databases implied by stancl/tenancy usage
+- [06-Database.md — Rushly database schema documentation: tenancy model, 6 domain ER diagrams, ~55-table data dictionary, relationship overview, enum/soft-delete reference, and Doc-vs-Code notes.] parcels_3pl referenced by model and ALTER migrations but never created by any migration (legacy external table)
+- [06-Database.md — Rushly database schema documentation: tenancy model, 6 domain ER diagrams, ~55-table data dictionary, relationship overview, enum/soft-delete reference, and Doc-vs-Code notes.] salla_orders created by two different migrations with different schemas; first renamed to salla_order_links
+- [06-Database.md — Rushly database schema documentation: tenancy model, 6 domain ER diagrams, ~55-table data dictionary, relationship overview, enum/soft-delete reference, and Doc-vs-Code notes.] integration_settings originally central (platform unique) then re-scoped to tenant by 2026_06_25_010001
+- [06-Database.md — Rushly database schema documentation: tenancy model, 6 domain ER diagrams, ~55-table data dictionary, relationship overview, enum/soft-delete reference, and Doc-vs-Code notes.] README.md claims Laravel 12 but composer.json pins ^10.10 (code wins) — reaffirmed for Blueprint semantics
+- [07-Laravel.md — Laravel Backend Deep-Dive] README.md/ARCHITECTURE.md claim Laravel 12; composer.json pins laravel/framework ^10.10 — code wins
+- [07-Laravel.md — Laravel Backend Deep-Dive] ARCHITECTURE.md claims PHP 8.4 production; composer.json requires php ^8.1
+- [07-Laravel.md — Laravel Backend Deep-Dive] ARCHITECTURE.md §7 says ~125 controllers; actual count is 219
+- [07-Laravel.md — Laravel Backend Deep-Dive] ARCHITECTURE.md §13 lists AuthServiceProvider as owning Gates/policies; $policies is empty and authz is permission-array middleware only
+- [07-Laravel.md — Laravel Backend Deep-Dive] ARCHITECTURE.md §15 says 24 enums; actual is 41 (incl. Wms/Zatca/Wallet/Merchant_panel subfolders)
+- [07-Laravel.md — Laravel Backend Deep-Dive] ARCHITECTURE.md §14 lists only 2 console commands; scheduler now runs 12 scheduled + 3 manual
+- [07-Laravel.md — Laravel Backend Deep-Dive] ARCHITECTURE.md §2 says frontend is Blade with Vite unused; app is mid-migration to Inertia.js+React with HandleInertiaRequests active
+- [08-Flutter.md] connectivity_plus is documented as shared baseline in MOBILE_APPS.md but only present in driver + merchant pubspec.yaml
+- [08-Flutter.md] Push/FCM is only in driver, merchant, admin (firebase_messaging dep + core/push/ folder); the five ops apps have neither, matching the doc's narrower claim
+- [08-Flutter.md] Locale persistence differs by app: admin persists to secure storage via TokenStorage.readLocale/writeLocale, driver's LocaleController is in-memory only and resets on cold start
+- [08-Flutter.md] Env.apiKey hard-codes a default shared static secret ('123456rx-ecourier123456') and Env.apiBaseUrl defaults to https://api.rushly-logistic.com/api/v10 — single shared apiKey across all tenants/apps (known security debt)
+- [09-API.md] INTEGRATIONS.md documents driver/merchant routes under /api/v10/delivery-man/* and /api/v10/merchant-panel/* prefixes, but routes/api.php uses /deliveryman/* (no hyphen) and flat /parcel/*, /shops/* etc (no merchant-panel/ prefix). Code is authoritative — tables use the real paths, which also match the Flutter api_endpoints.dart files.
+- [09-API.md] INTEGRATIONS.md implies an OpenAPI-style partner spec generally; in reality only the merchant subset has a generated spec (GET /admin/api-docs/merchant.json). The driver and admin surfaces have no shipped spec.
+- [09-API.md] README/context claim Laravel 12 but composer.json pins ^10.10 (noted in brief; not central to this API doc but consistent with code-wins policy).
+- [10-Authentication.md] OTP: doc-block describes a time-based MM DD HH deterministic code but LoginController::currentOtpCode() returns hard-coded '123456' (TEMP dev)
+- [10-Authentication.md] Remember-me stores the raw plaintext password in a 24h cookie (useremail/userpassword), separate from Laravel's hashed remember-token
+- [10-Authentication.md] config/sanctum.php sets expiration=null so personal-access tokens never auto-expire
+- [10-Authentication.md] Kernel api group has EnsureFrontendRequestsAreStateful commented out — no cookie-based SPA-Sanctum path
+- [10-Authentication.md] No Policies/Gates: AuthServiceProvider::$policies is empty and no app/Policies dir exists — authorization is entirely the users.permissions array
+- [10-Authentication.md] /super-admin/* routes are permission-gated (hasPermission), not user_type-gated; isolation relies on central-domain-only login + super-admin-only permission keys
+- [10-Authentication.md] README claims Laravel 12 but composer.json pins ^10.10 (ecosystem-wide note)
+- [12-Workflows.md] FULFILLMENT.md §3 lists route condition columns (condition_merchant_id, condition_country, condition_source_channel, condition_min_amount) but FulfillmentRouter::matches() actually reads merchant_id, shipping_country, source_provider_code, min_total AND adds shipping_city_id, max_total, is_cod — code wins
+- [12-Workflows.md] FULFILLMENT.md §5/§8 describes resolveFallbackStrategy precedence and a flat strategies config map, but code uses merchant-services-JSON-first precedence and a nested config('fulfillment.strategies.<code>.class') key
+- [12-Workflows.md] StockChanged docblock references a Phase 7 Commerce PushStockToConnectedChannelsListener/PushStockJob/SupportsInventorySync that appears forward-looking / not yet wired
+- [12-Workflows.md] PushNotificationService uses the deprecated FCM legacy fcm/send + server-key API rather than FCM HTTP v1
+- [12-Workflows.md] README.md claims Laravel 12 but composer.json pins ^10.10 (ecosystem-wide note, code wins)
+- [13-User-Journeys.md] README.md/RUSHLY_APPS_OVERVIEW.md claim Laravel 12 / PHP 8.4 but composer.json pins ^10.10 / PHP ^8.1 (code wins: Laravel 10)
+- [13-User-Journeys.md] Docs call the pipeline 34/40-state; app/Enums/ParcelStatus.php defines 41 constants (code wins: 41)
+- [13-User-Journeys.md] Docs reference a 'dispatch' endpoint; code routes to WmsFulfillmentApiController::confirmDispatch to avoid the base Controller::dispatch($job) collision
+- [14-Integrations.md] Three parallel Salla implementations coexist: app/Salla/ in-monolith bridge (routes live in web.php, tenant context), rushly-salla/ standalone app (live, awaiting first install), and app/Commerce/Providers/Salla/ generic-module provider (feature-flagged OFF via FEATURE_COMMERCE_LAYER). The active path today is app/Salla/ + SallaService writeback; the generic Commerce layer is intended to supersede the bespoke bridges but is gated off.
+- [14-Integrations.md] PushNotificationService uses the DEPRECATED FCM legacy HTTP API (fcm/send + 'Authorization: key='), whereas INTEGRATIONS.md sec.5 describes the driver-app side as using firebase/php-jwt + FCM HTTP v1. Server implementation is legacy-key based; Google has sunset the legacy API.
+- [14-Integrations.md] ZATCA is Phase-1 generation only (TLV + QR via NullGateway); no live clearance/reporting gateway exists despite the module scaffolding a Phase-2 hook.
+- [14-Integrations.md] config/salla.php still exists in rushly-saas but is now near-empty — OAuth/webhook creds moved to per-tenant integration_settings.meta on 2026-06-25 (read via sallaCreds()).
+- [14-Integrations.md] 3PL.md notes LOGESTECHS_API_KEY env entry is dead — Logestechs auth is per-shipment company-id header + per-call email/password, not a global key.
+- [15-Brand-System.md] Marketing brand (blue/cyan/violet) vs product brand (magenta/navy) — no shared design-token source; the marketing→merchant-portal transition changes the primary color
+- [15-Brand-System.md] Default asset public/images/default/rushly-logo.png is actually a 'FEERI LOGIS' logo, not the Rushly mark (white-label placeholder)
+- [15-Brand-System.md] No master logo vector (SVG/AI/EPS) committed — canonical mark exists only inline in marketing/components/sections/nav.tsx
+- [15-Brand-System.md] Space Grotesk display face is marketing-only; all product surfaces default to Cairo/Inter
+- [15-Brand-System.md] Each of 8 Flutter apps uses a distinct ColorScheme seed color — no unified app palette
+- [15-Brand-System.md] Marketing button style rounded-full blue gradient vs merchant button rounded-md solid magenta — duplicated cva kits, not shared
+- [15-Brand-System.md] RTL/Arabic (Cairo/Tajawal) supported in products but not on the English-only marketing site
+- [15-Brand-System.md] Marketing trust badges (SOC 2 / ISO 27001 / GDPR) are copy only, not verified in code
+- [16-UI-UX.md] docs/inertia/components/admin-layout.md says admin has 'no brand overrides', but AdminLayout.jsx does consume the brand prop for sidebar logo/name/logo_style (though not the full resolveTheme color/radius/density override that MerchantLayout applies).
+- [16-UI-UX.md] resources/js/lib/i18n.js advertises 7 SUPPORTED_LOCALES (en, ar, fr, es, bn, zh, in) but DICTIONARY only contains en + ar; fr/es/bn/zh/in silently fall back to English.
+- [16-UI-UX.md] MerchantLayout useDarkMode writes localStorage 'merchant-theme' on toggle but has no load-on-mount effect (AdminLayout does), so merchant dark-mode preference does not persist across full reloads — apparent bug.
+- [16-UI-UX.md] resources/css/app.css exists but is empty, and app.js/bootstrap.js/Example* are dead Laravel scaffolding; the live pipeline is merchant.css + merchant.jsx (also loaded by the admin blade shell — no separate admin.jsx).
+- [16-UI-UX.md] Brand color diverges by surface: web merchant portal primary is magenta hsl(330 70% 38%) while the Flutter merchant app seeds blue #0F62FE; web primary font is Cairo while Flutter uses Inter/Tajawal.
+- [16-UI-UX.md] rushly-driver-app uses the deprecated CardTheme class vs rushly-admin-app's current CardThemeData.
+- [17-Security.md] config/tenancy.php DatabaseTenancyBootstrapper is commented out, so tenancy is single shared DB with company_id scoping — the context brief's 'per-subdomain' description is true for identity/routing but NOT for data isolation.
+- [17-Security.md] app/Http/Middleware/Cors.php is a no-op (return next); real CORS is HandleCors + config/cors.php despite the custom class being in the global stack.
+- [17-Security.md] config/rxcourier.php api_key is a hard-coded literal, not env-driven, and is absent from .env.example.
+- [17-Security.md] 10-Authentication.md already documents fixed-OTP and remember-me-password issues; this doc re-cites them from code and adds severity/remediation.
+- [18-Deployment.md] README.md claims Laravel 12 but composer.json pins laravel/framework ^10.10 (code wins: Laravel 10).
+- [18-Deployment.md] _CONTEXT_BRIEF/config describe subdomain + per-tenant-DB tenancy ({tenant}.rushly.tech, UUID IDs), but stancl/tenancy DB bootstrapper, tenant routes, and provisioning jobs are all commented out and no tenant DBs exist — the real model is per-customer whole-app clones + single-DB company_id scoping.
+- [18-Deployment.md] .htaccess declares cPanel ea-php83 Apache handler, but production is nginx + php-fpm (Apache directives are inert).
+- [19-Environment.md] README.md claims Laravel 12 but composer.json pins laravel/framework ^10.10 - code wins (Laravel 10)
+- [19-Environment.md] Broadcast default is null in config/broadcasting.php but .env.example sets BROADCAST_DRIVER=log
+- [19-Environment.md] Flutter admin app defaults API_BASE_URL/TENANT_HOST_SUFFIX to rushly.tech while all 7 other apps default to rushly-logistic.com, despite context brief citing {tenant}.rushly.tech as production
+- [21-Code-Review.md] README.md claims Laravel 12 but composer.json pins laravel/framework ^10.10 (code wins: Laravel 10)
+- [21-Code-Review.md] GAPS.md flags APP_DEBUG=true in production leaking SQL-bearing stacktraces to authenticated users
+- [21-Code-Review.md] routes/api.php registers GET /api/panda/schudule_tracking_temp but DeliveryPandaController has no matching method (route would 500)
+- [21-Code-Review.md] 3PL.md presents a legacy Logestechs implementation then supersedes it mid-document with the 2026-06-30 Shipping-module migration note while the old LogestechsService remains on disk
+- [20-Performance.md] README.md claims Laravel 12 but composer.json pins laravel/framework ^10.10 — code wins (Laravel 10, PHP ^8.1); flagged as a Doc vs Code note in the doc
+- [22-Technical-Debt.md] README.md says 'Laravel 12 monolith' (lines 3, 83) but composer.json pins laravel/framework ^10.10 with PHP ^8.1 — code wins, this is Laravel 10.
+- [22-Technical-Debt.md] README/ARCHITECTURE cite '~112 tables' while GAPS.md health-check counts '200+ migrations' (191 files present) — not contradictory but the table figure should be re-derived from live schema.
+- [22-Technical-Debt.md] README describes stancl/tenancy per-subdomain identification without foregrounding that DatabaseTenancyBootstrapper is disabled in config/tenancy.php (line 31) — the app is single-DB with application-level companywise isolation, which is load-bearing for every isolation claim.
+- [26-Architecture-Decisions.md] README.md/ARCHITECTURE.md claim Laravel 12 + PHP 8.4, but composer.json pins laravel/framework ^10.10 and php ^8.1 — code wins (Laravel 10)
+- [26-Architecture-Decisions.md] ARCHITECTURE.md §2 describes the frontend as Blade-only with an unused Vite config, but the code runs an active Inertia.js + React stack (HandleInertiaRequests middleware, ~191 .jsx pages, Inertia::render across controllers) mid-migration off Blade
+- [26-Architecture-Decisions.md] Docs describe tenant hosts as {tenant}.rushly.tech (product) while ARCHITECTURE §18 dev-env uses {tenant}.rushly.test (local Valet) — environment difference, not a code conflict
+- [26-Architecture-Decisions.md] config/tenancy.php uses InitializeTenancyByDomain (full-host match against domains table) rather than pure subdomain parsing, though the registered rows are subdomains
+- [OMS — Canonical Orders & Normalization] OMS.md DB schema (§3) lists order_status/customer address as *_json/placed_at columns; actual orders table uses status + inline shipping_* columns + occurred_at/received_at with no billing/address JSON columns.
+- [OMS — Canonical Orders & Normalization] OMS.md shows OrderNormalizer::normalize($raw, $connection) with an AddressResolver::hydrate step inside the normalizer; real signature is normalize(string providerCode, array payload, ?int companyId) and address resolution happens inside SallaOrderMapper, not the facade.
+- [OMS — Canonical Orders & Normalization] OMS.md §5 says the initial audit event is type=received; code writes OrderEvent::TYPE_CREATED ('created') and 'updated'. The orders migration docblock claims OrderService uses updateOrCreate, but it does an explicit find-then-create/update.
+- [OMS — Canonical Orders & Normalization] OMS.md §7 lists OrderRepository methods pendingForCompany() and sinceForConnection() that do not exist; real methods are find/findForCompany/findByConnectionAndRemote/listForCompany.
+- [OMS — Canonical Orders & Normalization] LogOrderReceivedListener docblock says it is a Phase 5 stub swapped for RouteToFulfillment in Phase 6; in current wiring both listeners are registered together (Phase 6 landed), so the comment is stale. Also PaymentStatus::PARTIALLY_PAID enum value is never produced by any mapper/OrderService.
+- [Shipping — Generic Courier Abstraction] README claims Laravel 12 but composer.json pins laravel/framework ^10.10 — code wins (module is Laravel 10)
+- [Shipping — Generic Courier Abstraction] shipping-architecture.md quick-reference implies webhook onboarding is trivial, but no provider implements SupportsWebhooks and no /shipping/webhooks route exists in routes/api.php — webhooks are scaffolding only
+- [Shipping — Generic Courier Abstraction] Mobile 3PL model (parcels_3pl-shaped: provider/awb_number/current_status) still frames the admin-app contract, while the backend now sources Logestechs data from the new shipments table
+- [Parcels — Core Courier Shipment Domain] parcels.status column comment lists an old 9-value status set while the live enum has 41 states (code wins: app/Enums/ParcelStatus.php)
+- [Parcels — Core Courier Shipment Domain] Bulk-action controller historically read non-existent checked_ids instead of shipment_ids (silently no-op'd); fixed and documented inline at ParcelBulkActionController.php
+- [Parcels — Core Courier Shipment Domain] shipments:detect-abnormal command exists and is tenant-aware but was not found registered on any schedule in Kernel.php/console.php — needs confirmation
+- [Commerce — Storefront Ingestion Layer] COMMERCE.md §5 gives ingest route as POST /webhooks/commerce/{providerCode} via WebhookIngestController; actual is POST /api/v10/commerce/{provider}/webhook via invokable App\Http\Controllers\Api\V10\Commerce\WebhookController (routes/api.php:135)
+- [Commerce — Storefront Ingestion Layer] COMMERCE.md shows IngestWebhookJob calling HandlerInterface::parse → OrderNormalizer → OrderService; actual HandlerInterface has only handle(WebhookEvent,CommerceConnection):void — parsing lives on the provider (parseWebhookEvent), normalization+OMS handoff live in SallaWebhookHandler
+- [Commerce — Storefront Ingestion Layer] COMMERCE.md names the inventory method pushStock(); actual SupportsInventorySync method is pushInventoryUpdate(CommerceConnectionDTO,$updates[])
+- [Commerce — Storefront Ingestion Layer] COMMERCE.md shows PushStockJob(connection_id, sku, quantity); actual is PushStockJob(int connectionId, array updates)
+- [Commerce — Storefront Ingestion Layer] COMMERCE.md §3 webhook_events column list (remote_event_id, headers, raw_payload, verified, error) does not match the migration (idempotency_key UNIQUE, payload, last_error, attempts, normalized_payload, normalization_error; no headers/verified/remote_event_id)
+- [Commerce — Storefront Ingestion Layer] COMMERCE.md §8 says webhook_events is never pruned automatically; actual commerce:prune-logs prunes processed webhook_events past retention
+- [Commerce — Storefront Ingestion Layer] COMMERCE.md folder-listing comment says commerce_api_logs is pruned by shipping:prune-logs; actual command is commerce:prune-logs
+- [Fulfillment — Router & Strategies] Root FULFILLMENT.md §3 lists route columns as condition_merchant_id/condition_country/condition_source_channel/condition_min_amount + strategy_config JSON — none exist; real columns are merchant_id/source_provider_code/shipping_city_id/shipping_country/min_total/max_total/is_cod with no strategy_config (migration 2026_07_01_120002)
+- [Fulfillment — Router & Strategies] Root FULFILLMENT.md §3 describes fulfillment_defaults as applies_when(json)/strategy/strategy_config(json) — real table has default_strategy + service_last_mile/fulfillment/storage_strategy string columns (migration 2026_07_01_150001)
+- [Fulfillment — Router & Strategies] Root doc §5 describes a 2-tier fallback (defaults→config); code adds a first tier: merchant.services JSON → strategy mapping via FulfillmentDefault::strategyForMerchantServices()
+- [Fulfillment — Router & Strategies] Root doc §7 claims retry() is only allowed on failed fulfillments; FulfillmentService::retry() enforces no status guard and will re-execute any status
+- [Fulfillment — Router & Strategies] Design doc implies merchant 'we've started' notifications and Commerce pushOrderUpdate writeback on completion — neither implemented; module fires no notifications and the 4 events have zero subscribers (EventServiceProvider)
+- [Fleet — Vehicles, Trips, Fuel, Maintenance] Audience/role conflict: lang/en/mobile_apps.php + migration + controller docblock say fleet drivers are user_type=deliveryman, but CheckAdminRoleMiddleware admits only ADMIN/INCHARGE/HUB/SUPER_ADMIN and rejects DELIVERYMAN(3) — deliverymen get 403 on all fleet endpoints
+- [Fleet — Vehicles, Trips, Fuel, Maintenance] README/context: platform-wide Laravel 12 (README) vs ^10.10 (composer.json); code wins — noted in shared brief, not re-litigated in this module doc
+- [WMS — Warehouse Management] wms_cycle_counts.status defaults to 'open' in migration 100010 but there is no CycleCountStatus enum; UI only surfaces open/in_progress/completed
+- [WMS — Warehouse Management] PermissionSeeder defines 6 granular wms_* permissions but code enforces only wms_manage (web) — wms_products/receiving/fulfillment/adjustments/reports are unreferenced placeholders
+- [WMS — Warehouse Management] Mobile WMS API endpoints are gated only by auth:sanctum (no per-permission check), unlike the permission-gated web module
+- [WMS — Warehouse Management] StockChanged pushes total on-hand to storefronts, not on-hand-minus-reserved — intentional 'aggressive availability' tradeoff flagged for Phase 7.5
+- [WMS — Warehouse Management] Two fulfillment-number formats coexist: WmsFulfillmentRepository uses FUL-YYYY-##### while WmsFulfillmentStrategy uses WMS-YYYYMMDD-<hex>
+- [ZATCA — Saudi E-Invoicing] Maturity: lang/comments say 'Phase 1 — Generation' and code confirms it — NullGateway::isAvailable() always false, no XML signing/CSID/clearance; xml_payload & pdf_path columns declared but never written.
+- [ZATCA — Saudi E-Invoicing] companywise() scope inconsistency: ZatcaSetting scopes by settings()->id while ZatcaInvoice/ZatcaAuditLog scope by settings('company_id'); ZatcaSetting inline comment documents a prior tenant-bleed bug where (int)settings('company_id') fell through to 0.
+- [ZATCA — Saudi E-Invoicing] Merchant-panel /zatca route group (routes/web.php:1434) has NO explicit hasPermission middleware, unlike the admin group's hasPermission:zatca_manage.
+- [ZATCA — Saudi E-Invoicing] Permissions zatca_read/zatca_settings/zatca_regenerate seeded in PermissionSeeder.php:459 but referenced by no route — only zatca_manage is enforced.
+- [ZATCA — Saudi E-Invoicing] Duplicate QR-render logic: ZatcaInvoice::qrSvg() re-implements QrGenerator::svg() with its own DNS2D instance.
+- [Accounting — Qoyod / Daftra / Odoo Sync] ACCOUNTING.md (repo root) documents only the INTERNAL single-entry ledger engine and does not mention Qoyod/Daftra/Odoo at all; this module is its separate outbound mirror. Both accurate, different layers — clarified in the doc.
+- [Accounting — Qoyod / Daftra / Odoo Sync] config/services.php has NO accounting entries (verified) — credentials are per-tenant DB rows, not env, contrary to the usual Laravel integration pattern.
+- [Accounting — Qoyod / Daftra / Odoo Sync] Provider parity is uneven: Daftra has no VendorSync/BillSync/courier-map and no CourierStatement observer, unlike Qoyod and Odoo.
+- [Merchants — Portal & Management] Migration 2026_06_12_000003 adds boolean service flags has_last_mile/has_fulfillment/has_storage, but 2026_06_12_000004 drops them; live service model is the JSON `services` array via Merchant::hasService()/activeServices() — any has_fulfillment reference is stale.
+- [Merchants — Portal & Management] Two distinct 'Merchant' models: app/Models/Backend/Merchant.php (portal) vs app/Salla/Models/Merchant.php (Salla bridge identity) — easy to confuse, unrelated tables.
+- [Merchants — Portal & Management] Merchant::getComputedBalanceAttribute() hardcodes magic status literals (9=delivered, 4=paid) instead of ParcelStatus/payment enums.
+- [Finance — Billing, COD, Wallet, Settlement] parcelDelivered()/parcelPartialDelivered()/ReceivedRepository::store() run ~8 balance writes with no DB::transaction — mid-write failure drifts balances
+- [Finance — Billing, COD, Wallet, Settlement] Wallet debit in ParcelRepository::store() has no overdraft guard — wallet_balance can go negative, unlike payout paths which guard current_balance
+- [Finance — Billing, COD, Wallet, Settlement] invoiceId() uses a company-wide Invoice count, not a per-merchant sequence — theoretical numbering collision despite UNIQUE constraint
+- [Finance — Billing, COD, Wallet, Settlement] ApprovalStatus::APPROVED(2) is defined but skipped by payout flows (PENDING->PROCESSED/REJECT)
+- [Finance — Billing, COD, Wallet, Settlement] PaymentType/PayoutSetup/WalletPaymentMethod enumerate gateways that are mostly latent; OFFLINE bank transfer is the real path, online wallet recharge constants are commented out
+- [Finance — Billing, COD, Wallet, Settlement] Two near-identical payout-account tables exist: merchant_payments (no status in fillable) vs payment_accounts (has status), used by different surfaces and not kept in sync
+- [Finance — Billing, COD, Wallet, Settlement] README.md claims Laravel 12 but composer.json pins laravel/framework ^10.10 (code wins)
+- [Finance — Billing, COD, Wallet, Settlement] config/merchantpayment.php hardcodes a Bangladesh-only bank + bKash/Nagad/Rocket list — regional legacy artifact
+- [Drivers — Deliverymen & Last-Mile] delivery_man.hub_id relation/eager-load exists but no base-migration column; hub of record is users.hub_id
+- [Drivers — Deliverymen & Last-Mile] OTP-on-delivery and parcel-ownership guards are commented out in Deliveryman*Controller — only findByTracking enforces ownership
+- [Drivers — Deliverymen & Last-Mile] DeliveryManIncomeExpenseController::deliverymanIncomeExpense sets totalExpenses = incomes->sum() (double-counts income) so totalDeliveryExpense is wrong
+- [Drivers — Deliverymen & Last-Mile] ParcelStatus::DELIVERED hardcoded as literal 9 in DeliveryMan model relations instead of the enum constant
+- [Drivers — Deliverymen & Last-Mile] delivery_lat/long and driving_license_image_id are written via direct assignment but absent from model $fillable
+- [Hubs — Network & Hub Cash] HubController::edit() returns 'lat'/'long' from $hub->lat/$hub->long which are non-existent attributes; actual columns are hub_lat/hub_long — hub coordinates cannot round-trip through the edit screen (HubController.php:158-159 vs migration/HubRepository)
+- [Hubs — Network & Hub Cash] ReceivedRepository store/update/delete perform four coordinated ledger+balance writes with only try/catch and no DB::transaction, unlike the transaction-wrapped HubPaymentRepository — partial-failure can desync hub/account/driver balances vs the receipt
+- [Sorting & Scanning] forceStatus bug: app/Http/Controllers/Api/V10/Admin/AdminParcelController.php:153 calls ParcelStatusHelper::guardTransition() which is undefined in app/Support/ParcelStatusHelper.php; wrapped in class_exists()+catch(\Throwable) so it silently returns HTTP 422 for every scanner status-advance call, breaking the scanner app's apply-action feature (lookup still works).
+- [Notifications — SMS, Push, Email] FCM uses deprecated legacy HTTP API (fcm/send + Authorization: key=), not HTTP v1 — INTEGRATIONS.md §5 mentions HTTP v1 on driver side but server is legacy-key.
+- [Notifications — SMS, Push, Email] FollowupNotificationDispatcher::push() calls sendNotification/send which do not exist on PushNotificationService — method_exists guards never match, so the follow-up push path is a silent no-op (wired but non-functional).
+- [Notifications — SMS, Push, Email] Only 3 of many parcel-lifecycle SMS sends are gated by the SmsSendStatus/sms_send_settings toggle; the rest (pickup/reschedule/assign/return) fire unconditionally, so the admin toggle UI controls fewer messages than it appears.
+- [Notifications — SMS, Push, Email] FollowupNotificationDispatcher SMS gating uses free-form event keys (ndr_attempt_three, shipment_closed_lost) not present in the SmsSendStatus enum, so those SMS are effectively off by default.
+- [Support & CRM] status column exists in DB but is NOT in Support $fillable and is never written by merchant/mobile/merchant-web paths — merchant & driver tickets stay PENDING unless an admin acts via the admin API/web.
+- [Support & CRM] AdminSupportController and the Flutter parsers defensively read message??description / description??message, but support_chats has no 'description' column and supports has no 'message' column — those fallbacks are dead code (schema-drift smell).
+- [Support & CRM] Admin-web status transitions are UI-only (nextStatusOptions); the statusUpdate route accepts any ?status= value with no server-side state-machine guard.
+- [Support & CRM] SupportResource dereferences $this->user->name and $this->department->title with no null-safety — a ticket with a deleted user/department throws on serialization.
+- [Support & CRM] Merchant web panel support routes carry no permission middleware (session auth only), unlike the admin/superadmin routes.
+- [Permissions, Users & Roles] users.user_type migration column comment (2014_10_11_000000_create_users_table.php:31) only lists ADMIN/MERCHANT/DELIVERYMAN/INCHARGE; code enum adds HUB=5 and SUPER_ADMIN=6 which are used throughout — comment is stale, code wins.
+- [Permissions, Users & Roles] PermissionSeeder::run() is NOT idempotent (raw new+save loop inserts duplicates on re-run); new catalogue keys are instead added by guarded check-then-insert migrations. Fresh install uses seeder, existing installs use migrations — both converge.
+- [Permissions, Users & Roles] The tenant 'company' permission attribute and the super-admin 'company' attribute share the same string prefix but live in different catalogues with different scopes/CRUD sets (seeder explicitly notes the coexistence).
+- [Permissions, Users & Roles] users.role_id is stored but not used for live authorization; the users.permissions snapshot is what is actually evaluated — role is a template, not a live authority.
+- [Permissions, Users & Roles] Newer modules can have catalogue keys without route gating (e.g. tms_* exists but hasPermission:tms_read middleware is a deferred Phase-3 step per the seed migration docblock).
+- [Onboarding Tours & Knowledge Base] TOURS.md claims TourRepository caches per-user for 5 minutes via Cache::remember, but the code uses only a per-request in-memory $memo array (Cache::remember avoided because stancl/tenancy's tagged CacheManager fails against the file driver).
+- [Onboarding Tours & Knowledge Base] KNOWLEDGE_BASE.md documents only the admin + WMS KBs, but a third fully-built MerchantKnowledgeBaseController (merchant-panel.kb.*, mkb_* lang files, images/mkb) exists and is undocumented.
+- [Onboarding Tours & Knowledge Base] README.md claims Laravel 12 while composer.json pins ^10.10 (code wins) — noted per grounding rules.
+- [Onboarding Tours & Knowledge Base] TOURS.md says TourProvider is mounted globally in merchant.jsx; TourProvider is in fact only wired in merchant.jsx (the sole JS entrypoint), though the launcher + data-tour anchors also exist in AdminLayout.jsx.
+- [Reports, Analytics & Performance/KPI] Cross-tab revenue definitions diverge by design: Executive tab uses income/expenses ledger while Hub/Company/Customer tabs use parcel cash_collection - numbers not directly reconcilable (flagged as modelling seam, not bug)
+- [Reports, Analytics & Performance/KPI] app/Exports/HubReports.php and DeliverymanReports.php are empty FromCollection stubs whose collection() returns nothing; actual MHD export runs through ReportsController::MerchantReportExport/mhdPDF
+- [Reports, Analytics & Performance/KPI] Route comment says 'Phase 1: executive + driver perf' but shipped code already implements all six tabs (executive/drivers/customers/branches/companies/insights)
+- [Reports, Analytics & Performance/KPI] Four seeded per-tab permissions (performance_dashboard_drivers_view etc.) are NOT wired to any route; only _read and _export are enforced
+- [SaaS — Tenancy, Subscriptions & Super-Admin] super-admin.md lists plan/create, plan/edit, company/create, company/edit, and company/subscription/switch as 'Legacy Blade', but the live controllers (PlanController.php:110/127, CompanyController.php:144/162/296) return Inertia pages — the Blade→React port was completed after the audit was written.
+- [SaaS — Tenancy, Subscriptions & Super-Admin] super-admin.md's route audit omits the company_subscribe permission gate that the live switch-subscription routes actually carry (routes/superadmin.php:122-123).
+- [SaaS — Tenancy, Subscriptions & Super-Admin] config/tenancy.php:10 declares a UUID id_generator for tenants, but CompanyRepository.php:211 sets tenants.id to the chosen subdomain string; renaming a subdomain (CompanyRepository.php:286) rewrites the tenant primary key.
+- [SaaS — Tenancy, Subscriptions & Super-Admin] README claims Laravel 12 but composer.json pins ^10.10 (per context brief; code wins) — noted at platform level.
+- [rushly-saas — Backend Platform (SSOT)] README.md claims 'Laravel 12 monolith' but composer.json pins laravel/framework ^10.10 (Laravel 10 toolchain: collision ^7, phpunit ^10.1, ignition ^2) — code wins, treat as Laravel 10.
+- [rushly-saas — Backend Platform (SSOT)] config/tenancy.php has DatabaseTenancyBootstrapper commented out — tenancy is shared-database/row-scoped, NOT database-per-tenant.
+- [rushly-saas — Backend Platform (SSOT)] routes/tenant.php exists but its entire route group is commented out; tenant-vs-central behavior is decided via a runtime host lookup inside web.php/superadmin.php instead.
+- [rushly-saas — Backend Platform (SSOT)] resources/js/app.js (Vue) and resources/js/components/ExampleComponent.vue are dead legacy scaffolding; the live entrypoint is React via resources/js/merchant.jsx.
+- [rushly-saas — Backend Platform (SSOT)] routes/admin.php despite its name holds only one route (admin.parcels.details); most admin surfaces live in web.php.
+- [rushly-admin-app — Admin / Back-office Mobile] Force-status sheet uses local ParcelStatus constants that mismatch backend app/Enums/ParcelStatus.php (deliveryManAssign 5 vs 7, receivedWarehouse 4 vs 5, returnToCourier 7 vs 24, returnReceivedByMerchant 10 vs 30) — can send wrong status code
+- [rushly-admin-app — Admin / Back-office Mobile] README server-file table omits AdminMap/HubCash/Wms/Parcel3pl/Push/Reports/Exceptions/Sorting controllers and merchant pending/approve/reject that exist and are used
+- [rushly-admin-app — Admin / Back-office Mobile] README 'known gaps' says FCM token not forwarded, but push_service.dart + auth_repository.dart + AdminPushController implement /admin/fcm-subscribe
+- [rushly-admin-app — Admin / Back-office Mobile] README setup says drop Tajawal TTFs in assets/fonts, but theme uses google_fonts (runtime-fetched); no fonts: section in pubspec
+- [rushly-admin-app — Admin / Back-office Mobile] Shared /wms/* (non-admin) scan/lookup/stock/complete/adjustment endpoints declared in api_endpoints.dart not found in the /api/v10/admin route group
+- [rushly-admin-app — Admin / Back-office Mobile] Hard-coded shared apiKey (123456rx-ecourier123456) across tenants — README-acknowledged security debt
+- [rushly-driver-app — Last-Mile Driver] README 'Known gaps' claims parcel-location-update is unauthenticated (api.php:247); CODE: route now inside auth:sanctum at api.php:395, token-scoped (README stale)
+- [rushly-driver-app — Last-Mile Driver] README lists a settings/ placeholder feature folder that does not exist; real folders are tenant/, cash/, notifications/
+- [rushly-driver-app — Last-Mile Driver] README says NDR create UI is not wired; the create screen IS implemented and routed at /parcel/:id/ndr
+- [rushly-driver-app — Last-Mile Driver] ProfileScreen navigates to /update-password and /language routes that are NOT registered in app_router.dart (dead nav)
+- [rushly-driver-app — Last-Mile Driver] GET /rejection_reasons (api.php:406) sits outside both CheckApiKey and auth:sanctum — fully public endpoint
+- [rushly-driver-app — Last-Mile Driver] Declared packages freezed/json_serializable codegen, reactive_forms, google_maps_flutter, flutter_background_service are unused in lib/
+- [rushly-driver-app — Last-Mile Driver] Locale is in-memory only and resets to Arabic on every cold start (locale_controller.dart:6)
+- [rushly-driver-app — Last-Mile Driver] Dark theme only sets colorScheme+textTheme, missing the light theme's card/input/button styling
+- [rushly-fleet-app — Fleet Driver] App named 'Fleet Driver' and backend migration ties vehicles to deliveryman users, but CheckAdminRole and AdminAuthController@login reject DELIVERYMAN(3) — a genuine fleet deliveryman cannot log in; only ADMIN/SUPER_ADMIN/INCHARGE/HUB work
+- [rushly-fleet-app — Fleet Driver] Env host mismatch: .env.example API_BASE_URL uses admin.rushly-logistic.com while env.dart fallback uses api.rushly-logistic.com
+- [rushly-fleet-app — Fleet Driver] Login tagline advertises GPS but no GPS is captured or sent anywhere in the client
+- [rushly-fleet-app — Fleet Driver] generate:true and flutter_localizations present but the app ships hand-written map-based localization, not an .arb/gen-l10n pipeline
+- [rushly-scanner-app — Universal Scanner] Tagline advertises RFID scanning but only camera barcode/QR via mobile_scanner exists — no RFID/NFC code
+- [rushly-scanner-app — Universal Scanner] Partial Arabic localization: appTagline, tab labels/descriptions and parcel-card data labels fall back to English (_ar map truncated after 'status')
+- [rushly-scanner-app — Universal Scanner] env.dart default API_BASE_URL (api.rushly-logistic.com) differs from .env.example (admin.rushly-logistic.com)
+- [rushly-scanner-app — Universal Scanner] ApiEndpoints.hubs declared but never called (sorting-app-only endpoint); handover endpoint also unused here
+- [rushly-scanner-app — Universal Scanner] url_launcher dependency and PlaceholderScreen widget are scaffold carry-over with no call sites
+- [rushly-scanner-app — Universal Scanner] DioClient.onUnauthorized 401 hook is never assigned — 401 recovery relies only on the router guard
+- [rushly-scanner-app — Universal Scanner] TokenStorage.writeUser / auth_user key never written — login response user object is not persisted
+- [rushly-scanner-app — Universal Scanner] HistoryTab tab_1_desc promises tappable rows but tiles have no onTap
+- [rushly-merchant-app — Merchant Portal] l10n does not compile: duplicate returned/payable getters and map keys in app_localizations.dart, plus undefined s.noData used in reports_screen.dart:157/181/205
+- [rushly-merchant-app — Merchant Portal] Dashboard KPI cards pass backend ParcelStatus codes (_BackendStatus: 1/7/9/30) but ParcelListScreen filters on mobile core/utils/parcel_status.dart codes (5/9/10) → deep-links can yield empty lists
+- [rushly-merchant-app — Merchant Portal] ProfileScreen pushes /update-password and /language, neither registered in app_router.dart
+- [rushly-merchant-app — Merchant Portal] ParcelFormScreen edit mode reads parcelCreateFormProvider (create endpoint) and never calls editFormData(id)/GET /parcel/edit/{id} → blank prefill
+- [rushly-merchant-app — Merchant Portal] .env.example API_BASE_URL uses admin.rushly-logistic.com while code/README default to api.rushly-logistic.com
+- [rushly-merchant-app — Merchant Portal] README lists /api/v10 on api.rushly-logistic.com; Env.apiBaseUrl hard-codes that as fallback; shared static apiKey default 123456rx-ecourier123456 in env.dart
+- [rushly-merchant-app — Merchant Portal] routes/api.php comments the NDR block as 'deliveryman mobile app' but merchantIndex/show are the merchant-facing endpoints the app consumes
+- [rushly-merchant-app — Merchant Portal] MOBILE_APPS.md frames connectivity_plus as shared baseline; merchant declares it but never imports it (also unused: package_info_plus, share_plus, logger)
+- [rushly-sorting-app — Sorting Center] Bags/Routes tabs imply persistent entities but code confirms they are device-local ephemeral in-memory state (BagStore) with no backend table — controller docblock confirms this is by design
+- [rushly-sorting-app — Sorting Center] Arabic appTitle ('رشلي Sorting Center') and appTagline are left partly/fully in English in the ar map
+- [rushly-sorting-app — Sorting Center] .env.example API_BASE_URL host is admin.rushly-logistic.com but Env code fallback is api.rushly-logistic.com
+- [rushly-sorting-app — Sorting Center] Tab descriptions advertise 'seal, weigh' (Bags) and 'assign drivers' (Routes) but neither is implemented — dispatch is a plain hub-to-hub handover
+- [rushly-sorting-app — Sorting Center] generate:true in pubspec implies gen-l10n/ARB but localization is hand-written maps
+- [rushly-supervisor-app — Supervisor] Env default host mismatch: .env.example ships API_BASE_URL=admin.rushly-logistic.com but Env fallback is api.rushly-logistic.com (harmless — tenant-select always overrides)
+- [rushly-supervisor-app — Supervisor] No push/FCM in the app despite backend exposing POST /admin/fcm-subscribe & /admin/fcm-unsubscribe (AdminPushController) — notifications are Not implemented; refresh is pull-only
+- [rushly-supervisor-app — Supervisor] Arabic locale incomplete: appTagline and all four tab labels/descriptions are hardcoded English even in the _ar map, so Arabic users see English tabs
+- [rushly-supervisor-app — Supervisor] pubspec sets flutter generate:true but there is no l10n.yaml/.arb — localization is hand-rolled and generate does nothing
+- [rushly-supervisor-app — Supervisor] Unused API endpoint constants: drivers (list), dashboardSnap, dashboardTimeseries are declared but never called (no Dashboard tab)
+- [rushly-supervisor-app — Supervisor] AuthController.restore() sets userEmail='unknown' and TokenStorage.writeUser is never called, so auth_user key is never populated
+- [rushly-warehouse-app — Warehouse Ops] README/scaffold l10n table carries strings for parcels/drivers/merchants/hub-cash/fraud/support the warehouse app never renders — shared scaffold table, only WMS/fulfillment/auth/tenant strings are wired
+- [rushly-warehouse-app — Warehouse Ops] No push/FCM in the app despite backend fcm-subscribe/unsubscribe endpoints existing (PushNotificationController)
+- [rushly-warehouse-app — Warehouse Ops] onUnauthorized setter exists in DioClient but is never assigned anywhere, so mid-session 401 clears token without redirect
+- [rushly-warehouse-app — Warehouse Ops] Locale defaults to Arabic and is in-memory only — resets every cold start despite shared_preferences being a declared dependency
+- [rushly-warehouse-app — Warehouse Ops] AuthController.restore sets userEmail='unknown' and discards the profile/user object; auth_user secure key defined but never written
+- [rushly-warehouse-app — Warehouse Ops] WmsHomeScreen and PlaceholderScreen are present but unrouted/unreferenced (dead code)
+- [rushly-warehouse-app — Warehouse Ops] shared_preferences and url_launcher declared in pubspec but unused in lib/
+- [rushly-store — Storefront System] README lists 3 themes (greentic, stylique, techzonix) but themes/uniform also exists on disk — code wins, 4 themes
+- [rushly-store — Storefront System] Expected 'storefront → parcel into rushly-saas' pipeline (documented for rushly-saas via Commerce/OMS/Fulfillment) does NOT originate from this rushly-store app; it is fed by rushly-saas's own connectors (Salla/Woo/Zid)
+- [rushly-store — Storefront System] Version claim is consistent here (README Laravel 11.9 == composer ^11.9), opposite of rushly-saas where README says 12 but composer pins ^10.10 — confirming separate codebases on different Laravel majors
+- [rushly-salla — Salla ↔ Rushly Bridge] README/boilerplate Laravel 12 vs composer.json ^10.10 — code wins (Laravel 10)
+- [rushly-salla — Salla ↔ Rushly Bridge] OAuth redirect requests only scope=offline_access while README lists orders.read + shipments.read_write
+- [rushly-salla — Salla ↔ Rushly Bridge] Bridge POSTs /v10/merchant/parcel/store but rushly-saas exposes /v10/parcel/store and /v10/external/salla/parcel (no merchant/ segment)
+- [rushly-salla — Salla ↔ Rushly Bridge] RushlyApiClient type-hint auto-resolved with no container binding + primitive constructor → probable BindingResolutionException
+- [rushly-salla — Salla ↔ Rushly Bridge] Token-less GET /v10/parcel/tracking/{id} may 401 (Sanctum) vs the real public /api/public/tracking/{id}
+- [rushly-salla — Salla ↔ Rushly Bridge] CreateRushlyParcelJob fabricates RX- tracking number on 2xx-without-tracking_id, persisting a phantom parcel
+- [rushly-salla — Salla ↔ Rushly Bridge] OAuth + rushly_merchant_token stored plaintext (only $hidden), unlike encrypted Commerce creds
+- [rushly-salla — Salla ↔ Rushly Bridge] /dashboard has no auth guard
+
+## Known Gaps / Deferred / Not-in-codebase (246)
+
+- [01-Workspace-Inventory.md] Dart LOC and PHP LOC are raw wc -l over app/ and lib/ only; exclude views, tests, migrations bodies, and third-party code
+- [01-Workspace-Inventory.md] rushly-store and rushly-salla internal module deep-dives are out of Phase 1 scope
+- [01-Workspace-Inventory.md] navix-rushly-saas directory exists in /var/www but is not one of the 11 canonical projects; not analyzed
+- [01-Workspace-Inventory.md] rushly-store disk size and full migration/model semantics not enumerated beyond counts
+- [04-Business-Logic.md] NdrAction::ESCALATE only marks in_progress; downstream escalation handling is explicitly deferred ('Phase 6' per code comment) and Not found in the current codebase.
+- [04-Business-Logic.md] ASSIGN_TO_3PL (34) and the WMS_* statuses (37-40) appear in the enum but their transition handlers live in the Shipping/WMS modules, not ParcelRepository — not traced in depth here (see FULFILLMENT.md / shipping-architecture.md).
+- [04-Business-Logic.md] The exact chargeDetails computation formulas live in the React ParcelForm.jsx frontend; the backend only persists the posted values, so the authoritative per-zone delivery-rate math was not read from JSX.
+- [05-System-Architecture.md] rushly-store's exact order-ingestion path into rushly-saas was not traced to a specific controller/route — README indicates it is a standalone EcommerceGo storefront reaching Rushly via the external/webhook parcel surface, but the concrete call site in rushly-store was not located (no direct /api/v10/external reference found in its app/ or config/).
+- [05-System-Architecture.md] Production queue/cache/redis topology is inferred from pre-configured but dormant connections; no running worker or supervisor config was inspected.
+- [06-Database.md — Rushly database schema documentation: tenancy model, 6 domain ER diagrams, ~55-table data dictionary, relationship overview, enum/soft-delete reference, and Doc-vs-Code notes.] parcels_3pl table has no CREATE migration in the repo — its full column set is inferred from the Parcels_3pl model fillable array and ALTER migrations, not a canonical schema definition
+- [06-Database.md — Rushly database schema documentation: tenancy model, 6 domain ER diagrams, ~55-table data dictionary, relationship overview, enum/soft-delete reference, and Doc-vs-Code notes.] Full column lists for a handful of tables (e.g. Merchant extended theme/KYC/accounting-sync columns, tour_steps/user_tour_progress/tour_events) were summarized rather than enumerated exhaustively to stay within the 40-60 table scope
+- [06-Database.md — Rushly database schema documentation: tenancy model, 6 domain ER diagrams, ~55-table data dictionary, relationship overview, enum/soft-delete reference, and Doc-vs-Code notes.] OMS string enum exact value sets (OrderStatus/PaymentStatus/FulfillmentStatus in app/Oms/Enums) were referenced by location but not each constant fully listed
+- [06-Database.md — Rushly database schema documentation: tenancy model, 6 domain ER diagrams, ~55-table data dictionary, relationship overview, enum/soft-delete reference, and Doc-vs-Code notes.] Some ~130 smaller/config/CMS tables (blogs, pages, sections, faqs, partners, services, addons, notification_settings, sms_settings, news_offers, assets, to_dos, bank_transactions, etc.) were noted in central/tenant classification but not given individual dictionary rows
+- [07-Laravel.md — Laravel Backend Deep-Dive] Queue driver in production unknown — default is sync so 22 jobs run inline unless QUEUE_CONNECTION overridden
+- [07-Laravel.md — Laravel Backend Deep-Dive] Fulfillment strategy retry policy for transient faults marked TBD (Phase 6.5) in the interface docblock — not finalized in code
+- [07-Laravel.md — Laravel Backend Deep-Dive] routes/tenant.php loaded only if present and is largely a placeholder (29 lines); route-level detail deferred to ROUTES.md
+- [07-Laravel.md — Laravel Backend Deep-Dive] BroadcastServiceProvider exists but is commented out of config/app.php providers; broadcast driver default is null
+- [08-Flutter.md] docs/apps/ per-app deep-dive folder does not yet exist in the codebase (referenced as planned location)
+- [08-Flutter.md] supervisor pubspec.yaml in this workspace lists the lean baseline without flutter_map, though MOBILE_APPS.md describes a drivers map — map rendering mechanism for supervisor not fully confirmed from its deps
+- [08-Flutter.md] google_maps_flutter is declared in driver pubspec but the live tracking map uses flutter_map/OSM; the google_maps_flutter usage was not traced
+- [09-API.md] No published OpenAPI/Swagger for the driver and admin API surfaces; only the merchant subset is machine-documented.
+- [09-API.md] Exact accepted request bodies for legacy driver mutations (deliveryman/parcel-status-update, parcel-delivered, parcel-not-delivered) are not strictly validated in-controller and depend on the ParcelInterface repository layer, which was not exhaustively traced.
+- [09-API.md] Panda/Olivery/Zajel webhook payload shapes are provider-defined and documented in 3PL.md rather than here.
+- [09-API.md] Per-tenant host resolution details for the API (subdomain vs path) are governed by stancl/tenancy config not fully re-derived in this doc.
+- [10-Authentication.md] Nafath national-identity auth: Not found in the current codebase (only Google/Facebook Socialite present)
+- [10-Authentication.md] Role->user permission propagation: editing a role does not retroactively update existing users' copied permissions unless the user is re-saved
+- [10-Authentication.md] config('rxcourier.api_key') source (env/config file) not traced in this pass; it is a single shared static API key rather than per-device
+- [12-Workflows.md] Fulfillment* events (Requested/Started/Completed/Failed) have no registered listeners — the in_progress→completed roll-forward from ShipmentDelivered / WMS dispatched is described as future Phase 7 and is not wired in current code
+- [12-Workflows.md] OMS OrderUpdated event has no listeners — storefront edits after order creation are a manual ops task
+- [12-Workflows.md] ShipmentCreated and ShipmentCancelled shipping events have no registered listeners
+- [12-Workflows.md] SendShipmentNotifications (ShipmentDelivered) is log-only today; real shipping-specific SMS/email deferred
+- [12-Workflows.md] Cancel propagation: parcel-cancel flow does not auto-dispatch CancelShipmentJob (per shipping-architecture.md §12)
+- [12-Workflows.md] Storefront stock push (StockChanged consumer) wiring is forward-looking and could not be confirmed as active in the current codebase
+- [14-Integrations.md] Nafath (Saudi national digital identity) is Not found in the current codebase — no config, controller, or route.
+- [14-Integrations.md] SMSA courier integration is Not found in the current codebase; SPL appears only as the Saudi National Address lookup (address API), not as a shipping courier.
+- [14-Integrations.md] PayTabs, MyFatoorah, and HyperPay payment gateways are Not found in the current codebase (no config, controller, or library).
+- [14-Integrations.md] iMile is a stub only — config block + admin card, no service class, controller branch, or sync command.
+- [14-Integrations.md] Shopify has an admin platform card but no server-side shopify_orders link table yet (parcelCount returns 0); real wiring deferred, demo-mode only.
+- [14-Integrations.md] parcels_3pl table has no company_id column — documented cross-tenant AWB-collision leak risk in Panda/Aramex/Jet sync jobs and the Zajel webhook.
+- [14-Integrations.md] Cancellation propagation to couriers is unimplemented for Zajel, Jet, and Logestechs (AWBs stay open on the courier side).
+- [14-Integrations.md] rushly-zid standalone bridge app was referenced (INTEGRATIONS.md) but its source was not opened in this pass; documented from the rushly-saas ZidService + admin-side config and README references only.
+- [15-Brand-System.md] No formal brand guideline document, BRAND.md, Figma export, or design-token JSON exists in any repo
+- [15-Brand-System.md] No written mission or vision statement — only derivable positioning from marketing copy
+- [15-Brand-System.md] No master logo source file; no shared UI component package across the three surfaces
+- [15-Brand-System.md] Product apps (Flutter, merchant web) have no illustration language — illustration is marketing-only
+- [15-Brand-System.md] config/app.php APP_NAME defaults to 'Laravel' (unset), so the Laravel shell has no branded name out of the box
+- [16-UI-UX.md] No formal design-token file, Figma export, Storybook, or BRAND.md in the repo — the design system is reconstructed from tailwind.config.js, merchant.css, Components/ui, and each app's app_theme.dart.
+- [16-UI-UX.md] Web accessibility gaps: no skip-link, no aria-current on the active nav item (active state is visual only), no automated a11y/contrast test suite found.
+- [16-UI-UX.md] No shared Flutter widget library — lib/shared/widgets/ does not exist in any app; only l10n/router/theme are shared and each of the 8 apps is an independent project with no cross-app design-system package.
+- [16-UI-UX.md] Server-side Blade PHP lang/ translation files were not inspected (out of scope); the React chrome dictionary is effectively bilingual EN/AR.
+- [16-UI-UX.md] Flutter themeMode is left unset (defaults to ThemeMode.system), so exact dark-mode behaviour depends on OS setting; no in-app dark-mode toggle equivalent to the web was found in the shared theme layer.
+- [17-Security.md] The 71 raw-SQL call sites across app/ were not each individually audited — only controllers were scanned for request-interpolated raw SQL (none obvious). Report/export/search query builders warrant a dedicated pass.
+- [17-Security.md] CSRF-excluded payment gateway callbacks (/ipn, /success, payout/*, aamarpay) were not traced into each handler to confirm gateway-side signature/transaction verification — flagged as F11 for audit.
+- [17-Security.md] Per-tenant provider secret storage (Stripe/PayPal/Twilio/Qoyod/etc. via globalSettings) was not checked for exposure in API/Inertia props.
+- [17-Security.md] signatureImage upload endpoint route/controller not fully traced beyond ParcelRepository.php:2057; validation absence confirmed by negative grep only.
+- [18-Deployment.md] No Dockerfile, docker-compose, or CI/CD config (.github/.gitlab) in the repo — deploy is manual/ops-driven.
+- [18-Deployment.md] rushly-saas scheduler cron (schedule:run) is NOT installed in the live root crontab (only rushly-store, bna-platform, hani-yousif have it) — Kernel-scheduled jobs do not fire for the SSOT deployment.
+- [18-Deployment.md] No queue worker for rushly-saas (QUEUE_CONNECTION=sync; the only supervisor queue:work targets rushly-store) — all jobs run inline.
+- [18-Deployment.md] APP_DEBUG=true while APP_ENV=production in the live .env.
+- [18-Deployment.md] Android release build type signed with the debug signing config; no key.properties/upload keystore in repo. iOS bundle id/signing not found in the repo.
+- [18-Deployment.md] rushly.tech vhost (incl. wildcard *.rushly.tech) serves the certificate issued for salla.rushly.tech — potential SAN/name mismatch to verify.
+- [18-Deployment.md] No in-app 'create tenant' flow that provisions a database; tenant provisioning is a manual ops runbook (clone dir + DB + vhost + cert + cron).
+- [19-Environment.md] .env.example omits most consumed keys (APP_INSTALLED, FEATURE_LOGIN_OTP, all courier/payment/module/OAuth keys); provisioning requires reading config/*.php directly
+- [19-Environment.md] SMS: no config/sms.php and no SMS-provider env() calls; gateway credentials stored per-tenant in DB (SmsSetup enum)
+- [19-Environment.md] FCM/push: no FCM_*/FIREBASE_* env keys; stored in NotificationSettings DB model per tenant/company
+- [19-Environment.md] ZATCA: no config/zatca.php and zero env()/config() usage in app/Services/Zatca; credentials/environment per-tenant in DB, only ZatcaServiceProvider registered in config/app.php
+- [19-Environment.md] Razorpay and Skrill payment libs present per context brief but no dedicated env keys found in config/*.php
+- [21-Code-Review.md] Legacy 3PL migration to app/Shipping/ incomplete: Aramex/Jet/Zajel/Panda still on the flat Service pattern (app/Services/*Service.php)
+- [21-Code-Review.md] parcels_3pl table lacks company_id and companywise scope; legacy sync jobs run untenanted (3PL.md issue #3)
+- [21-Code-Review.md] No shared abstraction/Contracts across the Qoyod/Daftra/Odoo accounting modules; skeleton duplicated three times
+- [21-Code-Review.md] Flutter unused-screen check is a static class-name heuristic across 5 of the 8 client apps; scanner/sorting/fleet apps not exhaustively scanned; dynamic route resolution could hide false positives
+- [21-Code-Review.md] Full quantitative duplication metrics (e.g. clone-detection %) not computed; assessment is structural/manual
+- [20-Performance.md] Production env values (QUEUE_CONNECTION, CACHE_DRIVER, REDIS_HOST, worker counts, PHP max_execution_time) are not in-repo — analysis is of defaults/code paths only
+- [20-Performance.md] No seed data volume or slow-query log in repo, so full-scan claims are structural (missing index on queried column) not measured timings
+- [20-Performance.md] No CDN/OPcache/web-server tuning config in-repo (infra-level)
+- [20-Performance.md] Merchant/admin Flutter image upload call-sites not individually opened beyond confirming absence of imageQuality/maxWidth
+- [22-Technical-Debt.md] Exact count of remaining un-migrated legacy backend Blade CRUD pages is not enumerable precisely — approximated from 405 backend blades minus the migrated jsx set; only 12 pages have per-page docs in docs/inertia/pages/.
+- [22-Technical-Debt.md] The '~112 tables' schema figure could not be independently re-derived from the live DB in this pass (would require introspecting the running database).
+- [22-Technical-Debt.md] Whether login_otp being off is the intended production posture is a product decision not determinable from code.
+- [22-Technical-Debt.md] No CI/test-coverage data available to confirm whether commerce_layer-gated paths are exercised with the flag forced on.
+- [26-Architecture-Decisions.md] Retry policy for non-StrategyRejectedException fulfillment faults is marked TBD (Phase 6.5) in the interface docblock — not implemented
+- [26-Architecture-Decisions.md] Fulfillment lifecycle events (Requested/Started/Completed/Failed) are fired but have no registered listeners; storefront writeback on FulfillmentCompleted is not wired
+- [26-Architecture-Decisions.md] OMS OrderUpdated event has no listeners — storefront edits do not propagate to already-created parcels (manual ops task)
+- [26-Architecture-Decisions.md] Feature-flag enforcement is per-controller abort_unless rather than centralized middleware — a new Commerce controller could forget the guard
+- [26-Architecture-Decisions.md] Accounting sync (Qoyod/Daftra/Odoo) did NOT adopt the generic provider-abstraction; three near-duplicate modules with no shared AccountingProviderInterface
+- [26-Architecture-Decisions.md] Legacy 3PL providers (Aramex/Jet/Zajel/Panda) remain on the old per-service pattern + untouched parcels_3pl table; only Logestechs migrated to the Shipping module; no automatic logestechs_settings->shipping_connections backfill
+- [26-Architecture-Decisions.md] config/auth.php declares no explicit sanctum guard entry; API auth story split between config/auth.php (web/session) and config/sanctum.php
+- [OMS — Canonical Orders & Normalization] No provider mapper exists for Zid/WooCommerce/Shopify despite being referenced in comments; OrderNormalizer throws for them.
+- [OMS — Canonical Orders & Normalization] OrderUpdated has no listeners, so storefront edits are not propagated to already-created parcels.
+- [OMS — Canonical Orders & Normalization] No persistent Customer entity/dedupe, no currency conversion, no order_payments table (partially_paid unreachable).
+- [OMS — Canonical Orders & Normalization] No public/mobile API for OMS orders and no Flutter screen consumes them — could not confirm any client-side OMS usage (parcels are the mobile unit).
+- [Shipping — Generic Courier Abstraction] No auto-backfill from logestechs_settings to shipping_connections — operators re-add connections manually
+- [Shipping — Generic Courier Abstraction] No feature/controller tests for create/sync/cancel flows — only 4 unit tests (DTO, request mapper, factory, status mapper)
+- [Shipping — Generic Courier Abstraction] No village-lookup caching — LogestechsProvider::createShipment calls searchVillages on every unmapped destination
+- [Shipping — Generic Courier Abstraction] Cancel propagation is not automatic — parcel-cancel flow does not dispatch CancelShipmentJob
+- [Shipping — Generic Courier Abstraction] No dedicated shipping notifications — SendShipmentNotifications is log-only
+- [Shipping — Generic Courier Abstraction] Aramex/Jet/Zajel/Panda still on legacy per-provider services, not migrated to the module
+- [Parcels — Core Courier Shipment Domain] Abnormal-detection cron scheduling not found in the current codebase
+- [Parcels — Core Courier Shipment Domain] No central state-machine guard table — only PENDING→CANCELLED is enforced model-side; raw statusUpdate()/API force-status can jump states
+- [Parcels — Core Courier Shipment Domain] Status ids duplicated across each Flutter app's core/utils/parcel_status.dart with no shared source
+- [Parcels — Core Courier Shipment Domain] Dead/duplicated repository variants (parcelDelivered222, parcelSearchs222) remain uncleaned
+- [Commerce — Storefront Ingestion Layer] Commerce module emits no notifications (push/SMS/email) — observability is log tags + DB audit only; stated as 'Not found in the current codebase'
+- [Commerce — Storefront Ingestion Layer] Salla pushOrderUpdate (order/shipment status+tracking writeback) is a stub that throws ProviderUnavailableException
+- [Commerce — Storefront Ingestion Layer] Proactive OAuth token-refresh scheduler is absent — refreshAccessToken() exists but no scheduled job flips status to reauth_required
+- [Commerce — Storefront Ingestion Layer] SupportsBulkFetch is defined but no provider (including Salla) implements it — no backfill/gap-repair
+- [Commerce — Storefront Ingestion Layer] Zid/Shopify/WooCommerce/Magento/OpenCart/Custom REST are seeded catalog rows only (status=disabled), no provider classes
+- [Commerce — Storefront Ingestion Layer] Entire module dormant by default: FEATURE_COMMERCE_LAYER defaults false, so all routes/UI 404 until enabled
+- [Commerce — Storefront Ingestion Layer] Admin Inertia React pages (Admin/Commerce/*) referenced by controllers were not opened — only the backend controllers that render them were read
+- [Fulfillment — Router & Strategies] WMS and ThreePlDropship strategies park fulfillments at in_progress with no implemented listener to roll them forward to completed/failed (Phase 7 TBD)
+- [Fulfillment — Router & Strategies] FulfillmentRequested/Started/Completed/Failed events are emitted but have zero registered subscribers
+- [Fulfillment — Router & Strategies] No notifications (mail/SMS/push) anywhere in app/Fulfillment
+- [Fulfillment — Router & Strategies] vendor_direct strategy is a commented-out config stub, not implemented
+- [Fulfillment — Router & Strategies] config('fulfillment.queue') is reserved but unused — pipeline runs synchronously in the webhook/request path (RouteToFulfillmentListener is not ShouldQueue)
+- [Fulfillment — Router & Strategies] Module has no dedicated mobile/Sanctum API; admin UI is entirely gated behind the commerce_layer feature flag (default off)
+- [Fulfillment — Router & Strategies] Fulfillments admin viewer is read-only — no cancel/retry action wired to the UI despite service methods existing
+- [Fleet — Vehicles, Trips, Fuel, Maintenance] No vehicle-provisioning UI or API — nothing creates/edits fleet_vehicles or sets assigned_driver_id; only a read-only count in OperationsController
+- [Fleet — Vehicles, Trips, Fuel, Maintenance] No maintenance-resolution endpoint — status/resolved_at/resolution_notes columns exist but are never written via API
+- [Fleet — Vehicles, Trips, Fuel, Maintenance] No notifications wired (no push/SMS even for severity=critical maintenance)
+- [Fleet — Vehicles, Trips, Fuel, Maintenance] No app/Fleet service/DTO/event layer — all logic lives in the controller
+- [Fleet — Vehicles, Trips, Fuel, Maintenance] endTrip overwrites vehicle current_odometer unconditionally (no max() guard) — later low reading can roll odometer backward
+- [Fleet — Vehicles, Trips, Fuel, Maintenance] start_inspection JSON is unvalidated free-form array
+- [Fleet — Vehicles, Trips, Fuel, Maintenance] No fuel-efficiency/analytics derivation, no telematics/GPS-track ingestion, no preventive-maintenance scheduling
+- [WMS — Warehouse Management] No WMS-specific notification classes exist (app/Notifications has no WMS files); alerts surface only as web Toastr messages and downstream parcel notifications — no low-stock/SLA-breach/pending-approval push
+- [WMS — Warehouse Management] Cycle counts do not auto-post variances; entered counts are procedural and corrections must be made manually via the adjustments workflow
+- [WMS — Warehouse Management] GRN line editing after creation is a no-op (edit/update redirect to show)
+- [WMS — Warehouse Management] WmsStockController index low_only filter branch is an empty no-op
+- [WMS — Warehouse Management] Auto-approved manual adjustments create duplicate audit rows (accepted tradeoff to keep a single FIFO/FEFO codepath)
+- [WMS — Warehouse Management] Blade->React migration incomplete: several detail/show pages still render Blade views
+- [ZATCA — Saudi E-Invoicing] Phase 2 (Integration/Clearance) entirely unimplemented — no UBL XML, XAdES signing, CSID onboarding, clearance/reporting; gateway seam only.
+- [ZATCA — Saudi E-Invoicing] GenerateZatcaInvoiceJob::failed() does not call markFailed(), so a permanently-failed async generation may leave no failed row.
+- [ZATCA — Saudi E-Invoicing] VAT-inclusive-vs-exclusive assumption on invoices.total_charge is not validated against billing config — silent over-reporting risk if totals are exclusive.
+- [ZATCA — Saudi E-Invoicing] No Sanctum API and no Flutter client consume ZATCA (verified zero grep hits across all rushly-*-app/lib) — module is web-only.
+- [ZATCA — Saudi E-Invoicing] Default QUEUE_CONNECTION=sync means auto-generation runs inside the billing request unless a worker is configured; the 'zatca' queue name has no effect.
+- [ZATCA — Saudi E-Invoicing] invoice_id/merchant_id are index-only (no DB foreign keys to invoices/merchants).
+- [Accounting — Qoyod / Daftra / Odoo Sync] No automated tests exist for App\Qoyod / App\Daftra / App\Odoo (tests/** grep empty).
+- [Accounting — Qoyod / Daftra / Odoo Sync] No reconciliation or pull-back from the accounting systems — push-only, fire-and-forget; drift is invisible.
+- [Accounting — Qoyod / Daftra / Odoo Sync] No user-facing success/failure notifications — failures live only in logs and *_sync_status columns.
+- [Accounting — Qoyod / Daftra / Odoo Sync] Idempotency gap: a crash between remote-create and local id write-back can duplicate remote documents on retry.
+- [Accounting — Qoyod / Daftra / Odoo Sync] Odoo cached_uid is never invalidated on auth failure.
+- [Accounting — Qoyod / Daftra / Odoo Sync] Default sync queue driver makes 'async' jobs run inline in the web request.
+- [Merchants — Portal & Management] Admin merchant-payout (MerchantmanagePaymentController) and statements/wallet flows are referenced but documented in detail elsewhere, not fully expanded here.
+- [Merchants — Portal & Management] Exact merchant_settings / merchant_online_payment(_received) column schemas were not opened line-by-line — deferred to 06-Database.md.
+- [Merchants — Portal & Management] The AuthController@register/signin API implementation (token issuance specifics) was inferred from routes + Flutter client, not read in full — see 10-Authentication.md.
+- [Merchants — Portal & Management] Accounting MerchantObserver mirror-column behavior summarized from brief/migrations, not from reading each Qoyod/Daftra/Odoo observer.
+- [Finance — Billing, COD, Wallet, Settlement] No scheduled cron for automatic invoice generation found — generation is triggered by admin/merchant routes; the 'auto' is only the payment_period-elapsed guard inside store()
+- [Finance — Billing, COD, Wallet, Settlement] No SMS/push notification on invoice generation or payout PROCESSED found in the finance repositories reviewed (only wallet approval SMS and return-parcel SMS/push exist)
+- [Finance — Billing, COD, Wallet, Settlement] Online wallet top-up gateway callback (WalletRepository::paymentStatus) exists but the online recharge UI path was not found wired in the surfaces reviewed
+- [Finance — Billing, COD, Wallet, Settlement] Exact V10 API route-group prefix/version string not fully traced (documented as V10 / Sanctum per controller namespace and route file)
+- [Drivers — Deliverymen & Last-Mile] performance:backfill artisan command is referenced by the instrumentation migration but was not located/read in this pass
+- [Drivers — Deliverymen & Last-Mile] Exact NDR create payload/flow deferred to parcels.md rather than documented here
+- [Drivers — Deliverymen & Last-Mile] admin-app/supervisor-app assign-driver endpoint internals (haversine picker) are client-side and only summarized from MOBILE_APPS.md
+- [Hubs — Network & Hub Cash] No dynamic routing/optimization engine — hub-to-hub movement is manual operator-driven transfer only
+- [Hubs — Network & Hub Cash] No hub-specific notifications/push on reconciliation, payout, or transfer — activity-log (spatie) only
+- [Hubs — Network & Hub Cash] hub_incharges table has no company_id column; tenant scoping depends on joining through users
+- [Hubs — Network & Hub Cash] No idempotency/dedupe key on mobile POST /admin/hub-cash — double-submit can double-post ledgers
+- [Hubs — Network & Hub Cash] Hub network is flat — no region/zone/parent-hub hierarchy modelled
+- [Sorting & Scanning] No dedicated SortingService/ScanService or DB tables for bags/routes/scan-history — all grouping is ephemeral and device-local; a mid-shift crash loses un-dispatched bags and there is no server audit that operator X bagged parcel Y beyond the parcel_events row written at dispatch.
+- [Sorting & Scanning] No notifications: handover and forceStatus dispatch no events/FCM, so hub transfers and status changes made from these apps do not notify the destination hub, merchant, or customer; neither app registers for FCM.
+- [Sorting & Scanning] Scanner app hard-codes ParcelStatus ids in action_catalog.dart (client/server drift risk); lookup and hubs endpoints are not hub-scoped so any admin-type user can resolve any AWB/hub in the tenant; no fine-grained Permission/policy checks (coarse user_type gating only).
+- [Notifications — SMS, Push, Email] No unified Laravel Notification/Notifiable system or notifications table — transactional messages are not persisted server-side.
+- [Notifications — SMS, Push, Email] In-app inbox is device-local (SharedPreferences, cap 100) only; no GET notifications history API endpoint exists.
+- [Notifications — SMS, Push, Email] No queueing — SMS/push/email sent synchronously (QUEUE_CONNECTION=sync).
+- [Notifications — SMS, Push, Email] SMS gateways swallow failures (return exception object instead of throwing) and disable SSL peer verification; PushNotificationService uses die()/dd() on errors.
+- [Notifications — SMS, Push, Email] No FCM HTTP v1 migration present despite legacy API sunset.
+- [Support & CRM] No dedicated CRM module (no leads/accounts/contacts/pipeline/timeline); customer identity only exists on parcels.
+- [Support & CRM] parcel_ratings CSAT capture is standalone and not linked to support tickets or a contact record.
+- [Support & CRM] No support notifications beyond a 7-day polled admin bell — no push/email/SMS on new ticket or reply.
+- [Support & CRM] No SLA/first-response timers, no agent assignment/ownership, no internal notes, no email ingestion.
+- [Support & CRM] No automated tests found for the module.
+- [Support & CRM] status is not fillable and lacks an enforced state machine.
+- [Permissions, Users & Roles] Flutter clients do not receive or evaluate users.permissions — only user_type is parsed client-side; fine-grained mobile gating is not currently possible without an API change.
+- [Permissions, Users & Roles] No dedicated REST API resource exists for roles/permissions administration — it is a web-only (Blade) concern; API involvement is limited to user_type surface gates.
+- [Permissions, Users & Roles] users.permissions and roles.permissions are free-text JSON string lists with no referential FK to the catalogue tables; orphaned/renamed keys are not detectable at the DB level.
+- [Permissions, Users & Roles] Exact seeded contents of the bootstrap owner/super-admin role (which keys ship enabled by default) were not traced to a specific seeder beyond the catalogue itself.
+- [Onboarding Tours & Knowledge Base] Potential first-login-autostart defect: LoginController::authenticated() stamps users.first_login_at at login time, before the SPA calls /tours/for-me, so forMe() returns first_login=false and the WelcomeModal likely never auto-opens for genuine first-login users. Flagged, not runtime-verified.
+- [Onboarding Tours & Knowledge Base] No automated tests ship for either subsystem; TOURS.md lists only suggested feature/Playwright tests.
+- [Onboarding Tours & Knowledge Base] action.navigate is wired in TourProvider.next() but action.wait_for/condition are reserved and unimplemented.
+- [Onboarding Tours & Knowledge Base] Only en + ar locales exist for KB content and tour step translations.
+- [Onboarding Tours & Knowledge Base] public/images/{kb,wms-kb,mkb}/ screenshot dirs are not gitignored and require manual git add; no defined policy.
+- [Onboarding Tours & Knowledge Base] No dedicated KB service or DB table (content is code); no analytics rollup job for tour_events at scale.
+- [Reports, Analytics & Performance/KPI] performance:backfill artisan command is not registered in app/Console/Kernel.php or routes/console.php - must be run manually post-deploy
+- [Reports, Analytics & Performance/KPI] The rich six-tab Performance Dashboard has no Flutter client; supervisor/merchant apps use separate simpler /api/v10 report endpoints that do not reuse app/Services/Performance
+- [Reports, Analytics & Performance/KPI] No result caching layer for the scan-heavy aggregations (CACHE_DRIVER=file default, Redis opt-in only)
+- [Reports, Analytics & Performance/KPI] AiInsightsService::fastestGrowingHub lacks per-hub trend data and falls back to top-profit hub
+- [Reports, Analytics & Performance/KPI] Customer rating link dispatch (SMS hook) is anticipated in ParcelRatingController docblock but not implemented - ratings only captured when an external caller shares the signed URL
+- [SaaS — Tenancy, Subscriptions & Super-Admin] No scheduled subscription-expiry notification job exists — expiry is enforced only reactively by subscriptionCheckMiddleware at request time.
+- [SaaS — Tenancy, Subscriptions & Super-Admin] Stripe payment path hard-codes company_id=1 for API keys and forces USD currency (PlanController.php:383/395); not per-tenant.
+- [SaaS — Tenancy, Subscriptions & Super-Admin] Parent-pays-for-children billing is unimplemented (TODO(billing) seam in CompanyRepository::store).
+- [SaaS — Tenancy, Subscriptions & Super-Admin] routes/tenant.php is effectively empty (Stancl block commented out); tenant routes actually live in the if($domain) block of web.php.
+- [SaaS — Tenancy, Subscriptions & Super-Admin] Self-service company sign-up creates a trial subscription that is already-expired (signUpStore:468-469).
+- [rushly-saas — Backend Platform (SSOT)] Broadcasting is effectively dormant (broadcast driver null, only one per-user channel in channels.php) — not deeply explored.
+- [rushly-saas — Backend Platform (SSOT)] SuperAdmin is mid Blade->React migration: only 1 of the super-admin screens (FulfillmentDefaults) is a React page; the rest remain Blade under resources/views/backend and were not individually enumerated.
+- [rushly-saas — Backend Platform (SSOT)] ROUTES.md (243KB) and full endpoint-by-endpoint listings were intentionally not reproduced — deferred to docs 09-API and the repo ROUTES.md as cross-links.
+- [rushly-admin-app — Admin / Back-office Mobile] Shared /api/v10/wms/* route group (for wmsProductLookup/wmsStock/wmsGrnScan/wmsGrnComplete/wmsAdjustment) was not located in routes/api.php admin group — registration point unconfirmed
+- [rushly-admin-app — Admin / Back-office Mobile] shared_preferences is declared in pubspec but not referenced in lib/ (only flutter_secure_storage used for persistence)
+- [rushly-admin-app — Admin / Back-office Mobile] wmsAdjustment endpoint is declared but not referenced by any screen
+- [rushly-admin-app — Admin / Back-office Mobile] Backend admin endpoints /admin/fleet/*, /admin/sorting/*, /admin/reports/drivers, /admin/exceptions exist in the route group but are not called by this app (belong to sibling apps/web)
+- [rushly-driver-app — Last-Mile Driver] LocationService.start() is provider-wired but never called by any screen — continuous live-location tracking is inactive; only runsheet takes a one-shot fix
+- [rushly-driver-app — Last-Mile Driver] PushService has no background/onMessageOpenedApp handlers (only foreground messages reach the inbox) and unsubscribe() is not called on logout
+- [rushly-driver-app — Last-Mile Driver] refresh() endpoint wired but never invoked — no proactive token refresh; relies on 401 bounce
+- [rushly-driver-app — Last-Mile Driver] Shared static apiKey (123456rx-ecourier123456) hardcoded across all tenants (env.dart:6-7)
+- [rushly-driver-app — Last-Mile Driver] No screens for wired endpoints: /profile/update, /password/reset, /deliveryman/income-expense
+- [rushly-driver-app — Last-Mile Driver] Backend controller response shapes (DeliverymanController cash/dashboard/profile) were inferred from Dart fromJson mappers, not read directly from PHP controllers
+- [rushly-fleet-app — Fleet Driver] No push notifications: pubspec has no firebase/push SDK; critical maintenance reports raise no alert
+- [rushly-fleet-app — Fleet Driver] No GPS capture: start/end lat-lng parsed and backend-accepted but never sent by the app; login 'GPS' tagline unimplemented
+- [rushly-fleet-app — Fleet Driver] Fuel receipt captured as a typed URL string only — no image picker/upload flow
+- [rushly-fleet-app — Fleet Driver] Partial Arabic localization — fleet-domain strings are English in both _en and _ar maps; only auth/tenant/shell chrome is translated
+- [rushly-fleet-app — Fleet Driver] Declared-but-unused packages: shared_preferences and url_launcher
+- [rushly-fleet-app — Fleet Driver] Session identity gap: restore() sets userEmail='unknown' and ignores /admin/profile and /admin/login user payloads
+- [rushly-fleet-app — Fleet Driver] No maintenance-resolution path in the app (backend has no endpoint either)
+- [rushly-fleet-app — Fleet Driver] No test/ directory though flutter_test is declared
+- [rushly-fleet-app — Fleet Driver] DioClient.onUnauthorized session-expiry hook is never registered by any screen
+- [rushly-scanner-app — Universal Scanner] No push/FCM in the scanner app despite backend AdminPushController fcm-subscribe endpoints — documented as Not found in the current codebase
+- [rushly-scanner-app — Universal Scanner] Hard-coded shared API key committed in both .env.example and env.dart (security)
+- [rushly-scanner-app — Universal Scanner] Client-side status-transition mapping (actionsFor) can drift from server ParcelStatusHelper::guardTransition; server returns 422 on mismatch
+- [rushly-scanner-app — Universal Scanner] No l10n.yaml/ARB files though pubspec sets generate:true — hand-rolled AppLocalizations map used instead
+- [rushly-merchant-app — Merchant Portal] Locale is in-memory only (LocaleController) — merchant language choice resets to Arabic on cold start; admin app persists it
+- [rushly-merchant-app — Merchant Portal] ApiException.fieldErrors/isValidation defined but never consumed — form field errors not surfaced; UI shows e.toString()
+- [rushly-merchant-app — Merchant Portal] Push is foreground-only: no onBackgroundMessage isolate, no device-local inbox, no notification deep-linking (thinner than driver app)
+- [rushly-merchant-app — Merchant Portal] No offline read cache — all repositories fetch live
+- [rushly-merchant-app — Merchant Portal] Many declared-but-unused repo methods/endpoint constants: refresh, profile/update, parcel filter/statusWise/tracking, parcel/{id}/status/{statusId}, statement-reports, dashboard/filter, payment-request/create, settings generalSettings/hub, fraud store/update/delete, ndr show
+- [rushly-merchant-app — Merchant Portal] Fraud, NDR are read/check-only in the app despite backend supporting store/update/delete and detail show
+- [rushly-merchant-app — Merchant Portal] Could not inspect backend merchant controllers' method bodies (only routes/api.php verified) — request/response field shapes were inferred from the Dart models' fromJson, not from PHP resources
+- [rushly-sorting-app — Sorting Center] Push notifications: Not found in the current codebase (no firebase_messaging or local notifications dependency)
+- [rushly-sorting-app — Sorting Center] Bags/routes are not persisted — app restart loses un-dispatched bags; no backend persistence
+- [rushly-sorting-app — Sorting Center] restore() sets userEmail to 'unknown' and discards the fetched profile, so no user identity is shown
+- [rushly-sorting-app — Sorting Center] No automated tests beyond the default flutter_test dependency
+- [rushly-sorting-app — Sorting Center] Camera permission handling is only in platform manifests, not visible in lib/
+- [rushly-sorting-app — Sorting Center] Unused declared dependencies: shared_preferences, url_launcher, intl (no lib/ usage)
+- [rushly-supervisor-app — Supervisor] No real-time driver location feed — driver lat/lng/seen_at derive from the most recent ParcelEvent (no driver_locations table on the backend), so 'nearest driver' distance sorting is only as fresh as the last scan/event
+- [rushly-supervisor-app — Supervisor] shared_preferences dependency declared but unused in lib/
+- [rushly-supervisor-app — Supervisor] PlaceholderScreen widget defined but not wired into HomeShell (all tabs are real features)
+- [rushly-supervisor-app — Supervisor] DioClient.onUnauthorized hook exists but is never assigned by any caller; 401 handling relies on the router guard + restore()
+- [rushly-supervisor-app — Supervisor] Module docs referenced (drivers-deliverymen, parcels, reports-analytics-performance, etc.) were cross-linked but not deeply re-verified as part of this task
+- [rushly-warehouse-app — Warehouse Ops] App keeps no client-side role/hub/profile context — all role-gating is server-side only, so the doc cannot describe client-side permission UX
+- [rushly-warehouse-app — Warehouse Ops] Cycle-count and damage-report new-session forms take raw numeric hub/product/location IDs with no barcode/name resolution
+- [rushly-warehouse-app — Warehouse Ops] No offline/queue behavior — all flows are online pull-based (ref.invalidate); no background sync
+- [rushly-warehouse-app — Warehouse Ops] shared_preferences declared but locale persistence not implemented
+- [rushly-store — Storefront System] No direct code integration path from rushly-store into the rushly-saas logistics platform — Not found in the current codebase; the analogous bridge would be a rushly-salla-style order→parcel connector, which does not exist
+- [rushly-store — Storefront System] AutoSelectService.php internals read via docs/delivery/auto-selection.md rather than opening the source file directly
+- [rushly-store — Storefront System] Did not enumerate every one of the ~30 payment gateway controllers or the full web.php admin route surface (out of scope for the integration-focused brief)
+- [rushly-salla — Salla ↔ Rushly Bridge] Mechanism populating salla_merchants.rushly_merchant_token and rushly_shop_id not in this codebase (seeded out-of-band)
+- [rushly-salla — Salla ↔ Rushly Bridge] No code reads salla_settings.trigger_status (dormant config)
+- [rushly-salla — Salla ↔ Rushly Bridge] Rushly-status → salla_status mapping lives in rushly-saas, not this app
+- [rushly-salla — Salla ↔ Rushly Bridge] Live endpoint path for parcel create/tracking must be reconciled against rushly-saas/routes/api.php
+- [rushly-salla — Salla ↔ Rushly Bridge] VerifyCsrfToken::$except contents not confirmed (webhooks/salla, internal/parcel-status must be exempt)

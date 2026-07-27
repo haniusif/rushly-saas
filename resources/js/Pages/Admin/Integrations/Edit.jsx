@@ -74,7 +74,7 @@ function CopyRow({ label, value }) {
     );
 }
 
-export default function Edit({ setting = {}, lookups = {}, placeholders = {}, env_keys = {}, urls = {}, salla = null, t = {} }) {
+export default function Edit({ setting = {}, lookups = {}, placeholders = {}, env_keys = {}, urls = {}, salla = null, zid = null, t = {} }) {
     const form = useForm({
         is_enabled: setting.is_enabled ? '1' : '0',
         app_url: setting.app_url ?? '',
@@ -89,6 +89,7 @@ export default function Edit({ setting = {}, lookups = {}, placeholders = {}, en
         webhook_secret: setting.webhook_secret ?? '',
         app_id: setting.app_id ?? '',
         authorization_mode: setting.authorization_mode ?? 'easy',
+        service_type: setting.service_type ?? 'delivery',
         _method: 'put',
     });
 
@@ -163,6 +164,32 @@ export default function Edit({ setting = {}, lookups = {}, placeholders = {}, en
                                     </Field>
                                 </div>
 
+                                {zid && (
+                                    <div className="space-y-4 pt-5 mt-5 border-t border-border">
+                                        <div className="flex items-center gap-2">
+                                            <KeyRound className="h-4 w-4 text-primary" />
+                                            <h3 className="text-sm font-semibold">{t.zid_bridge_section}</h3>
+                                        </div>
+                                        <p className="text-[11px] text-muted-foreground">{t.zid_bridge_help}</p>
+
+                                        <div className="rounded-md border border-border bg-muted/20 p-4 space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t.zid_paste_section}</h4>
+                                                <a
+                                                    href={zid.partner_portal_url}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="inline-flex h-7 items-center rounded-md border border-input bg-background px-2 text-[11px] font-medium hover:bg-muted/40"
+                                                >
+                                                    <ExternalLink className="h-3 w-3 me-1" /> {t.zid_open_partners}
+                                                </a>
+                                            </div>
+                                            <CopyRow label={t.zid_parcel_create_label} value={zid.parcel_create_url} />
+                                            <CopyRow label={t.zid_writeback_label} value={zid.writeback_path} />
+                                        </div>
+                                    </div>
+                                )}
+
                                 {salla && (
                                     <div className="space-y-4 pt-5 mt-5 border-t border-border">
                                         <div className="flex items-center gap-2">
@@ -210,6 +237,12 @@ export default function Edit({ setting = {}, lookups = {}, placeholders = {}, en
                                                 <Select value={form.data.authorization_mode} onChange={(e) => form.setData('authorization_mode', e.target.value)}>
                                                     <option value="easy">Easy mode (webhook delivers token)</option>
                                                     <option value="full">Full OAuth (browser callback)</option>
+                                                </Select>
+                                            </Field>
+                                            <Field label={t.salla_service_type} error={form.errors.service_type} hint={t.salla_service_type_hint}>
+                                                <Select value={form.data.service_type} onChange={(e) => form.setData('service_type', e.target.value)}>
+                                                    <option value="delivery">{t.salla_service_delivery}</option>
+                                                    <option value="delivery_and_fulfillment">{t.salla_service_both}</option>
                                                 </Select>
                                             </Field>
                                             <Field label={t.salla_redirect_uri} error={form.errors.oauth_redirect_uri} hint={t.salla_redirect_hint}>

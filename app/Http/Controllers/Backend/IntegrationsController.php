@@ -68,15 +68,19 @@ class IntegrationsController extends Controller
             return $row;
         })->values();
 
+        // Walk public/images/partners/{key}.{svg,png,webp,jpg} for every card
+        // so the controller is the single source of truth for which logo a
+        // brand uses. The React LogoBox still walks its own fallback chain
+        // when this returns null (Lucide icon → simple-icons CDN).
+        $attachLogo = fn (array $p) => array_merge($p, ['logo_url' => $this->partnerLogoUrl($p['key'])]);
+
         return Inertia::render('Admin/Integrations/Index', [
             'integrations' => $integrations,
-            'three_pls'    => collect($this->buildThreePls())
-                ->map(fn ($p) => array_merge($p, ['logo_url' => $this->partnerLogoUrl($p['key'])]))
-                ->all(),
-            'accounting'   => $this->buildAccounting($companyId),
-            'erp'          => $this->buildErp($companyId),
-            'payments'     => $this->buildPayments($companyId),
-            'location'     => $this->buildLocation($companyId),
+            'three_pls'    => collect($this->buildThreePls())->map($attachLogo)->all(),
+            'accounting'   => collect($this->buildAccounting($companyId))->map($attachLogo)->all(),
+            'erp'          => collect($this->buildErp($companyId))->map($attachLogo)->all(),
+            'payments'     => collect($this->buildPayments($companyId))->map($attachLogo)->all(),
+            'location'     => collect($this->buildLocation($companyId))->map($attachLogo)->all(),
             'permissions'  => [
                 'update' => hasPermission('integrations_update'),
             ],
@@ -332,6 +336,11 @@ class IntegrationsController extends Controller
                 'webhook_secret'           => (string) ($meta['webhook_secret'] ?? ''),
                 'app_id'                   => (string) ($meta['app_id'] ?? ''),
                 'authorization_mode'       => (string) ($meta['authorization_mode'] ?? 'easy'),
+                // What service scope the tenant's Salla app is registered
+                // for. Drives future WMS routing: delivery-only tenants
+                // route straight to a 3PL; delivery+fulfillment tenants
+                // route through the WMS pick/pack flow first.
+                'service_type'             => (string) ($meta['service_type'] ?? 'delivery'),
             ],
             'salla' => $platform === 'salla' ? [
                 // The exact strings the tenant pastes into their Salla Partner
@@ -340,6 +349,14 @@ class IntegrationsController extends Controller
                 'default_redirect_uri' => url('/integrations/salla/oauth/callback'),
                 'webhook_url'          => url('/integrations/salla/webhook'),
                 'partner_portal_url'   => 'https://salla.partners/',
+            ] : null,
+            'zid' => $platform === 'zid' ? [
+                // Zid uses the bridge-app pattern: the standalone rushly-zid
+                // app owns the Zid OAuth tokens and webhooks. We display the
+                // Rushly endpoint the bridge needs to POST new parcels to.
+                'parcel_create_url'    => url('/api/v10/external/zid/parcel'),
+                'writeback_path'       => '/internal/parcel-status',
+                'partner_portal_url'   => 'https://web.zid.sa/partners',
             ] : null,
             'lookups' => [
                 'cities'         => $cities->map(fn ($c) => ['value' => (string) $c->id, 'label' => $c->name])->values(),
@@ -400,10 +417,21 @@ class IntegrationsController extends Controller
                 'salla_redirect_uri'     => 'OAuth Redirect URI (optional override)',
                 'salla_redirect_hint'    => 'Defaults to your tenant subdomain callback. Override only if you need a different URL.',
                 'salla_authorization_mode' => 'Authorization mode',
+                'salla_service_type'       => 'Service scope',
+                'salla_service_type_hint'  => 'What this Salla app does for Rushly. Delivery-only apps route straight to a courier; Delivery + Fulfillment apps go through the WMS pick/pack flow first.',
+                'salla_service_delivery'   => 'Delivery only',
+                'salla_service_both'       => 'Delivery + Fulfillment',
                 'salla_paste_section'    => 'Paste these into your Salla Partner app',
                 'salla_callback_label'   => 'Callback URL',
                 'salla_webhook_label'    => 'Webhook URL',
                 'salla_open_partners'    => 'Open Salla Partner portal',
+                // Zid bridge section
+                'zid_bridge_section'     => 'Zid bridge connection',
+                'zid_bridge_help'        => 'Zid uses the rushly-zid bridge app pattern. Set the bridge URL above (where this app POSTs status updates) and the shared writeback bearer. The bridge app handles Zid OAuth and webhooks; it POSTs new parcels back to the endpoint below.',
+                'zid_paste_section'      => 'Paste this into your Zid bridge config',
+                'zid_parcel_create_label'=> 'Rushly parcel-create endpoint (bridge → this app)',
+                'zid_writeback_label'    => 'Writeback path (this app → bridge)',
+                'zid_open_partners'      => 'Open Zid Partner portal',
             ],
         ]);
     }
@@ -428,6 +456,7 @@ class IntegrationsController extends Controller
             'webhook_secret'           => ['nullable', 'string', 'max:255'],
             'app_id'                   => ['nullable', 'string', 'max:64'],
             'authorization_mode'       => ['nullable', 'in:easy,full'],
+            'service_type'             => ['nullable', 'in:delivery,delivery_and_fulfillment'],
         ]);
 
         $data['is_enabled'] = (bool) ($data['is_enabled'] ?? false);
@@ -436,7 +465,7 @@ class IntegrationsController extends Controller
 
         if ($platform === 'salla') {
             $meta = (array) ($setting->meta ?? []);
-            foreach (['oauth_client_id', 'oauth_client_secret', 'oauth_redirect_uri', 'webhook_secret', 'app_id', 'authorization_mode'] as $k) {
+            foreach (['oauth_client_id', 'oauth_client_secret', 'oauth_redirect_uri', 'webhook_secret', 'app_id', 'authorization_mode', 'service_type'] as $k) {
                 if (array_key_exists($k, $data)) {
                     $meta[$k] = $data[$k];
                 }
@@ -445,7 +474,7 @@ class IntegrationsController extends Controller
             $setting->meta = $meta;
         } else {
             // Strip Salla-only keys so they never land on Zid/Shopify rows.
-            foreach (['oauth_client_id', 'oauth_client_secret', 'oauth_redirect_uri', 'webhook_secret', 'app_id', 'authorization_mode'] as $k) {
+            foreach (['oauth_client_id', 'oauth_client_secret', 'oauth_redirect_uri', 'webhook_secret', 'app_id', 'authorization_mode', 'service_type'] as $k) {
                 unset($data[$k]);
             }
         }
@@ -484,8 +513,12 @@ class IntegrationsController extends Controller
     private function partnerLogoUrl(string $key): ?string
     {
         foreach (['svg', 'png', 'webp', 'jpg'] as $ext) {
-            if (file_exists(public_path("images/partners/{$key}.{$ext}"))) {
-                return asset("images/partners/{$key}.{$ext}");
+            $path = public_path("images/partners/{$key}.{$ext}");
+            if (file_exists($path)) {
+                // Append mtime so Cloudflare / browser cache busts when the file
+                // is replaced. Without this, replacing the SVG leaves stale bytes
+                // at the CDN edge for the configured max-age (4h here).
+                return asset("images/partners/{$key}.{$ext}") . '?v=' . filemtime($path);
             }
         }
         return null;
@@ -554,17 +587,40 @@ class IntegrationsController extends Controller
                 ]),
                 'parcels' => $this->threePlCount('jet'),
             ],
-            [
-                'key' => 'logestechs', 'name' => 'Logestechs', 'host' => 'logestechs.com',
-                'base_url' => $logesBase !== '' ? $logesBase : '— (STUB — Postman docs pending)',
-                'key_set' => $logesBase !== '' && $logesKey !== '',
-                'key_tail' => $logesKey !== '' ? substr($logesKey, -4) : null,
-                'extras' => [
-                    'Status'            => 'STUB — service code present, endpoints/payload await Postman docs',
-                    'Target company id' => 'Per-shipment (chosen at assign time)',
-                ],
-                'parcels' => $this->threePlCount('logestechs'),
-            ],
+            (function () use ($logesBase) {
+                // Logestechs is the first citizen of the new Shipping module.
+                // Connection state lives in shipping_connections, not env or the
+                // old logestechs_settings table.
+                $companyId = settings()->id ?? null;
+                $connections = \App\Shipping\Models\ShippingConnection::query()
+                    ->where('company_id', $companyId)
+                    ->whereHas('provider', fn ($p) => $p->where('code', 'logestechs'))
+                    ->get();
+
+                $active   = $connections->where('status', 'active')->count();
+                $total    = $connections->count();
+                $default  = $connections->firstWhere('is_default', true);
+
+                return [
+                    'key'      => 'logestechs',
+                    'name'     => 'Logestechs',
+                    'host'     => 'logestechs.com',
+                    'base_url' => $logesBase !== '' ? $logesBase : '— (set LOGESTECHS_BASE_URL)',
+                    // Connected = at least one active connection. Tenant-scoped.
+                    'key_set'  => $active > 0,
+                    'key_tail' => null,
+                    'extras'   => array_filter([
+                        'Connections'   => $total > 0 ? "{$active} active / {$total} total" : null,
+                        'Default'       => $default ? $default->connection_name : null,
+                        'Module'        => 'Shipping (new module)',
+                    ]),
+                    'parcels'  => \App\Shipping\Models\Shipment::query()
+                        ->where('company_id', $companyId)
+                        ->whereHas('connection.provider', fn ($p) => $p->where('code', 'logestechs'))
+                        ->count(),
+                    'settings_url' => route('shipping.connections.index'),
+                ];
+            })(),
             [
                 'key' => 'imile', 'name' => 'iMile', 'host' => 'imile.com',
                 'base_url' => $imileBase !== '' ? $imileBase : '— (planned, NDA docs pending)',

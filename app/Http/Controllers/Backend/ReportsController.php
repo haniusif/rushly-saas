@@ -19,8 +19,9 @@ use App\Repositories\Merchant\MerchantInterface;
 use Illuminate\Http\Request;
 use App\Repositories\Reports\ReportsInterface;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\MerchantReports; 
+use App\Exports\MerchantReports;
 use Dotenv\Parser\Value;
+use Inertia\Inertia;
 
 class ReportsController extends Controller
 {
@@ -38,28 +39,105 @@ class ReportsController extends Controller
         $this->bankTransaction     =  $bankTransaction;
     }
     public function parcelReports(Request $request){
-        $parcels = [];
-        $hubs     = $this->hub->hubs();
-        return view('backend.reports.parcel_reports',compact('request','parcels','hubs'));
+        return $this->renderParcelReports($request, null, '');
     }
 
     public function parcelSReports(Request $request){
-
-        if($this->repo->parcelReports($request)){
-            $parcels      =  $this->repo->parcelReports($request);
-            $hubs         = $this->hub->hubs();
-            $print        =   true;
-            $parcel_ids   = '';
-            foreach ($parcels as $key=>$parcel) {
-                foreach ($parcel as $key => $parcl) {
-
-                    $parcel_ids  = $parcl->id.','.$parcel_ids;
-                }
-            }
-            return view('backend.reports.parcel_reports',compact('parcels','request','hubs','print','parcel_ids'));
-        }else{
+        $parcels = $this->repo->parcelReports($request);
+        if (! $parcels) {
             return redirect()->back();
         }
+        $parcelIds = '';
+        foreach ($parcels as $group) {
+            foreach ($group as $p) {
+                $parcelIds = $p->id . ',' . $parcelIds;
+            }
+        }
+        return $this->renderParcelReports($request, $parcels, rtrim($parcelIds, ','));
+    }
+
+    private function renderParcelReports(Request $request, $parcels, string $parcelIds)
+    {
+        $statusLabels = (array) trans('parcelStatusFilter');
+
+        $rows       = [];
+        $totalCount = 0;
+        $totalCash  = 0.0;
+        if ($parcels) {
+            $i = 1;
+            foreach ($parcels as $statusKey => $group) {
+                $cash = 0.0;
+                foreach ($group as $p) {
+                    $cash += (float) ($p->cash_collection ?? 0);
+                }
+                $rows[] = [
+                    'serial'       => $i++,
+                    'status'       => (int) $statusKey,
+                    'status_label' => $statusLabels[$statusKey] ?? (string) $statusKey,
+                    'count'        => count($group),
+                    'cash'         => $cash,
+                ];
+                $totalCount += count($group);
+                $totalCash  += $cash;
+            }
+        }
+
+        $statusOptions = collect($statusLabels)
+            ->map(fn ($label, $key) => ['value' => (string) $key, 'label' => (string) $label])
+            ->values();
+
+        $hubOptions = collect($this->hub->hubs())
+            ->map(fn ($h) => ['value' => (string) $h->id, 'label' => (string) $h->name])
+            ->values();
+
+        $merchantOptions = $this->merchant->merchantIdlist()
+            ->map(fn ($m) => ['value' => (string) $m->id, 'label' => (string) ($m->business_name ?: ('#' . $m->id))])
+            ->values();
+
+        return Inertia::render('Admin/Reports/ParcelReports', [
+            'rows'       => $rows,
+            'totals'     => ['count' => $totalCount, 'cash' => $totalCash],
+            'currency'   => settings()->currency,
+            'has_data'   => (bool) $parcels,
+            'parcel_ids' => $parcelIds,
+            'filters'    => [
+                'parcel_date'        => (string) $request->parcel_date,
+                'parcel_merchant_id' => (string) $request->parcel_merchant_id,
+                'hub_id'             => (string) $request->hub_id,
+                'parcel_status'      => array_values((array) $request->parcel_status),
+            ],
+            'lookups'    => [
+                'statuses'  => $statusOptions,
+                'hubs'      => $hubOptions,
+                'merchants' => $merchantOptions,
+            ],
+            'urls' => [
+                'filter' => route('parcel.filter.reports'),
+                'reset'  => route('parcel.reports'),
+                'print'  => $parcelIds ? route('parcel.reports.print.page', $parcelIds) : null,
+            ],
+            't' => [
+                'title'           => __('reports.parcel_reports') ?: 'Parcel reports',
+                'dashboard'       => __('dashboard.title') ?: 'Dashboard',
+                'reports'         => __('reports.title') ?: 'Reports',
+                'date'            => __('parcel.date') ?: 'Date',
+                'date_ph'         => 'YYYY-MM-DD ~ YYYY-MM-DD',
+                'merchant'        => __('parcel.merchant') ?: 'Merchant',
+                'select_merchant' => (__('menus.select') ?: 'Select') . ' ' . (__('merchant.title') ?: 'Merchant'),
+                'hub'             => __('parcel.hub') ?: 'Hub',
+                'select_hub'      => (__('menus.select') ?: 'Select') . ' ' . (__('hub.title') ?: 'Hub'),
+                'status'          => __('parcel.status') ?: 'Status',
+                'filter'          => __('levels.filter') ?: 'Filter',
+                'clear'           => __('levels.clear') ?: 'Clear',
+                'export'          => __('menus.export') ?: 'Export',
+                'print'           => __('reports.print') ?: 'Print',
+                'serial'          => '#',
+                'count'           => __('reports.count') ?: 'Count',
+                'cash_collection' => __('parcel.cash_collection') ?: 'Cash collection',
+                'total'           => __('reports.total_cash_collection') ?: 'Total',
+                'empty'           => __('levels.no_data_found') ?: 'Apply a filter to see a parcel report.',
+            ],
+        ]);
     }
     
         public function parcelFinanceReports(Request $request){

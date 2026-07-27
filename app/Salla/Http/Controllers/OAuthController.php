@@ -18,6 +18,13 @@ class OAuthController extends Controller
     public function redirect(Request $request): RedirectResponse
     {
         $provider = $this->provider();
+        // Salla's scope authority is the app's Partner-Portal registration —
+        // whatever the tenant ticked under "Set up the App Scope" is what the
+        // access token carries. The URL scope param is only used to *add*
+        // offline_access (issues a refresh_token) on top of that; enumerating
+        // scopes here would not narrow the token and would risk drifting out
+        // of sync with the Portal config. This matches the pattern in the
+        // official SallaApp/oauth2-merchant SDK README.
         $url = $provider->getAuthorizationUrl(['scope' => 'offline_access']);
         $request->session()->put('oauth2state', $provider->getState());
 

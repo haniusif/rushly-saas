@@ -13,6 +13,7 @@ class Shipment extends Model
         'salla_order_id',
         'rushly_tracking_number',
         'salla_shipment_id',
+        'shipment_number',
         'awb_number',
         'label_url',
         'status',

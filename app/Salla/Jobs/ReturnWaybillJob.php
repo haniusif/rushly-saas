@@ -33,15 +33,21 @@ class ReturnWaybillJob implements ShouldQueue
         $awb = $shipment->awb_number ?? $shipment->rushly_tracking_number;
         $labelBase = rtrim((string) config('app.url'), '/');
         $labelUrl = $shipment->label_url ?? "{$labelBase}/parcel/{$shipment->rushly_tracking_number}/label";
+        // Salla requires shipment_number on every PUT. ShipmentCreatingHandler
+        // captures it from the webhook; fall back to the id if the payload
+        // omitted it (some Salla event variants do).
+        $shipmentNumber = (string) ($shipment->shipment_number ?: $this->sallaShipmentId);
 
         (new ApiClient($order->merchant))->returnWaybill(
             $this->sallaShipmentId,
+            $shipmentNumber,
             $awb,
             $labelUrl,
         );
 
         $shipment->update([
             'salla_shipment_id' => $this->sallaShipmentId,
+            'shipment_number'   => $shipmentNumber,
             'awb_number'        => $awb,
             'label_url'         => $labelUrl,
             'status'            => 'awb_returned',

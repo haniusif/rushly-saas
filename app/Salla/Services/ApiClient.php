@@ -26,26 +26,58 @@ class ApiClient
         }
     }
 
-    public function updateShipmentStatus(string $sallaShipmentId, string $status, ?string $note = null): array
+    /**
+     * PUT /admin/v2/shipments/{id} is Salla's single write endpoint for a
+     * shipment — status changes, AWB return, label URL, cost, etc. all go
+     * through the same body. `shipment_number` and `status` are required.
+     *
+     * Docs: https://docs.salla.dev/5394233e0
+     */
+    public function updateShipment(string $sallaShipmentId, array $fields): array
     {
-        $response = $this->request('post', "/shipments/{$sallaShipmentId}/status", [
-            'status' => $status,
-            'note'   => $note,
-        ]);
-
-        $this->ensureSuccess($response, 'shipment.status');
+        $response = $this->request('put', "/shipments/{$sallaShipmentId}", $fields);
+        $this->ensureSuccess($response, 'shipment.update');
         return $response->json();
     }
 
-    public function returnWaybill(string $sallaShipmentId, string $awbNumber, string $labelUrl): array
-    {
-        $response = $this->request('post', "/shipments/{$sallaShipmentId}/awb", [
-            'awb_number' => $awbNumber,
-            'label_url'  => $labelUrl,
-        ]);
+    /**
+     * Convenience wrapper for pushing just a status change. Requires
+     * shipment_number because Salla's schema demands it — pass it from the
+     * local salla_shipments row captured in ShipmentCreatingHandler.
+     */
+    public function updateShipmentStatus(
+        string $sallaShipmentId,
+        string $shipmentNumber,
+        string $status,
+        ?string $statusNote = null,
+    ): array {
+        return $this->updateShipment($sallaShipmentId, array_filter([
+            'shipment_number' => $shipmentNumber,
+            'status'          => $status,
+            'status_note'     => $statusNote,
+        ], fn ($v) => $v !== null && $v !== ''));
+    }
 
-        $this->ensureSuccess($response, 'shipment.awb');
-        return $response->json();
+    /**
+     * Return the AWB number + label URL back to Salla for an in-flight
+     * shipment. Salla now requires a `status` alongside the tracking
+     * fields; we send `created` (label ready) per the fulfillment cycle
+     * docs. Use updateShipment() directly if a different status is needed.
+     */
+    public function returnWaybill(
+        string $sallaShipmentId,
+        string $shipmentNumber,
+        string $trackingNumber,
+        string $labelUrl,
+        ?string $trackingLink = null,
+    ): array {
+        return $this->updateShipment($sallaShipmentId, array_filter([
+            'shipment_number' => $shipmentNumber,
+            'status'          => 'created',
+            'tracking_number' => $trackingNumber,
+            'tracking_link'   => $trackingLink,
+            'pdf_label'       => $labelUrl,
+        ], fn ($v) => $v !== null && $v !== ''));
     }
 
     public function getOrder(int $orderId): array

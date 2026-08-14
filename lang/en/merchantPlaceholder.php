@@ -20,5 +20,10 @@ return array (
     'amount'         => 'Select amount',
     'select_account' => 'Select Client Account',
     'date_format'    => 'yyyy-mm-dd',
- 
+
+    // Merchant panel placeholders
+    'status'         => 'All statuses',
+    'customer'       => 'Customer name',
+    'invoice_id'     => 'Invoice ID',
+
 );

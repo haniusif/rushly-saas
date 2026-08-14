@@ -131,9 +131,41 @@ return array (
   'Selling_price_of_parcel'         =>  'سعر بيع الشحنة',
   'enter_invoice_number'            =>  'أدخل رقم الفاتورة',
   'settings_update_success'         => 'تم تحديث الإعدادات بنجاح',
+  'export_xlsx'                     => 'إكسل',
+  'export_csv'                      => 'CSV',
+  'export_pdf'                      => 'PDF',
   'invoice_id'                      => 'رقم الفاتورة',
   'wallet_request'                  => 'طلب من المحفظة',
   'recipient_info'                  => 'بيانات المستلم',
   'updated_on'                      => 'تم التحديث في',
+  'parcel_date'                     => 'التاريخ',
+  'select_deliveryman'              => 'اختر المندوب',
+  'select_hub'                      => 'اختر الفرع',
+  'bulk_action'                     => 'إجراء جماعي',
+
+  // تسميات لوحة التاجر
+  'customer'                        => 'العميل',
+  'logs'                            => 'السجلات',
+  'tracking_id'                     => 'رقم التتبع',
+  'amount'                          => 'المبلغ',
+  'payment'                         => 'الدفع',
+
+  // صفحة التفاصيل
+  'sender_info'                     => 'بيانات المُرسِل',
+  'timeline'                        => 'الخط الزمني',
+  'finance'                         => 'المالية',
+  'attempts'                        => 'محاولات التسليم',
+  'priority_high'                   => 'عالية',
+
+  // معالج الاستيراد
+  'import_with_preview'             => 'استيراد الشحنات',
+  'preview_title'                   => 'معاينة قبل التأكيد',
+  'confirm_import'                  => 'تأكيد الاستيراد',
+  'total_rows'                      => 'إجمالي الصفوف',
+  'showing_first'                   => 'عرض أول',
+  'rows_only'                       => 'صف',
+  'expected_columns'                => 'ترتيب الأعمدة المتوقَّع',
+  'validation_errors'               => 'أخطاء التحقق',
+  'row_number'                      => 'صف',
 
 );

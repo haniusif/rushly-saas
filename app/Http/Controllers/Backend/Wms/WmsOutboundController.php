@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Backend\Wms;
 
 use App\Enums\Wms\OutboundType;
+use App\Http\Controllers\Backend\Wms\Concerns\RendersInertiaIndex;
 use App\Http\Controllers\Controller;
 use App\Models\Backend\Wms\WmsLocation;
 use App\Models\Backend\Wms\WmsProduct;
@@ -12,9 +13,12 @@ use App\Repositories\Wms\WmsOutboundRepositoryInterface;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class WmsOutboundController extends Controller
 {
+    use RendersInertiaIndex;
+
     public function __construct(
         protected WmsOutboundRepositoryInterface $repo,
         protected MerchantInterface $merchantRepo,
@@ -23,10 +27,47 @@ class WmsOutboundController extends Controller
 
     public function index(Request $request)
     {
-        $outbounds = $this->repo->all($request);
+        $paginator = $this->repo->all($request);
         $merchants = $this->merchantRepo->all();
         $hubs      = $this->hubRepo->all();
-        return view('backend.wms.outbound.index', compact('outbounds', 'merchants', 'hubs'));
+
+        $rows = collect($paginator->items())->map(fn ($o) => [
+            'id'             => $o->id,
+            'outbound_number'=> $o->outbound_number,
+            'type'           => $o->type,
+            'merchant'       => optional($o->merchant)->business_name,
+            'hub'            => optional($o->hub)->name,
+            'processed_by'   => optional($o->processedBy)->name,
+            'status'         => $o->status,
+            'status_label'   => ucwords(str_replace('_', ' ', $o->status)),
+            'completed_at'   => optional($o->completed_at)->diffForHumans(),
+            'url'            => route('wms.outbound.show', $o->id),
+        ])->values();
+
+        return Inertia::render('Admin/Wms/Outbound/Index', [
+            'rows'        => $rows,
+            'pagination'  => $this->paginateMeta($paginator),
+            'filters'     => [
+                'type'        => $request->input('type', ''),
+                'status'      => $request->input('status', ''),
+                'merchant_id' => $request->input('merchant_id', ''),
+            ],
+            'lookups'     => [
+                'types'    => ['fulfillment', 'manual', 'transfer', 'return_to_merchant'],
+                'statuses' => ['pending', 'processing', 'completed', 'cancelled'],
+                'merchants'=> $this->lookupRows($merchants, fn ($m) => ['id' => $m->id, 'name' => $m->business_name]),
+                'hubs'     => $this->lookupRows($hubs, fn ($h) => ['id' => $h->id, 'name' => $h->name]),
+            ],
+            'permissions' => ['create' => hasPermission('wms_manage')],
+            'urls' => [
+                'index'  => route('wms.outbound.index'),
+                'create' => route('wms.outbound.create'),
+            ],
+            't' => $this->indexLabels([
+                'title' => 'Outbound', 'outbound_number' => 'Outbound #', 'type' => 'Type',
+                'merchant' => 'Merchant', 'hub' => 'Hub', 'processed_by' => 'Processed by', 'completed' => 'Completed',
+            ]),
+        ]);
     }
 
     public function create()
@@ -45,7 +86,42 @@ class WmsOutboundController extends Controller
             ->all();
 
         $nextNumber = $this->repo->nextOutboundNumber();
-        return view('backend.wms.outbound.create', compact('merchants', 'hubs', 'types', 'productOptions', 'locationOptions', 'nextNumber'));
+
+        return Inertia::render('Admin/Wms/Outbound/Create', [
+            'lookups' => [
+                'merchants' => $this->lookupRows($merchants, fn ($m) => ['id' => $m->id, 'name' => $m->business_name]),
+                'hubs'      => $this->lookupRows($hubs,      fn ($h) => ['id' => $h->id, 'name' => $h->name]),
+                'types'     => $types,
+                'products'  => $productOptions,
+                'locations' => $locationOptions,
+            ],
+            'next_number' => $nextNumber,
+            'urls' => [
+                'submit' => route('wms.outbound.store'),
+                'cancel' => route('wms.outbound.index'),
+            ],
+            't' => [
+                'title'        => 'New outbound',
+                'title_index'  => 'Outbound',
+                'outbound_number' => 'Outbound #',
+                'merchant'     => 'Merchant',
+                'hub'          => 'Hub',
+                'type'         => 'Type',
+                'items'        => 'Items',
+                'add_item'     => 'Add item',
+                'product'      => 'Product',
+                'location'     => 'Location',
+                'quantity'     => 'Qty',
+                'batch'        => 'Batch',
+                'remove'       => 'Remove',
+                'cancel'       => __('levels.cancel') ?: 'Cancel',
+                'save'         => 'Save outbound',
+                'no_items'     => 'Click "Add item" to start. At least one item is required.',
+                'select_merchant_first' => 'Select merchant first',
+                'select_hub_first'      => 'Select hub first',
+                'select_type_first'     => 'Select an outbound type first',
+            ],
+        ]);
     }
 
     public function store(Request $request)

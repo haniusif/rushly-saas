@@ -207,6 +207,9 @@ class PermissionSeeder extends Seeder
                 'read'   => 'integrations_read',
                 'update' => 'integrations_update',
             ],
+            'mobile_apps'      => [
+                'read'   => 'mobile_apps_read',
+            ],
             'notification_settings'   => [
                 'read'  => 'notification_settings_read',
                 'update' => 'notification_settings_update',
@@ -516,6 +519,10 @@ class PermissionSeeder extends Seeder
             'integrations'      => [
                 'read'   => 'integrations_read',
                 'update' => 'integrations_update',
+            ],
+
+            'mobile_apps'      => [
+                'read'   => 'mobile_apps_read',
             ],
 
             'knowledge_base' => [

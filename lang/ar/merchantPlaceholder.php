@@ -20,4 +20,9 @@ return array (
     'amount'         => 'أدخل المبلغ',
     'select_account' => 'اختر حساب التاجر',
     'date_format'    => 'yyyy-mm-dd',
+
+    // عناصر نائبة في لوحة التاجر
+    'status'         => 'كل الحالات',
+    'customer'       => 'اسم العميل',
+    'invoice_id'     => 'رقم الفاتورة',
 );

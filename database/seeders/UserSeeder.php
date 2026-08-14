@@ -289,6 +289,8 @@ class UserSeeder extends Seeder
             'general_settings_read',
             'general_settings_update',
 
+            'mobile_apps_read',
+
             'notification_settings_read',
             'notification_settings_update',
 
@@ -471,6 +473,7 @@ class UserSeeder extends Seeder
             'salary_read',
             'support_read',
             'general_settings_read',
+            'mobile_apps_read',
 
             'designation_read',
 

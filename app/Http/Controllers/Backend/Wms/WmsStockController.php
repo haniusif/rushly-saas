@@ -2,15 +2,19 @@
 
 namespace App\Http\Controllers\Backend\Wms;
 
+use App\Http\Controllers\Backend\Wms\Concerns\RendersInertiaIndex;
 use App\Http\Controllers\Controller;
 use App\Models\Backend\Wms\WmsStock;
 use App\Repositories\Hub\HubInterface;
 use App\Repositories\Merchant\MerchantInterface;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class WmsStockController extends Controller
 {
+    use RendersInertiaIndex;
+
     public function __construct(
         protected MerchantInterface $merchantRepo,
         protected HubInterface $hubRepo
@@ -36,11 +40,56 @@ class WmsStockController extends Controller
             // Filter after the fact — small enough scope and avoids a subquery on aggregated columns.
         }
 
-        $rows      = $q->orderByDesc('id')->paginate(50);
+        $paginator = $q->orderByDesc('id')->paginate(50);
         $merchants = $this->merchantRepo->all();
         $hubs      = $this->hubRepo->all();
 
-        return view('backend.wms.stock.index', compact('rows', 'merchants', 'hubs'));
+        $rows = collect($paginator->items())->map(function ($s) {
+            $available = max(0, (int) $s->quantity - (int) $s->reserved_qty);
+            $reorderPoint = optional($s->product)->reorder_point ?? 0;
+            return [
+                'id'            => $s->id,
+                'sku'           => optional($s->product)->sku,
+                'product_id'    => optional($s->product)->id,
+                'product_name'  => optional($s->product)->name,
+                'merchant'      => optional(optional($s->product)->merchant)->business_name,
+                'location_id'   => optional($s->location)->id,
+                'location_code' => optional($s->location)->code,
+                'hub'           => optional(optional($s->location)->hub)->name,
+                'quantity'      => (int) $s->quantity,
+                'reserved'      => (int) $s->reserved_qty,
+                'available'     => $available,
+                'low'           => $reorderPoint > 0 && $available <= $reorderPoint,
+                'batch'         => $s->batch_number,
+                'expiry'        => optional($s->expiry_date)->format('Y-m-d'),
+            ];
+        })->values();
+
+        return Inertia::render('Admin/Wms/Stock/Index', [
+            'rows'        => $rows,
+            'pagination'  => $this->paginateMeta($paginator),
+            'filters'     => [
+                'q'           => $request->input('q', ''),
+                'merchant_id' => $request->input('merchant_id', ''),
+                'hub_id'      => $request->input('hub_id', ''),
+                'low_only'    => $request->boolean('low_only'),
+            ],
+            'lookups'     => [
+                'merchants' => $this->lookupRows($merchants, fn ($m) => ['id' => $m->id, 'name' => $m->business_name]),
+                'hubs'      => $this->lookupRows($hubs, fn ($h) => ['id' => $h->id, 'name' => $h->name]),
+            ],
+            'urls' => [
+                'index'  => route('wms.stock.index'),
+                'export' => route('wms.stock.export'),
+            ],
+            't' => $this->indexLabels([
+                'title' => 'Stock', 'sku' => 'SKU', 'product' => 'Product', 'merchant' => 'Merchant',
+                'location' => 'Location', 'hub' => 'Hub',
+                'qty' => 'Qty', 'reserved' => 'Reserved', 'available' => 'Available',
+                'batch' => 'Batch', 'expiry' => 'Expiry', 'low_only' => 'Low only', 'export' => 'Export CSV',
+                'search' => 'Search SKU / product',
+            ]),
+        ]);
     }
 
     public function export(Request $request): StreamedResponse

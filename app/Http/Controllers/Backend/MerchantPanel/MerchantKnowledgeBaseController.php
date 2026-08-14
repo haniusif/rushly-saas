@@ -26,7 +26,6 @@ class MerchantKnowledgeBaseController extends Controller
         'wallet'        => ['icon' => 'Wallet',          'subs' => ['my-wallet']],
         'accounting'    => ['icon' => 'Receipt',         'subs' => ['payments-received', 'payout', 'invoice', 'zatca-invoices', 'zatca-settings']],
         'shipments'     => ['icon' => 'Package',         'subs' => ['list', 'create', 'import', 'details']],
-        'shipment-bank' => ['icon' => 'PiggyBank',       'subs' => ['bank']],
         'reports'       => ['icon' => 'BarChart3',       'subs' => ['shipments-report', 'total-summary', 'account-transactions', 'statements']],
         'settings'      => ['icon' => 'Settings',        'subs' => ['cod-charges', 'delivery-charges', 'pickup-points']],
     ];

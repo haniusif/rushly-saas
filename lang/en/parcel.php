@@ -199,7 +199,32 @@ return array (
   'parcel_count' => 'Shipment Count',
   'days_count' => 'Days count',
   'start_date' => 'Start Date',
-  'expired_date' => 'Expired Date'
- 
+  'expired_date' => 'Expired Date',
+  'parcel_date'         => 'Date',
+  'select_deliveryman'  => 'Select courier',
+  'select_hub'          => 'Select hub',
+  'bulk_action'         => 'Bulk action',
+
+  // Merchant panel labels
+  'customer'            => 'Customer',
+  'logs'                => 'Logs',
+
+  // Details page
+  'sender_info'         => 'Sender',
+  'timeline'            => 'Timeline',
+  'finance'             => 'Finance',
+  'attempts'            => 'Delivery attempts',
+  'priority_high'       => 'High',
+
+  // Import wizard
+  'import_with_preview' => 'Import shipments',
+  'preview_title'       => 'Preview before confirming',
+  'confirm_import'      => 'Confirm import',
+  'total_rows'          => 'Total rows',
+  'showing_first'       => 'Showing first',
+  'rows_only'           => 'rows',
+  'expected_columns'    => 'Expected column order',
+  'validation_errors'   => 'Validation errors',
+  'row_number'          => 'Row',
 
 );

@@ -70,24 +70,120 @@ class MerchantParcelController extends Controller
     }
     public function index(Request $request)
     {
-        $userID = Auth::user()->id;
+        $userID   = Auth::user()->id;
         $merchant = $this->currentMerchant();
-        $parcels = $this->repo->all($merchant->id);
-        return Inertia::render('Merchant/Parcel/Index', [
-            'parcels'  => $parcels,
-            'merchant' => $merchant,
-            'filters'  => $request->only(['status', 'date', 'search']),
+        $parcels  = $this->repo->all($merchant->id);
+        return $this->renderParcelList('Merchant/Parcel/Index', $request, $parcels, $merchant, [
+            'title_key' => 'menus.parcel',
+            'page_kind' => 'index',
         ]);
     }
+
     public function parcelBank(Request $request)
     {
-        $userID = Auth::user()->id;
+        $userID   = Auth::user()->id;
         $merchant = $this->currentMerchant();
-        $parcels = $this->repo->parcelBank($merchant->id);
-        return Inertia::render('Merchant/ParcelBank/Index', [
-            'parcels'  => $parcels,
-            'merchant' => $merchant,
-            'filters'  => $request->only(['status', 'date', 'search']),
+        $parcels  = $this->repo->parcelBank($merchant->id);
+        return $this->renderParcelList('Merchant/Parcel/Index', $request, $parcels, $merchant, [
+            'title_key' => 'menus.parcel_bank',
+            'page_kind' => 'bank',
+        ]);
+    }
+
+    private function renderParcelList(string $component, Request $request, $paginator, $merchant, array $cfg)
+    {
+        $i = (($paginator->currentPage() - 1) * $paginator->perPage()) + 1;
+        $statusList = (array) trans('merchantParcelStatusFilter');
+        $currency   = settings()->currency;
+
+        $rows = collect($paginator->items())->map(function ($p) use (&$i, $statusList) {
+            return [
+                'serial'        => $i++,
+                'id'            => $p->id,
+                'tracking_id'   => $p->tracking_id,
+                'invoice_id'    => $p->invoice_id ?? null,
+                'customer_name' => $p->customer_name,
+                'customer_phone'=> $p->customer_phone,
+                'amount'        => (float) ($p->cash_collection ?? 0),
+                'status'        => (int) $p->status,
+                'status_label'  => $statusList[$p->status] ?? (string) $p->status,
+                'payment_label' => strip_tags((string) ($p->payment_status_string ?? '')),
+                'created_at'    => optional($p->created_at)->toDateTimeString(),
+                'details_url'   => route('merchant-panel.parcel.details', $p->id),
+                'logs_url'      => route('merchant-panel.parcel.logs', $p->id),
+            ];
+        })->values();
+
+        $statusOptions = collect($statusList)->map(fn ($label, $key) => [
+            'value' => (string) $key,
+            'label' => (string) $label,
+        ])->values();
+
+        return Inertia::render($component, [
+            'rows'       => $rows,
+            'currency'   => $currency,
+            'filters'    => [
+                'parcel_date'           => $request->parcel_date,
+                'parcel_status'         => $request->parcel_status,
+                'parcel_customer'       => $request->parcel_customer,
+                'parcel_customer_phone' => $request->parcel_customer_phone,
+                'invoice_id'            => $request->invoice_id,
+            ],
+            'lookups'    => [
+                'statuses' => $statusOptions,
+            ],
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+                'from'         => $paginator->firstItem(),
+                'to'           => $paginator->lastItem(),
+                'links'        => $paginator->linkCollection()->map(fn ($l) => [
+                    'url'    => $l['url'],
+                    'label'  => $l['label'],
+                    'active' => (bool) $l['active'],
+                ])->values(),
+            ],
+            'urls' => [
+                'create'       => route('merchant-panel.parcel.create'),
+                'filter'       => route('merchant-panel.parcel.filter'),
+                'reset'        => $cfg['page_kind'] === 'bank'
+                    ? route('merchant-panel.parcel-bank.index')
+                    : route('merchant-panel.parcel.index'),
+                'import'       => route('merchant-panel.parcel.parcel-import'),
+                'export_xlsx'  => route('merchant-panel.parcel.file-export'),
+                'export_csv'   => route('merchant-panel.parcel.file-export', ['type' => 'csv']),
+            ],
+            't' => [
+                'title'         => __($cfg['title_key']) ?: ($cfg['page_kind'] === 'bank' ? 'Parcel bank' : 'Parcels'),
+                'list'          => __('levels.list') ?: 'List',
+                'add'           => __('levels.add') ?: 'Add',
+                'import'        => __('parcel.import') ?: 'Import',
+                'export'        => __('menus.export') ?: 'Export',
+                'export_xlsx'   => __('parcel.export_xlsx') ?: 'Excel',
+                'export_csv'    => __('parcel.export_csv') ?: 'CSV',
+                'dashboard'     => __('levels.dashboard') ?: 'Dashboard',
+                'tracking_id'   => __('parcel.tracking_id') ?: 'Tracking ID',
+                'recipient_info'=> __('parcel.recipient_info') ?: 'Recipient',
+                'amount'        => __('parcel.amount') ?: 'Amount',
+                'status'        => __('parcel.status') ?: 'Status',
+                'payment'       => __('parcel.payment') ?: 'Payment',
+                'date'          => __('parcel.date') ?: 'Date',
+                'date_ph'       => __('merchantPlaceholder.date') ?: 'YYYY-MM-DD ~ YYYY-MM-DD',
+                'status_ph'     => __('merchantPlaceholder.status') ?: 'All statuses',
+                'customer'      => __('parcel.customer') ?: 'Customer',
+                'customer_ph'   => __('merchantPlaceholder.customer') ?: 'Customer name',
+                'customer_phone'=> __('parcel.customer_phone') ?: 'Customer phone',
+                'phone_ph'      => __('merchantPlaceholder.phone') ?: 'Phone',
+                'invoice_id'    => __('invoice.id') ?: 'Invoice ID',
+                'invoice_ph'    => __('merchantPlaceholder.invoice_id') ?: 'Invoice ID',
+                'filter'        => __('levels.filter') ?: 'Filter',
+                'clear'         => __('levels.clear') ?: 'Clear',
+                'view'          => __('levels.view') ?: 'View',
+                'logs'          => __('parcel.logs') ?: 'Logs',
+                'empty'         => __('levels.no_data_found') ?: ($cfg['page_kind'] === 'bank' ? 'No parcels in bank.' : 'No parcels yet.'),
+            ],
         ]);
     }
 
@@ -95,19 +191,29 @@ class MerchantParcelController extends Controller
     {
         $userID = Auth::user()->id;
         $merchant = $this->currentMerchant();
-        if($this->repo->filter($merchant->id,$request)){
-            $parcels      = $this->repo->filter($merchant->id,$request);
-            return view('backend.merchant_panel.parcel.index',compact('parcels','request' ));
-        }else{
+        $parcels  = $this->repo->filter($merchant->id, $request);
+        if (! $parcels) {
             return redirect()->back();
         }
+        return $this->renderParcelList('Merchant/Parcel/Index', $request, $parcels, $merchant, [
+            'title_key' => 'menus.parcel',
+            'page_kind' => 'index',
+        ]);
     }
 
     public function create()
     {
         $userID = Auth::user()->id;
         $merchant = $this->currentMerchant();
+        return Inertia::render('Merchant/Parcel/Create', $this->buildParcelFormProps($merchant));
+    }
 
+    /**
+     * Shared prop bag for Create and Edit. Extracted so edit() can render the
+     * same Inertia component with a `parcel` prefill and `urls.update`.
+     */
+    protected function buildParcelFormProps($merchant): array
+    {
         // Normalize shops to a stable {id, name, phone, address, lat, long} shape.
         // getShops() pads index 0 with the default shop, which may be null.
         $shops = collect($this->repo->getShops($merchant->id))
@@ -160,15 +266,98 @@ class MerchantParcelController extends Controller
             ])
             ->values();
 
-        return Inertia::render('Merchant/Parcel/Create', [
-            'merchant'      => $merchant,
-            'defaultShop'   => $shops->first(),
+        $defaultShop = $shops->first();
+        $codCharges  = (array) ($merchant->cod_charges ?? []);
+        $fragileLiquidActive = SettingHelper('fragile_liquid_status') == \App\Enums\Status::ACTIVE;
+        $fragileLiquidCharge = (float) (SettingHelper('fragile_liquid_charge') ?: 0);
+
+        return [
+            'merchant' => [
+                'id'           => $merchant->id,
+                'business_name'=> $merchant->business_name,
+                'vat'          => (float) ($merchant->vat ?? 0),
+            ],
+            'cod_charges' => [
+                'inside_city'  => (float) ($codCharges['inside_city']  ?? 0),
+                'sub_city'     => (float) ($codCharges['sub_city']     ?? 0),
+                'outside_city' => (float) ($codCharges['outside_city'] ?? 0),
+            ],
+            'fragile_liquid' => [
+                'active' => (bool) $fragileLiquidActive,
+                'charge' => $fragileLiquidCharge,
+            ],
+            'default_shop' => $defaultShop ? [
+                'id'      => $defaultShop['id'],
+                'name'    => $defaultShop['name'],
+                'phone'   => $defaultShop['phone'],
+                'address' => $defaultShop['address'],
+                'lat'     => $defaultShop['lat'],
+                'long'    => $defaultShop['long'],
+            ] : null,
             'shops'         => $shops,
-            'deliveryTypes' => $deliveryTypes,
+            'delivery_types'=> $deliveryTypes,
             'categories'    => $availableCats,
-            'packagings'    => $this->repo->packaging(),
+            'packagings'    => collect($this->repo->packaging())->map(fn ($p) => [
+                'id'    => $p->id,
+                'name'  => $p->name,
+                'price' => (float) ($p->price ?? 0),
+            ])->values(),
             'cities'        => $cities,
-        ]);
+            'currency'      => settings()->currency,
+            'urls' => [
+                'store'             => route('merchant-panel.parcel.store'),
+                'cancel'            => route('merchant-panel.parcel.index'),
+                'shop_lookup'       => route('merchant-panel.parcel.merchant.shops'),
+                'weight_lookup'     => route('merchant-panel.parcel.deliveryCategory.deliveryWeight'),
+                'delivery_charge'   => route('merchant-panel.parcel.deliveryCharge.get'),
+                'areas_by_city'     => route('merchant-panel.parcel.getAreas'),
+            ],
+            't' => [
+                'title'              => __('Create shipment') ?: 'Create shipment',
+                'dashboard'          => __('Dashboard') ?: 'Dashboard',
+                'shipments'          => __('Shipments') ?: 'Shipments',
+                'create'             => __('Create') ?: 'Create',
+                'pickup_point'       => __('Pickup points') ?: 'Pickup point',
+                'pickup_point_ph'    => __('select pickup point') ?: 'Select pickup point',
+                'pickup_phone'       => __('Pickup phone') ?: 'Pickup phone',
+                'pickup_address'     => __('Pickup address') ?: 'Pickup address',
+                'cod'                => __('COD') ?: 'COD',
+                'cod_ph'             => __('Cash amount including delivery charge') ?: 'Cash amount including delivery charge',
+                'reference_number'   => __('Reference number') ?: 'Reference number',
+                'reference_ph'       => __('Reference number / Order number') ?: 'Reference number / Order number',
+                'category'           => __('parcel.category') ?: 'Category',
+                'weight'             => __('parcel.weight') ?: 'Weight',
+                'extra_weight'       => __('Extra weight') ?: 'Extra weight',
+                'delivery_type'      => __('parcel.delivery_type') ?: 'Delivery type',
+                'customer_name'      => __('parcel.customer_name') ?: 'Customer name',
+                'customer_phone'     => __('parcel.customer_phone') ?: 'Customer phone',
+                'city'               => __('City') ?: 'City',
+                'city_ph'            => __('Select City') ?: 'Select city',
+                'area'               => __('Area') ?: 'Area',
+                'area_ph'            => __('Select Area') ?: 'Select area',
+                'customer_address'   => __('parcel.customer_address') ?: 'Customer address',
+                'note'               => __('parcel.note') ?: 'Note',
+                'liquid_check_label' => __('parcel.liquid_check_label') ?: 'Fragile / liquid?',
+                'liquid_fragile'     => __('parcel.liquid_fragile') ?: 'Liquid / fragile',
+                'packaging'          => __('parcel.packaging') ?: 'Packaging',
+                'parcel_bank'        => __('levels.parcel_bank') ?: 'Save to parcel bank',
+                'select'             => __('menus.select') ?: 'Select',
+                'save'               => __('levels.save') ?: 'Save',
+                'cancel'             => __('levels.cancel') ?: 'Cancel',
+                // Charge summary card
+                'charge_details'     => __('parcel.charge_details') ?: 'Charge details',
+                'amount'             => __('levels.amount') ?: 'Amount',
+                'cash_collection'    => __('parcel.Cash_Collection') ?: 'Cash collection',
+                'delivery_charge'    => __('parcel.Delivery_Charge') ?: 'Delivery charge',
+                'cod_charge'         => __('reports.COD_Charge') ?: 'COD charge',
+                'liquid_charge'      => __('parcel.Liquid/Fragile_Charge') ?: 'Liquid/fragile charge',
+                'packaging_charge'   => __('reports.P.Charge') ?: 'Packaging charge',
+                'total_charge'       => __('parcel.Total_Charge') ?: 'Total charge',
+                'vat'                => __('parcel.Vat') ?: 'VAT',
+                'net_payable'        => __('parcel.Net_Payable') ?: 'Net payable',
+                'current_payable'    => __('parcel.Current_payable') ?: 'Current payable',
+            ],
+        ];
     }
 
     public function store(StoreRequest $request)
@@ -217,9 +406,63 @@ class MerchantParcelController extends Controller
     // Parcel logs
     public function logs($id)
     {
-        $parcel       = $this->repo->get($id);
-        $parcelevents = $this->repo->parcelEvents($id);
-        return view('backend.merchant_panel.parcel.logs', compact('parcel','parcelevents'));
+        $parcel = $this->repo->get($id);
+        if (! $parcel) {
+            abort(404);
+        }
+        $merchant = $this->currentMerchant();
+        if (! $merchant || (int) $parcel->merchant_id !== (int) $merchant->id) {
+            abort(403);
+        }
+
+        $events = \App\Models\Backend\ParcelEvent::where('parcel_id', $id)
+            ->with(['hub', 'deliveryMan.user', 'pickupman.user', 'user'])
+            ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        return Inertia::render('Merchant/Parcel/Logs', [
+            'parcel' => [
+                'id'           => $parcel->id,
+                'tracking_id'  => $parcel->tracking_id,
+                'status'       => (int) $parcel->status,
+                'status_label' => \App\Support\ParcelStatusHelper::label((int) $parcel->status),
+                'status_color' => \App\Support\ParcelStatusHelper::color((int) $parcel->status),
+                'created_at'   => optional($parcel->created_at)->format('Y-m-d H:i'),
+            ],
+            'events' => $events->map(function ($ev) {
+                $actor = optional(optional($ev)->user)->name
+                    ?? optional(optional($ev->deliveryMan)->user)->name
+                    ?? optional(optional($ev->pickupman)->user)->name;
+                $statusId = (int) $ev->parcel_status;
+                return [
+                    'id'         => $ev->id,
+                    'status'     => $statusId,
+                    'label'      => \App\Support\ParcelStatusHelper::label($statusId),
+                    'color'      => $ev->cancel_parcel_id ? 'red' : \App\Support\ParcelStatusHelper::color($statusId),
+                    'actor'      => $actor,
+                    'hub'        => optional($ev->hub)->name,
+                    'note'       => $ev->note,
+                    'created_at' => optional($ev->created_at)->format('Y-m-d H:i:s'),
+                ];
+            })->values(),
+            'urls' => [
+                'index'   => route('merchant-panel.parcel.index'),
+                'details' => route('merchant-panel.parcel.details', $parcel->id),
+            ],
+            't' => [
+                'title'        => __('parcel.parcel_logs') ?: 'Shipment logs',
+                'title_index'  => __('parcel.title') ?: 'Parcels',
+                'back_to_list' => __('levels.back') ?: 'Back',
+                'view_details' => __('levels.view') ?: 'View details',
+                'no_events'    => __('levels.no_data_found') ?: 'No events recorded yet.',
+                'actor'        => __('levels.user') ?: 'Actor',
+                'hub'          => __('levels.hub') ?: 'Hub',
+                'note'         => __('levels.note') ?: 'Note',
+                'status'       => __('levels.status') ?: 'Status',
+                'when'         => __('levels.date') ?: 'When',
+            ],
+        ]);
     }
 
     // Parcel duplicate
@@ -241,31 +484,222 @@ class MerchantParcelController extends Controller
     // Parcel details
     public function details($id)
     {
-        // return $this->repo->details($id);
-        $parcel       = $this->repo->details($id);
-        $parcelevents = $this->repo->parcelEvents($id);
-        return view('backend.merchant_panel.parcel.details',compact('parcel','parcelevents'));
+        $parcel = $this->repo->details($id);
+        if (! $parcel) {
+            abort(404);
+        }
+
+        // Tenant-isolation guard: a merchant can only see their own parcels.
+        $merchant = $this->currentMerchant();
+        if (! $merchant || (int) $parcel->merchant_id !== (int) $merchant->id) {
+            abort(403);
+        }
+
+        $parcel->loadMissing(['images', 'merchant.user', 'merchantShop', 'hub', 'city', 'area', 'deliveryCategory']);
+
+        $events = \App\Models\Backend\ParcelEvent::where('parcel_id', $id)
+            ->with(['hub', 'deliveryMan.user', 'pickupman.user', 'user'])
+            ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $waLink = function ($phone) {
+            $digits = preg_replace('/\D+/', '', (string) $phone);
+            return $digits ? 'https://wa.me/' . $digits : null;
+        };
+
+        $attachments = [];
+        foreach ($parcel->images ?? [] as $img) {
+            $attachments[] = [
+                'url'     => $img->image_url,
+                'label'   => ucfirst(str_replace('_', ' ', $img->type)),
+                'date'    => optional($img->created_at)->format('Y-m-d H:i'),
+                'contain' => false,
+            ];
+        }
+        foreach ($events as $ev) {
+            if ($ev->delivered_image) {
+                $attachments[] = [
+                    'url'     => static_asset($ev->delivered_image),
+                    'label'   => __('Delivered Photo'),
+                    'date'    => optional($ev->created_at)->format('Y-m-d H:i'),
+                    'contain' => false,
+                ];
+            }
+            if ($ev->signature_image) {
+                $attachments[] = [
+                    'url'     => static_asset($ev->signature_image),
+                    'label'   => __('Signature'),
+                    'date'    => optional($ev->created_at)->format('Y-m-d H:i'),
+                    'contain' => true,
+                ];
+            }
+        }
+
+        $senderName  = optional($parcel->merchant)->business_name ?? optional($parcel->merchantShop)->name;
+        $senderPhone = $parcel->pickup_phone ?: optional(optional($parcel->merchant)->user)->mobile;
+
+        $isPending = (int) $parcel->status === \App\Enums\ParcelStatus::PENDING;
+
+        return Inertia::render('Merchant/Parcel/Details', [
+            'parcel' => [
+                'id'                    => $parcel->id,
+                'tracking_id'           => $parcel->tracking_id,
+                'invoice_no'            => $parcel->invoice_no,
+                'status'                => (int) $parcel->status,
+                'status_label'          => \App\Support\ParcelStatusHelper::label((int) $parcel->status),
+                'status_color'          => \App\Support\ParcelStatusHelper::color((int) $parcel->status),
+                'created_at'            => optional($parcel->created_at)->format('Y-m-d H:i'),
+                'updated_at'            => optional($parcel->updated_at)->format('Y-m-d H:i'),
+                'cod_amount'            => (float) ($parcel->cod_amount ?? 0),
+                'cash_collection'       => (float) ($parcel->cash_collection ?? 0),
+                'selling_price'         => (float) ($parcel->selling_price ?? 0),
+                'total_delivery_amount' => (float) ($parcel->total_delivery_amount ?? 0),
+                'vat_amount'            => (float) ($parcel->vat_amount ?? 0),
+                'current_payable'       => (float) ($parcel->current_payable ?? 0),
+                'weight'                => $parcel->weight,
+                'weight_unit'           => optional($parcel->deliveryCategory)->title,
+                'delivery_type'         => $parcel->delivery_type_name ?? null,
+                'city'                  => optional($parcel->city)->name,
+                'area'                  => optional($parcel->area)->name,
+                'hub'                   => optional($parcel->hub)->name,
+                'priority'              => (int) ($parcel->priority_type_id ?? 2),
+                'note'                  => $parcel->note,
+                'attempts'              => (int) ($parcel->number_of_attempts ?? 0),
+            ],
+            'sender' => [
+                'name'     => $senderName,
+                'address'  => $parcel->pickup_address,
+                'phone'    => $senderPhone,
+                'whatsapp' => $waLink($senderPhone),
+            ],
+            'recipient' => [
+                'name'     => $parcel->customer_name,
+                'address'  => $parcel->customer_address,
+                'phone'    => $parcel->customer_phone,
+                'whatsapp' => $waLink($parcel->customer_phone),
+            ],
+            'attachments' => $attachments,
+            'events' => $events->map(function ($ev) {
+                $actor = optional(optional($ev)->user)->name
+                    ?? optional(optional($ev->deliveryMan)->user)->name
+                    ?? optional(optional($ev->pickupman)->user)->name;
+                $statusId = (int) $ev->parcel_status;
+                return [
+                    'id'         => $ev->id,
+                    'status'     => $statusId,
+                    'label'      => \App\Support\ParcelStatusHelper::label($statusId),
+                    'color'      => $ev->cancel_parcel_id ? 'red' : \App\Support\ParcelStatusHelper::color($statusId),
+                    'actor'      => $actor,
+                    'hub'        => optional($ev->hub)->name,
+                    'note'       => $ev->note,
+                    'created_at' => optional($ev->created_at)->format('Y-m-d H:i:s'),
+                ];
+            })->values(),
+            'currency'    => settings()->currency,
+            'permissions' => [
+                // Merchants can edit/delete only while the parcel is still Pending.
+                'edit'   => $isPending,
+                'delete' => $isPending,
+            ],
+            'urls' => [
+                'index'  => route('merchant-panel.parcel.index'),
+                'edit'   => route('merchant-panel.parcel.edit',   $parcel->id),
+                'logs'   => route('merchant-panel.parcel.logs',   $parcel->id),
+                'delete' => route('merchant-panel.parcel.delete', $parcel->id),
+            ],
+            't' => $this->parcelDetailsLabels(),
+        ]);
+    }
+
+    private function parcelDetailsLabels(): array
+    {
+        return [
+            'title'             => __('parcel.parcel_details') ?: 'Shipment details',
+            'title_index'       => __('parcel.title') ?: 'Parcels',
+            'sender_info'       => __('parcel.sender_info') ?: 'Sender',
+            'recipient_info'    => __('parcel.recipient_info') ?: 'Recipient',
+            'attachment'        => __('levels.attachment') ?: 'Attachments',
+            'no_attachments'    => __('levels.no_data_found') ?: 'No attachments',
+            'edit'              => __('levels.edit') ?: 'Edit',
+            'logs'              => __('parcel.logs') ?: 'Logs',
+            'tracking_id'       => __('parcel.tracking_id') ?: 'Tracking ID',
+            'booking_date'      => __('levels.booking_date') ?: 'Booking date',
+            'cod'               => __('levels.cod') ?: 'COD',
+            'cash_collection'   => __('parcel.cash_collection') ?: 'Cash collection',
+            'price'             => __('levels.price') ?: 'Price',
+            'invoice'           => __('invoice.invoice') ?: 'Invoice',
+            'weight'            => __('levels.weight') ?: 'Weight',
+            'delivery_type'     => __('levels.delivery_type') ?: 'Delivery type',
+            'city'              => __('levels.city') ?: 'City',
+            'area'              => __('levels.area') ?: 'Area',
+            'hub'               => __('levels.hub') ?: 'Hub',
+            'note'              => __('levels.note') ?: 'Note',
+            'status'            => __('levels.status') ?: 'Status',
+            'timeline'          => __('parcel.timeline') ?: 'Timeline',
+            'finance'           => __('parcel.finance') ?: 'Finance',
+            'delivery'          => __('parcel.delivery_charge') ?: 'Delivery',
+            'vat'               => __('parcel.vat') ?: 'VAT',
+            'net_payable'       => __('parcel.Net_Payable') ?: 'Net payable',
+            'shipment_creation' => __('parcel.parcel_create') ?: 'Shipment created',
+            'attempts'          => __('parcel.attempts') ?: 'Delivery attempts',
+            'back_to_list'      => __('levels.back') ?: 'Back',
+            'priority_high'     => __('parcel.priority_high') ?: 'High',
+        ];
     }
 
     public function edit($id)
     {
-        $userID = Auth::user()->id;
-        $parcel = $this->repo->get($id);
-        if($parcel->status == ParcelStatus::PENDING){
-            $merchant = $this->currentMerchant();
-            $shops = $this->repo->getShops($merchant->id);
-            $deliveryCharges = DeliveryCharge::companywise()->where('category_id',$parcel->category_id)->get();
-            $deliveryCategories = $this->repo->deliveryCategories();
-            $deliveryCategoryCharges = $this->repo->deliveryCharges();
-            $packagings = $this->repo->packaging();
-            $deliveryTypes      = $this->repo->deliveryTypes();
-            return view('backend.merchant_panel.parcel.edit',compact('parcel','merchant','deliveryTypes','shops','deliveryCategories','deliveryCategoryCharges','deliveryCharges','packagings'));
-        }
-        else{
-            Toastr::error(__('parcel.edit_error_message'),__('message.error'));
+        $userID   = Auth::user()->id;
+        $parcel   = $this->repo->get($id);
+        $merchant = $this->currentMerchant();
+
+        if (! $parcel) { abort(404); }
+        if (! $merchant || (int) $parcel->merchant_id !== (int) $merchant->id) { abort(403); }
+
+        // Merchants can only edit while the parcel is still Pending.
+        if ($parcel->status != ParcelStatus::PENDING) {
+            Toastr::error(__('parcel.edit_error_message'), __('message.error'));
             return redirect()->route('merchant-panel.parcel.index');
         }
 
+        // Reuse the shared form-prop builder, then layer edit-mode additions:
+        // the source parcel for prefill, a PUT-target store URL, and edit title.
+        $base = $this->buildParcelFormProps($merchant);
+        $base['parcel'] = [
+            'id'                    => $parcel->id,
+            'tracking_id'           => $parcel->tracking_id,
+            'shop_id'               => $parcel->merchant_shop_id,
+            'pickup_phone'          => $parcel->pickup_phone,
+            'pickup_address'        => $parcel->pickup_address,
+            'pickup_lat'            => $parcel->pickup_lat,
+            'pickup_long'           => $parcel->pickup_long,
+            'cash_collection'       => $parcel->cash_collection,
+            'invoice_no'            => $parcel->invoice_no,
+            'category_id'           => $parcel->category_id,
+            'weight'                => $parcel->weight,
+            'extra_weight'          => 0,
+            'delivery_type_id'      => $parcel->delivery_type_id,
+            'customer_name'         => $parcel->customer_name,
+            'customer_phone'        => $parcel->customer_phone,
+            'customer_address'      => $parcel->customer_address,
+            'customer_lat'          => $parcel->customer_lat,
+            'customer_long'         => $parcel->customer_long,
+            'city_id'               => $parcel->city_id,
+            'area_id'               => $parcel->area_id,
+            'note'                  => $parcel->note,
+            'packaging_id'          => $parcel->packaging_id,
+            'parcel_bank'           => $parcel->parcel_bank === 'on',
+            'liquid_fragile_amount' => $parcel->liquid_fragile_amount,
+            'cod_charge'            => $parcel->cod_charge ?? 0,
+            'vat'                   => $parcel->vat ?? 0,
+        ];
+        $base['mode'] = 'edit';
+        $base['urls']['update'] = route('merchant-panel.parcel.update', $parcel->id);
+        $base['t']['edit']       = __('parcel.parcel_edit') ?: 'Edit shipment';
+        $base['t']['edit_title'] = (__('parcel.parcel_edit') ?: 'Edit shipment') . ' · ' . $parcel->tracking_id;
+
+        return Inertia::render('Merchant/Parcel/Create', $base);
     }
 
 
@@ -307,8 +741,52 @@ class MerchantParcelController extends Controller
 
     public function parcelImportExport()
     {
-        $deliveryCategories = $this->repo->deliveryCategories();
-        return view('backend.merchant_panel.parcel.import',compact('deliveryCategories'));
+        return Inertia::render('Merchant/Parcel/Import', [
+            'step' => 'upload',
+            'urls' => $this->importUrls(),
+            't'    => $this->importLabels(),
+        ]);
+    }
+
+    /**
+     * Shared URL bundle for the import wizard. Both the upload step and the
+     * preview step render the same Inertia page, so they share these.
+     */
+    private function importUrls(): array
+    {
+        return [
+            'dashboard'      => route('dashboard.index'),
+            'parcel_index'   => route('merchant-panel.parcel.index'),
+            'upload'         => route('merchant-panel.m_parcel.file-import.post'),
+            'confirm'        => route('merchant-panel.parcel.import.confirm'),
+            'cancel'         => route('merchant-panel.parcel.parcel-import'),
+            'sample'         => route('exports.shipment-template'),
+        ];
+    }
+
+    private function importLabels(): array
+    {
+        return [
+            'title'             => __('parcel.import_with_preview') ?: 'Import shipments',
+            'dashboard'         => __('levels.dashboard') ?: 'Dashboard',
+            'parcels'           => __('parcel.title') ?: 'Parcels',
+            'parcel_import'     => __('parcel.parcel_import') ?: 'Shipment import',
+            'sample'            => __('parcel.sample') ?: 'Download sample',
+            'import'            => __('parcel.import') ?: 'Import',
+            'note'              => __('merchantImport.note') ?: 'Please check this before importing your file.',
+            'tip_01'            => __('merchantImport.01') ?: 'Uploaded file type must be xlsx.',
+            'choose_file'       => __('levels.choose_file') ?: 'Choose file',
+            'no_file'           => __('levels.no_data_found') ?: 'No file chosen',
+            'preview_title'     => __('parcel.preview_title') ?: 'Preview before confirming',
+            'total_rows'        => __('parcel.total_rows') ?: 'Total rows',
+            'showing_first'     => __('parcel.showing_first') ?: 'Showing first',
+            'rows_only'         => __('parcel.rows_only') ?: 'rows',
+            'expected_columns'  => __('parcel.expected_columns') ?: 'Expected column order',
+            'confirm_import'    => __('parcel.confirm_import') ?: 'Confirm import',
+            'back'              => __('levels.back') ?: 'Back',
+            'validation_errors' => __('parcel.validation_errors') ?: 'Validation errors',
+            'row_number'        => __('parcel.row_number') ?: 'Row',
+        ];
     }
     
     
@@ -446,11 +924,15 @@ public function m_parcelImport(Request $request)
     // 📊 Preview the first 100 rows
     $previewRows = collect($normalizedRows)->take(100);
 
-    return view('backend.merchant_panel.parcel.preview', [
-        'headers'     => $headers,
-        'previewRows' => $previewRows,
-        'totalRows'   => count($normalizedRows),
-        'expected'    => $expected,
+    return Inertia::render('Merchant/Parcel/Import', [
+        'step'         => 'preview',
+        'headers'      => $headers->values()->all(),
+        'preview_rows' => $previewRows->map(fn ($r) => $r->values()->all())->values()->all(),
+        'total_rows'   => count($normalizedRows),
+        'preview_count' => $previewRows->count(),
+        'expected'     => $expected->values()->all(),
+        'urls'         => $this->importUrls(),
+        't'            => $this->importLabels(),
     ]);
 }
 

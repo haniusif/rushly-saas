@@ -55,7 +55,7 @@ All four bridges talk to `rushly-saas` via `/api/v10/*` using the shared `apiKey
 
 ## 0. Main rushly-saas app (the logistics platform itself)
 
-The repo root is a **multi-tenant logistics / courier management SaaS** built on Laravel 10. A single deployment hosts:
+The repo root is a **multi-tenant logistics / courier management SaaS** built on Laravel 12. A single deployment hosts:
 
 - A **central domain** (marketing site + super-admin) where logistics companies sign up.
 - **Tenant subdomains** (one per customer company) running the operational app — admins, hub managers, merchants, delivery men all log into their own subdomain.
@@ -66,8 +66,8 @@ Each tenant runs the full courier workflow: parcels, hubs, delivery men, merchan
 
 | Layer | Choice |
 |---|---|
-| Framework | Laravel 10 (`^10.10`) |
-| PHP | `^8.1` (tested on 8.3 — vendor deps break on 8.4) |
+| Framework | Laravel 12 |
+| PHP | 8.4 |
 | DB | MySQL (`mysqli` + `pdo`) |
 | Multi-tenancy | `stancl/tenancy` v3.7 (shared DB, per-tenant cache/filesystem) |
 | Frontend | Blade + pre-compiled `public/css`/`public/js` (Vite config exists but unused) |
@@ -84,7 +84,16 @@ Each tenant runs the full courier workflow: parcels, hubs, delivery men, merchan
 - `app/Http/Controllers/` — ~125 controllers split across `Auth/`, `Api/V10/`, `Backend/` (admin/ops, with `HubPanel/`, `MerchantPanel/`, `Superadmin/`, `FrontWeb/` sub-panels), `Frontend/`, `Admin/`.
 - `app/Models/` — ~87 Eloquent models (`Backend/` holds the domain models: `Parcel`, `Merchant`, `Hub`, `Account`, `Salary`, plus the new `Tour`, `TourStep`, `UserTourProgress`, `TourEvent`).
 - `app/Repositories/` — ~48 repositories, interface-bound in `AppServiceProvider` (100+ bindings) and constructor-injected into controllers.
-- `app/Services/` — `DeliveryPandaService` (3PL), `SallaService`, `ZidService`, `WooCommerceService` (these push status writebacks back to the bridge apps / plugin), `FollowupNotificationDispatcher`.
+- `app/Services/` — legacy per-provider 3PL services (`DeliveryPandaService`, `AramexService`, `JetService`, `ZajelService`), storefront writeback services (`SallaService`, `ZidService`, `WooCommerceService`), `SmsService`, `FollowupNotificationDispatcher`.
+- **Module namespaces** (each with `Contracts/` + `DTOs/` + `Services/` + `Models/` + own service provider):
+  - `app/Shipping/` — generic courier abstraction ([`docs/shipping-architecture.md`](docs/shipping-architecture.md)). Logestechs is the first production-verified provider.
+  - `app/Commerce/` — generic storefront abstraction ([`COMMERCE.md`](COMMERCE.md)). Salla is the first provider; feature-flag gated.
+  - `app/Oms/` — canonical orders + normalization pipeline ([`OMS.md`](OMS.md)).
+  - `app/Fulfillment/` — router + strategies (`wms`, `threepl_dropship`, `merchant_self`) ([`FULFILLMENT.md`](FULFILLMENT.md)).
+  - `app/Wms/` — warehouse-management observers (fires `StockChanged` → Commerce inventory sync).
+  - `app/Qoyod/`, `app/Daftra/`, `app/Odoo/` — per-tenant accounting sync ([`ACCOUNTING.md`](ACCOUNTING.md)).
+  - `app/Zatca/` — Saudi e-invoicing Phase 1.
+  - `app/Salla/` — Salla-specific OAuth + webhook bridge.
 - `app/Enums/` — 24 enums; the central one is `ParcelStatus` (34-state lifecycle, paired with `app/Support/ParcelStatusHelper` for the state machine).
 - `database/migrations/` — ~96 migrations → ~116 tables across tenancy/auth, parcels & logistics, merchants & billing, accounting, settings, HR, support, geography, CMS, superadmin/plans, and onboarding tours.
 - `routes/` — 7 files: `web.php` (main app), `superadmin.php` (central-only), `api.php` (v10 REST), `admin.php`, `tenant.php`, `console.php`, `channels.php`.
@@ -95,6 +104,8 @@ Each tenant runs the full courier workflow: parcels, hubs, delivery men, merchan
 **How the bridges plug in** — Each bridge stores a per-merchant Sanctum token (`SallaMerchant.rushly_merchant_token`, `ZidStore.rushly_merchant_token`) issued by rushly-saas to scope parcel creation to the right merchant. WooCommerce skips this and passes `merchant_id` in the JSON body instead. Status writeback (parcel → storefront) is driven from rushly-saas using link tables (`salla_orders`, `zid_orders`, `woocommerce_orders`) that live in the main DB, not in the bridge apps.
 
 **Onboarding tours** — Every logged-in user is auto-offered a role-appropriate walkthrough on first login. 18 system tours ship out of the box (12 admin + 6 merchant, covering every sidebar module). Tours are JSON-authored (`database/seeders/tours/`), tenant-overridable via `/admin/tours`, EN+AR bilingual with RTL support. Full architecture in `TOURS.md`.
+
+**Mobile-app directory (in-tenant)** — Every tenant admin exposes the eight companion Flutter apps at **Settings → Mobile Apps** (`/admin/settings/mobile-apps`), gated by the `mobile_apps_read` permission. Read-only catalog with per-role app tiles; the individual apps themselves live in sibling repos and are documented in `MOBILE_APPS.md`.
 
 **Authoritative deep-dive**: `ARCHITECTURE.md` at the repo root (directory map, full table list, controller breakdown, middleware, enums, integrations).
 

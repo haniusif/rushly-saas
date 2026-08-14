@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Backend\Wms;
 
 use App\Enums\Wms\FulfillmentStatus;
+use App\Http\Controllers\Backend\Wms\Concerns\RendersInertiaIndex;
 use App\Http\Controllers\Controller;
 use App\Models\Backend\Wms\WmsFulfillment;
 use App\Models\Backend\Wms\WmsFulfillmentItem;
@@ -11,9 +12,12 @@ use App\Repositories\Wms\WmsFulfillmentRepositoryInterface;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class WmsFulfillmentController extends Controller
 {
+    use RendersInertiaIndex;
+
     public function __construct(
         protected WmsFulfillmentRepositoryInterface $repo,
         protected HubInterface $hubRepo
@@ -21,8 +25,8 @@ class WmsFulfillmentController extends Controller
 
     public function index(Request $request)
     {
-        $fulfillments = $this->repo->all($request);
-        $hubs         = $this->hubRepo->all();
+        $paginator = $this->repo->all($request);
+        $hubs      = $this->hubRepo->all();
 
         $base = WmsFulfillment::companywise();
         $summary = [
@@ -35,7 +39,43 @@ class WmsFulfillmentController extends Controller
             'sla_breached' => $this->repo->breachedSla()->count(),
         ];
 
-        return view('backend.wms.fulfillment.index', compact('fulfillments', 'hubs', 'summary'));
+        $rows = collect($paginator->items())->map(fn ($f) => [
+            'id'             => $f->id,
+            'fulfillment_no' => $f->fulfillment_number,
+            'parcel_label'   => optional($f->parcel)->tracking_id ?? ('#' . $f->parcel_id),
+            'merchant'       => optional($f->merchant)->business_name,
+            'hub'            => optional($f->hub)->name,
+            'picker'         => optional($f->picker)->name,
+            'status'         => $f->status,
+            'status_label'   => ucwords(str_replace('_', ' ', $f->status)),
+            'sla_deadline'   => optional($f->sla_deadline)->diffForHumans(),
+            'sla_overdue'    => $f->sla_deadline && $f->sla_deadline->isPast()
+                                && !in_array($f->status, [FulfillmentStatus::DISPATCHED, FulfillmentStatus::CANCELLED]),
+            'url'            => route('wms.fulfillment.show', $f->id),
+        ])->values();
+
+        return Inertia::render('Admin/Wms/Fulfillment/Index', [
+            'rows'        => $rows,
+            'pagination'  => $this->paginateMeta($paginator),
+            'filters'     => [
+                'status'        => $request->input('status', ''),
+                'hub_id'        => $request->input('hub_id', ''),
+                'sla_breached'  => (bool) $request->boolean('sla_breached'),
+            ],
+            'summary'     => array_map('intval', $summary),
+            'lookups'     => [
+                'statuses' => ['pending', 'picking', 'packing', 'ready', 'dispatched', 'cancelled'],
+                'hubs'     => $this->lookupRows($hubs, fn ($h) => ['id' => $h->id, 'name' => $h->name]),
+            ],
+            'urls' => [
+                'index' => route('wms.fulfillment.index'),
+            ],
+            't' => $this->indexLabels([
+                'title' => 'Fulfillment', 'fulfillment_number' => 'Fulfillment #',
+                'parcel' => 'Parcel', 'merchant' => 'Merchant', 'hub' => 'Hub', 'picker' => 'Picker', 'sla' => 'SLA',
+                'sla_breached' => 'SLA breached', 'overdue' => 'Overdue',
+            ]),
+        ]);
     }
 
     public function show(int $id)

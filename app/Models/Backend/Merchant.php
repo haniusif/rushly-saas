@@ -17,7 +17,7 @@ use PhpParser\Node\Stmt\Static_;
 class Merchant extends Model
 {
     use HasFactory, LogsActivity;
-    protected $fillable = ['title','business_name','current_balance','user_id'];
+    protected $fillable = ['title','business_name','current_balance','user_id','label_template'];
 
     protected $casts = [
         "cod_charges"       => 'array',

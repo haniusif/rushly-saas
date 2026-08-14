@@ -24,9 +24,14 @@ class ZidService
 
     public static function fromConfig(): self
     {
+        // Per-tenant Zid bridge config wins; env values stay only as a
+        // fallback for installs that haven't migrated yet.
+        $appUrl = zidBridge('app_url') ?: config('services.zid.app_url');
+        $token  = zidBridge('writeback_token') ?: config('services.zid.writeback_token');
+
         return new self(
-            (string) rtrim(config('services.zid.app_url') ?? '', '/'),
-            (string) config('services.zid.writeback_token'),
+            (string) rtrim((string) ($appUrl ?? ''), '/'),
+            (string) ($token ?? ''),
         );
     }
 

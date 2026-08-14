@@ -49,6 +49,7 @@ use App\Http\Controllers\Backend\FraudController;
 use App\Http\Controllers\Backend\NdrController;
 use App\Http\Controllers\Backend\AbnormalShipmentController;
 use App\Http\Controllers\Backend\LabelTemplateController;
+use App\Http\Controllers\Backend\MobileAppsController;
 use App\Http\Controllers\Backend\SettingsHubController;
 use App\Http\Controllers\Backend\Zatca\SettingsController as ZatcaSettingsController;
 use App\Http\Controllers\Backend\Zatca\InvoiceController as ZatcaInvoiceController;
@@ -784,6 +785,11 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
 
                         // Settings hub — single landing page with cards for every settings module
                         Route::get('settings',                                  [SettingsHubController::class, 'index'])->name('settings.index');
+
+                        // Mobile apps directory — companion role-specific Flutter apps
+                        Route::get('settings/mobile-apps',                      [MobileAppsController::class, 'index'])
+                            ->middleware('hasPermission:mobile_apps_read')
+                            ->name('mobile-apps.index');
 
                         // Shipping label templates (5 carrier-styled layouts + per-merchant override)
                         Route::prefix('settings/label-templates')->name('label-templates.')->middleware('hasPermission:label_template_manage')->group(function () {

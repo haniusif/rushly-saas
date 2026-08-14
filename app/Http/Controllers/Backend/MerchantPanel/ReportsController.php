@@ -12,6 +12,7 @@ use App\Repositories\MerchantPanel\MerchantParcel\MerchantParcelInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use Inertia\Inertia;
 
 class ReportsController extends Controller
 {
@@ -22,10 +23,14 @@ class ReportsController extends Controller
         $this->merchant_parcel_repo = $merchant_parcel_repo;
     }
 
-    public function TotalSummeryReports(Request $request){
-        $parcelsStatus=null;
-        $parcels=null;
-        return view('backend.merchant_panel.reports.total_summery',compact('request','parcelsStatus','parcels'));
+    public function TotalSummeryReports(Request $request)
+    {
+        return $this->renderTotalSummery($request, [
+            'parcelsTotal' => $this->zeroParcelsTotal(),
+            'parcelProfit' => $this->zeroParcelProfit(),
+            'merchantTotalPayment' => ['paidAmount' => 0, 'pendingAmount' => 0],
+            'has_data' => false,
+        ]);
     }
 
 
@@ -110,7 +115,106 @@ public function parcelFinanceReports(Request $request)
             }
         }
 
-        return view('backend.merchant_panel.reports.total_summery',compact('request','merchant','parcelsStatus','parcelProfit','parcelsTotal','merchantTotalPayment','parcels'));
+        return $this->renderTotalSummery($request, [
+            'parcelsTotal' => $parcelsTotal,
+            'parcelProfit' => $parcelProfit,
+            'merchantTotalPayment' => $merchantTotalPayment,
+            'has_data' => true,
+        ]);
+    }
+
+    private function zeroParcelsTotal(): array
+    {
+        return [
+            'totalBankOpeningBalance' => 0,
+            'totalBankBalance'        => 0,
+            'totalPaybleAmount'       => 0,
+            'totalCashCollection'     => 0,
+            'totalSellingPrice'       => 0,
+            'totalDeliveryIncome'     => 0,
+            'totalDeliveryExpense'    => 0,
+        ];
+    }
+
+    private function zeroParcelProfit(): array
+    {
+        return [
+            'totalDeliveryChargeVat'  => 0,
+            'totalDeliveryCharge'     => 0,
+            'totalCOD'                => 0,
+            'totalVat'                => 0,
+            'totalLiquidFragileAmount'=> 0,
+            'packagingAmount'         => 0,
+        ];
+    }
+
+    private function renderTotalSummery(Request $request, array $data)
+    {
+        $totals = $data['parcelsTotal'];
+        $profit = $data['parcelProfit'];
+        $pay    = $data['merchantTotalPayment'];
+
+        $netProfit = ($totals['totalCashCollection'] ?? 0) - ($totals['totalSellingPrice'] ?? 0);
+
+        return Inertia::render('Merchant/Reports/TotalSummery', [
+            'currency'   => settings()->currency,
+            'has_data'   => (bool) ($data['has_data'] ?? false),
+            'filters'    => [
+                'date' => $request->date,
+            ],
+            'profit'     => [
+                'delivery_charge'  => (float) $profit['totalDeliveryCharge'],
+                'cod'              => (float) $profit['totalCOD'],
+                'vat'              => (float) $profit['totalVat'],
+                'liquid_fragile'   => (float) $profit['totalLiquidFragileAmount'],
+                'packaging'        => (float) $profit['packagingAmount'],
+                'net_profit'       => (float) $netProfit,
+                'delivery_charge_vat' => (float) $profit['totalDeliveryChargeVat'],
+            ],
+            'totals'     => [
+                'cash_collection'   => (float) $totals['totalCashCollection'],
+                'selling_price'     => (float) $totals['totalSellingPrice'],
+                'payable_amount'    => (float) $totals['totalPaybleAmount'],
+                'bank_opening'      => (float) $totals['totalBankOpeningBalance'],
+                'bank_balance'      => (float) $totals['totalBankBalance'],
+            ],
+            'payments' => [
+                'paid_amount'       => (float) ($pay['paidAmount'] ?? 0),
+                'pending_amount'    => (float) ($pay['pendingAmount'] ?? 0),
+            ],
+            'urls' => [
+                'filter' => route('merchant.parcel.filter.total.summery'),
+                'reset'  => route('merchant.total.summery'),
+            ],
+            't' => [
+                'title'             => __('menus.total_summery') ?: 'Total summary',
+                'dashboard'         => __('levels.dashboard') ?: 'Dashboard',
+                'reports'           => __('menus.reports') ?: 'Reports',
+                'date'              => __('parcel.date') ?: 'Date',
+                'date_ph'           => __('merchantPlaceholder.date') ?: 'YYYY-MM-DD To YYYY-MM-DD',
+                'filter'            => __('levels.filter') ?: 'Filter',
+                'clear'             => __('levels.clear') ?: 'Clear',
+                'apply_filter_hint' => __('levels.apply_filter') ?: 'Apply a date filter to see totals.',
+                'delivery_charge'   => __('dashboard.total_delivery_charge') ?: 'Total delivery charge',
+                'cod'               => __('dashboard.total_cod_amount') ?: 'Total COD amount',
+                'vat'               => __('dashboard.total_vat_amount') ?: 'Total VAT amount',
+                'liquid_fragile'    => __('dashboard.total_liquid_fragile_amount') ?: 'Total liquid/fragile',
+                'packaging'         => __('dashboard.total_packaging_amount') ?: 'Total packaging',
+                'net_profit'        => __('dashboard.net_profit_ammount') ?: 'Net profit',
+                'cash_collection'   => __('dashboard.total_cash_collection') ?: 'Cash collection',
+                'selling_price'     => __('dashboard.total_selling_price') ?: 'Selling price',
+                'payable_amount'    => __('dashboard.payable_amount') ?: 'Payable amount',
+                'paid_amount'       => __('dashboard.paid_amount') ?: 'Paid amount',
+                'pending_amount'    => __('dashboard.pending_amount') ?: 'Pending amount',
+                'delivery_charge_vat'=> __('dashboard.total_delivery_charge_vat') ?: 'Delivery charge + VAT',
+                'bank_opening'      => __('dashboard.bank_opening_balance') ?: 'Bank opening balance',
+                'bank_balance'      => __('dashboard.bank_balance') ?: 'Bank balance',
+                'group_profit'      => __('dashboard.parcels_profit') ?: 'Parcels profit',
+                'group_sales'       => __('dashboard.parcels_sales') ?: 'Parcels sales',
+                'group_payments'    => __('dashboard.payments') ?: 'Payments',
+                'group_accounts'    => __('dashboard.accounts') ?: 'Accounts',
+            ],
+        ]);
     }
 
 }

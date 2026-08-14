@@ -15,6 +15,7 @@ use App\Repositories\NdrRepositoryInterface;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
 
 class NdrController extends Controller
@@ -35,12 +36,92 @@ class NdrController extends Controller
 
     public function index(Request $request)
     {
-        $ndrs           = $this->repo->all($request);
+        $paginator      = $this->repo->all($request);
         $stats          = $this->repo->stats();
         $failureReasons = $this->failureReasonOptions();
         $deliverymans   = $this->deliveryman->all();
 
-        return view('backend.ndr.index', compact('ndrs', 'stats', 'failureReasons', 'deliverymans'));
+        $rows = collect($paginator->items())->map(fn ($n) => [
+            'id'              => $n->id,
+            'tracking_id'     => optional($n->parcel)->tracking_id ?? ('#' . $n->parcel_id),
+            'attempt_number' => (int) $n->attempt_number,
+            'failure_reason'  => $n->failure_reason,
+            'failure_label'   => ucwords(str_replace('_', ' ', $n->failure_reason)),
+            'deliveryman'     => optional($n->deliveryman)->name,
+            'status'          => $n->status,
+            'status_label'    => ucwords(str_replace('_', ' ', $n->status)),
+            'created_at'      => optional($n->created_at)->diffForHumans(),
+            'url'             => route('ndr.show', $n->id),
+        ])->values();
+
+        $deliverymanRows = collect($deliverymans instanceof \Illuminate\Pagination\AbstractPaginator
+            ? $deliverymans->items() : $deliverymans)->map(fn ($d) => [
+                'id'   => $d->user_id ?? $d->id,
+                'name' => optional($d->user)->name ?? $d->name ?? ('#' . $d->id),
+            ])->values();
+
+        $filters = $request->only(['status', 'failure_reason', 'deliveryman_id', 'date_from', 'date_to']);
+
+        return Inertia::render('Admin/Ndr/Index', [
+            'rows'        => $rows,
+            'pagination'  => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'from'         => $paginator->firstItem(),
+                'to'           => $paginator->lastItem(),
+                'total'        => $paginator->total(),
+                'prev_url'     => $paginator->previousPageUrl(),
+                'next_url'     => $paginator->nextPageUrl(),
+            ],
+            'filters' => array_merge([
+                'status' => '', 'failure_reason' => '', 'deliveryman_id' => '',
+                'date_from' => '', 'date_to' => '',
+            ], $filters),
+            'stats' => [
+                'today'       => (int) ($stats['today'] ?? 0),
+                'open'        => (int) ($stats['open'] ?? 0),
+                'in_progress' => (int) ($stats['in_progress'] ?? 0),
+                'resolved'    => (int) ($stats['resolved'] ?? 0),
+                'return_rate' => (float) ($stats['return_rate'] ?? 0),
+            ],
+            'lookups' => [
+                'statuses'    => ['open', 'in_progress', 'resolved', 'returned'],
+                'reasons'     => collect($failureReasons)->map(fn ($label, $key) => [
+                    'value' => $key, 'label' => $label,
+                ])->values(),
+                'deliverymen' => $deliverymanRows,
+            ],
+            'urls' => [
+                'index'  => route('ndr.index'),
+                'export' => route('ndr.export', $filters),
+            ],
+            't' => [
+                'title'          => __('ndr.title') ?: 'NDR',
+                'list'           => __('levels.list') ?: 'List',
+                'today_ndrs'     => __('ndr.today_ndrs') ?: 'Today',
+                'pending'        => __('ndr.pending') ?: 'Pending',
+                'resolved'       => __('ndr.resolved') ?: 'Resolved',
+                'return_rate'    => __('ndr.return_rate') ?: 'Return rate',
+                'all_status'     => __('ndr.all_status') ?: 'All status',
+                'all_reasons'    => __('ndr.all_reasons') ?: 'All reasons',
+                'any_deliveryman'=> __('ndr.any_deliveryman') ?: 'Any courier',
+                'attempt'        => __('ndr.attempt') ?: 'Attempt',
+                'failure_reason' => __('ndr.failure_reason') ?: 'Failure reason',
+                'tracking'       => __('levels.tracking') ?: 'Tracking',
+                'deliveryman'    => __('levels.deliveryman') ?: 'Courier',
+                'status'         => __('levels.status') ?: 'Status',
+                'created'        => __('levels.created') ?: 'Created',
+                'actions'        => __('levels.actions') ?: 'Actions',
+                'view'           => __('levels.view') ?: 'View',
+                'filter'         => __('levels.filter') ?: 'Filter',
+                'clear'          => __('levels.clear') ?: 'Clear',
+                'export'         => __('levels.export_to_excel') ?: 'Export',
+                'no_rows'        => __('ndr.no_ndrs_found') ?: 'No NDRs found',
+                'showing_results'=> 'Showing :from – :to of :total',
+                'from'           => 'From',
+                'to'             => 'To',
+            ],
+        ]);
     }
 
     public function export(Request $request)

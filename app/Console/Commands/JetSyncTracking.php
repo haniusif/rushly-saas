@@ -95,6 +95,19 @@ class JetSyncTracking extends Command
             $parcel = Parcel::find($row->parcel_id);
             if (! $parcel) continue;
 
+            // Phase 9.5 — defensive tenant-scope check. Skip if the row's
+            // company_id doesn't match the linked parcel's — see
+            // AramexSyncTracking for full rationale.
+            if ($row->company_id !== null && (int) $parcel->company_id !== (int) $row->company_id) {
+                Log::warning('jet.sync: parcels_3pl.company_id mismatch — skipping', [
+                    'row_id'            => $row->id,
+                    'parcel_id'         => $parcel->id,
+                    'row_company_id'    => $row->company_id,
+                    'parcel_company_id' => $parcel->company_id,
+                ]);
+                continue;
+            }
+
             $mapped = $this->mapStatus($code, $desc);
             if ($mapped === null) {
                 $this->logEvent($parcel->id, (int) $parcel->status, $note);

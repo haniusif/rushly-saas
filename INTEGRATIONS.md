@@ -21,6 +21,8 @@ Everything goes through one of two auth gates: **static apiKey header** and/or *
 
 The four storefront bridges follow a single shared pattern documented in the workspace-level [`../INTEGRATIONS.md`](../INTEGRATIONS.md): per-platform link table (`salla_orders` / `zid_orders` / `woocommerce_orders` / future `shopify_orders`), `<Platform>Service` for status writeback, `Parcel<Platform>Observer` registered in `EventServiceProvider`, and a controller under `app/Http/Controllers/Api/V10/External/` mounted at `/api/v10/external/<platform>/parcel`. Super-admins manage all four from `/admin/integrations`.
 
+**Outbound 3PLs now split across two patterns.** The legacy per-provider `Service` classes (Aramex / Jet / Zajel / Panda) still run against the shared `parcels_3pl` table. Logestechs (and any new provider) live in the **new generic Shipping module** at `app/Shipping/`, which provides `ShippingProviderInterface`, per-tenant `shipping_connections` (encrypted credentials), queued `CreateShipmentJob`, per-connection `SyncTrackingJob`, and a dedicated admin UI at `/admin/shipping/connections`. Full architecture: [`docs/shipping-architecture.md`](docs/shipping-architecture.md). The `/admin/integrations` Logestechs card + the `/admin/bulk_action` picker both read from `shipping_connections` — the tenant chooses which saved connection ships each batch, no per-submit credentials required.
+
 ---
 
 ## 2. API surface area

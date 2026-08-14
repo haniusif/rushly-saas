@@ -3,15 +3,19 @@
 namespace App\Http\Controllers\Backend\Wms;
 
 use App\Enums\Wms\LocationType;
+use App\Http\Controllers\Backend\Wms\Concerns\RendersInertiaIndex;
 use App\Http\Controllers\Controller;
 use App\Models\Backend\Wms\WmsLocation;
 use App\Repositories\Hub\HubInterface;
 use App\Repositories\Wms\WmsLocationRepositoryInterface;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class WmsLocationController extends Controller
 {
+    use RendersInertiaIndex;
+
     public function __construct(
         protected WmsLocationRepositoryInterface $repo,
         protected HubInterface $hubRepo
@@ -19,24 +23,148 @@ class WmsLocationController extends Controller
 
     public function index(Request $request)
     {
-        $locations = $this->repo->all($request);
+        $paginator = $this->repo->all($request);
         $hubs      = $this->hubRepo->all();
         $types     = $this->typeOptions();
-        return view('backend.wms.locations.index', compact('locations', 'hubs', 'types'));
+
+        $rows = collect($paginator->items())->map(fn ($l) => [
+            'id'       => $l->id,
+            'code'     => $l->code,
+            'hub'      => optional($l->hub)->name,
+            'zone'     => $l->zone,
+            'aisle'    => $l->aisle,
+            'rack'     => $l->rack,
+            'shelf'    => $l->shelf,
+            'bin'      => $l->bin,
+            'type'     => $l->type,
+            'capacity' => $l->capacity,
+            'url'      => route('wms.locations.edit', $l->id),
+        ])->values();
+
+        return Inertia::render('Admin/Wms/Locations/Index', [
+            'rows'        => $rows,
+            'pagination'  => $this->paginateMeta($paginator),
+            'filters'     => [
+                'hub_id' => $request->input('hub_id', ''),
+                'zone'   => $request->input('zone', ''),
+                'aisle'  => $request->input('aisle', ''),
+                'type'   => $request->input('type', ''),
+            ],
+            'lookups'     => [
+                'hubs'  => $this->lookupRows($hubs, fn ($h) => ['id' => $h->id, 'name' => $h->name]),
+                'types' => collect($types)->map(fn ($l, $k) => ['value' => $k, 'label' => $l])->values(),
+            ],
+            'permissions' => ['create' => hasPermission('wms_manage')],
+            'urls' => [
+                'index'  => route('wms.locations.index'),
+                'create' => route('wms.locations.create'),
+                'map'    => route('wms.locations.map'),
+            ],
+            't' => $this->indexLabels([
+                'title' => 'Storage locations', 'code' => 'Code', 'hub' => 'Hub',
+                'zone' => 'Zone', 'aisle' => 'Aisle', 'rack' => 'Rack',
+                'shelf' => 'Shelf', 'bin' => 'Bin', 'type' => 'Type', 'capacity' => 'Capacity',
+                'map_view' => 'Map view',
+            ]),
+        ]);
     }
 
     public function map(Request $request)
     {
-        $tree = $this->repo->tree($request->input('hub_id'));
-        $hubs = $this->hubRepo->all();
-        return view('backend.wms.locations.map', compact('tree', 'hubs'));
+        $hubId = $request->input('hub_id');
+        $rawTree = $this->repo->tree($hubId);
+        $hubs    = $this->hubRepo->all();
+
+        // Flatten ['zone' => ['aisle' => [location, ...]]] into structured arrays
+        // the React tree view can iterate cleanly.
+        $zones = [];
+        foreach ($rawTree as $zoneName => $aisles) {
+            $aisleList = [];
+            foreach ($aisles as $aisleName => $locations) {
+                $aisleList[] = [
+                    'name'      => $aisleName,
+                    'locations' => collect($locations)->map(fn ($l) => [
+                        'id'       => $l->id,
+                        'code'     => $l->code,
+                        'rack'     => $l->rack,
+                        'shelf'    => $l->shelf,
+                        'bin'      => $l->bin,
+                        'type'     => $l->type,
+                        'capacity' => $l->capacity,
+                        'url'      => route('wms.locations.edit', $l->id),
+                    ])->values(),
+                ];
+            }
+            $zones[] = ['name' => $zoneName, 'aisles' => $aisleList];
+        }
+
+        return Inertia::render('Admin/Wms/Locations/Map', [
+            'zones'  => $zones,
+            'filters' => ['hub_id' => $hubId ? (int) $hubId : ''],
+            'lookups' => [
+                'hubs' => $this->lookupRows($hubs, fn ($h) => ['id' => $h->id, 'name' => $h->name]),
+            ],
+            'urls' => [
+                'index'  => route('wms.locations.index'),
+                'map'    => route('wms.locations.map'),
+                'create' => route('wms.locations.create'),
+            ],
+            'permissions' => ['create' => hasPermission('wms_manage')],
+            't' => $this->indexLabels([
+                'title'        => 'Locations map',
+                'list_view'    => 'List view',
+                'map_view'     => 'Map view',
+                'all_hubs'     => 'All hubs',
+                'zone'         => 'Zone',
+                'aisle'        => 'Aisle',
+                'rack'         => 'Rack',
+                'shelf'        => 'Shelf',
+                'bin'          => 'Bin',
+                'type'         => 'Type',
+                'capacity'     => 'Capacity',
+                'no_locations' => 'No storage locations defined yet.',
+                'edit'         => 'Edit',
+            ]),
+        ]);
     }
 
     public function create()
     {
         $hubs  = $this->hubRepo->all();
         $types = $this->typeOptions();
-        return view('backend.wms.locations.create', compact('hubs', 'types'));
+
+        return Inertia::render('Admin/Wms/Locations/Create', [
+            'mode'    => 'create',
+            'lookups' => [
+                'hubs'  => $this->lookupRows($hubs, fn ($h) => ['id' => $h->id, 'name' => $h->name]),
+                'types' => $types,
+            ],
+            'urls' => [
+                'submit' => route('wms.locations.store'),
+                'cancel' => route('wms.locations.index'),
+            ],
+            't' => $this->indexLabels([
+                'title'    => 'New storage location',
+                'list'     => 'Locations',
+                'identity' => 'Identity',
+                'address'  => 'Hierarchy',
+                'options'  => 'Options',
+                'hub'      => 'Hub',
+                'zone'     => 'Zone',
+                'aisle'    => 'Aisle',
+                'rack'     => 'Rack',
+                'shelf'    => 'Shelf',
+                'bin'      => 'Bin',
+                'type'     => 'Type',
+                'capacity' => 'Capacity',
+                'code'     => 'Code',
+                'is_active'=> 'Active',
+                'save'     => __('levels.submit') ?: 'Save',
+                'cancel'   => __('levels.cancel') ?: 'Cancel',
+                'code_hint'=> 'Leave blank to auto-generate from rack/shelf/bin.',
+                'zone_hint'=> 'Optional grouping (e.g. cold, dry).',
+            ]),
+        ]);
     }
 
     public function store(Request $request)

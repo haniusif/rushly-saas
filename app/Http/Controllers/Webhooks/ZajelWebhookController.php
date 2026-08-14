@@ -47,16 +47,43 @@ class ZajelWebhookController extends Controller
         }
 
         // 3. Resolve to a known parcel
-        $row = Parcels_3pl::where('awb_number', $ref)
+        // Phase 9.5 — if multiple rows match the awb_number across tenants
+        // (possible when two tenants share a Zajel account), we can't safely
+        // pick one without more info. Log and reject the webhook — Zajel
+        // will retry, and by then ops should have investigated.
+        $matches = Parcels_3pl::where('awb_number', $ref)
             ->where('parcel_3pl_name', 'zajel')
-            ->first();
-        if (! $row) {
+            ->limit(2)
+            ->get();
+        if ($matches->isEmpty()) {
             Log::info('Zajel webhook: unknown reference', ['ref' => $ref, 'status' => $status]);
             return response()->json(['message' => 'Unknown reference_number'], 404);
         }
+        if ($matches->count() > 1) {
+            Log::warning('Zajel webhook: ambiguous reference across tenants — rejecting', [
+                'ref'         => $ref,
+                'row_ids'     => $matches->pluck('id')->all(),
+                'companies'   => $matches->pluck('company_id')->all(),
+            ]);
+            return response()->json(['message' => 'Ambiguous reference_number across tenants'], 409);
+        }
+        $row = $matches->first();
         $parcel = Parcel::find($row->parcel_id);
         if (! $parcel) {
             return response()->json(['message' => 'Linked parcel missing'], 404);
+        }
+
+        // Phase 9.5 — defensive tenant-scope check. Same pattern as
+        // Aramex/Jet/Panda syncs: skip when parcels_3pl.company_id
+        // doesn't match the linked parcel's tenant.
+        if ($row->company_id !== null && (int) $parcel->company_id !== (int) $row->company_id) {
+            Log::warning('zajel.webhook: parcels_3pl.company_id mismatch — rejecting', [
+                'row_id'            => $row->id,
+                'parcel_id'         => $parcel->id,
+                'row_company_id'    => $row->company_id,
+                'parcel_company_id' => $parcel->company_id,
+            ]);
+            return response()->json(['message' => 'Tenant mismatch on linked parcel'], 409);
         }
 
         // 4. Always: refresh tracking columns on parcels_3pl

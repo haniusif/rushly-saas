@@ -689,10 +689,10 @@
                 hasPermission('label_template_manage') == true)
             <!---for setting--->
             <li class="nav-item">
-                <a class="nav-link {{ request()->is('admin/database-backup*', 'admin/delivery-category*', 'admin/delivery-category*', 'admin/delivery-charge*', 'admin/packaging*', 'admin/delivery-type*', 'admin/liquid-fragile*', 'admin/sms-settings*', 'admin/sms-send-settings*', 'admin/general-settings*', 'admin/notification-settings*', 'admin/googlemap-settings*', 'admin/asset-category*', 'admin/social-login-setting*', 'admin/pay-out/setup*', 'admin/settings/pay-out/setup*', 'admin/settings/invoice-generate-menually*', 'admin/currency*', 'admin/integrations*', 'admin/zatca*', 'admin/settings/label-templates*', 'admin/api-docs*', 'admin/settings/public-tracking-api-keys*', 'admin/settings') ? 'active' : '' }} "
+                <a class="nav-link {{ request()->is('admin/database-backup*', 'admin/delivery-category*', 'admin/delivery-category*', 'admin/delivery-charge*', 'admin/packaging*', 'admin/delivery-type*', 'admin/liquid-fragile*', 'admin/sms-settings*', 'admin/sms-send-settings*', 'admin/general-settings*', 'admin/notification-settings*', 'admin/googlemap-settings*', 'admin/asset-category*', 'admin/social-login-setting*', 'admin/pay-out/setup*', 'admin/settings/pay-out/setup*', 'admin/settings/invoice-generate-menually*', 'admin/currency*', 'admin/integrations*', 'admin/zatca*', 'admin/settings/label-templates*', 'admin/api-docs*', 'admin/settings/public-tracking-api-keys*', 'admin/settings/mobile-apps*', 'admin/settings') ? 'active' : '' }} "
                     href="#" data-toggle="collapse" aria-expanded="false" data-target="#submenu-0"
                     aria-controls="submenu-0"><i class="ti ti-settings"></i> {{ __('menus.settings') }}</a>
-                <div class="{{ request()->is('admin/database-backup*', 'admin/delivery-category*', 'admin/delivery-charge*', 'admin/packaging*', 'admin/delivery-type*', 'admin/liquid-fragile*', 'admin/sms-settings*', 'admin/sms-send-settings*', 'admin/general-settings*', 'admin/notification-settings*', 'admin/googlemap-settings*', 'admin/asset-category*', 'admin/social-login-setting*', 'admin/pay-out/setup*', 'admin/settings/pay-out/setup*', 'admin/settings/invoice-generate-menually*', 'admin/currency*', 'admin/integrations*', 'admin/zatca*', 'admin/settings/label-templates*', 'admin/api-docs*', 'admin/settings/public-tracking-api-keys*', 'admin/settings') ? '' : 'collapse' }} submenu"
+                <div class="{{ request()->is('admin/database-backup*', 'admin/delivery-category*', 'admin/delivery-charge*', 'admin/packaging*', 'admin/delivery-type*', 'admin/liquid-fragile*', 'admin/sms-settings*', 'admin/sms-send-settings*', 'admin/general-settings*', 'admin/notification-settings*', 'admin/googlemap-settings*', 'admin/asset-category*', 'admin/social-login-setting*', 'admin/pay-out/setup*', 'admin/settings/pay-out/setup*', 'admin/settings/invoice-generate-menually*', 'admin/currency*', 'admin/integrations*', 'admin/zatca*', 'admin/settings/label-templates*', 'admin/api-docs*', 'admin/settings/public-tracking-api-keys*', 'admin/settings/mobile-apps*', 'admin/settings') ? '' : 'collapse' }} submenu"
                     id="submenu-0" class="collapse submenu">
                     <ul class="nav flex-column">
 
@@ -720,6 +720,13 @@
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->is('admin/settings/public-tracking-api-keys*') ? 'active' : '' }}"
                                     href="{{ route('settings.public-tracking-api-keys.index') }}">Public Tracking API</a>
+                            </li>
+                        @endif
+
+                        @if (hasPermission('mobile_apps_read') == true)
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->is('admin/settings/mobile-apps*') ? 'active' : '' }}"
+                                    href="{{ route('mobile-apps.index') }}">{{ __('mobile_apps.title') }}</a>
                             </li>
                         @endif
 

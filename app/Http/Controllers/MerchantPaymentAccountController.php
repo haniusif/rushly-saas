@@ -9,6 +9,7 @@ use App\Repositories\Merchant\MerchantInterface;
 use App\Repositories\MerchantPayment\PaymentInterface;
 use Illuminate\Support\Facades\Redirect;
 use Brian2694\Toastr\Facades\Toastr;
+use Inertia\Inertia;
 class MerchantPaymentAccountController extends Controller
 {
     protected $repo;
@@ -19,11 +20,65 @@ class MerchantPaymentAccountController extends Controller
         $this->payRepo = $payRepo;
     }
     public function index($id){
-        
-        $singleMerchant = $this->repo->get($id);
-        $payments       = $this->payRepo->get($id);
+        $m = $this->repo->get($id);
+        if(blank($m)){ abort(404); }
+        $payments = $this->payRepo->get($id);
 
-        return view('backend.merchant.payment.index',compact('singleMerchant','payments'));
+        $rows = collect($payments)->map(fn ($p) => [
+            'id'             => $p->id,
+            'method'         => $p->payment_method,
+            'method_label'   => __('merchant.' . $p->payment_method) ?: ucwords(str_replace('_', ' ', (string) $p->payment_method)),
+            'bank_name'      => $p->bank_name,
+            'holder_name'    => $p->holder_name,
+            'account_no'     => $p->account_no,
+            'branch_name'    => $p->branch_name,
+            'routing_no'     => $p->routing_no,
+            'mobile_company' => $p->mobile_company,
+            'mobile_no'      => $p->mobile_no,
+            'account_type'   => $p->account_type,
+            'status'         => (int) $p->status,
+            'urls' => [
+                'edit'   => route('merchant.payment.edit', ['mid' => $m->id, 'id' => $p->id]),
+                'delete' => route('merchant.payment.delete', $p->id),
+            ],
+        ])->values();
+
+        return Inertia::render('Admin/Merchant/Payment/Index', [
+            'merchant' => [
+                'id'            => $m->id,
+                'business_name' => $m->business_name,
+                'unique_id'     => $m->merchant_unique_id,
+                'name'          => optional($m->user)->name,
+                'image'         => optional($m->user)->image,
+            ],
+            'rows'        => $rows,
+            'permissions' => [
+                'create' => hasPermission('merchant_payment_create'),
+                'update' => hasPermission('merchant_payment_update'),
+                'delete' => hasPermission('merchant_payment_delete'),
+            ],
+            'urls' => [
+                'view'   => route('merchant.view', $m->id),
+                'index'  => route('merchant.paymentaccount.index', $m->id),
+                'create' => route('merchant.payment.add', $m->id),
+            ],
+            't' => [
+                'title'           => 'Payment accounts',
+                'title_index'     => 'Merchants',
+                'method'          => __('merchant.payment_method') ?: 'Method',
+                'account_info'    => __('merchant.account_info') ?: 'Account info',
+                'status'          => __('levels.status') ?: 'Status',
+                'actions'         => __('levels.actions') ?: 'Actions',
+                'active'          => __('merchantshops.active') ?: 'Active',
+                'inactive'        => __('merchantshops.inactive') ?: 'Inactive',
+                'add'             => __('levels.add') ?: 'Add',
+                'edit'            => __('levels.edit') ?: 'Edit',
+                'delete'          => __('levels.delete') ?: 'Delete',
+                'delete_confirm'  => 'Delete this payment account?',
+                'no_rows'         => 'No payment accounts registered.',
+                'back_to_view'    => 'Back to merchant',
+            ],
+        ]);
     }
     public function paymentAdd($id){
         $singleMerchant = $this->repo->get($id);

@@ -14,6 +14,7 @@ use App\Repositories\Hub\HubInterface;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class AbnormalShipmentController extends Controller
 {
@@ -33,7 +34,7 @@ class AbnormalShipmentController extends Controller
 
     public function index(Request $request)
     {
-        $abnormals = $this->repo->all($request);
+        $paginator = $this->repo->all($request);
 
         $base    = AbnormalShipment::companywise();
         $summary = [
@@ -46,24 +47,183 @@ class AbnormalShipmentController extends Controller
         $deliverymans = $this->deliveryman->all();
         $threshold    = $this->repo->getThresholdDays();
 
-        return view('backend.abnormal.index', compact('abnormals', 'summary', 'deliverymans', 'threshold'));
+        $rows = collect($paginator->items())->map(fn ($a) => [
+            'id'            => $a->id,
+            'tracking_id'   => optional($a->parcel)->tracking_id ?? ('#' . $a->parcel_id),
+            'customer_name' => optional($a->parcel)->customer_name,
+            'last_event'    => optional($a->last_event_at)->diffForHumans(),
+            'stale_days'    => (int) $a->stale_days,
+            'severity'      => $a->severity,
+            'status'        => $a->status,
+            'status_label'  => ucwords(str_replace('_', ' ', $a->status)),
+            'url'           => route('abnormal.show', $a->id),
+        ])->values();
+
+        $deliverymanRows = collect($deliverymans instanceof \Illuminate\Pagination\AbstractPaginator
+            ? $deliverymans->items() : $deliverymans)->map(fn ($d) => [
+                'id'   => $d->user_id ?? $d->id,
+                'name' => optional($d->user)->name ?? $d->name ?? ('#' . $d->id),
+            ])->values();
+
+        $filters = $request->only(['min_days', 'severity', 'status', 'assigned_to']);
+
+        return Inertia::render('Admin/Abnormal/Index', [
+            'rows'        => $rows,
+            'pagination'  => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'from'         => $paginator->firstItem(),
+                'to'           => $paginator->lastItem(),
+                'total'        => $paginator->total(),
+                'prev_url'     => $paginator->previousPageUrl(),
+                'next_url'     => $paginator->nextPageUrl(),
+            ],
+            'filters'   => array_merge([
+                'min_days' => '', 'severity' => '', 'status' => '', 'assigned_to' => '',
+            ], $filters),
+            'summary'   => array_map('intval', $summary),
+            'threshold' => (int) $threshold,
+            'lookups'   => [
+                'min_days'    => ['3', '5', '7'],
+                'severities'  => ['warning', 'danger', 'critical'],
+                'statuses'    => ['open', 'investigating', 'resolved', 'closed_lost'],
+                'deliverymen' => $deliverymanRows,
+            ],
+            'urls' => [
+                'index'    => route('abnormal.index'),
+                'settings' => route('abnormal.settings'),
+            ],
+            't' => [
+                'title'             => __('abnormal.title') ?: 'Abnormal shipments',
+                'settings'          => __('settings.title') ?: 'Settings',
+                'stalled_3_days'    => __('abnormal.stalled_3_days') ?: 'Stalled 3+ days',
+                'stalled_5_days'    => __('abnormal.stalled_5_days') ?: 'Stalled 5+ days',
+                'stalled_7_days'    => __('abnormal.stalled_7_days_critical') ?: 'Critical 7+ days',
+                'closed_as_lost'    => __('abnormal.closed_as_lost') ?: 'Closed as lost',
+                'duration'          => __('abnormal.duration') ?: 'Duration',
+                'any_severity'      => __('abnormal.any_severity') ?: 'Any severity',
+                'all_status'        => __('ndr.all_status') ?: 'All status',
+                'any_investigator'  => __('abnormal.any_investigator') ?: 'Any investigator',
+                'detection_threshold'=> __('abnormal.detection_threshold') ?: 'Detection threshold',
+                'days'              => __('abnormal.days') ?: 'days',
+                'all'               => __('levels.all') ?: 'All',
+                'tracking'          => __('levels.tracking') ?: 'Tracking',
+                'customer'          => __('levels.customer') ?: 'Customer',
+                'last_event'        => __('abnormal.last_event') ?: 'Last event',
+                'stale_days'        => __('abnormal.stale_days') ?: 'Stale days',
+                'severity'          => __('abnormal.severity') ?: 'Severity',
+                'status'            => __('levels.status') ?: 'Status',
+                'actions'           => __('levels.actions') ?: 'Actions',
+                'open'              => __('levels.open') ?: 'Open',
+                'filter'            => __('levels.filter') ?: 'Filter',
+                'clear'             => __('levels.clear') ?: 'Clear',
+                'no_rows'           => __('abnormal.no_abnormal') ?: 'No abnormal shipments',
+                'showing_results'   => 'Showing :from – :to of :total',
+            ],
+        ]);
     }
 
     public function show(int $id)
     {
-        $abnormal = $this->repo->find($id);
-        if (!$abnormal) {
+        $a = $this->repo->find($id);
+        if (!$a) {
             Toastr::error(__('Abnormal record not found.'));
             return redirect()->route('abnormal.index');
         }
+        $a->loadMissing(['parcel.merchant', 'assignedTo']);
 
         $deliverymans = $this->deliveryman->all();
-        $hubs         = $this->hub->all();
-        $events       = ParcelEvent::where('parcel_id', $abnormal->parcel_id)
+        $events       = ParcelEvent::where('parcel_id', $a->parcel_id)
                             ->orderByDesc('id')->limit(15)->get();
         $autoEscalate = max(1, (int) $this->getConfig('abnormal_auto_escalation_days', 7));
+        $stale        = (int) $a->stale_days;
 
-        return view('backend.abnormal.show', compact('abnormal', 'deliverymans', 'hubs', 'events', 'autoEscalate'));
+        $deliverymanRows = collect($deliverymans instanceof \Illuminate\Pagination\AbstractPaginator
+            ? $deliverymans->items() : $deliverymans)->map(fn ($d) => [
+                'id'   => $d->user_id ?? $d->id,
+                'name' => optional($d->user)->name ?? $d->name ?? ('#' . $d->id),
+            ])->values();
+
+        return \Inertia\Inertia::render('Admin/Abnormal/View', [
+            'abnormal' => [
+                'id'             => $a->id,
+                'severity'       => $a->severity,
+                'status'         => $a->status,
+                'status_label'   => ucwords(str_replace('_', ' ', $a->status)),
+                'stale_days'     => $stale,
+                'auto_escalate'  => $autoEscalate,
+                'stale_pct'      => min(100, (int) round(($stale / max(1, $autoEscalate)) * 100)),
+                'detected_at'    => optional($a->detected_at)->diffForHumans(),
+                'last_event_at'  => optional($a->last_event_at)->toDateTimeString(),
+                'last_event_rel' => optional($a->last_event_at)->diffForHumans(),
+                'escalated_at'   => optional($a->escalated_at)->toDateTimeString(),
+                'resolution_note'=> $a->resolution_note,
+                'assigned_to'    => $a->assigned_to,
+                'assigned_name'  => optional($a->assignedTo)->name,
+                'parcel' => [
+                    'id'             => $a->parcel_id,
+                    'tracking_id'    => optional($a->parcel)->tracking_id,
+                    'customer_name'  => optional($a->parcel)->customer_name,
+                    'customer_phone' => optional($a->parcel)->customer_phone,
+                    'merchant'       => optional(optional($a->parcel)->merchant)->business_name,
+                ],
+            ],
+            'events' => $events->map(fn ($e) => [
+                'id'         => $e->id,
+                'status'     => (int) $e->parcel_status,
+                'label'      => \App\Support\ParcelStatusHelper::label((int) $e->parcel_status),
+                'color'      => \App\Support\ParcelStatusHelper::color((int) $e->parcel_status),
+                'hub_id'     => $e->hub_id,
+                'created_at' => optional($e->created_at)->toDateTimeString(),
+            ])->values(),
+            'lookups' => [
+                'deliverymen' => $deliverymanRows,
+            ],
+            'permissions' => [
+                'manage' => hasPermission('abnormal_manage'),
+            ],
+            'urls' => [
+                'index'         => route('abnormal.index'),
+                'parcel_view'   => route('parcel.details', $a->parcel_id),
+                'assign'        => route('abnormal.assign',  $a->id),
+                'action'        => route('abnormal.action',  $a->id),
+                'resolve'       => route('abnormal.resolve', $a->id),
+                'create_ndr'    => route('ndr.create',       $a->parcel_id),
+                'settings'      => route('abnormal.settings'),
+            ],
+            't' => [
+                'title'              => 'Abnormal shipment',
+                'title_index'        => __('abnormal.title') ?: 'Abnormal shipments',
+                'back'               => 'Back to list',
+                'customer'           => __('levels.customer') ?: 'Customer',
+                'phone'              => __('levels.phone') ?: 'Phone',
+                'merchant'           => __('levels.merchant') ?: 'Merchant',
+                'detected'           => __('abnormal.detected') ?: 'Detected',
+                'last_event'         => __('abnormal.last_event') ?: 'Last event',
+                'assigned_to'        => __('abnormal.assigned_to') ?: 'Assigned to',
+                'nobody_yet'         => __('abnormal.nobody_yet') ?: 'Nobody yet',
+                'stale_progress'     => __('abnormal.stale_progress') ?: 'Stale progress',
+                'days_of'            => 'of',
+                'days'               => 'days (auto-escalation threshold)',
+                'event_timeline'     => __('abnormal.event_timeline') ?: 'Event timeline',
+                'no_events'          => __('abnormal.no_events') ?: 'No events.',
+                'investigation'      => __('abnormal.investigation') ?: 'Investigation',
+                'assign_investigator'=> __('abnormal.assign_to_investigator') ?: 'Assign to investigator',
+                'assign'             => __('abnormal.assign') ?: 'Assign',
+                'take_action'        => __('abnormal.take_action') ?: 'Take action',
+                'create_ndr'         => __('abnormal.create_ndr') ?: 'Create NDR',
+                'log_contact'        => __('abnormal.log_customer_contact') ?: 'Log customer contact',
+                'escalate'           => 'Escalate',
+                'close_lost'         => 'Close as lost',
+                'close_lost_warn'    => 'Close-as-Lost needs a second supervisor to confirm.',
+                'resolve'            => 'Resolve',
+                'resolution_note'    => 'Resolution note',
+                'resolution_placeholder' => __('abnormal.resolution_note_placeholder') ?: 'How was this resolved?',
+                'severity'           => __('abnormal.severity') ?: 'Severity',
+                'status'             => __('levels.status') ?: 'Status',
+                'view_parcel'        => 'Open parcel',
+            ],
+        ]);
     }
 
     public function assign(Request $request, int $id)

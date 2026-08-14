@@ -72,6 +72,9 @@ return [
     //salary
     'parcel_reports'               => 'Shipment Reports',
     'all_reports'                  => 'All Reports',
+    'parcels_chart'                => 'Parcels — last 8 days',
+    'parcels_breakdown'            => 'Parcels by status',
+    'series_total'                 => 'Total',
     'current_balance'              => 'Current Balance',
     'opening_balance'              => 'Opening Balance',
     'vat'                          => 'Vat',
@@ -122,4 +125,16 @@ return [
     'status_out_for_delivery'      => 'Out for delivery',
     'status_delivered'             => 'Delivered',
     'status_partial'               => 'Partial',
+
+    // Merchant dashboard + reports
+    'active_shipments_amount'   => 'Active shipments amount',
+    'accounts'                  => 'Accounts',
+    'bank_balance'              => 'Bank balance',
+    'bank_opening_balance'      => 'Bank opening balance',
+    'parcels_profit'            => 'Parcels profit',
+    'parcels_sales'             => 'Parcels sales',
+    'payable_amount'            => 'Payable amount',
+    'payments'                  => 'Payments',
+    'pending_amount'            => 'Pending amount',
+    'total_delivery_charge_vat' => 'Total delivery charge VAT',
 ];

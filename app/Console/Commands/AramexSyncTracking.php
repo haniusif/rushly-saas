@@ -102,6 +102,22 @@ class AramexSyncTracking extends Command
             $parcel = Parcel::find($row->parcel_id);
             if (! $parcel) continue;
 
+            // Phase 9.5 — defensive tenant-scope check. `parcels_3pl.company_id`
+            // is populated by the Phase 9 model hook and should always match
+            // the linked parcel's company_id. A mismatch means either a bad
+            // backfill or an anomalous manual insert — either way, skip and
+            // let ops investigate rather than run parcelDelivered against
+            // the wrong tenant's data.
+            if ($row->company_id !== null && (int) $parcel->company_id !== (int) $row->company_id) {
+                Log::warning('aramex.sync: parcels_3pl.company_id mismatch — skipping', [
+                    'row_id'            => $row->id,
+                    'parcel_id'         => $parcel->id,
+                    'row_company_id'    => $row->company_id,
+                    'parcel_company_id' => $parcel->company_id,
+                ]);
+                continue;
+            }
+
             // Refresh tracking columns on parcels_3pl
             Parcels_3pl::where('id', $row->id)->update([
                 'current_status'  => strtoupper($desc),

@@ -388,7 +388,7 @@ public function lastPickupMan()
         $invoice   = Invoice::where('merchant_id',Auth::user()->merchant->id)->get();
         $inv  = null;
         foreach ($invoice as $in) {
-            if(in_array($this->id,$in->parcels_id) == true):
+            if(in_array($this->id, (array) ($in->parcels_id ?? [])) == true):
                 $inv  = $in;
             endif;
         }
@@ -399,7 +399,7 @@ public function lastPickupMan()
         $invoice   = Invoice::where('merchant_id',$this->merchant_id)->get();
         $inv  = null;
         foreach ($invoice as $in) {
-            if(in_array($this->id,$in->parcels_id) == true):
+            if(in_array($this->id, (array) ($in->parcels_id ?? [])) == true):
                 $inv  = $in;
             endif;
         }

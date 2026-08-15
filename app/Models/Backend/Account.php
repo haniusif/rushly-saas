@@ -2,6 +2,8 @@
 
 namespace App\Models\Backend;
 
+use App\Models\Concerns\ScopedToCompany;
+
 use App\Enums\Status;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +13,7 @@ use App\Models\User;
 
 class Account extends Model
 {
-    use HasFactory, LogsActivity;
+    use HasFactory, LogsActivity, ScopedToCompany;
     protected $fillable = ['account_holder_name','account_no','gateway'];
 
     // Get all row. Descending order using scope.

@@ -2,6 +2,8 @@
 
 namespace App\Models\Backend;
 
+use App\Models\Concerns\ScopedToCompany;
+
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +13,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Ndr extends Model
 {
-    use HasFactory, LogsActivity, SoftDeletes;
+    use HasFactory, LogsActivity, SoftDeletes, ScopedToCompany;
 
     protected $table = 'ndrs';
 

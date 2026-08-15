@@ -2,6 +2,8 @@
 
 namespace App\Models\Backend;
 
+use App\Models\Concerns\ScopedToCompany;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Activitylog\LogOptions;
@@ -13,7 +15,7 @@ use App\Models\User;
 
 class Expense extends Model
 {
-    use HasFactory, LogsActivity;
+    use HasFactory, LogsActivity, ScopedToCompany;
 
     protected $fillable = [
 

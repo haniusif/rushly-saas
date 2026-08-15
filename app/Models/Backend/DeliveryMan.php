@@ -2,6 +2,8 @@
 
 namespace App\Models\Backend;
 
+use App\Models\Concerns\ScopedToCompany;
+
 use App\Enums\Status;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,7 +13,7 @@ use Spatie\Activitylog\LogOptions;
 
 class DeliveryMan extends Model
 {
-    use HasFactory, LogsActivity;
+    use HasFactory, LogsActivity, ScopedToCompany;
 
     protected $table = 'delivery_man';
     protected $fillable = [

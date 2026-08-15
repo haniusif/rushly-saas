@@ -475,10 +475,7 @@ class ParcelController extends Controller
                 'name'  => $p->name,
                 'price' => (float) $p->price,
             ])->values(),
-            'delivery_types'   => collect($deliveryTypes)->map(fn ($d) => [
-                'id'   => $d->id,
-                'name' => $d->name ?? $d->key ?? $d->id,
-            ])->values(),
+            'delivery_types'   => $this->deliveryTypeOptions(),
             'settings' => [
                 'currency'              => settings()->currency,
                 'vat_tax'               => (float) (settings()->vat ?? 0),
@@ -594,6 +591,55 @@ class ParcelController extends Controller
 
 
     /**
+     * Delivery-type options for the front-end, keyed by the DeliveryType ENUM.
+     *
+     * repo->deliveryTypes() returns Config ROWS, whose ids (47, 48, 51…) have
+     * nothing to do with the DeliveryType enum (1-4) that ParcelRepository
+     * compares delivery_type_id against. Emitting the config id — which every
+     * parcel form did — meant the repository's COD-tier branch and its
+     * pickup/delivery-date branches never matched, so shipments saved with
+     * cod_charge 0 and both dates null. Translate the config key to the enum
+     * value here so what the form posts is what the repository understands.
+     *
+     * Config rows can repeat a key across tenants (sub_city exists at 47 and
+     * 53), hence the unique().
+     */
+    private function deliveryTypeOptions()
+    {
+        $byKey = [
+            'same_day'     => DeliveryType::SAMEDAY,
+            'next_day'     => DeliveryType::NEXTDAY,
+            'sub_city'     => DeliveryType::SUBCITY,
+            'outside_city' => DeliveryType::OUTSIDECITY,
+        ];
+
+        return collect($this->repo->deliveryTypes())
+            ->map(function ($d) use ($byKey) {
+                $key  = strtolower((string) ($d->key ?? ''));
+                $enum = $byKey[$key] ?? null;
+                if (! $enum) {
+                    return null;
+                }
+                // Same label source the merchant panel uses, so both forms read
+                // "Same Day" rather than the raw config key. Look up on the
+                // ORIGINAL key — lang/*/deliveryType.php keeps the legacy
+                // capitalisation ('outside_City'), which the lowercased key
+                // used for enum matching would miss.
+                foreach ([$d->key ?? '', $key, $enum] as $candidate) {
+                    $label = __('deliveryType.' . $candidate);
+                    if ($label !== 'deliveryType.' . $candidate) {
+                        return ['id' => $enum, 'name' => $label];
+                    }
+                }
+
+                return ['id' => $enum, 'name' => $d->name ?? $key];
+            })
+            ->filter()
+            ->unique('id')
+            ->values();
+    }
+
+    /**
      * Lookup data for the navbar Quick Shipment modal.
      *
      * The modal lives in AdminLayout's Topbar, which renders on every admin
@@ -678,28 +724,14 @@ class ParcelController extends Controller
 
         $categoryId = optional(collect($this->repo->deliveryCategories())->first())->id;
 
-        // deliveryTypes() returns Config ROWS, whose ids (47, 48, 51…) are
-        // unrelated to the DeliveryType enum (1-4) that the repository's COD
-        // and pickup/delivery-date branches compare against. Passing a config
-        // id straight through — as the full form does — means no branch ever
-        // matches, so cod_charge lands at 0 and both dates stay null. Map the
-        // enabled config key onto the enum instead, preferring the fastest
-        // service the tenant has switched on.
-        $enabled  = collect($this->repo->deliveryTypes())->pluck('key')
-            ->map(fn ($k) => strtolower((string) $k))->unique();
-        $byKey    = [
-            'same_day'     => DeliveryType::SAMEDAY,
-            'next_day'     => DeliveryType::NEXTDAY,
-            'sub_city'     => DeliveryType::SUBCITY,
-            'outside_city' => DeliveryType::OUTSIDECITY,
-        ];
-        $deliveryTypeId = null;
-        foreach ($byKey as $key => $enumValue) {
-            if ($enabled->contains($key)) {
-                $deliveryTypeId = $enumValue;
-                break;
-            }
-        }
+        // Fastest enabled service, already translated to the DeliveryType enum
+        // by deliveryTypeOptions() — see the note there on why the raw config
+        // id must never reach the repository.
+        $options        = $this->deliveryTypeOptions();
+        $deliveryTypeId = collect([
+            DeliveryType::SAMEDAY, DeliveryType::NEXTDAY,
+            DeliveryType::SUBCITY, DeliveryType::OUTSIDECITY,
+        ])->first(fn ($enum) => $options->contains('id', $enum));
 
         if (! $categoryId || ! $deliveryTypeId) {
             return response()->json([
@@ -967,10 +999,7 @@ class ParcelController extends Controller
                 'name'  => $p->name,
                 'price' => (float) $p->price,
             ])->values(),
-            'delivery_types' => collect($deliveryTypes)->map(fn ($d) => [
-                'id'   => $d->id,
-                'name' => $d->name ?? $d->key ?? $d->id,
-            ])->values(),
+            'delivery_types' => $this->deliveryTypeOptions(),
             'settings' => [
                 'currency'              => settings()->currency,
                 'vat_tax'               => (float) (settings()->vat ?? 0),
@@ -1716,10 +1745,7 @@ class ParcelController extends Controller
                 'name'  => $p->name,
                 'price' => (float) $p->price,
             ])->values(),
-            'delivery_types'   => collect($deliveryTypes)->map(fn ($d) => [
-                'id'   => $d->id,
-                'name' => $d->name ?? $d->key ?? $d->id,
-            ])->values(),
+            'delivery_types'   => $this->deliveryTypeOptions(),
             'settings' => [
                 'currency'              => settings()->currency,
                 'vat_tax'               => (float) (settings()->vat ?? 0),

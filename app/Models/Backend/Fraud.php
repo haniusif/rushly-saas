@@ -2,6 +2,8 @@
 
 namespace App\Models\Backend;
 
+use App\Models\Concerns\ScopedToCompany;
+
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +12,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Fraud extends Model
 {
-    use HasFactory,LogsActivity;
+    use HasFactory,LogsActivity, ScopedToCompany;
 
     protected $fillable = [
         'created_by',

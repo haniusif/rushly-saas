@@ -2,6 +2,8 @@
 
 namespace App\Models\Backend;
 
+use App\Models\Concerns\ScopedToCompany;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -9,7 +11,7 @@ use Spatie\Activitylog\LogOptions;
 
 class Hub extends Model
 {
-    use HasFactory, LogsActivity;
+    use HasFactory, LogsActivity, ScopedToCompany;
     protected $fillable = ['name','phone','address'];
 
     // Get all row. Descending order using scope.

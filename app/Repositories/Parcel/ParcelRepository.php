@@ -682,8 +682,8 @@ public function filter($request, $paginate = 10)
             if($request->selling_price){
                 $log->selling_price          = $request->selling_price;
             }
-            $log->total_delivery_amount  = $chargeDetails->totalDeliveryChargeAmount;
-            $log->current_payable        = $chargeDetails->currentPayable;
+            $log->total_delivery_amount  = $chargeDetails->totalDeliveryChargeAmount ?? 0;
+            $log->current_payable        = $chargeDetails->currentPayable ?? 0;
             $log->note                   = $request->note;
             $log->save();
 
@@ -954,8 +954,8 @@ public function filter($request, $paginate = 10)
                 $log->selling_price          = $request->selling_price;
             }
             if(!blank($chargeDetails)){
-                $log->total_delivery_amount  = $chargeDetails->totalDeliveryChargeAmount;
-                $log->current_payable        = $chargeDetails->currentPayable;
+                $log->total_delivery_amount  = $chargeDetails->totalDeliveryChargeAmount ?? 0;
+                $log->current_payable        = $chargeDetails->currentPayable ?? 0;
             }
             else{
                 $log->total_delivery_amount  = $duplicate_parcel->total_delivery_amount;
@@ -988,9 +988,9 @@ public function filter($request, $paginate = 10)
   
       
             if(!blank($chargeDetails)){
-                $parcel->vat                    = $chargeDetails->vatTex;
-                $parcel->vat_amount             = $chargeDetails->VatAmount;
-                $parcel->delivery_charge        = $chargeDetails->deliveryChargeAmount;
+                $parcel->vat                    = $chargeDetails->vatTex ?? 0;
+                $parcel->vat_amount             = $chargeDetails->VatAmount ?? 0;
+                $parcel->delivery_charge        = $chargeDetails->deliveryChargeAmount ?? $chargeDetails->totalDeliveryChargeAmount ?? 0;
                 //merchant cod charge
                 $Codmerchant  = Merchant::find($request->merchant_id);
                 $merchantCODCharge   = 0;
@@ -1002,15 +1002,15 @@ public function filter($request, $paginate = 10)
                     $merchantCODCharge   = $Codmerchant->cod_charges['outside_city'];
                 endif;
                 $parcel->cod_charge             =  $merchantCODCharge;
-                $parcel->cod_amount             = $chargeDetails->codChargeAmount;
-                $parcel->total_delivery_amount  = $chargeDetails->totalDeliveryChargeAmount;
-                $parcel->current_payable        = $chargeDetails->currentPayable;
+                $parcel->cod_amount             = $chargeDetails->codChargeAmount ?? 0;
+                $parcel->total_delivery_amount  = $chargeDetails->totalDeliveryChargeAmount ?? 0;
+                $parcel->current_payable        = $chargeDetails->currentPayable ?? 0;
                 if($request->packaging_id){
                     $parcel->packaging_id           = $request->packaging_id;
-                    $parcel->packaging_amount       = $chargeDetails->packagingAmount;
+                    $parcel->packaging_amount       = $chargeDetails->packagingAmount ?? 0;
                 }
                 if(isset($request->fragileLiquid) && $request->fragileLiquid=='on'){
-                    $parcel->liquid_fragile_amount      = $chargeDetails->liquidFragileAmount;
+                    $parcel->liquid_fragile_amount      = $chargeDetails->liquidFragileAmount ?? 0;
                 }else {
                     $parcel->liquid_fragile_amount      = null;
                 }
@@ -1108,9 +1108,9 @@ public function filter($request, $paginate = 10)
             // End Pickup & Delivery Time
             $parcel->note                       = $request->note;
             if(!blank($chargeDetails)){
-                $parcel->vat                    = $chargeDetails->vatTex;
-                $parcel->vat_amount             = $chargeDetails->VatAmount;
-                $parcel->delivery_charge        = $chargeDetails->deliveryChargeAmount;
+                $parcel->vat                    = $chargeDetails->vatTex ?? 0;
+                $parcel->vat_amount             = $chargeDetails->VatAmount ?? 0;
+                $parcel->delivery_charge        = $chargeDetails->deliveryChargeAmount ?? $chargeDetails->totalDeliveryChargeAmount ?? 0;
                 //merchant cod charge
                 $Codmerchant  = Merchant::find($request->merchant_id);
                 $merchantCODCharge   = 0;
@@ -1122,15 +1122,15 @@ public function filter($request, $paginate = 10)
                     $merchantCODCharge   = $Codmerchant->cod_charges['outside_city'];
                 endif;
                 $parcel->cod_charge             =  $merchantCODCharge;
-                $parcel->cod_amount             = $chargeDetails->codChargeAmount;
-                $parcel->total_delivery_amount  = $chargeDetails->totalDeliveryChargeAmount;
-                $parcel->current_payable        = $chargeDetails->currentPayable;
+                $parcel->cod_amount             = $chargeDetails->codChargeAmount ?? 0;
+                $parcel->total_delivery_amount  = $chargeDetails->totalDeliveryChargeAmount ?? 0;
+                $parcel->current_payable        = $chargeDetails->currentPayable ?? 0;
                 if($request->packaging_id){
                     $parcel->packaging_id           = $request->packaging_id;
-                    $parcel->packaging_amount       = $chargeDetails->packagingAmount;
+                    $parcel->packaging_amount       = $chargeDetails->packagingAmount ?? 0;
                 }
                 if(isset($request->fragileLiquid) && $request->fragileLiquid=='on'){
-                    $parcel->liquid_fragile_amount      = $chargeDetails->liquidFragileAmount;
+                    $parcel->liquid_fragile_amount      = $chargeDetails->liquidFragileAmount ?? 0;
                 }else {
                     $parcel->liquid_fragile_amount      = null;
                 }

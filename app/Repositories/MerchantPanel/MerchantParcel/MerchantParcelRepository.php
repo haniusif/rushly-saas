@@ -265,18 +265,22 @@ public function parcel_by_daterange($merchant_id, $from, $to , $paginate = 10)
             endif;
             //end merchant cod charge
             $parcel->cod_charge             =  $merchantCODCharge;
-            $parcel->cod_amount             = $chargeDetails->codChargeAmount;
-            $parcel->total_delivery_amount  = $chargeDetails->totalDeliveryChargeAmount;
-            $parcel->current_payable        = $chargeDetails->currentPayable;
+            // chargeDetails is client-supplied JSON; the form omits keys it has
+            // no value for (a 0-COD parcel sends no codChargeAmount), and an
+            // undefined property becomes an ErrorException that fails the whole
+            // save. Same guard already applied to vatTex/deliveryChargeAmount.
+            $parcel->cod_amount             = $chargeDetails->codChargeAmount ?? 0;
+            $parcel->total_delivery_amount  = $chargeDetails->totalDeliveryChargeAmount ?? 0;
+            $parcel->current_payable        = $chargeDetails->currentPayable ?? 0;
             $parcel->note                   = $request->note;
             $parcel->parcel_bank            = $request->parcel_bank;
             $parcel->status                 = ParcelStatus::PENDING;
             if($request->packaging_id){
                 $parcel->packaging_id               = $request->packaging_id;
-                $parcel->packaging_amount           = $chargeDetails->packagingAmount;
+                $parcel->packaging_amount           = $chargeDetails->packagingAmount ?? 0;
             }
             if(isset($request->fragileLiquid) && $request->fragileLiquid=='on'){
-                $parcel->liquid_fragile_amount  = $chargeDetails->liquidFragileAmount;
+                $parcel->liquid_fragile_amount  = $chargeDetails->liquidFragileAmount ?? 0;
             }
           
             $parcel->tracking_id             = $this->RandomTrackingID();
@@ -417,15 +421,15 @@ public function parcel_by_daterange($merchant_id, $from, $to , $paginate = 10)
                 endif;
                 //end merchant cod charge
                 $parcel->cod_charge             =  $merchantCODCharge;
-                $parcel->cod_amount             = $chargeDetails->codChargeAmount;
-                $parcel->total_delivery_amount  = $chargeDetails->totalDeliveryChargeAmount;
-                $parcel->current_payable        = $chargeDetails->currentPayable;
+                $parcel->cod_amount             = $chargeDetails->codChargeAmount ?? 0;
+                $parcel->total_delivery_amount  = $chargeDetails->totalDeliveryChargeAmount ?? 0;
+                $parcel->current_payable        = $chargeDetails->currentPayable ?? 0;
                 if($request->packaging_id){
                     $parcel->packaging_id           = $request->packaging_id;
-                    $parcel->packaging_amount       = $chargeDetails->packagingAmount;
+                    $parcel->packaging_amount       = $chargeDetails->packagingAmount ?? 0;
                 }
                 if(isset($request->fragileLiquid) && $request->fragileLiquid=='on'){
-                    $parcel->liquid_fragile_amount      = $chargeDetails->liquidFragileAmount;
+                    $parcel->liquid_fragile_amount      = $chargeDetails->liquidFragileAmount ?? 0;
                 }else {
                     $parcel->liquid_fragile_amount      = null;
                 }
@@ -489,8 +493,8 @@ public function parcel_by_daterange($merchant_id, $from, $to , $paginate = 10)
                 $log->selling_price          = $request->selling_price;
             }
             if(!blank($chargeDetails)){
-                $log->total_delivery_amount  = $chargeDetails->totalDeliveryChargeAmount;
-                $log->current_payable        = $chargeDetails->currentPayable;
+                $log->total_delivery_amount  = $chargeDetails->totalDeliveryChargeAmount ?? 0;
+                $log->current_payable        = $chargeDetails->currentPayable ?? 0;
             }
             else{
                 $log->total_delivery_amount  = $duplicate_parcel->total_delivery_amount;
@@ -607,18 +611,18 @@ public function parcel_by_daterange($merchant_id, $from, $to , $paginate = 10)
                 endif;
                 //end merchant cod charge
                 $parcel->cod_charge             =  $merchantCODCharge;
-                $parcel->cod_amount             = $chargeDetails->codChargeAmount;
-                $parcel->total_delivery_amount  = $chargeDetails->totalDeliveryChargeAmount;
-                $parcel->current_payable        = $chargeDetails->currentPayable;
+                $parcel->cod_amount             = $chargeDetails->codChargeAmount ?? 0;
+                $parcel->total_delivery_amount  = $chargeDetails->totalDeliveryChargeAmount ?? 0;
+                $parcel->current_payable        = $chargeDetails->currentPayable ?? 0;
 
                 if(isset($request->fragileLiquid) && $request->fragileLiquid=='on'){
-                    $parcel->liquid_fragile_amount      = $chargeDetails->liquidFragileAmount;
+                    $parcel->liquid_fragile_amount      = $chargeDetails->liquidFragileAmount ?? 0;
                 }else{
                     $parcel->liquid_fragile_amount      = null;
                 }
                 if($request->packaging_id){
                     $parcel->packaging_id               = $request->packaging_id;
-                    $parcel->packaging_amount           = $chargeDetails->packagingAmount;
+                    $parcel->packaging_amount           = $chargeDetails->packagingAmount ?? 0;
 
                 }
             }

@@ -3,6 +3,7 @@
 namespace App\Models\Backend;
 
 
+use App\Models\Concerns\ScopedToCompany;
 use App\Models\MerchantShops;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -24,7 +25,7 @@ class Parcel extends Model
     
  
      
-    use HasFactory, LogsActivity;
+    use HasFactory, LogsActivity, ScopedToCompany;
 
     /**
      * Transient cancel reason — set by ::cancelShipment() before save so the
@@ -53,21 +54,9 @@ class Parcel extends Model
     |--------------------------------------------------------------------------
     | Tenant isolation (global scope)
     |--------------------------------------------------------------------------
-    | Every Eloquent query against Parcel (find, where, ::all, eager loads
-    | via Eloquent — anything that goes through the query builder) is
-    | automatically constrained to the current tenant's company_id. This
-    | closes a class of leaks where a caller did `Parcel::find($id)` with
-    | $id coming from the URL or request payload, bypassing the local
-    | scopeCompanywise() scope.
-    |
-    | Guards (skip the scope when ANY of these is true):
-    |  - tenant() is null         (CLI, artisan, jobs, queue workers, tinker,
-    |                              cron, scheduler, central-domain requests).
-    |    The settings() helper falls back to id=1 in those contexts and that
-    |    fallback would silently clamp every CLI query to tenant 1 — worse
-    |    than no scope at all.
-    |  - tenant()->company_id is null  (defensive — half-resolved tenant).
-    |  - Authenticated user is SUPER_ADMIN (cross-tenant access by design).
+    | Every Eloquent query against Parcel is constrained to one company_id by
+    | the ScopedToCompany trait (see the trait for the full resolution order
+    | and the contexts it deliberately leaves unscoped).
     |
     | Escape hatch:
     |    Parcel::withoutGlobalScope('tenant')->find($id)
@@ -78,20 +67,6 @@ class Parcel extends Model
     | compatibility — calls like Parcel::companywise()->... still work,
     | they're just redundant now.
     */
-    static::addGlobalScope('tenant', function ($query) {
-        // stancl/tenancy resolves tenant() during the request. If it's
-        // null, we're outside any tenant HTTP context — skip the scope.
-        if (!function_exists('tenant') || !tenant() || !tenant()->company_id) {
-            return;
-        }
-        // Super-admins have explicit cross-tenant authority.
-        if (\Illuminate\Support\Facades\Auth::check()
-            && (int) \Illuminate\Support\Facades\Auth::user()->user_type === \App\Enums\UserType::SUPER_ADMIN) {
-            return;
-        }
-        $table = (new static())->getTable();
-        $query->where($table . '.company_id', (int) tenant()->company_id);
-    });
 
     static::updating(function ($parcel) {
         // Once a shipment is CANCELLED, no further updates of any kind are
@@ -259,6 +234,68 @@ public function lastPickupMan()
     return $this->hasOne(ParcelEvent::class, 'parcel_id', 'id')
                 ->whereNotNull('pickup_man_id')
                 ->latest('id');
+}
+
+/*
+|--------------------------------------------------------------------------
+| Driver assignment
+|--------------------------------------------------------------------------
+| There is NO `parcels.delivery_man_id` column — a parcel's driver lives on
+| `parcel_events.delivery_man_id`, and the current driver is the one on the
+| most recent event that names one. Querying `delivery_man_id` directly on
+| `parcels` raises SQLSTATE[42S22] "Unknown column", which is exactly what
+| these scopes exist to prevent.
+|
+| The subquery mirrors the join already used by DriverPerformanceService.
+*/
+
+/**
+ * Parcels whose CURRENT driver is $driverId.
+ */
+public function scopeAssignedToDriver($query, $driverId)
+{
+    return $query->whereIn('id', function ($sub) use ($driverId) {
+        $sub->from('parcel_events as pe')
+            ->select('pe.parcel_id')
+            ->where('pe.delivery_man_id', (int) $driverId)
+            ->whereRaw('pe.id = (
+                select max(pe2.id) from parcel_events pe2
+                 where pe2.parcel_id = pe.parcel_id
+                   and pe2.delivery_man_id is not null
+            )');
+    });
+}
+
+/**
+ * Parcels that currently have any driver assigned (or none, when $assigned
+ * is false). Replaces whereNotNull/whereNull('delivery_man_id').
+ */
+public function scopeHasDriverAssigned($query, bool $assigned = true)
+{
+    $sub = function ($sub) {
+        $sub->from('parcel_events as pe')
+            ->select('pe.parcel_id')
+            ->whereNotNull('pe.delivery_man_id');
+    };
+
+    return $assigned
+        ? $query->whereIn('id', $sub)
+        : $query->whereNotIn('id', $sub);
+}
+
+/**
+ * Adds a `delivery_man_id` column to the SELECT, resolved from the latest
+ * event, so callers can read/group by the current driver.
+ */
+public function scopeWithDriverId($query)
+{
+    return $query->addSelect(['delivery_man_id' => ParcelEvent::query()
+        ->select('delivery_man_id')
+        ->whereColumn('parcel_id', 'parcels.id')
+        ->whereNotNull('delivery_man_id')
+        ->latest('id')
+        ->limit(1),
+    ]);
 }
 
 

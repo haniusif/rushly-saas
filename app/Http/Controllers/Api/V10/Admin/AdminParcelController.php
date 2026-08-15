@@ -48,7 +48,7 @@ class AdminParcelController extends Controller
             $query->where('hub_id', (int) $hubId);
         }
         if ($driverId = $request->query('driver_id')) {
-            $query->where('delivery_man_id', (int) $driverId);
+            $query->assignedToDriver((int) $driverId);
         }
         if ($from = $request->query('from')) {
             $query->whereDate('created_at', '>=', $from);
@@ -105,11 +105,15 @@ class AdminParcelController extends Controller
 
         $driver = DeliveryMan::with('hub')->findOrFail($request->driver_id);
 
-        $parcel->delivery_man_id = $driver->id;
+        // NOTE: do NOT set $parcel->delivery_man_id — there is no such column
+        // on `parcels`, and assigning it made save() emit an UPDATE naming an
+        // unknown field, which failed the whole assignment. The driver linkage
+        // is recorded on the ParcelEvent row created below, which is the
+        // authoritative place for it.
         if ($driver->hub_id) {
             $parcel->hub_id = $driver->hub_id;
+            $parcel->save();
         }
-        $parcel->save();
 
         // Append a parcel event row using the existing repo helper, which
         // also flips the parcel status when appropriate.

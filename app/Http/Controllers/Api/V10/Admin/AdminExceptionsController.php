@@ -52,7 +52,8 @@ class AdminExceptionsController extends Controller
         // 2. Stuck parcels — same status for stuckDays or more, not yet delivered
         $stuckQuery = Parcel::query()
             ->select('id', 'tracking_id', 'customer_name', 'status', 'hub_id',
-                     'merchant_id', 'updated_at', 'delivery_man_id')
+                     'merchant_id', 'updated_at')
+            ->withDriverId()
             ->whereNotIn('status', [
                 ParcelStatus::DELIVERED,
                 ParcelStatus::PARTIAL_DELIVERED,
@@ -75,7 +76,8 @@ class AdminExceptionsController extends Controller
         // 3. Returning to courier or already back at courier
         $returningQuery = Parcel::query()
             ->select('id', 'tracking_id', 'customer_name', 'status', 'hub_id',
-                     'merchant_id', 'delivery_man_id', 'updated_at')
+                     'merchant_id', 'updated_at')
+            ->withDriverId()
             ->where('status', ParcelStatus::RETURN_TO_COURIER)
             ->latest('updated_at')
             ->limit(self::LIMIT);

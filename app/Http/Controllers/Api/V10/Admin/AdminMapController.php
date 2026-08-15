@@ -44,7 +44,7 @@ class AdminMapController extends Controller
 
         $query = Parcel::query()
             ->with(['merchant:id,business_name'])
-            ->whereNull('delivery_man_id')
+            ->hasDriverAssigned(false)
             ->whereIn('status', $openStatuses)
             ->whereNotNull('customer_lat')
             ->whereNotNull('customer_long');
@@ -109,15 +109,24 @@ class AdminMapController extends Controller
             ->keyBy('delivery_man_id');
 
         // Current load = parcels currently assigned but not delivered.
-        $loadCounts = Parcel::query()
-            ->whereIn('delivery_man_id', $ids)
-            ->whereNotIn('status', [
+        // Driver assignment lives on parcel_events, not parcels, so count
+        // through the latest driver-bearing event per parcel. Driving this
+        // off ParcelEvent keeps the company_id global scope applied.
+        $loadCounts = ParcelEvent::query()
+            ->join('parcels', 'parcels.id', '=', 'parcel_events.parcel_id')
+            ->whereIn('parcel_events.delivery_man_id', $ids)
+            ->whereRaw('parcel_events.id = (
+                select max(pe2.id) from parcel_events pe2
+                 where pe2.parcel_id = parcel_events.parcel_id
+                   and pe2.delivery_man_id is not null
+            )')
+            ->whereNotIn('parcels.status', [
                 ParcelStatus::DELIVERED,
                 ParcelStatus::RETURNED_MERCHANT,
                 ParcelStatus::RETURN_RECEIVED_BY_MERCHANT,
             ])
-            ->select('delivery_man_id', DB::raw('count(*) as c'))
-            ->groupBy('delivery_man_id')
+            ->select('parcel_events.delivery_man_id', DB::raw('count(*) as c'))
+            ->groupBy('parcel_events.delivery_man_id')
             ->pluck('c', 'delivery_man_id');
 
         return $this->responseWithSuccess('admin.map.drivers', [

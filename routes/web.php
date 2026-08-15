@@ -563,6 +563,10 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::get('parcel/clone/{id}',                     [ParcelController::class, 'duplicate'])->name('parcel.clone');
                         Route::get('parcel/create',                         [ParcelController::class, 'create'])->name('parcel.create')->middleware('hasPermission:parcel_create');
                         Route::post('parcel/store',                         [ParcelController::class, 'store'])->name('parcel.store')->middleware('hasPermission:parcel_create');
+                        // Navbar Quick Shipment modal (AdminLayout Topbar). Same
+                        // parcel_create permission as the full create screen.
+                        Route::get('parcel/quick-create/lookups',           [ParcelController::class, 'quickCreateLookups'])->name('parcel.quick-create.lookups')->middleware('hasPermission:parcel_create');
+                        Route::post('parcel/quick-store',                   [ParcelController::class, 'quickStore'])->name('parcel.quick-store')->middleware('hasPermission:parcel_create');
                         Route::post('parcel/clone-store',                   [ParcelController::class, 'duplicateStore'])->name('parcel.clone-store');
                         Route::get('parcel/edit/{id}',                      [ParcelController::class, 'edit'])->name('parcel.edit')->middleware('hasPermission:parcel_update');
                         Route::put('parcel/update/{id}',                    [ParcelController::class, 'update'])->name('parcel.update')->middleware('hasPermission:parcel_update');

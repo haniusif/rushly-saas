@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Backend;
 
+use App\Enums\DeliveryType;
 use App\Enums\ParcelStatus;
 use App\Enums\Status;
 use App\Enums\UserType;
@@ -591,6 +592,167 @@ class ParcelController extends Controller
             ->with('error', __('parcel.error_msg'));
     }
 
+
+    /**
+     * Lookup data for the navbar Quick Shipment modal.
+     *
+     * The modal lives in AdminLayout's Topbar, which renders on every admin
+     * page and therefore has no page props to read merchants/cities from.
+     * Rather than push this onto every Inertia response, the modal fetches it
+     * once, lazily, the first time it is opened.
+     */
+    public function quickCreateLookups()
+    {
+        $merchants = Merchant::companywise()->where('status', Status::ACTIVE)
+            ->with('user')->orderBy('business_name')->get();
+
+        return response()->json([
+            'merchants' => collect($merchants)->map(fn ($m) => [
+                'id'             => $m->id,
+                'name'           => $m->business_name,
+                'vat'            => (float) ($m->vat ?? 0),
+                'cod_charges'    => [
+                    'inside_city'  => (float) (data_get($m, 'cod_charges.inside_city') ?? 0),
+                    'sub_city'     => (float) (data_get($m, 'cod_charges.sub_city') ?? 0),
+                    'outside_city' => (float) (data_get($m, 'cod_charges.outside_city') ?? 0),
+                ],
+                'pickup_phone'   => optional($m->user)->mobile,
+                'pickup_address' => $m->address,
+            ])->values(),
+            'cities' => collect($this->repo->cities())->map(fn ($c) => [
+                'id'   => $c->id,
+                'name' => $c->en_name ?: $c->name,
+            ])->values(),
+            'currency' => settings()->currency,
+        ]);
+    }
+
+    /**
+     * Create a shipment from the navbar Quick Shipment modal.
+     *
+     * Deliberately a separate entry point from store(): the modal collects only
+     * pickup / receiver / COD / notes, while Parcel\StoreRequest additionally
+     * demands category_id and delivery_type_id, and the full Inertia form
+     * computes chargeDetails in the browser. Here both are resolved server-side
+     * — the client never supplies pricing — and the assembled request is handed
+     * to the SAME repository store() the full form uses, so tracking-id
+     * generation, parcel events, wallet debits and hub assignment all behave
+     * identically. Anything the modal omits stays editable afterwards on the
+     * normal edit screen.
+     *
+     * Responds with JSON (not a redirect) because the caller is a fetch() from
+     * a modal that stays open on failure to show the error inline.
+     */
+    public function quickStore(Request $request)
+    {
+        $data = $request->validate([
+            'merchant_id'      => ['required', 'numeric'],
+            'pickup_phone'     => ['required', 'string', 'max:191'],
+            'pickup_address'   => ['required', 'string', 'max:191'],
+            'customer_name'    => ['required', 'string', 'max:191'],
+            'customer_phone'   => ['required', 'string', 'max:191'],
+            'customer_address' => ['required', 'string', 'max:191'],
+            'city_id'          => ['required', 'numeric'],
+            'cash_collection'  => ['nullable', 'numeric', 'min:0'],
+            'note'             => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        // Same subscription / quota gates as store() — a cheaper entry point
+        // must not become a way around the plan limit.
+        $parcelCount = Parcel::companywise()->count();
+        if (! settings()->subscription) {
+            return response()->json([
+                'message' => __('Your workspace has no active subscription. Contact billing.'),
+            ], 422);
+        }
+        if (settings()->subscription->parcel_count <= $parcelCount) {
+            return response()->json([
+                'message' => __('You have reached your parcel limit. Upgrade your package to create more.'),
+            ], 422);
+        }
+
+        $merchant = Merchant::companywise()->find($data['merchant_id']);
+        if (! $merchant) {
+            return response()->json(['message' => __('parcel.error_msg')], 422);
+        }
+
+        $categoryId = optional(collect($this->repo->deliveryCategories())->first())->id;
+
+        // deliveryTypes() returns Config ROWS, whose ids (47, 48, 51…) are
+        // unrelated to the DeliveryType enum (1-4) that the repository's COD
+        // and pickup/delivery-date branches compare against. Passing a config
+        // id straight through — as the full form does — means no branch ever
+        // matches, so cod_charge lands at 0 and both dates stay null. Map the
+        // enabled config key onto the enum instead, preferring the fastest
+        // service the tenant has switched on.
+        $enabled  = collect($this->repo->deliveryTypes())->pluck('key')
+            ->map(fn ($k) => strtolower((string) $k))->unique();
+        $byKey    = [
+            'same_day'     => DeliveryType::SAMEDAY,
+            'next_day'     => DeliveryType::NEXTDAY,
+            'sub_city'     => DeliveryType::SUBCITY,
+            'outside_city' => DeliveryType::OUTSIDECITY,
+        ];
+        $deliveryTypeId = null;
+        foreach ($byKey as $key => $enumValue) {
+            if ($enabled->contains($key)) {
+                $deliveryTypeId = $enumValue;
+                break;
+            }
+        }
+
+        if (! $categoryId || ! $deliveryTypeId) {
+            return response()->json([
+                'message' => __('Configure at least one delivery category and delivery type before using quick create.'),
+            ], 422);
+        }
+
+        // Pricing, server-side. Mirrors the arithmetic in ParcelForm.jsx, minus
+        // the packaging/fragile extras the modal has no fields for. The COD
+        // tier follows the same delivery-type split the repository uses.
+        $cashCollection = (float) ($data['cash_collection'] ?? 0);
+        $codTier        = match ($deliveryTypeId) {
+            DeliveryType::SUBCITY     => 'sub_city',
+            DeliveryType::OUTSIDECITY => 'outside_city',
+            default                   => 'inside_city',
+        };
+        $codPct         = (float) (data_get($merchant, 'cod_charges.' . $codTier) ?? 0);
+        $codCharge      = $cashCollection * ($codPct / 100);
+        $vatRate        = (float) ($merchant->vat ?? 0);
+        $totalCharge    = $codCharge;
+        $vatAmount      = $totalCharge * ($vatRate / 100);
+        $currentPayable = $cashCollection - $totalCharge - $vatAmount;
+
+        $request->merge([
+            'category_id'      => $categoryId,
+            'delivery_type_id' => $deliveryTypeId,
+            'cash_collection'  => $cashCollection,
+            'vat_tex'          => $vatRate,
+            'chargeDetails'    => json_encode([
+                'totalCashCollection'       => $cashCollection,
+                'codChargeAmount'           => $codCharge,
+                'liquidFragileAmount'       => 0,
+                'packagingAmount'           => 0,
+                'totalDeliveryChargeAmount' => $totalCharge,
+                'vatTex'                    => $vatRate,
+                'VatAmount'                 => $vatAmount,
+                'netPayable'                => $currentPayable,
+                'currentPayable'            => $currentPayable,
+            ]),
+        ]);
+
+        if (! $this->repo->store($request)) {
+            return response()->json(['message' => __('parcel.error_msg')], 422);
+        }
+
+        $parcel = Parcel::companywise()->latest('id')->first();
+
+        return response()->json([
+            'message'     => __('parcel.added_msg'),
+            'parcel_id'   => optional($parcel)->id,
+            'tracking_id' => optional($parcel)->tracking_id,
+        ]);
+    }
 
     public function duplicateStore(StoreRequest $request)
     {

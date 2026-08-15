@@ -767,8 +767,18 @@ public function filter($request, $paginate = 10)
             }
             return true;
         }
-        catch (\Exception $e) { 
+        catch (\Exception $e) {
             DB::rollBack();
+            // Was a bare `return false`, which made every store() failure
+            // invisible: the controller just flashed a generic error and
+            // nothing reached the log. Mirrors the logging MerchantParcel-
+            // Repository already does.
+            \Log::error('Parcel store() failed', [
+                'msg'         => $e->getMessage(),
+                'file'        => $e->getFile(),
+                'line'        => $e->getLine(),
+                'merchant_id' => $request->merchant_id ?? null,
+            ]);
             return false;
         }
     }

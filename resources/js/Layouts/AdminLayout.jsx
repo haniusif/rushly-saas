@@ -9,7 +9,7 @@ import {
     BarChart3, AlertTriangle, Hourglass, Wand2, ListChecks, CheckCircle2, XCircle, Info,
     Wallet, ShieldAlert, DollarSign, CreditCard, BadgeDollarSign,
     UserCog, HardDrive, Briefcase, Tags, BellRing, KeyRound, Layers,
-    Plug, MapPinned, Layout, ScrollText, Sliders, BookOpen,
+    Plug, MapPinned, Layout, ScrollText, Sliders, BookOpen, PackagePlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/Components/ui/Button';
@@ -19,6 +19,7 @@ import {
 } from '@/Components/ui/DropdownMenu';
 import { Input } from '@/Components/ui/Input';
 import GlobalSearch from '@/Components/GlobalSearch';
+import QuickCreateShipmentModal from '@/Components/parcel/QuickCreateShipmentModal';
 import { useT, useLocale, SUPPORTED_LOCALES } from '@/lib/i18n';
 import TourLauncher from '@/Tour/TourLauncher';
 
@@ -360,6 +361,12 @@ function LanguageMenu() {
 function Topbar({ onSidebarOpen, user }) {
     const [dark, toggleDark] = useDarkMode();
     const t = useT();
+    const { props } = usePage();
+    const [quickOpen, setQuickOpen] = React.useState(false);
+    // Same UX gate as the sidebar: hide the action for admins who would only
+    // get a 403 from parcel.quick-store anyway. Server middleware stays
+    // authoritative.
+    const canCreateParcel = new Set(props?.auth?.permissions ?? []).has('parcel_create');
     return (
         <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur md:px-6">
             <Button variant="ghost" size="icon" className="md:hidden" onClick={onSidebarOpen}>
@@ -371,6 +378,19 @@ function Topbar({ onSidebarOpen, user }) {
             </div>
 
             <div className="ms-auto flex items-center gap-1">
+                {canCreateParcel && (
+                    <Button
+                        variant="default"
+                        size="sm"
+                        className="h-9 gap-1.5"
+                        onClick={() => setQuickOpen(true)}
+                        aria-label={t('quick_ship_title')}
+                        data-tour="topbar-quick-shipment"
+                    >
+                        <PackagePlus className="h-4 w-4" />
+                        <span className="hidden sm:inline">{t('quick_ship_action')}</span>
+                    </Button>
+                )}
                 <TourLauncher label={t('take_a_tour')} />
                 <LanguageMenu />
                 <Button variant="ghost" size="icon" onClick={toggleDark} aria-label={t('toggle_theme')}>
@@ -432,6 +452,17 @@ function Topbar({ onSidebarOpen, user }) {
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
+
+            {canCreateParcel && (
+                <QuickCreateShipmentModal
+                    open={quickOpen}
+                    onClose={() => setQuickOpen(false)}
+                    lookupsUrl={safeRoute('parcel.quick-create.lookups')}
+                    storeUrl={safeRoute('parcel.quick-store')}
+                    parcelIndexUrl={safeRoute('parcel.index')}
+                    t={t}
+                />
+            )}
         </header>
     );
 }

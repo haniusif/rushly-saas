@@ -3080,7 +3080,27 @@ public function printMultipleParcelLabels($parcels)
             $data['description'] = $description;
             $data['orderNumber'] = $order_reference;
             $data['reference_number'] = $reference_number;
-            
+
+            // Carrier-style templates (bold-barcode / high-density) print a
+            // waybill header: weights, piece counts, declared value, station
+            // codes and payment terms. Older layouts ignore these keys, and
+            // every template reads them with a ?? fallback, so adding them
+            // here is additive.
+            $data['weight']         = (float) ($parcel->weight ?? 0);
+            $data['pieces']         = $number_of_boxes;
+            $data['declaredValue']  = (float) ($parcel->selling_price ?? 0);
+            $data['trackingId']     = $parcel->tracking_id ?? (string) $parcel->id;
+            $data['currency']       = optional(settings())->currency ?: 'SAR';
+            // Station codes: the city's short code is the closest thing the
+            // schema has to a carrier origin/destination station.
+            $data['originCode']      = $parcel->city->city_code ?? '-';
+            $data['destinationCode'] = $receiver_city_code;
+            // parcels has no national-address column (it lives on users), so
+            // the label falls back to the merchant owner's when present.
+            $data['shortAddressCode'] = optional(optional($merchant)->user)->short_national_address ?: '-';
+            $data['sender']['city']  = $sender_city;
+            $data['receiver']['area'] = $receiver_neighbourhood;
+
 
             $tpl = $resolver->forParcel($parcel);
             $html = view($tpl->view(), compact('data'))->render();

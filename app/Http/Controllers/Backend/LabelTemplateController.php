@@ -152,7 +152,7 @@ class LabelTemplateController extends Controller
             'sender' => [
                 'name' => 'Sample Merchant', 'phone' => '+966500000000',
                 'addressLine1' => '123 King Fahd Rd', 'addressLine2' => 'Riyadh',
-                'country' => 'SA',
+                'country' => 'SA', 'city' => 'Riyadh',
             ],
             'receiver' => [
                 'name' => 'Mohammed Ali', 'phone' => '+966550000000',
@@ -166,6 +166,18 @@ class LabelTemplateController extends Controller
             'description' => 'Sample preview shipment',
             'orderNumber' => 'ORD-PREVIEW',
             'reference_number' => 'REF-PREVIEW',
+
+            // Waybill header fields used by the carrier-style layouts
+            // (bold-barcode / high-density). Mirrors what ParcelController
+            // builds for a real parcel so the preview is representative.
+            'weight'           => 4.20,
+            'pieces'           => 1,
+            'declaredValue'    => 150.00,
+            'trackingId'       => '2916 8713 9135',
+            'currency'         => optional(settings())->currency ?: 'SAR',
+            'originCode'       => 'RUH',
+            'destinationCode'  => 'DMM',
+            'shortAddressCode' => 'RNBB3871',
         ];
     }
 }

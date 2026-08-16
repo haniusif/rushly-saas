@@ -84,8 +84,8 @@ const NAV = [
         { tKey: 'menu_fraud',             icon: ShieldAlert,   route: 'fraud.index',             match: ['admin/fraud'], perm: 'fraud_read' },
     ]},
     { group: 'menu_billing', items: [
-        { tKey: 'menu_subscribe',    icon: Bell,        route: 'subscribe.index',    match: ['admin/subscribe'] },
-        { tKey: 'menu_subscription', icon: Receipt,     route: 'subscription.index', match: ['subscription'] },
+        { tKey: 'menu_subscribe',    icon: Bell,        route: 'subscribe.index',    match: ['admin/subscribe'], perm: 'subscribe_read' },
+        { tKey: 'menu_subscription', icon: Receipt,     route: 'subscription.index', match: ['subscription'], perm: 'subscription_read' },
         { tKey: 'menu_reports',      icon: ScrollText,  route: 'parcel.reports',     match: ['admin/reports','admin/parcel-reports'], perm: 'parcel_status_reports' },
     ]},
     { group: 'menu_zatca', items: [
@@ -108,7 +108,7 @@ const NAV = [
         { tKey: 'menu_sms_setting',             icon: MessageCircle, route: 'sms-settings.index',             match: ['admin/sms-settings'], perm: 'sms_settings_read' },
         { tKey: 'menu_sms_send_setting',        icon: Send,          route: 'sms-send-settings.index',        match: ['admin/sms-send-settings'], perm: 'sms_send_settings_read' },
         { tKey: 'menu_notification_settings',   icon: BellRing,      route: 'notification-settings.index',    match: ['admin/notification-settings'], perm: 'notification_settings_read' },
-        { tKey: 'menu_googlemap_setting',       icon: MapPinned,     route: 'googlemap-settings.index',       match: ['admin/googlemap-settings'] },
+        { tKey: 'menu_googlemap_setting',       icon: MapPinned,     route: 'googlemap-settings.index',       match: ['admin/googlemap-settings'], perm: 'general_settings_read' },
         { tKey: 'menu_social_login_settings',   icon: KeyRound,      route: 'social.login.settings.index',    match: ['admin/social-login-settings'], perm: 'social_login_settings_read' },
         { tKey: 'menu_payment_gateway_setup',   icon: CreditCard,    route: 'payout.setup.settings.index',    match: ['admin/settings/pay-out'], perm: 'payout_setup_settings_read' },
         { tKey: 'menu_packaging',               icon: Boxes,         route: 'packaging.index',                match: ['admin/packaging'], perm: 'packaging_read' },

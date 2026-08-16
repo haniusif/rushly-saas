@@ -303,7 +303,7 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                 Route::get('/tours/for-me',           [\App\Http\Controllers\Api\V10\TourController::class, 'forMe'])->name('tours.for-me');
                 Route::post('/tours/{key}/progress',  [\App\Http\Controllers\Api\V10\TourController::class, 'saveProgress'])->name('tours.progress');
                 Route::post('/tours/{key}/event',     [\App\Http\Controllers\Api\V10\TourController::class, 'logEvent'])->name('tours.event');
-                Route::get('/subscription',          [PlanController::class, 'subscription'])->name('subscription.index');
+                Route::get('/subscription',          [PlanController::class, 'subscription'])->name('subscription.index')->middleware('hasPermission:subscription_read');
 
                 Route::get('/subscription/payment',  [PlanController::class, 'subscriptionPayment'])->name('subscription.payment');
 
@@ -1115,7 +1115,7 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::get('salary/salary-generate/edit/{id}',     [SalaryGenerateController::class, 'edit'])->name('salary.generate.edit')->middleware('hasPermission:salary_generate_update');
                         Route::put('salary/salary-generate/update',        [SalaryGenerateController::class, 'update'])->name('salary.generate.update')->middleware('hasPermission:salary_generate_update');
                         Route::delete('salary/salary-generate/delete/{id}', [SalaryGenerateController::class, 'salaryGenerateDelete'])->name('salary-generate.delete')->middleware('hasPermission:salary_generate_delete');
-                        Route::get('subscribe',                            [SalaryGenerateController::class, 'subscribe'])->name('subscribe.index');
+                        Route::get('subscribe',                            [SalaryGenerateController::class, 'subscribe'])->name('subscribe.index')->middleware('hasPermission:subscribe_read');
                         //pickup request
                         Route::prefix('pickup-request')->name('pickup.request.')->group(function () {
                             Route::get('regular',                      [PickupRequestController::class, 'regular'])->name('regular')->middleware('hasPermission:pickup_request_regular');
@@ -1124,8 +1124,8 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         //parcel search
                         Route::get('parcel/specific/search',                    [ParcelController::class, 'ParcelSearchs'])->name('parcel.specific.search');
                         // GoogleMap settings
-                        Route::get('googlemap-settings/index',        [GoogleMapSettingsController::class, 'index'])->name('googlemap-settings.index');
-                        Route::put('googlemap-settings/update',       [GoogleMapSettingsController::class, 'update'])->name('googlemap-settings.update');
+                        Route::get('googlemap-settings/index',        [GoogleMapSettingsController::class, 'index'])->name('googlemap-settings.index')->middleware('hasPermission:general_settings_read');
+                        Route::put('googlemap-settings/update',       [GoogleMapSettingsController::class, 'update'])->name('googlemap-settings.update')->middleware('hasPermission:general_settings_update');
 
                         // Notification settings
                         Route::get('notification-settings/index',        [NotificationSettingsController::class, 'index'])->name('notification-settings.index')->middleware('hasPermission:notification_settings_read');

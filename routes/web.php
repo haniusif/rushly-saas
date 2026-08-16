@@ -169,7 +169,10 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
     $domain = false;
     if (Config::get('app.app_installed') == 'yes'  && Schema::hasTable('domains')) :
         $domain = in_array(request()->getHost(), Domain::pluck('domain')->toArray());
-        \Log::info(request()->getHost());
+        // NOTE: there was a `\Log::info(request()->getHost())` here. It ran on
+        // EVERY request — 4,213 INFO lines in a single day — burying the
+        // handful of real errors in the log. Removed rather than downgraded:
+        // the host is already on each request and adds nothing on its own.
     endif;
 
     if ($domain) :

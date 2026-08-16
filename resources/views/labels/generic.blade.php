@@ -20,27 +20,9 @@
 </head>
 <body>
 @php
-    // Tenant logo → base64 data URI so mPDF renders it without needing
-    // network access at print time. Falls back to text-only header when
-    // the tenant hasn't uploaded a logo yet.
-    $__logoDataUri = null;
-    // Try tenant logo first; fall back to the platform default under
-    // public/images/default/logo.png. Fully silent on any error.
-    $__logoCandidates = [];
-    try {
-        $tenantPath = optional(optional(settings())->rxlogo)->original;
-        if (is_string($tenantPath) && $tenantPath !== '') $__logoCandidates[] = $tenantPath;
-    } catch (\Throwable $e) {}
-    $__logoCandidates[] = 'images/default/logo.png';
-
-    foreach ($__logoCandidates as $__candidate) {
-        $__abs = public_path($__candidate);
-        if (is_file($__abs)) {
-            $__mime = @mime_content_type($__abs) ?: 'image/png';
-            $__logoDataUri = 'data:' . $__mime . ';base64,' . base64_encode(@file_get_contents($__abs));
-            break;
-        }
-    }
+    // Tenant logo as a data URI. Shared with the other label templates via
+    // labelLogoDataUri() so there is a single implementation to fix.
+    $__logoDataUri = labelLogoDataUri();
 @endphp
 <div class="wrap">
     <div class="row" style="text-align:center;">

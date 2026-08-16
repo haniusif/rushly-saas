@@ -35,8 +35,9 @@
     $rawCountry = trim((string) ($data['receiver']['country'] ?? ''));
     $country    = $data['receiver']['country_code']
                   ?? ($ccMap[strtolower($rawCountry)] ?? strtoupper(substr($rawCountry, 0, 2)));
-    $logoPath   = public_path('assets/labels/carrier-logo.png');
-    $hasLogo    = is_file($logoPath);
+    // Tenant logo, inlined as a data URI (mPDF prints with no network access).
+    // Falls back to the tenant name as text when no logo is uploaded.
+    $logoUri    = labelLogoDataUri();
     $brandName  = optional(settings())->name ?: config('app.name');
 @endphp
 <!DOCTYPE html>
@@ -94,8 +95,8 @@
     <table class="hd">
         <tr>
             <td style="width:36%;">
-                @if ($hasLogo)
-                    <img src="{{ $logoPath }}" alt="" style="max-width:150px;max-height:42px;">
+                @if ($logoUri)
+                    <img src="{{ $logoUri }}" alt="" style="max-width:145px;max-height:40px;">
                 @else
                     <div class="brand">{{ \Illuminate\Support\Str::limit($brandName, 16, '') }}</div>
                     <div class="brandsub">EXPRESS</div>

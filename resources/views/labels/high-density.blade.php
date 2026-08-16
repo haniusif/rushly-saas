@@ -30,8 +30,9 @@
     $origin    = strtoupper((string) ($data['originCode'] ?? ''));
     $dest      = strtoupper((string) ($data['destinationCode'] ?? ($data['receiver']['city_code'] ?? '')));
     $weight    = (float) ($data['weight'] ?? 0);
-    $logoPath  = public_path('assets/labels/carrier-logo.png');
-    $hasLogo   = is_file($logoPath);
+    // Tenant logo, inlined as a data URI (mPDF prints with no network access).
+    // Falls back to the tenant name as text when no logo is uploaded.
+    $logoUri   = labelLogoDataUri();
     $brandName = optional(settings())->name ?: config('app.name');
     $wfmt      = fn ($w) => rtrim(rtrim(number_format($w, 2), '0'), '.');
 
@@ -95,8 +96,8 @@
     <table>
         <tr>
             <td class="br" style="width:32%;vertical-align:middle;">
-                @if ($hasLogo)
-                    <img src="{{ $logoPath }}" alt="" style="max-width:130px;max-height:34px;">
+                @if ($logoUri)
+                    <img src="{{ $logoUri }}" alt="" style="max-width:125px;max-height:32px;">
                 @else
                     <div class="brand">{{ \Illuminate\Support\Str::limit($brandName, 20, '') }}</div>
                 @endif

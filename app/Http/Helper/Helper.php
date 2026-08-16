@@ -102,6 +102,47 @@ if(!function_exists('hasPermission')){
     }
 }
 
+if(!function_exists('labelLogoDataUri')){
+    /**
+     * The tenant logo as a base64 data URI, for shipping-label templates.
+     *
+     * mPDF prints without network access, so the image has to be inlined
+     * rather than referenced by URL. Falls back to the platform default at
+     * public/images/default/logo.png, then to null when the tenant has not
+     * uploaded a logo and the default is missing — callers render a text
+     * header in that case.
+     *
+     * Silent on every failure: a broken logo must never take down a label.
+     */
+    function labelLogoDataUri(): ?string {
+        $candidates = [];
+
+        try {
+            $tenantPath = optional(optional(settings())->rxlogo)->original;
+            if (is_string($tenantPath) && $tenantPath !== '') {
+                $candidates[] = $tenantPath;
+            }
+        } catch (\Throwable $e) {
+            // settings() can throw outside a resolved tenant context.
+        }
+
+        $candidates[] = 'images/default/logo.png';
+
+        foreach ($candidates as $candidate) {
+            $abs = public_path($candidate);
+            if (is_file($abs)) {
+                $mime = @mime_content_type($abs) ?: 'image/png';
+                $raw  = @file_get_contents($abs);
+                if ($raw !== false) {
+                    return 'data:' . $mime . ';base64,' . base64_encode($raw);
+                }
+            }
+        }
+
+        return null;
+    }
+}
+
 if(!function_exists('settings')){
     function settings(){
         return  GeneralSettings::with('rxlogo','rxfavicon')->where('status',Status::ACTIVE)->where(function($query){

@@ -18,9 +18,16 @@ class LoginOtpMail extends Mailable
 
     public function build()
     {
-        $from = settings()?->email ?: config('mail.from.address');
+        // Sending AS the tenant's own address got every mail rejected by the
+        // provider when that domain wasn't verified — see tenantMailFrom().
+        $sender = tenantMailFrom();
 
-        return $this->from($from)
+        $mail = $this->from($sender['address'], $sender['name']);
+        if ($sender['reply_to']) {
+            $mail->replyTo($sender['reply_to'], $sender['name']);
+        }
+
+        return $mail
             ->subject(__('auth.login_otp_subject'))
             ->view('emails.login-otp', [
                 'code'             => $this->code,

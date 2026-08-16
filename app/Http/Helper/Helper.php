@@ -102,6 +102,67 @@ if(!function_exists('hasPermission')){
     }
 }
 
+if(!function_exists('tenantMailFrom')){
+    /**
+     * A From/Reply-To pair the mail provider will actually accept.
+     *
+     * Tenants store their own contact address in general_settings, and the
+     * mailables used to send AS that address. The provider (Resend) only
+     * accepts domains verified against the API key, so every tenant on an
+     * unverified domain had its mail bounced with:
+     *
+     *   550 This API key is not authorized to send emails from <domain>
+     *
+     * which silently broke login OTPs, merchant signup and credential mails.
+     *
+     * The envelope address is therefore only the tenant's when its domain is
+     * verified; otherwise it falls back to the platform sender. Either way the
+     * tenant's NAME stays as the display name and its address becomes Reply-To,
+     * so the mail still reads as coming from the tenant and replies reach them.
+     *
+     * @param  string|null $preferred Address to use when its domain is verified
+     *                                (defaults to the tenant's configured email).
+     * @return array{address:string,name:string,reply_to:?string}
+     */
+    function tenantMailFrom(?string $preferred = null): array {
+        $platform = (string) config('mail.from.address');
+
+        $tenantEmail = null;
+        $tenantName  = null;
+        try {
+            $tenantEmail = optional(settings())->email ?: null;
+            $tenantName  = optional(settings())->name ?: null;
+        } catch (\Throwable $e) {
+            // settings() can throw outside a resolved tenant context.
+        }
+
+        $candidate = $preferred ?: $tenantEmail;
+
+        $domainOf = static function (?string $email): ?string {
+            if (! $email || ! str_contains($email, '@')) return null;
+            return strtolower(trim(substr(strrchr($email, '@'), 1)));
+        };
+
+        $verified = array_map('strtolower', (array) config('mail.verified_sender_domains', []));
+        if ($platformDomain = $domainOf($platform)) {
+            $verified[] = $platformDomain;   // the platform's own domain always works
+        }
+
+        $useCandidate = $candidate
+            && ($d = $domainOf($candidate))
+            && in_array($d, $verified, true);
+
+        return [
+            'address'  => $useCandidate ? $candidate : $platform,
+            'name'     => $tenantName ?: (string) config('mail.from.name'),
+            // No point setting Reply-To to the address we are already sending as.
+            'reply_to' => ($candidate && $candidate !== ($useCandidate ? $candidate : $platform))
+                            ? $candidate
+                            : null,
+        ];
+    }
+}
+
 if(!function_exists('labelLogoPath')){
     /**
      * Absolute path to the logo a shipping label should print: the tenant's

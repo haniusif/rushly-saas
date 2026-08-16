@@ -3,14 +3,35 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class MobileAppsController extends Controller
 {
-    public function index(): View
+    public function index(): Response
     {
-        $apps = $this->apps();
-        return view('backend.settings.mobile-apps', compact('apps'));
+        // Only DATA crosses to the front-end. The Blade version also shipped
+        // `icon` (Tabler class) and `gradient` (Tailwind class) strings, which
+        // cannot survive the move: Tailwind only generates classes it can see
+        // in the source, so a gradient built at runtime in PHP would emit no
+        // CSS at all. The React page keys its own icon/colour off `key`.
+        return Inertia::render('Admin/Settings/MobileApps', [
+            'apps' => collect($this->apps())->map(fn ($a) => [
+                'key'         => $a['key'],
+                'title'       => $a['title'],
+                'audience'    => $a['audience'],
+                'description' => $a['description'],
+                'repo'        => $a['repo'],
+            ])->values(),
+            't' => [
+                'title'        => __('mobile_apps.title') ?: 'Mobile apps',
+                'subtitle'     => __('mobile_apps.subtitle'),
+                'footer_note'  => __('mobile_apps.footer_note'),
+                'settings'     => __('settings_hub.title') ?: 'Settings',
+                'audience'     => 'Audience',
+                'repository'   => 'Repository',
+            ],
+        ]);
     }
 
     /**

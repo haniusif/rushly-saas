@@ -73,8 +73,48 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at'    => 'datetime',
-        'permissions'          => 'array', 
+        'permissions'          => 'array',
     ];
+
+    /**
+     * Keep users.permissions in step with the assigned role.
+     *
+     * hasPermission() reads users.permissions, NOT the role, so a role by
+     * itself grants nothing — the column has to carry the role's list. The
+     * user CRUD repository did this inline, which meant every other path that
+     * sets role_id (seeders, imports, console commands, direct model writes)
+     * left the column stale or empty. Doing it on the model covers all of them.
+     *
+     * Only fires when role_id actually CHANGES, and never overwrites
+     * permissions the caller set in the same save: UserRepository assigns
+     * hub-scoped permissions alongside role_id for hub users, and that
+     * explicit choice must win over the role's list.
+     */
+    protected static function booted()
+    {
+        static::saving(function (self $user) {
+            if (! $user->isDirty('role_id') || ! $user->role_id) {
+                return;
+            }
+            // Caller supplied permissions explicitly in this same save.
+            if ($user->isDirty('permissions')) {
+                return;
+            }
+
+            // Role lives under Models\Backend and casts permissions to array;
+            // value() bypasses the cast, so a raw JSON string is still decoded.
+            $perms = \App\Models\Backend\Role::withoutGlobalScopes()
+                ->whereKey($user->role_id)
+                ->value('permissions');
+
+            if (is_string($perms)) {
+                $perms = json_decode($perms, true);
+            }
+            if (is_array($perms)) {
+                $user->permissions = array_values($perms);
+            }
+        });
+    }
 
     // Get single row in Hub table.
     public function hub()

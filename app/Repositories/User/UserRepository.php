@@ -104,7 +104,12 @@ class UserRepository implements UserInterface{
             $user->salary           = $request->salary !== ""? $request->salary: 0;
             if($request->hub_id){
              $user->permissions     = $this->hubPermissions();
-            }else{
+            }elseif($role){
+                // Null-guarded to match update(). An unknown/missing role_id
+                // made this read a property on null, which the catch below
+                // swallowed into a bare "false" — the user was silently never
+                // created. The role->permissions sync itself is now also
+                // enforced by the User model's saving hook.
                 if($role->permissions !== null){
                     $user->permissions  = $role->permissions;
                 }
@@ -114,6 +119,13 @@ class UserRepository implements UserInterface{
             return true;
         }
         catch (\Exception $e) {
+            // Was a bare `return false`: the controller flashed a generic
+            // error and nothing reached the log, so a failed user create was
+            // undiagnosable.
+            \Log::error('User store() failed', [
+                'msg' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine(),
+                'role_id' => $request->role_id ?? null,
+            ]);
             return false;
         }
     }
@@ -161,7 +173,11 @@ class UserRepository implements UserInterface{
             $user->save();
             return true;
 
-        } catch (\Exception $e) { 
+        } catch (\Exception $e) {
+            \Log::error('User update() failed', [
+                'msg' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine(),
+                'user_id' => $id, 'role_id' => $request->role_id ?? null,
+            ]);
             return false;
         }
     }

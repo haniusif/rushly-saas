@@ -32,7 +32,8 @@
     $weight    = (float) ($data['weight'] ?? 0);
     // Tenant logo, inlined as a data URI (mPDF prints with no network access).
     // Falls back to the tenant name as text when no logo is uploaded.
-    $logoUri   = labelLogoDataUri();
+    // Scaled to fill the header cell without distorting — see bold-barcode.
+    $logo      = labelLogoBox(128, 52);
     $brandName = optional(settings())->name ?: config('app.name');
     $wfmt      = fn ($w) => rtrim(rtrim(number_format($w, 2), '0'), '.');
 
@@ -96,8 +97,9 @@
     <table>
         <tr>
             <td class="br" style="width:32%;vertical-align:middle;">
-                @if ($logoUri)
-                    <img src="{{ $logoUri }}" alt="" style="max-width:125px;max-height:32px;">
+                @if ($logo)
+                    <img src="{{ $logo['uri'] }}" alt=""
+                         style="width:{{ $logo['w'] }}px;height:{{ $logo['h'] }}px;">
                 @else
                     <div class="brand">{{ \Illuminate\Support\Str::limit($brandName, 20, '') }}</div>
                 @endif

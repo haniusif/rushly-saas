@@ -102,19 +102,16 @@ if(!function_exists('hasPermission')){
     }
 }
 
-if(!function_exists('labelLogoDataUri')){
+if(!function_exists('labelLogoPath')){
     /**
-     * The tenant logo as a base64 data URI, for shipping-label templates.
+     * Absolute path to the logo a shipping label should print: the tenant's
+     * uploaded logo, else the platform default, else null.
      *
-     * mPDF prints without network access, so the image has to be inlined
-     * rather than referenced by URL. Falls back to the platform default at
-     * public/images/default/logo.png, then to null when the tenant has not
-     * uploaded a logo and the default is missing — callers render a text
-     * header in that case.
-     *
-     * Silent on every failure: a broken logo must never take down a label.
+     * A tenant can hold a logo path in general_settings whose FILE is missing
+     * (uploads pruned, restored DB without the uploads dir), so existence is
+     * checked per candidate rather than trusting the DB value.
      */
-    function labelLogoDataUri(): ?string {
+    function labelLogoPath(): ?string {
         $candidates = [];
 
         try {
@@ -131,15 +128,73 @@ if(!function_exists('labelLogoDataUri')){
         foreach ($candidates as $candidate) {
             $abs = public_path($candidate);
             if (is_file($abs)) {
-                $mime = @mime_content_type($abs) ?: 'image/png';
-                $raw  = @file_get_contents($abs);
-                if ($raw !== false) {
-                    return 'data:' . $mime . ';base64,' . base64_encode($raw);
-                }
+                return $abs;
             }
         }
 
         return null;
+    }
+}
+
+if(!function_exists('labelLogoDataUri')){
+    /**
+     * The label logo as a base64 data URI.
+     *
+     * mPDF prints without network access, so the image has to be inlined
+     * rather than referenced by URL. Returns null when no logo is available —
+     * callers render a text header in that case.
+     *
+     * Silent on every failure: a broken logo must never take down a label.
+     */
+    function labelLogoDataUri(): ?string {
+        $abs = labelLogoPath();
+        if (! $abs) {
+            return null;
+        }
+
+        $raw = @file_get_contents($abs);
+        if ($raw === false) {
+            return null;
+        }
+
+        return 'data:' . (@mime_content_type($abs) ?: 'image/png') . ';base64,' . base64_encode($raw);
+    }
+}
+
+if(!function_exists('labelLogoBox')){
+    /**
+     * The label logo scaled to FILL the given box while keeping its aspect
+     * ratio, returned as ['uri' => …, 'w' => px, 'h' => px].
+     *
+     * Templates can't just set width:100%: tenant logos vary from wide
+     * wordmarks to perfect squares (Bosta Express ships a 1254×1254), and a
+     * square scaled to the header's full width would be as tall as it is wide
+     * and push the label onto a second page. Scaling by min() of the two
+     * ratios grows the logo as large as the box allows in whichever dimension
+     * binds first, so it fills the space without distortion or overflow.
+     *
+     * Falls back to the box dimensions if the image can't be measured.
+     */
+    function labelLogoBox(int $maxW, int $maxH): ?array {
+        $uri = labelLogoDataUri();
+        if (! $uri) {
+            return null;
+        }
+
+        $abs  = labelLogoPath();
+        $dims = $abs ? @getimagesize($abs) : null;
+
+        if (! $dims || empty($dims[0]) || empty($dims[1])) {
+            return ['uri' => $uri, 'w' => $maxW, 'h' => $maxH];
+        }
+
+        $scale = min($maxW / $dims[0], $maxH / $dims[1]);
+
+        return [
+            'uri' => $uri,
+            'w'   => max(1, (int) round($dims[0] * $scale)),
+            'h'   => max(1, (int) round($dims[1] * $scale)),
+        ];
     }
 }
 

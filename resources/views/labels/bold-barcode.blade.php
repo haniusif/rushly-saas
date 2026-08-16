@@ -37,7 +37,9 @@
                   ?? ($ccMap[strtolower($rawCountry)] ?? strtoupper(substr($rawCountry, 0, 2)));
     // Tenant logo, inlined as a data URI (mPDF prints with no network access).
     // Falls back to the tenant name as text when no logo is uploaded.
-    $logoUri    = labelLogoDataUri();
+    // Scaled to fill the header cell without distorting: a square tenant logo
+    // grows to the band height, a wide wordmark to the cell width.
+    $logo       = labelLogoBox(150, 56);
     $brandName  = optional(settings())->name ?: config('app.name');
 @endphp
 <!DOCTYPE html>
@@ -95,8 +97,9 @@
     <table class="hd">
         <tr>
             <td style="width:36%;">
-                @if ($logoUri)
-                    <img src="{{ $logoUri }}" alt="" style="max-width:145px;max-height:40px;">
+                @if ($logo)
+                    <img src="{{ $logo['uri'] }}" alt=""
+                         style="width:{{ $logo['w'] }}px;height:{{ $logo['h'] }}px;">
                 @else
                     <div class="brand">{{ \Illuminate\Support\Str::limit($brandName, 16, '') }}</div>
                     <div class="brandsub">EXPRESS</div>

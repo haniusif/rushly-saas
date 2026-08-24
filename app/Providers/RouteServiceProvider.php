@@ -18,11 +18,13 @@ class RouteServiceProvider extends ServiceProvider
      *
      * @var string
      */
-    public const HOME = '/summary';
-    // Previously '/dashboard' — tenant admins now land on the lighter
-    // summary page after login. The full dashboard is still linked from
-    // the summary's "Open full dashboard" button and remains the merchant
-    // portal's landing page (that redirect is handled elsewhere).
+    public const HOME = '/dashboard';
+    // Back to '/dashboard'. It was '/summary' while that page was open to
+    // every authenticated admin, but /summary is now gated on summary_read
+    // (a super-admin-only permission), so landing there after login would
+    // bounce anyone without it straight back out via PermissionCheckMiddleware.
+    // /dashboard carries no permission middleware, so it is safe as the
+    // universal post-login target.
 
     /**
      * Define your route model bindings, pattern filters, etc.

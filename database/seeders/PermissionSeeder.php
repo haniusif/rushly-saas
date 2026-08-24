@@ -464,8 +464,10 @@ class PermissionSeeder extends Seeder
             ],
 
             // Knowledge Base — gates the per-sub-page screenshot upload/delete
-            // (and the WMS KB equivalents). Read remains open to any logged-in
-            // admin; only writes are permission-gated.
+            // (and the WMS KB equivalents). `knowledge_base_read` now gates the
+            // page itself but is deliberately absent from THIS (tenant) catalog:
+            // the admin KB is platform-facing, so tenant role editors must not be
+            // able to grant it back. It lives in the super-admin catalog only.
             'knowledge_base' => [
                 'update' => 'knowledge_base_update',
             ],
@@ -526,7 +528,19 @@ class PermissionSeeder extends Seeder
             ],
 
             'knowledge_base' => [
+                'read'   => 'knowledge_base_read',
                 'update' => 'knowledge_base_update',
+            ],
+
+            // Platform-facing landing pages. Super-admin-only by design: both
+            // routes carry hasPermission middleware and neither key appears in
+            // the tenant catalog, so a company admin cannot grant them.
+            'summary'              => [
+                'read'             => 'summary_read',
+            ],
+
+            'operations_dashboard' => [
+                'read'             => 'operations_dashboard_read',
             ],
 
             'database_backup'       => [

@@ -290,12 +290,12 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                 // XSS Protection
                 Route::get('/dashboard',             [DashbordController::class, 'index'])->name('dashboard.index');
                 // Lightweight home for tenant admins — KPIs, 7-day trend, recent shipments.
-                Route::get('/summary',               [\App\Http\Controllers\Backend\SummaryController::class, 'index'])->name('summary.index');
+                Route::get('/summary',               [\App\Http\Controllers\Backend\SummaryController::class, 'index'])->name('summary.index')->middleware('hasPermission:summary_read');
                 // Executive Operations Command Center — expanded KPI grid, health
                 // gauges, 14-day timeline, funnel, alerts, activity feed, quick
                 // actions. Same permission set as /summary since it's the same
                 // audience (tenant admins).
-                Route::get('/operations-dashboard',  [\App\Http\Controllers\Backend\OperationsController::class, 'index'])->name('operations.index');
+                Route::get('/operations-dashboard',  [\App\Http\Controllers\Backend\OperationsController::class, 'index'])->name('operations.index')->middleware('hasPermission:operations_dashboard_read');
 
                 // Onboarding tour engine — JSON endpoints consumed by the React
                 // TourProvider. Session-auth'd, tenant-scoped. Open to any
@@ -349,8 +349,8 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         // Reading is open to any logged-in admin; only screenshot
                         // upload/delete requires the knowledge_base_update permission.
                         Route::prefix('knowledge-base')->name('admin.kb.')->group(function () {
-                            Route::get('/',                                          [AdminKnowledgeBaseController::class, 'index'])->name('index');
-                            Route::get('{section}',                                  [AdminKnowledgeBaseController::class, 'show'])->name('show');
+                            Route::get('/',                                          [AdminKnowledgeBaseController::class, 'index'])->name('index')->middleware('hasPermission:knowledge_base_read');
+                            Route::get('{section}',                                  [AdminKnowledgeBaseController::class, 'show'])->name('show')->middleware('hasPermission:knowledge_base_read');
                             Route::post('{section}/screenshot/{sub}',                [AdminKnowledgeBaseController::class, 'uploadScreenshot'])->name('screenshot.upload')->middleware('hasPermission:knowledge_base_update');
                             Route::delete('{section}/screenshot/{sub}',              [AdminKnowledgeBaseController::class, 'deleteScreenshot'])->name('screenshot.delete')->middleware('hasPermission:knowledge_base_update');
                         });
@@ -535,7 +535,7 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                             Route::get('/pdf/{invoice_id}',     [MerchantInvoiceController::class, 'InvoicePdf'])->name('pdf')->middleware('hasPermission:invoice_read');
                             Route::get('/csv/{invoice_id}',     [MerchantInvoiceController::class, 'InvoiceCSV'])->name('csv')->middleware('hasPermission:invoice_read');
                         });
-                        Route::get('paid/invoice',               [MerchantInvoiceController::class, 'PaidInvoice'])->name('paid.invoice.index');
+                        Route::get('paid/invoice',               [MerchantInvoiceController::class, 'PaidInvoice'])->name('paid.invoice.index')->middleware('hasPermission:paid_invoice_read');
                         //liquid fragile
                         Route::get('liquid-fragile/index',  [LiquidFragileController::class, 'index'])->name('liquid-fragile.index')->middleware('hasPermission:liquid_fragile_read');
                         Route::get('liquid-fragile/edit',   [LiquidFragileController::class, 'edit'])->name('liquid.fragile.edit')->middleware('hasPermission:liquid_fragile_update');
@@ -1143,7 +1143,7 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         //Payout
                         Route::prefix('payout')->name('payout.')->group(function () {
                             //stripe payment gateway
-                            Route::get('/',                                     [PayoutController::class, 'index'])->name('index');
+                            Route::get('/',                                     [PayoutController::class, 'index'])->name('index')->middleware('hasPermission:payout_read');
                             Route::get('/merchant/payout',                      [PayoutController::class, 'merchantPayout'])->name('merchant.payout');
                             Route::get('/stripe',                               [PayoutController::class, 'stripe'])->name('merchant.stripe');
                             Route::post('/stripe/post',                         [PayoutController::class, 'stripePost'])->name('merchant.stripe.post');

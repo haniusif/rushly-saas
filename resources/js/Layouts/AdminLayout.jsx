@@ -3,13 +3,14 @@ import { Head, Link, usePage, router } from '@inertiajs/react';
 import {
     LayoutDashboard, Home, Package, Truck, Building2, Users, Warehouse,
     Boxes, ClipboardList, MapPin, Inbox, Send, ArrowRightLeft,
-    CheckSquare, Bug, Map, MessageCircle, Newspaper, Activity,
+    CheckSquare, Bug, Map, MessageCircle, Newspaper,
     Settings, History, FileText, Receipt, Menu, X, Sun, Moon,
     LogOut, ChevronDown, Bell, Search, Globe, Check, User as UserIcon,
     BarChart3, AlertTriangle, Hourglass, Wand2, ListChecks, CheckCircle2, XCircle, Info,
     Wallet, ShieldAlert, DollarSign, CreditCard, BadgeDollarSign,
     UserCog, HardDrive, Briefcase, Tags, BellRing, KeyRound, Layers,
     Plug, MapPinned, Layout, ScrollText, Sliders, BookOpen, PackagePlus,
+    Smartphone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/Components/ui/Button';
@@ -25,11 +26,8 @@ import TourLauncher from '@/Tour/TourLauncher';
 
 const NAV = [
     { group: 'menu_main', items: [
-        { tKey: 'menu_summary',        icon: Home,            route: 'summary.index',       match: ['summary'] },
-        { tKey: 'menu_ops_dashboard',  icon: Activity,        route: 'operations.index',    match: ['operations-dashboard'] },
         { tKey: 'menu_dashboard',      icon: LayoutDashboard, route: 'dashboard.index',     match: ['admin/dashboard', 'dashboard'] },
         { tKey: 'menu_performance',    icon: BarChart3,       route: 'performance.index',   match: ['admin/performance'], perm: 'performance_dashboard_read' },
-        { tKey: 'menu_knowledge_base', icon: BookOpen,        route: 'admin.kb.index',      match: ['admin/knowledge-base'] },
     ]},
     { group: 'menu_parcels', items: [
         { tKey: 'menu_parcel',      icon: Package,        route: 'parcel.index',       match: ['admin/parcel'], perm: 'parcel_read' },
@@ -67,8 +65,8 @@ const NAV = [
         { tKey: 'menu_child_companies', icon: Building2,  route: 'child-companies.index',     match: ['admin/child-companies'], perm: 'company_create' },
     ]},
     { group: 'menu_finance', items: [
-        { tKey: 'menu_payment_received', icon: BadgeDollarSign, route: 'paid.invoice.index',  match: ['admin/paid'] },
-        { tKey: 'menu_payout',           icon: CreditCard,      route: 'payout.index',        match: ['admin/payout'] },
+        { tKey: 'menu_payment_received', icon: BadgeDollarSign, route: 'paid.invoice.index',  match: ['admin/paid'], perm: 'paid_invoice_read' },
+        { tKey: 'menu_payout',           icon: CreditCard,      route: 'payout.index',        match: ['admin/payout'], perm: 'payout_read' },
         { tKey: 'menu_accounts',         icon: DollarSign,      route: 'accounts.index',      match: ['admin/accounts'], perm: 'account_read' },
         { tKey: 'menu_wallet_request',   icon: Wallet,          route: 'wallet.request.index', match: ['admin/wallet-request'], perm: 'wallet_request_read' },
     ]},
@@ -101,6 +99,7 @@ const NAV = [
     { group: 'menu_settings', items: [
         { tKey: 'menu_general_settings',        icon: Sliders,       route: 'general-settings.index',         match: ['admin/general-settings'], perm: 'general_settings_read' },
         { tKey: 'menu_integrations',            icon: Plug,          route: 'integrations.index',             match: ['admin/integrations'], perm: 'integrations_read' },
+        { tKey: 'menu_mobile_apps',             icon: Smartphone,    route: 'mobile-apps.index',              match: ['admin/settings/mobile-apps'], perm: 'mobile_apps_read' },
         { tKey: 'menu_delivery_category',       icon: Tags,          route: 'delivery-category.index',        match: ['admin/delivery-category'], perm: 'delivery_category_read' },
         { tKey: 'menu_delivery_charge',         icon: DollarSign,    route: 'delivery-charge.index',          match: ['admin/delivery-charge'], perm: 'delivery_charge_read' },
         { tKey: 'menu_delivery_type',           icon: Truck,         route: 'delivery-type.index',            match: ['admin/delivery-type'], perm: 'delivery_type_read' },
@@ -220,8 +219,12 @@ function Sidebar({ open, onClose, currentUrl, brand, appName }) {
     // Empty general_settings.name shouldn't leave the sidebar reading "Admin".
     const brandName = (brand?.name || appName || 'Admin');
     const initial = brandName.charAt(0).toUpperCase();
-    const homeHref = safeRoute('summary.index');
-    const homeUrl  = homeHref === '#' ? '/summary' : homeHref;
+    // The logo points at whatever that audience's landing page actually is.
+    // /summary is gated on summary_read now, which tenants don't hold, so
+    // sending them there would bounce through PermissionCheckMiddleware.
+    const homeRoute = isSuperAdmin ? 'summary.index' : 'dashboard.index';
+    const homeHref  = safeRoute(homeRoute);
+    const homeUrl   = homeHref === '#' ? (isSuperAdmin ? '/summary' : '/dashboard') : homeHref;
     return (
         <>
             <div

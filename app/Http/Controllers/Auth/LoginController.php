@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\ValidationException;
 
 class LoginController extends Controller
 {
@@ -270,5 +271,44 @@ class LoginController extends Controller
             }
             return ['email' => $request->get('email'),'password' => $request->get('password'), 'status' => '1', 'verification_status' => '1'];
         endif;
+    }
+
+    /**
+     * Tell the user WHY the login failed.
+     *
+     * This one method is the exit for four different failures: a wrong
+     * password, a disabled/unverified account, a user belonging to a different
+     * company, and a super admin signing in on a tenant host. All four used to
+     * render `auth.failed`, and `auth.failed` had been reworded to "Your
+     * account is currently inactive. Please contact the administrator" — so a
+     * simple typo in a password told the user they had been deactivated and
+     * sent them to their admin instead of to the password reset.
+     *
+     * `auth.failed` is back to the standard credentials wording. The inactive
+     * message now lives under `auth.inactive` and is only used when a matching
+     * account genuinely IS disabled.
+     *
+     * Note credentials() pins status = 1 and verification_status = 1, so a
+     * disabled account never authenticates regardless of the message shown —
+     * this changes only what the user is told, never who gets in.
+     */
+    protected function sendFailedLoginResponse(Request $request)
+    {
+        $identifier = $request->get($this->username());
+
+        $user = User::where(function ($query) use ($identifier) {
+            $query->where('email', $identifier)->orWhere('mobile', $identifier);
+        })->first();
+
+        // Only claim "inactive" when we can actually see a disabled account for
+        // that identifier. Anything else — no such user, wrong password, wrong
+        // tenant — is a credentials failure, and saying so leaks nothing beyond
+        // what the standard Laravel message already does.
+        $isDisabled = $user
+            && ((string) $user->status !== '1' || (string) $user->verification_status !== '1');
+
+        throw ValidationException::withMessages([
+            $this->username() => [__($isDisabled ? 'auth.inactive' : 'auth.failed')],
+        ]);
     }
 }

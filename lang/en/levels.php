@@ -548,4 +548,7 @@ return [
 
     // Generic placeholder for empty-select options (Hub picker, area picker, …).
     'none'                     => 'None',
+
+    'of' => 'of',
+    'cards' => 'Cards',
 ];

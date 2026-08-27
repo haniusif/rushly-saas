@@ -227,4 +227,14 @@ return array (
   'validation_errors'   => 'Validation errors',
   'row_number'          => 'Row',
 
+
+  'chip_total' => 'Total',
+  'chip_pending' => 'Pending',
+  'chip_assigned' => 'Assigned',
+  'chip_picked_up' => 'Picked up',
+  'chip_ofd' => 'OFD',
+  'chip_delivered' => 'Delivered',
+  'chip_returned' => 'Returned',
+  'chip_cancelled' => 'Cancelled',
+  'chip_failed' => 'Failed',
 );

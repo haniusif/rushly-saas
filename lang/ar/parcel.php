@@ -168,4 +168,14 @@ return array (
   'validation_errors'               => 'أخطاء التحقق',
   'row_number'                      => 'صف',
 
+
+  'chip_total' => 'الإجمالي',
+  'chip_pending' => 'قيد الانتظار',
+  'chip_assigned' => 'مُسند',
+  'chip_picked_up' => 'تم الاستلام',
+  'chip_ofd' => 'خارج للتوصيل',
+  'chip_delivered' => 'تم التسليم',
+  'chip_returned' => 'مُرتجع',
+  'chip_cancelled' => 'ملغي',
+  'chip_failed' => 'فشل',
 );

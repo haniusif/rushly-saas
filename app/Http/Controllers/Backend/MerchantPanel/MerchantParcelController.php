@@ -149,7 +149,13 @@ class MerchantParcelController extends Controller
                 'customer_phone'=> $p->customer_phone,
                 'amount'        => (float) ($p->cash_collection ?? 0),
                 'status'        => (int) $p->status,
-                'status_label'  => $statusList[$p->status] ?? (string) $p->status,
+                // merchantParcelStatusFilter only covers 7 of the status codes
+                // (1,2,5,7,9,26,32), so anything else — Returned (30),
+                // Cancelled (41) — used to fall through to the raw NUMBER and
+                // the column literally read "30" / "41". Fall back to the
+                // canonical label instead; the number is the last resort.
+                'status_label'  => $statusList[$p->status]
+                    ?? (\App\Support\ParcelStatusHelper::label((int) $p->status) ?: (string) $p->status),
                 // Same curated hex the admin list renders its pills from, so
                 // both pages colour a given status identically.
                 'status_color'  => \App\Support\ParcelStatusHelper::color((int) $p->status),

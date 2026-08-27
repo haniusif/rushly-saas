@@ -131,4 +131,8 @@ return [
    'child_companies'           => 'الحسابات الفرعية',
    'child_companies_new'       => 'حساب فرعي جديد',
    'child_companies_subtitle'  => 'الشركات التي أنشأتها تحت حسابك.',
+
+    'city' => 'المدن',
+    'city_single' => 'المدينة',
+    'area' => 'المناطق',
 ];

@@ -133,4 +133,8 @@ return [
    'child_companies'             => 'Sub-accounts',
    'child_companies_new'         => 'New sub-account',
    'child_companies_subtitle'    => 'Companies you have created under your account.',
+
+    'city' => 'Cities',
+    'city_single' => 'City',
+    'area' => 'Areas',
 ];

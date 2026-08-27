@@ -188,6 +188,11 @@ class MerchantParcelController extends Controller
                 'partial_delivered'       => (bool) ($p->partial_delivered ?? false),
                 'partial_delivered_label' => \App\Support\ParcelStatusHelper::label(\App\Enums\ParcelStatus::PARTIAL_DELIVERED),
                 'attempts'      => (int) ($p->number_of_attempts ?? 0),
+                'priority'      => (int) ($p->priority_type_id ?? 2),
+                // The single transition a merchant may make, or null. Mirrors
+                // MERCHANT_ALLOWED_TRANSITIONS so the UI cannot offer more than
+                // the endpoint accepts.
+                'can_cancel'    => (int) $p->status === ParcelStatus::PENDING,
                 'courier_name'  => $p->lastParcel3pl
                     ? (optional($p->lastParcel3pl)->company_name ?: optional($p->lastParcel3pl)->parcel_3pl_name)
                     : null,
@@ -252,6 +257,9 @@ class MerchantParcelController extends Controller
             'urls' => [
                 // The drawer appends /{id}; the admin page uses its own base.
                 'tracking_json_base' => url('/merchant/parcel/tracking-json'),
+                'priority_status'    => route('merchant-panel.parcel.priority-update'),
+                'bulk_print_labels'  => route('merchant-panel.parcel.bulk-print-labels'),
+                'bulk_cancel'        => route('merchant-panel.parcel.bulk-cancel'),
                 'create'       => route('merchant-panel.parcel.create'),
                 'filter'       => route('merchant-panel.parcel.filter'),
                 'reset'        => $cfg['page_kind'] === 'bank'
@@ -327,6 +335,13 @@ class MerchantParcelController extends Controller
                 'pod'             => __('parcel.pod') ?: 'POD',
                 'track'           => __('parcel.track') ?: 'Track shipment',
                 'search_all_ph'   => 'Tracking ID, customer or phone',
+                'priority'          => __('parcel.priority') ?: 'Priority',
+                'status_update'     => __('parcel.status_update') ?: 'Status',
+                'change_status'     => __('parcel.change_status') ?: 'Change',
+                'bulk_print_labels' => __('parcel.bulk_print_labels') ?: 'Print labels',
+                'bulk_cancel'       => __('parcel.bulk_cancel') ?: 'Cancel selected',
+                'selected'          => __('parcel.selected') ?: 'selected',
+                'cancel_confirm'    => 'Cancel the selected shipment(s)? Only Pending ones will be cancelled.',
             ],
         ]);
     }
@@ -987,6 +1002,95 @@ class MerchantParcelController extends Controller
         $this->ownedParcelOrAbort($id);
 
         return app(\App\Http\Controllers\Backend\ParcelController::class)->deliveredInfo($id);
+    }
+
+    /**
+     * Flip the priority flag on the merchant's own shipment.
+     *
+     * Mirrors ParcelController::priorityUpdate, including its inverted
+     * contract: the client posts the CURRENT value and the server flips it
+     * (receives 1 -> stores 2, anything else -> stores 1). Priority is already
+     * a field merchants set on the booking form, so exposing the toggle grants
+     * nothing new — but the lookup is scoped, unlike the admin one, which may
+     * legitimately reach any shipment in the tenant.
+     */
+    public function priorityUpdate(Request $request)
+    {
+        $parcel = $this->ownedParcelOrAbort($request->id);
+
+        $parcel->priority_type_id = (1 === (int) $request->priority) ? 2 : 1;
+        $parcel->save();
+
+        return response()->json(['id' => $parcel->id, 'priority' => $parcel->priority_type_id]);
+    }
+
+    /**
+     * Print labels for several shipments at once.
+     *
+     * The id list arrives from the client, so it is filtered to this
+     * merchant's shipments before anything is rendered — a merchant cannot
+     * widen the set by adding ids they do not own. Reuses the admin renderer.
+     */
+    public function bulkPrintLabels(Request $request)
+    {
+        $merchant = $this->currentMerchant();
+        $ids      = array_filter(array_map('intval', (array) $request->input('ids', [])));
+
+        if (! $ids) {
+            Toastr::error(__('parcel.no_data_to_preview'), __('message.error'));
+            return redirect()->route('merchant-panel.parcel.index');
+        }
+
+        $parcels = \App\Models\Backend\Parcel::whereIn('id', $ids)
+            ->where('merchant_id', $merchant->id)
+            ->get();
+
+        if ($parcels->isEmpty()) {
+            abort(403);
+        }
+
+        return app(\App\Http\Controllers\Backend\ParcelController::class)
+            ->printMultipleParcelLabels($parcels);
+    }
+
+    /**
+     * Cancel several shipments at once.
+     *
+     * Same policy as the single-shipment path: this merchant's shipments only,
+     * and only those still Pending. Anything else in the selection is skipped
+     * rather than failing the whole batch, and the count of each is reported.
+     */
+    public function bulkCancel(Request $request)
+    {
+        $merchant = $this->currentMerchant();
+        $ids      = array_filter(array_map('intval', (array) $request->input('ids', [])));
+
+        if (! $ids) {
+            return redirect()->route('merchant-panel.parcel.index');
+        }
+
+        $parcels = \App\Models\Backend\Parcel::whereIn('id', $ids)
+            ->where('merchant_id', $merchant->id)
+            ->get();
+
+        $cancelled = 0;
+        foreach ($parcels as $parcel) {
+            if ((int) $parcel->status !== ParcelStatus::PENDING) {
+                continue;
+            }
+            $this->repo->statusUpdate($parcel->id, ParcelStatus::CANCELLED, $merchant->id);
+            $cancelled++;
+        }
+
+        $skipped = count($ids) - $cancelled;
+        if ($cancelled) {
+            Toastr::success(__('parcel.bulk_cancelled', ['count' => $cancelled]), __('message.success'));
+        }
+        if ($skipped > 0) {
+            Toastr::error(__('parcel.bulk_cancel_skipped', ['count' => $skipped]), __('message.error'));
+        }
+
+        return redirect()->route('merchant-panel.parcel.index');
     }
 
     public function parcelImportExport()

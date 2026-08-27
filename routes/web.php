@@ -1373,6 +1373,12 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::get('parcel/print/{id}',          [MerchantParcelController::class, 'printWithTracking'])->name('merchant-panel.parcel.print');
                         Route::get('parcel/tracking-json/{id}',  [MerchantParcelController::class, 'trackingJson'])->name('merchant-panel.parcel.tracking-json');
                         Route::get('parcel/delivered-info/{id}', [MerchantParcelController::class, 'deliveredInfo'])->name('merchant-panel.parcel.delivered-info');
+
+                        // Priority toggle + bulk operations. All POST, all scoped to
+                        // the signed-in merchant's own shipments inside the controller.
+                        Route::post('parcel/priority/update',    [MerchantParcelController::class, 'priorityUpdate'])->name('merchant-panel.parcel.priority-update');
+                        Route::post('parcel/bulk/print-labels',  [MerchantParcelController::class, 'bulkPrintLabels'])->name('merchant-panel.parcel.bulk-print-labels');
+                        Route::post('parcel/bulk/cancel',        [MerchantParcelController::class, 'bulkCancel'])->name('merchant-panel.parcel.bulk-cancel');
                         Route::put('parcel/update/{id}',     [MerchantParcelController::class, 'update'])->name('merchant-panel.parcel.update');
                         // POST, not GET: a state change behind a GET is triggerable by a
                         // link, an <img> src or a prefetch, and carries no CSRF token. No UI

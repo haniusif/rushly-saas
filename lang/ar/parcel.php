@@ -194,4 +194,11 @@ return array (
     'print_label' => 'طباعة الملصق',
     'total_charge' => 'إجمالي الرسوم',
     'track' => 'تتبع الشحنة',
+    'priority' => 'الأولوية',
+    'bulk_cancelled' => 'تم إلغاء :count شحنة.',
+    'bulk_cancel_skipped' => 'تم تخطي :count — يمكن إلغاء الشحنات قيد الانتظار فقط.',
+    'bulk_print_labels' => 'طباعة الملصقات',
+    'bulk_cancel' => 'إلغاء المحدد',
+    'selected' => 'محدد',
+    'change_status' => 'تغيير',
 );

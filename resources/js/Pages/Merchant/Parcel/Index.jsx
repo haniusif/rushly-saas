@@ -4,7 +4,7 @@ import {
     Plus, Filter, Eraser, Eye, Upload, Download, ChevronDown,
     Search, Package, Rows3, LayoutGrid, MoreVertical, Copy, Edit, Trash2,
     User, Phone, Map, MapPin, Store, History, Check, FileText, Printer,
-    Route as RouteIcon, Image as ImageIcon,
+    Route as RouteIcon, Image as ImageIcon, RefreshCcw, Ban,
 } from 'lucide-react';
 import MerchantLayout from '@/Layouts/MerchantLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
@@ -228,6 +228,57 @@ function RowActions({ row, permissions, t, onDelete, onTrack }) {
                 )}
             </DropdownMenuContent>
         </DropdownMenu>
+    );
+}
+
+/**
+ * Priority flag. Same inverted contract as the admin toggle: the server reads
+ * `priority` and FLIPS it, so the CURRENT value is what gets posted.
+ */
+function PriorityToggle({ id, initial, url }) {
+    const [on, setOn] = React.useState(initial === 1);
+    const [busy, setBusy] = React.useState(false);
+    const toggle = async () => {
+        if (busy || !url) return;
+        const current = on ? 1 : 2;
+        const next = !on;
+        setOn(next);
+        setBusy(true);
+        try {
+            const fd = new FormData();
+            fd.append('id', String(id));
+            fd.append('priority', String(current));
+            fd.append('_token', document.querySelector('meta[name="csrf-token"]')?.content || '');
+            const r = await fetch(url, {
+                method: 'POST',
+                body: fd,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+            });
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        } catch {
+            setOn(on);   // revert on failure
+        } finally {
+            setBusy(false);
+        }
+    };
+    return (
+        <button
+            type="button"
+            onClick={toggle}
+            disabled={busy}
+            aria-pressed={on}
+            className={cn(
+                'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors',
+                on ? 'bg-primary' : 'bg-muted-foreground/30',
+                busy && 'opacity-60',
+            )}
+        >
+            <span className={cn(
+                'inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform',
+                on ? 'translate-x-[1.15rem]' : 'translate-x-[0.15rem]',
+            )} />
+        </button>
     );
 }
 
@@ -466,6 +517,59 @@ export default function Index({
     const [trackingId, setTrackingId] = React.useState(null);
     const openTracking = (id) => setTrackingId(id);
 
+    // Row selection for the bulk bar.
+    const [selected, setSelected] = React.useState([]);
+    const toggleRow = (id) =>
+        setSelected((v) => (v.includes(id) ? v.filter((x) => x !== id) : [...v, id]));
+    const allOnPage = rows.map((r) => r.id);
+    const allSelected = allOnPage.length > 0 && allOnPage.every((id) => selected.includes(id));
+    const toggleAll = () => setSelected(allSelected ? [] : allOnPage);
+    React.useEffect(() => {
+        // Drop ids that are no longer on the page after a filter or page change.
+        setSelected((v) => v.filter((id) => allOnPage.includes(id)));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pagination?.current_page, rows.length]);
+
+    /**
+     * The one transition a merchant may make. Posts to the guarded
+     * status-update endpoint, which independently re-checks ownership and that
+     * the shipment is still Pending.
+     */
+    const changeStatus = (row) => {
+        if (!row.can_cancel) return;
+        if (!window.confirm(t.cancel_confirm || 'Cancel this shipment?')) return;
+        router.post(`/merchant/parcel/status-update/${row.id}/41`, {}, { preserveScroll: true });
+    };
+
+    /**
+     * Bulk actions post a real form rather than going through Inertia: the
+     * label endpoint streams a PDF, which Inertia cannot follow.
+     */
+    const submitBulk = (action, confirmText) => {
+        if (!selected.length) return;
+        if (confirmText && !window.confirm(confirmText)) return;
+        const url = action === 'labels' ? urls.bulk_print_labels : urls.bulk_cancel;
+        if (!url) return;
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = url;
+        if (action === 'labels') form.target = '_blank';
+        const token = document.createElement('input');
+        token.type = 'hidden';
+        token.name = '_token';
+        token.value = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        form.appendChild(token);
+        selected.forEach((id) => {
+            const i = document.createElement('input');
+            i.type = 'hidden';
+            i.name = 'ids[]';
+            i.value = String(id);
+            form.appendChild(i);
+        });
+        document.body.appendChild(form);
+        form.submit();
+    };
+
     const del = (row) => {
         if (!row?.urls?.delete) return;
         if (window.confirm(t.delete_confirm || 'Delete this shipment?')) {
@@ -554,6 +658,32 @@ export default function Index({
                 t={t}
             />
 
+            {selected.length > 0 && (
+                <Card className="mb-3 border-primary/40 bg-primary/5">
+                    <CardContent className="flex flex-wrap items-center gap-2 p-3">
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                            {selected.length} {t.selected}
+                        </span>
+                        <div className="flex flex-wrap items-center gap-2 ms-auto">
+                            <Button variant="outline" size="sm" onClick={() => submitBulk('labels')}>
+                                <Printer className="h-3.5 w-3.5 me-1" /> {t.bulk_print_labels}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-destructive"
+                                onClick={() => submitBulk('cancel', t.cancel_confirm)}
+                            >
+                                <Ban className="h-3.5 w-3.5 me-1" /> {t.bulk_cancel}
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => setSelected([])}>
+                                {t.cancel}
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
             {/* Header strip: result count on the left, view toggle + actions right. */}
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -621,13 +751,24 @@ export default function Index({
                             <table className="w-full text-sm">
                                 <thead className="bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
                                     <tr>
+                                        <th className="px-2.5 py-2 text-start font-medium">
+                                            <input
+                                                type="checkbox"
+                                                checked={allSelected}
+                                                onChange={toggleAll}
+                                                aria-label="Select all"
+                                                className="h-4 w-4 rounded border-input"
+                                            />
+                                        </th>
                                         <th className="px-2.5 py-2 text-start font-medium">{t.actions}</th>
                                         <th className="px-2.5 py-2 text-start font-medium">{t.tracking_id}</th>
                                         <th className="px-2.5 py-2 text-start font-medium">{t.print_label}</th>
                                         <th className="px-2.5 py-2 text-start font-medium">{t.recipient_info}</th>
                                         <th className="px-2.5 py-2 text-start font-medium">{t.shop}</th>
                                         <th className="px-2.5 py-2 text-end   font-medium">{t.amount}</th>
+                                        <th className="px-2.5 py-2 text-center font-medium">{t.priority}</th>
                                         <th className="px-2.5 py-2 text-start font-medium">{t.status}</th>
+                                        <th className="px-2.5 py-2 text-start font-medium">{t.status_update}</th>
                                         <th className="px-2.5 py-2 text-start font-medium">{t.payment}</th>
                                         <th className="px-2.5 py-2 text-center font-medium">{t.attempts}</th>
                                         <th className="px-2.5 py-2 text-start font-medium">{t.pod}</th>
@@ -636,7 +777,18 @@ export default function Index({
                                 </thead>
                                 <tbody className="divide-y divide-border">
                                     {rows.map((r) => (
-                                        <tr key={r.id} className="hover:bg-muted/20 transition-colors">
+                                        <tr key={r.id} className={cn(
+                                            'hover:bg-muted/20 transition-colors',
+                                            selected.includes(r.id) && 'bg-primary/5',
+                                        )}>
+                                            <td className="px-2.5 py-2 align-top">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selected.includes(r.id)}
+                                                    onChange={() => toggleRow(r.id)}
+                                                    className="h-4 w-4 rounded border-input"
+                                                />
+                                            </td>
                                             <td className="px-2.5 py-2 align-top">
                                                 <RowActions row={r} permissions={permissions} t={t} onDelete={del} onTrack={openTracking} />
                                             </td>
@@ -723,6 +875,10 @@ export default function Index({
                                                 </div>
                                             </td>
 
+                                            <td className="px-2.5 py-2 align-top text-center">
+                                                <PriorityToggle id={r.id} initial={r.priority} url={urls.priority_status} />
+                                            </td>
+
                                             <td className="px-2.5 py-2 align-top">
                                                 <div className="space-y-1">
                                                     <StatusPill label={r.status_label} color={r.status_color} />
@@ -735,6 +891,21 @@ export default function Index({
                                                         </div>
                                                     )}
                                                 </div>
+                                            </td>
+
+                                            <td className="px-2.5 py-2 align-top">
+                                                {r.can_cancel ? (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="h-8"
+                                                        onClick={() => changeStatus(r)}
+                                                    >
+                                                        <RefreshCcw className="h-3.5 w-3.5 me-1" /> {t.change_status}
+                                                    </Button>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground">…</span>
+                                                )}
                                             </td>
 
                                             <td className="px-2.5 py-2 align-top text-xs text-muted-foreground">

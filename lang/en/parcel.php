@@ -253,4 +253,10 @@ return array (
     'print_label' => 'Print label',
     'total_charge' => 'Total charge',
     'track' => 'Track shipment',
+    'bulk_cancelled' => ':count shipment(s) cancelled.',
+    'bulk_cancel_skipped' => ':count skipped — only Pending shipments can be cancelled.',
+    'bulk_print_labels' => 'Print labels',
+    'bulk_cancel' => 'Cancel selected',
+    'selected' => 'selected',
+    'change_status' => 'Change',
 );

@@ -1365,6 +1365,14 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::get('parcel/edit/{id}',       [MerchantParcelController::class, 'edit'])->name('merchant-panel.parcel.edit');
                         Route::get('parcel/details/{id}',    [MerchantParcelController::class, 'details'])->name('merchant-panel.parcel.details');
                         Route::get('parcel/logs/{id}',       [MerchantParcelController::class, 'logs'])->name('merchant-panel.parcel.logs');
+
+                        // Label / print / tracking. Each guards ownership then
+                        // delegates to ParcelController so the artefacts stay
+                        // identical to the admin ones.
+                        Route::get('parcel/print-label/{id}',    [MerchantParcelController::class, 'printLabel'])->name('merchant-panel.parcel.print-label');
+                        Route::get('parcel/print/{id}',          [MerchantParcelController::class, 'printWithTracking'])->name('merchant-panel.parcel.print');
+                        Route::get('parcel/tracking-json/{id}',  [MerchantParcelController::class, 'trackingJson'])->name('merchant-panel.parcel.tracking-json');
+                        Route::get('parcel/delivered-info/{id}', [MerchantParcelController::class, 'deliveredInfo'])->name('merchant-panel.parcel.delivered-info');
                         Route::put('parcel/update/{id}',     [MerchantParcelController::class, 'update'])->name('merchant-panel.parcel.update');
                         // POST, not GET: a state change behind a GET is triggerable by a
                         // link, an <img> src or a prefetch, and carries no CSRF token. No UI

@@ -195,11 +195,17 @@ class MerchantParcelController extends Controller
                 'details_url'   => route('merchant-panel.parcel.details', $p->id),
                 'logs_url'      => route('merchant-panel.parcel.logs', $p->id),
                 'urls'          => [
-                    'view'   => route('merchant-panel.parcel.details', $p->id),
-                    'logs'   => route('merchant-panel.parcel.logs', $p->id),
-                    'clone'  => route('merchant-parcel.clone', $p->id),
-                    'edit'   => route('merchant-panel.parcel.edit', $p->id),
-                    'delete' => route('merchant-panel.parcel.delete', $p->id),
+                    'view'        => route('merchant-panel.parcel.details', $p->id),
+                    'logs'        => route('merchant-panel.parcel.logs', $p->id),
+                    'clone'       => route('merchant-parcel.clone', $p->id),
+                    'edit'        => route('merchant-panel.parcel.edit', $p->id),
+                    'delete'      => route('merchant-panel.parcel.delete', $p->id),
+                    'print'       => route('merchant-panel.parcel.print', $p->id),
+                    'print_label' => route('merchant-panel.parcel.print-label', $p->id),
+                    // Only meaningful once delivered, same rule as the admin list.
+                    'delivered_info' => (int) $p->status === \App\Enums\ParcelStatus::DELIVERED
+                        ? route('merchant-panel.parcel.delivered-info', $p->id)
+                        : null,
                 ],
             ];
         })->values();
@@ -244,6 +250,8 @@ class MerchantParcelController extends Controller
                 'delete' => true,
             ],
             'urls' => [
+                // The drawer appends /{id}; the admin page uses its own base.
+                'tracking_json_base' => url('/merchant/parcel/tracking-json'),
                 'create'       => route('merchant-panel.parcel.create'),
                 'filter'       => route('merchant-panel.parcel.filter'),
                 'reset'        => $cfg['page_kind'] === 'bank'
@@ -314,6 +322,11 @@ class MerchantParcelController extends Controller
                 'delete'          => __('levels.delete') ?: 'Delete',
                 'actions'         => __('levels.actions') ?: 'Actions',
                 'delete_confirm'  => 'Delete this shipment?',
+                'print_label'     => __('parcel.print_label') ?: 'Print label',
+                'print'           => __('parcel.print') ?: 'Print',
+                'pod'             => __('parcel.pod') ?: 'POD',
+                'track'           => __('parcel.track') ?: 'Track shipment',
+                'search_all_ph'   => 'Tracking ID, customer or phone',
             ],
         ]);
     }
@@ -931,6 +944,49 @@ class MerchantParcelController extends Controller
             Toastr::error(__('parcel.delete_error_message'),__('message.error'));
             return redirect()->route('merchant-panel.parcel.index');
         }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Label / print / tracking — merchant-side mirrors of the admin endpoints
+    |--------------------------------------------------------------------------
+    | The rendering itself lives in ParcelController and is reused rather than
+    | duplicated: the label PDF, the tracking JSON and the delivered-info page
+    | are the same artefacts, and a second copy would drift.
+    |
+    | What differs is authorisation. The admin controller resolves a shipment
+    | with a bare repo->get($id), which is correct there — an admin may see any
+    | shipment in the tenant. A merchant may not, so every one of these guards
+    | ownership first and only then delegates.
+    */
+
+    public function printLabel($id)
+    {
+        $parcel = $this->ownedParcelOrAbort($id);
+
+        return app(\App\Http\Controllers\Backend\ParcelController::class)
+            ->printMultipleParcelLabels(collect([$parcel]));
+    }
+
+    public function printWithTracking($id)
+    {
+        $this->ownedParcelOrAbort($id);
+
+        return app(\App\Http\Controllers\Backend\ParcelController::class)->parcelPrint($id);
+    }
+
+    public function trackingJson($id)
+    {
+        $this->ownedParcelOrAbort($id);
+
+        return app(\App\Http\Controllers\Backend\ParcelController::class)->trackingJson($id);
+    }
+
+    public function deliveredInfo($id)
+    {
+        $this->ownedParcelOrAbort($id);
+
+        return app(\App\Http\Controllers\Backend\ParcelController::class)->deliveredInfo($id);
     }
 
     public function parcelImportExport()

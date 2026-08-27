@@ -143,4 +143,5 @@ return [
     'partner' => 'Partner',
     'update' => 'Update',
     'why_rushly' => 'Why Rushly',
+    'shop' => 'Shop',
 ];

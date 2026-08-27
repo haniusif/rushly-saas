@@ -3,7 +3,8 @@ import { Head, useForm, router } from '@inertiajs/react';
 import {
     Plus, Filter, Eraser, Eye, Upload, Download, ChevronDown,
     Search, Package, Rows3, LayoutGrid, MoreVertical, Copy, Edit, Trash2,
-    User, Phone, Map, MapPin, Store, History, Check,
+    User, Phone, Map, MapPin, Store, History, Check, FileText, Printer,
+    Route as RouteIcon, Image as ImageIcon,
 } from 'lucide-react';
 import MerchantLayout from '@/Layouts/MerchantLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
@@ -15,6 +16,7 @@ import {
     DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
     DropdownMenuSeparator,
 } from '@/Components/ui/DropdownMenu';
+import ShipmentDrawer from '@/Components/parcel/ShipmentDrawer';
 import { cn } from '@/lib/utils';
 
 /**
@@ -174,7 +176,7 @@ function TrackingCell({ value, href }) {
     );
 }
 
-function RowActions({ row, permissions, t, onDelete }) {
+function RowActions({ row, permissions, t, onDelete, onTrack }) {
     // Delivered (9) and Partial delivered (10) are terminal — the admin list
     // hides edit/delete on them and so does this one.
     const terminal = row.status === 9 || row.status === 10;
@@ -186,6 +188,14 @@ function RowActions({ row, permissions, t, onDelete }) {
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-44">
+                {onTrack && (
+                    <>
+                        <DropdownMenuItem onClick={() => onTrack(row.id)}>
+                            <RouteIcon className="h-4 w-4 me-2" /> {t.track}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                    </>
+                )}
                 <DropdownMenuItem onClick={() => { window.location.href = row.urls.view; }}>
                     <Eye className="h-4 w-4 me-2" /> {t.view}
                 </DropdownMenuItem>
@@ -195,6 +205,16 @@ function RowActions({ row, permissions, t, onDelete }) {
                 <DropdownMenuItem onClick={() => { window.location.href = row.urls.clone; }}>
                     <Copy className="h-4 w-4 me-2" /> {t.clone}
                 </DropdownMenuItem>
+                {row.urls.print && (
+                    <DropdownMenuItem onClick={() => { window.open(row.urls.print, '_blank'); }}>
+                        <Printer className="h-4 w-4 me-2" /> {t.print}
+                    </DropdownMenuItem>
+                )}
+                {row.urls.print_label && (
+                    <DropdownMenuItem onClick={() => { window.open(row.urls.print_label, '_blank'); }}>
+                        <Printer className="h-4 w-4 me-2" /> {t.print_label}
+                    </DropdownMenuItem>
+                )}
                 {!terminal && (permissions.update || permissions.delete) && <DropdownMenuSeparator />}
                 {!terminal && permissions.update && (
                     <DropdownMenuItem onClick={() => { window.location.href = row.urls.edit; }}>
@@ -288,7 +308,7 @@ function KpiChips({ counts = {}, filterUrl, activeStatus, t = {} }) {
  * reflowed for a grid. Used when the merchant picks the card view, and the
  * better default on narrow screens where a 7-column row would scroll.
  */
-function ParcelCard({ row, currency, t, permissions, onDelete }) {
+function ParcelCard({ row, currency, t, permissions, onDelete, onTrack }) {
     return (
         <Card className="h-full">
             <CardContent className="p-4 flex flex-col gap-3 h-full">
@@ -301,7 +321,7 @@ function ParcelCard({ row, currency, t, permissions, onDelete }) {
                     </div>
                     <div className="flex items-start gap-1">
                         <StatusPill label={row.status_label} color={row.status_color} />
-                        <RowActions row={row} permissions={permissions} t={t} onDelete={onDelete} />
+                        <RowActions row={row} permissions={permissions} t={t} onDelete={onDelete} onTrack={onTrack} />
                     </div>
                 </div>
 
@@ -441,6 +461,10 @@ export default function Index({
         e.preventDefault();
         form.post(urls.filter, { preserveScroll: true });
     };
+
+    // Tracking drawer, same component the admin list opens.
+    const [trackingId, setTrackingId] = React.useState(null);
+    const openTracking = (id) => setTrackingId(id);
 
     const del = (row) => {
         if (!row?.urls?.delete) return;
@@ -587,7 +611,7 @@ export default function Index({
             ) : viewMode === 'cards' ? (
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     {rows.map((r) => (
-                        <ParcelCard key={r.id} row={r} currency={currency} t={t} permissions={permissions} onDelete={del} />
+                        <ParcelCard key={r.id} row={r} currency={currency} t={t} permissions={permissions} onDelete={del} onTrack={openTracking} />
                     ))}
                 </div>
             ) : (
@@ -599,19 +623,22 @@ export default function Index({
                                     <tr>
                                         <th className="px-2.5 py-2 text-start font-medium">{t.actions}</th>
                                         <th className="px-2.5 py-2 text-start font-medium">{t.tracking_id}</th>
+                                        <th className="px-2.5 py-2 text-start font-medium">{t.print_label}</th>
                                         <th className="px-2.5 py-2 text-start font-medium">{t.recipient_info}</th>
                                         <th className="px-2.5 py-2 text-start font-medium">{t.shop}</th>
                                         <th className="px-2.5 py-2 text-end   font-medium">{t.amount}</th>
                                         <th className="px-2.5 py-2 text-start font-medium">{t.status}</th>
                                         <th className="px-2.5 py-2 text-start font-medium">{t.payment}</th>
                                         <th className="px-2.5 py-2 text-center font-medium">{t.attempts}</th>
+                                        <th className="px-2.5 py-2 text-start font-medium">{t.pod}</th>
+                                        <th className="px-2.5 py-2 text-start font-medium">{t.courier_name}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border">
                                     {rows.map((r) => (
                                         <tr key={r.id} className="hover:bg-muted/20 transition-colors">
                                             <td className="px-2.5 py-2 align-top">
-                                                <RowActions row={r} permissions={permissions} t={t} onDelete={del} />
+                                                <RowActions row={r} permissions={permissions} t={t} onDelete={del} onTrack={openTracking} />
                                             </td>
 
                                             <td className="px-2.5 py-2 align-top">
@@ -626,6 +653,15 @@ export default function Index({
                                                         3PL: {r.courier_name}
                                                     </div>
                                                 )}
+                                            </td>
+
+                                            <td className="px-2.5 py-2 align-top">
+                                                {r.urls?.print_label ? (
+                                                    <a href={r.urls.print_label} target="_blank" rel="noreferrer"
+                                                        title={t.print_label} className="text-rose-600">
+                                                        <FileText className="h-5 w-5" />
+                                                    </a>
+                                                ) : <span className="text-xs text-muted-foreground">—</span>}
                                             </td>
 
                                             <td className="px-2.5 py-2 align-top">
@@ -708,6 +744,19 @@ export default function Index({
                                             <td className="px-2.5 py-2 align-top text-center font-medium tabular-nums">
                                                 {r.attempts ?? 0}
                                             </td>
+
+                                            <td className="px-2.5 py-2 align-top">
+                                                {r.urls?.delivered_info ? (
+                                                    <a href={r.urls.delivered_info} target="_blank" rel="noreferrer"
+                                                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                                                        <ImageIcon className="h-3.5 w-3.5" /> {t.pod}
+                                                    </a>
+                                                ) : <span className="text-xs text-muted-foreground">—</span>}
+                                            </td>
+
+                                            <td className="px-2.5 py-2 align-top text-xs">
+                                                {r.courier_name || <span className="text-muted-foreground">—</span>}
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -720,6 +769,12 @@ export default function Index({
             <div className={cn(viewMode === 'cards' && 'mt-3')}>
                 <Pagination pagination={pagination} />
             </div>
+
+            <ShipmentDrawer
+                parcelId={trackingId}
+                onClose={() => setTrackingId(null)}
+                baseUrl={urls.tracking_json_base}
+            />
         </MerchantLayout>
     );
 }

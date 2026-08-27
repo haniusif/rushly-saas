@@ -247,4 +247,10 @@ return array (
     'delivery_re_schedule_cancel' => 'Delivery reschedule cancelled successfully.',
     'pickup_reschedule_canceled' => 'Pickup reschedule cancelled successfully.',
   'status_change_not_allowed' => 'You can only cancel a shipment while it is still Pending. After pickup, please raise a Support request.',
+    'cod' => 'COD',
+    'courier_name' => 'Courier',
+    'pod' => 'POD',
+    'print_label' => 'Print label',
+    'total_charge' => 'Total charge',
+    'track' => 'Track shipment',
 );

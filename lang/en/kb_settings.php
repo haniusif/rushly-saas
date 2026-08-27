@@ -40,7 +40,7 @@ return [
                 'webhook_secret', 'app_id', 'authorization_mode',
             ],
             'cross_links' => 'E-commerce bridges (Salla, Zid, Shopify, WooCommerce); 3PL (Aramex, Zajel, DeliveryPanda, Jet, iMile, Logestechs); Accounting (Qoyod, Daftra); ERP (Odoo); Payments (Stripe, Moyasar, ClickPay, STC Pay); Location (Google Maps, Saudi National Address).',
-            'notes'       => '3PL / payment / ERP credentials can be per-tenant or global (.env). Bridge URLs can override the .env values. Salla uses OAuth; Zid / Shopify use the bridge pattern. Shows parcel count per platform.',
+            'notes'       => '3PL / payment / ERP credentials can be per-tenant or global (.env). Bridge URLs can override the .env values. Salla uses OAuth; Zid / Shopify use the bridge pattern. Shows shipment count per platform.',
         ],
 
         'delivery-category' => [
@@ -128,7 +128,7 @@ return [
                 'unifonic_app_sid', 'unifonic_sender',
                 '{provider}_status',
             ],
-            'cross_links' => 'Notification settings (alternative delivery channel); used by Parcel SMS dispatchers.',
+            'cross_links' => 'Notification settings (alternative delivery channel); used by Shipment SMS dispatchers.',
             'notes'       => 'Seven independent provider cards, each with its own submit URL. Sender IDs must be pre-approved on the provider side (MSEGAT, Taqnyat, 4Jawaly). Helper smsSettings() reads the global config row.',
         ],
 
@@ -198,7 +198,7 @@ return [
         'packaging' => [
             'icon'    => 'Boxes',
             'label'   => 'Packaging',
-            'purpose' => 'Define reusable packaging options with price, status and display position for parcel fulfillment.',
+            'purpose' => 'Define reusable packaging options with price, status and display position for shipment fulfillment.',
             'pages' => [
                 ['path' => 'Index',  'desc' => 'Sortable list of packaging types with status and actions.'],
                 ['path' => 'Create', 'desc' => 'New packaging option form.'],
@@ -209,7 +209,7 @@ return [
                 ['label' => 'Active',   'tone' => 'ok'],
                 ['label' => 'Inactive', 'tone' => 'bad'],
             ],
-            'cross_links' => 'Parcels (packaging selection at create-time).',
+            'cross_links' => 'Shipments (packaging selection at create-time).',
             'notes'       => 'Blade-rendered CRUD. Image upload per packaging. Position controls display order in dropdowns. Price is per unit.',
         ],
 

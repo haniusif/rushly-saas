@@ -13,7 +13,7 @@ return [
     'driver_photo_hint'           => 'optional, max 5MB',
     'next_attempt_date'           => 'Next Attempt Date',
     'reschedule_hint'             => 'if rescheduling',
-    'final_attempt_warning'       => 'This is attempt 3 — saving will auto-set the parcel to RETURN_TO_COURIER and the NDR to status=returned.',
+    'final_attempt_warning'       => 'This is attempt 3 — saving will auto-set the shipment to RETURN_TO_COURIER and the NDR to status=returned.',
     'save'                        => 'Save NDR',
 
     // Index / list
@@ -27,7 +27,7 @@ return [
     'no_ndrs_found'               => 'No NDRs found.',
 
     // Show / actions
-    'parcel'                      => 'Parcel',
+    'parcel'                      => 'Shipment',
     'tracking_id'                 => 'Tracking ID',
     'cash_collection'             => 'Cash Collection',
     'failure'                     => 'Failure',

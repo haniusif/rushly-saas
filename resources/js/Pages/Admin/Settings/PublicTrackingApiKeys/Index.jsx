@@ -343,7 +343,7 @@ console.log(data.status_label, data.events);`;
             { key: 'tracking_id', value: sampleTracking },
         ],
         item: [{
-            name: 'Get parcel tracking',
+            name: 'Get shipment tracking',
             request: {
                 method: 'GET',
                 header: [{ key: 'X-API-Key', value: '{{api_key}}' }],
@@ -396,7 +396,7 @@ console.log(data.status_label, data.events);`;
                         </p>
                     </div>
                     <div className="rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                        Send the key in the <code className="rounded bg-white px-1 py-0.5 font-mono">X-API-Key</code> header, or as a <code className="rounded bg-white px-1 py-0.5 font-mono">?api_key=</code> query parameter. Keys are scoped to your tenant — they can only look up parcels created under this account.
+                        Send the key in the <code className="rounded bg-white px-1 py-0.5 font-mono">X-API-Key</code> header, or as a <code className="rounded bg-white px-1 py-0.5 font-mono">?api_key=</code> query parameter. Keys are scoped to your tenant — they can only look up shipments created under this account.
                     </div>
                 </div>
             </CardContent>
@@ -428,7 +428,7 @@ export default function Index({
                         Public tracking API keys
                     </h1>
                     <p className="mt-1 text-sm text-slate-600">
-                        Issue keys so other websites (e.g. merchant storefronts) can look up parcel tracking status through your API.
+                        Issue keys so other websites (e.g. merchant storefronts) can look up shipment tracking status through your API.
                     </p>
                 </div>
 

@@ -23,7 +23,7 @@ return [
     'ofd_by_hub_subtitle' => 'Today, currently out for delivery',
     'ofd_by_hub_col_name' => 'Hub',
     'ofd_by_hub_col_qty'  => 'OFD',
-    'ofd_by_hub_empty'    => 'No parcels out for delivery today.',
+    'ofd_by_hub_empty'    => 'No shipments out for delivery today.',
     'top_deliverymen_title'          => 'Deliveryman performance',
     'current_month'                  => 'Current month: :month',
     'all_time'                       => 'All time',

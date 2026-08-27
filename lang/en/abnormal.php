@@ -29,7 +29,7 @@ return [
     'nobody_yet'                  => 'Nobody yet',
     'stale_progress'              => 'Stale progress',
     'event_timeline'              => 'Event Timeline',
-    'no_events'                   => 'No parcel events on file.',
+    'no_events'                   => 'No shipment events on file.',
     'investigation'               => 'Investigation',
     'assign_to_investigator'      => 'Assign to investigator',
     'assign'                      => 'Assign',

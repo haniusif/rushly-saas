@@ -9,19 +9,19 @@ return [
 
     'driver_title'      => 'Driver App',
     'driver_audience'   => 'Delivery drivers',
-    'driver_desc'       => 'Assigned parcels, delivery outcomes (delivered / partial / not-delivered with photo), NDR, earnings, cash reconciliation, live tracking map and route-optimised runsheet.',
+    'driver_desc'       => 'Assigned shipments, delivery outcomes (delivered / partial / not-delivered with photo), NDR, earnings, cash reconciliation, live tracking map and route-optimised runsheet.',
 
     'merchant_title'    => 'Merchant App',
     'merchant_audience' => 'Merchants / shop owners',
-    'merchant_desc'     => 'Parcel CRUD, bulk CSV import, tracking map, shops, payments (accounts + requests + statements PDF), invoices, fraud, NDR, store connections and reports.',
+    'merchant_desc'     => 'Shipment CRUD, bulk CSV import, tracking map, shops, payments (accounts + requests + statements PDF), invoices, fraud, NDR, store connections and reports.',
 
     'admin_title'       => 'Admin App',
     'admin_audience'    => 'Back-office (admin / hub / incharge)',
-    'admin_desc'        => 'Dashboard, parcels, drivers, merchants (with onboarding approval), hubs, payouts, support, fraud, driver-assignment map, hub cash, WMS lookup + GRN + cycle count + damage, and 3PL assignment.',
+    'admin_desc'        => 'Dashboard, shipments, drivers, merchants (with onboarding approval), hubs, payouts, support, fraud, driver-assignment map, hub cash, WMS lookup + GRN + cycle count + damage, and 3PL assignment.',
 
     'supervisor_title'    => 'Supervisor App',
     'supervisor_audience' => 'Field supervisors',
-    'supervisor_desc'     => 'Live drivers list + detail, unassigned parcels + assign, per-driver performance reports with date range, and aggregated exceptions feed (open NDRs, stuck parcels, returning to courier).',
+    'supervisor_desc'     => 'Live drivers list + detail, unassigned shipments + assign, per-driver performance reports with date range, and aggregated exceptions feed (open NDRs, stuck shipments, returning to courier).',
 
     'warehouse_title'    => 'Warehouse App',
     'warehouse_audience' => 'Warehouse staff',

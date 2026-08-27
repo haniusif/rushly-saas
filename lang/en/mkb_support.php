@@ -25,7 +25,7 @@ return [
                 ['label' => 'Resolved',   'tone' => 'ok'],
                 ['label' => 'Closed',     'tone' => 'default'],
             ],
-            'cross_links' => 'For shipment-specific issues, include the tracking ID in the subject — the agent can jump straight to the parcel details and event timeline.',
+            'cross_links' => 'For shipment-specific issues, include the tracking ID in the subject — the agent can jump straight to the shipment details and event timeline.',
             'notes'       => 'You only see your own tickets; agents see all tickets across merchants. Email notifications fire on every reply so check your inbox if you are not on the panel.',
         ],
 

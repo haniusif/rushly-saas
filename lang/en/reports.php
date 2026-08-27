@@ -96,7 +96,7 @@ return [
     'Current_Cash_Balance'                 =>    'Current Cash Balance',
  
     'parcel_info'                          => 'Shipments Information',
-    'total_created_parcel'                 => 'Total created parcels',
+    'total_created_parcel'                 => 'Total created shipments',
     'total_delivered'                      => 'Total delivered',
     'total_partial_delivered'               => 'Total partial delivered',
     'total_delivered_cash_collection'      => 'Total delivered cash collection (with partial delivered)',
@@ -118,5 +118,5 @@ return [
     'return_charges'                        => 'Return charges',
     'total_charges'                         => 'Total charges',
     'delivery_man_income'                   => 'Couriers  income',
-    'parcel_finance_reports' => 'Parcel finance reports',
+    'parcel_finance_reports' => 'Shipment finance reports',
 ];

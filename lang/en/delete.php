@@ -5,7 +5,7 @@ return [
     'support'              => 'Do you want to delete the support?',
     'payment_account'      => 'Do you want to delete the payment account?',
     'shop'                 => 'Do you want to delete the shop?',
-    'parcel'               => 'Do you want to delete the Parcel?',
+    'parcel'               => 'Do you want to delete the Shipment?',
     'payment_request'      => 'Do you want to delete the payment request?',
     'news_offer'           => 'Do you want to delete the news & offer?',
     'hub'                  => 'Do you want to delete the Branch?',

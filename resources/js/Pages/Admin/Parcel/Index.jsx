@@ -18,6 +18,21 @@ import ShipmentDrawer from '@/Components/parcel/ShipmentDrawer';
 import ChangeStatusModal from '@/Components/parcel/ChangeStatusModal';
 import { cn } from '@/lib/utils';
 
+/**
+ * Append the active filter state to a URL so a download or a navigation
+ * respects what is currently on screen. Empty values are dropped.
+ */
+function withFilters(url, filters) {
+    if (!url) return url;
+    const params = new URLSearchParams();
+    Object.entries(filters || {}).forEach(([k, v]) => {
+        if (v !== '' && v !== null && v !== undefined) params.set(k, String(v));
+    });
+    const qs = params.toString();
+    if (!qs) return url;
+    return url + (url.includes('?') ? '&' : '?') + qs;
+}
+
 function Money({ value, currency }) {
     const n = Number(value || 0);
     return (
@@ -233,7 +248,9 @@ export default function Index({
     const submitFilter = (e) => {
         e?.preventDefault?.();
         setSubmitting(true);
-        router.get(urls.filter, draft, {
+        // `search` lives in its own state, so it has to be merged in or
+        // applying a filter would discard the operator's search term.
+        router.get(urls.filter, { ...draft, search }, {
             preserveState: true,
             preserveScroll: true,
             replace: true,
@@ -243,10 +260,14 @@ export default function Index({
 
     const submitSearch = (e) => {
         e?.preventDefault?.();
-        router.get(urls.specific_search, { search }, { preserveState: true });
+        // Through parcel.filter, not the standalone search endpoint: that one
+        // ignores every other filter, so searching used to silently discard
+        // the merchant / status / date the operator had set.
+        router.get(urls.filter, { ...draft, search }, { preserveState: true });
     };
 
     const clear = () => {
+        setSearch('');
         setDraft({
             parcel_date: '', parcel_status: '', parcel_merchant_id: '',
             parcel_deliveryman_id: '', parcel_pickupman_id: '', invoice_id: '',
@@ -512,7 +533,7 @@ export default function Index({
                     <a href={urls.parcel_map} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent transition-colors">
                         <Map className="h-4 w-4 me-1" /> {t.map_label}
                     </a>
-                    <a href={urls.export} className="inline-flex h-9 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 px-3 text-sm font-medium hover:bg-sky-100 transition-colors">
+                    <a href={withFilters(urls.export, { ...filters, search })} className="inline-flex h-9 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 px-3 text-sm font-medium hover:bg-sky-100 transition-colors">
                         <Download className="h-4 w-4 me-1" /> {exportLabel}
                     </a>
                     <a href={urls.import} className="inline-flex h-9 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 px-3 text-sm font-medium hover:bg-emerald-100 transition-colors">

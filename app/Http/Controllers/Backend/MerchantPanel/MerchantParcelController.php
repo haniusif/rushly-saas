@@ -835,16 +835,77 @@ class MerchantParcelController extends Controller
 
 
     // Parcel update
+    /**
+     * Fetch a parcel that belongs to the signed-in merchant, or abort.
+     *
+     * Parcel carries a tenant global scope, so a lookup can never cross into
+     * another COMPANY. It does not, however, distinguish two merchants inside
+     * the same company — for that the merchant_id has to be checked explicitly,
+     * which is what details(), logs() and edit() already do inline. The write
+     * paths below did not, so any merchant could address a sibling merchant's
+     * shipment by id.
+     */
+    private function ownedParcelOrAbort($id)
+    {
+        $parcel   = $this->repo->get($id);
+        $merchant = $this->currentMerchant();
+
+        if (! $parcel) {
+            abort(404);
+        }
+        if (! $merchant || (int) $parcel->merchant_id !== (int) $merchant->id) {
+            abort(403);
+        }
+
+        return $parcel;
+    }
+
+    /**
+     * Statuses a merchant may set on their own shipment, keyed by the status it
+     * may be moved FROM.
+     *
+     * Deliberately tiny. Before this, the endpoint accepted any status id, so a
+     * merchant could mark their own shipment Delivered — which drives COD
+     * settlement — or push a sibling merchant's shipment into any state at all.
+     * The rule mirrors what the app already tells merchants in the knowledge
+     * base: changes are theirs to make only while the shipment is still
+     * Pending; after pickup it belongs to the courier and goes through Support.
+     */
+    private const MERCHANT_ALLOWED_TRANSITIONS = [
+        ParcelStatus::PENDING => [ParcelStatus::CANCELLED],
+    ];
+
     public function statusUpdate($id, $status_id)
     {
-        $this->repo->statusUpdate($id, $status_id);
-        Toastr::success(__('parcel.update_msg'),__('message.success'));
+        $parcel   = $this->ownedParcelOrAbort($id);
+        $from     = (int) $parcel->status;
+        $to       = (int) $status_id;
+        $allowed  = self::MERCHANT_ALLOWED_TRANSITIONS[$from] ?? [];
+
+        if (! in_array($to, $allowed, true)) {
+            Toastr::error(__('parcel.status_change_not_allowed'), __('message.error'));
+            return redirect()->route('merchant-panel.parcel.index');
+        }
+
+        $this->repo->statusUpdate($id, $to, $parcel->merchant_id);
+        Toastr::success(__('parcel.update_msg'), __('message.success'));
+
         return redirect()->route('merchant-panel.parcel.index');
     }
 
     public function update(StoreRequest $request,$id)
     {
         $userID = Auth::user()->id;
+
+        // edit() already refuses another merchant's shipment and anything past
+        // Pending; the write half enforced neither, so the form guard could be
+        // walked straight around by POSTing to this route.
+        $parcel = $this->ownedParcelOrAbort($id);
+        if ((int) $parcel->status !== ParcelStatus::PENDING) {
+            Toastr::error(__('parcel.edit_error_message'), __('message.error'));
+            return redirect()->route('merchant-panel.parcel.index');
+        }
+
         if($this->repo->update($id, $request,$userID)){
             Toastr::success(__('parcel.update_msg'),__('message.success'));
             return redirect()->route('merchant-panel.parcel.index');
@@ -858,7 +919,9 @@ class MerchantParcelController extends Controller
     public function destroy($id)
     {
         $userID = Auth::user()->id;
-        $parcel = $this->repo->get($id);
+        // Was checking the status but not the owner, so a merchant could delete
+        // a sibling merchant's Pending shipment.
+        $parcel = $this->ownedParcelOrAbort($id);
         if($parcel->status == ParcelStatus::PENDING){
             $this->repo->delete($id,$userID);
             Toastr::success(__('parcel.delete_msg'),__('message.success'));

@@ -1366,7 +1366,10 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::get('parcel/details/{id}',    [MerchantParcelController::class, 'details'])->name('merchant-panel.parcel.details');
                         Route::get('parcel/logs/{id}',       [MerchantParcelController::class, 'logs'])->name('merchant-panel.parcel.logs');
                         Route::put('parcel/update/{id}',     [MerchantParcelController::class, 'update'])->name('merchant-panel.parcel.update');
-                        Route::get('parcel/status-update/{id}/{status_id}',   [MerchantParcelController::class, 'statusUpdate'])->name('merchant-panel.parcel.status-update');
+                        // POST, not GET: a state change behind a GET is triggerable by a
+                        // link, an <img> src or a prefetch, and carries no CSRF token. No UI
+                        // referenced this route, so changing the verb breaks nothing.
+                        Route::post('parcel/status-update/{id}/{status_id}',  [MerchantParcelController::class, 'statusUpdate'])->name('merchant-panel.parcel.status-update');
                         Route::delete('parcel/delete/{id}',     [MerchantParcelController::class, 'destroy'])->name('merchant-panel.parcel.delete');
                         Route::post('parcel/merchant',          [MerchantParcelController::class, 'getMerchant'])->name('merchant-panel.parcel.merchant.get');
                         Route::post('parcel/merchant/shops',    [MerchantParcelController::class, 'merchantShops'])->name('merchant-panel.parcel.merchant.shops');

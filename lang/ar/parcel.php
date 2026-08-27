@@ -187,4 +187,5 @@ return array (
     'no_data_to_preview' => 'لا توجد بيانات للمعاينة.',
     'delivery_re_schedule_cancel' => 'تم إلغاء إعادة جدولة التوصيل بنجاح.',
     'pickup_reschedule_canceled' => 'تم إلغاء إعادة جدولة الاستلام بنجاح.',
+  'status_change_not_allowed' => 'يمكنك إلغاء الشحنة فقط أثناء كونها قيد الانتظار. بعد الاستلام، يرجى فتح طلب دعم.',
 );

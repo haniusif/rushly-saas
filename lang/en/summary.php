@@ -32,4 +32,18 @@ return [
     'top_deliverymen_col_delivered'  => 'Delivered',
     'top_deliverymen_col_performance' => 'Performance',
     'top_deliverymen_empty'          => 'No deliverymen yet.',
+
+    'status_donut_title' => 'Today\'s shipment mix',
+    'status_donut_subtitle' => 'By current status',
+    'status_donut_empty' => 'No shipments created today yet.',
+    'status_delivered' => 'Delivered',
+    'status_ofd' => 'Out for delivery',
+    'status_pending' => 'Pending pickup',
+    'status_returned' => 'Returned',
+    'status_cancelled' => 'Cancelled',
+    'status_other' => 'In transit',
+    'week_ring_title' => 'Success this week',
+    'week_ring_subtitle' => 'Delivered vs terminal, last 7 days',
+    'week_ring_delivered' => 'delivered',
+    'week_ring_created' => 'created',
 ];

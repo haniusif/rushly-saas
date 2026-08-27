@@ -78,4 +78,6 @@ return [
     'Enter_company_name'               => 'Enter Company Name',
     'Enter_domain'                     => 'Enter Domain',
     'enter_address'         => 'Enter address',
+
+    'address' => 'Address',
 ];

@@ -551,4 +551,12 @@ return [
 
     'of' => 'of',
     'cards' => 'Cards',
+
+    'Enter_description' => 'Enter description',
+    'cancelled' => 'Cancelled',
+    'payout' => 'Payout',
+    'users' => 'Users',
+    'priority_high' => 'High',
+    'priority_medium' => 'Medium',
+    'priority_low' => 'Low',
 ];

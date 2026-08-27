@@ -117,7 +117,6 @@ return [
     'total_due_amount'                      => 'Total Due Amount (without Pending payments)',
     'return_charges'                        => 'Return charges',
     'total_charges'                         => 'Total charges',
-    'delivery_man_income'                   => 'Couriers  income'
-
-
+    'delivery_man_income'                   => 'Couriers  income',
+    'parcel_finance_reports' => 'Parcel finance reports',
 ];

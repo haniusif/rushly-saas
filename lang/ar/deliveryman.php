@@ -91,4 +91,6 @@ return array (
   'wizard_prev'                   => 'السابق',
   'wizard_submit'                 => 'إرسال',
   'wizard_step_of'                => 'الخطوة :current من :total',
+
+    'password_keep_hint' => 'اتركه فارغًا للإبقاء على كلمة المرور الحالية.',
 );

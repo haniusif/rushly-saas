@@ -135,4 +135,10 @@ return [
     'city' => 'المدن',
     'city_single' => 'المدينة',
     'area' => 'المناطق',
+
+    'blogs' => 'المدونة',
+    'integrations' => 'التكاملات',
+    'partner' => 'الشركاء',
+    'update' => 'تحديث',
+    'why_rushly' => 'لماذا رشلي',
 ];

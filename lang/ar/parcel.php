@@ -178,4 +178,13 @@ return array (
   'chip_returned' => 'مُرتجع',
   'chip_cancelled' => 'ملغي',
   'chip_failed' => 'فشل',
+
+    'area' => 'المنطقة',
+    'city' => 'المدينة',
+    'paid_invoice' => 'الفواتير المدفوعة',
+    'not_found' => 'لم يتم العثور على الشحنة.',
+    'not_assigned' => 'هذه الشحنة غير مُسندة إليك.',
+    'no_data_to_preview' => 'لا توجد بيانات للمعاينة.',
+    'delivery_re_schedule_cancel' => 'تم إلغاء إعادة جدولة التوصيل بنجاح.',
+    'pickup_reschedule_canceled' => 'تم إلغاء إعادة جدولة الاستلام بنجاح.',
 );

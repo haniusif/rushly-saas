@@ -2,6 +2,8 @@
 
 namespace App\Models\Backend;
 
+use App\Enums\Status;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -24,7 +26,7 @@ class OperationalArea extends Model
     public function getMyStatusAttribute()
     {
         return $this->status == 1
-            ? '<span class="badge badge-pill badge-success">' . trans('status.1') . '</span>'
-            : '<span class="badge badge-pill badge-danger">'  . trans('status.2') . '</span>';
+            ? '<span class="badge badge-pill badge-success">' . trans('status.' . Status::ACTIVE) . '</span>'
+            : '<span class="badge badge-pill badge-danger">'  . trans('status.' . Status::INACTIVE) . '</span>';
     }
 }

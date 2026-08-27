@@ -510,4 +510,12 @@ return [
 
     'of' => 'من',
     'cards' => 'بطاقات',
+
+    'Enter_description' => 'أدخل الوصف',
+    'cancelled' => 'ملغي',
+    'payout' => 'المدفوعات',
+    'users' => 'المستخدمون',
+    'priority_high' => 'عالية',
+    'priority_medium' => 'متوسطة',
+    'priority_low' => 'منخفضة',
 ];

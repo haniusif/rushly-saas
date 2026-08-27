@@ -237,4 +237,13 @@ return array (
   'chip_returned' => 'Returned',
   'chip_cancelled' => 'Cancelled',
   'chip_failed' => 'Failed',
+
+    'area' => 'Area',
+    'city' => 'City',
+    'paid_invoice' => 'Paid invoices',
+    'not_found' => 'Shipment not found.',
+    'not_assigned' => 'This shipment is not assigned to you.',
+    'no_data_to_preview' => 'No data to preview.',
+    'delivery_re_schedule_cancel' => 'Delivery reschedule cancelled successfully.',
+    'pickup_reschedule_canceled' => 'Pickup reschedule cancelled successfully.',
 );

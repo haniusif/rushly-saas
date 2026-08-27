@@ -26,4 +26,9 @@ return [
     'returned_to_merchant_expense'                              => 'إرجاع الشحنة — مصروف التاجر',
     'returned_to_merchant_income_cancel'                        => 'إلغاء إرجاع الشحنة — مصروف التاجر',
     'returned_to_merchant_expense_cancel'                       => 'إلغاء إرجاع الشحنة — إيراد التاجر',
+
+    'return_to_merchant_deliveryman_statement' => 'إرجاع الشحنة إلى العميل - دخل المندوب',
+    'return_to_merchant__deliveryman_statement' => 'إرجاع الشحنة إلى العميل - مصروف المندوب',
+    'return_received_by_merchant_statment' => 'استلام المرتجع من العميل - مصروف',
+    'return_received_by_statement' => 'استلام المرتجع - دخل',
 ];

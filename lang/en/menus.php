@@ -137,4 +137,10 @@ return [
     'city' => 'Cities',
     'city_single' => 'City',
     'area' => 'Areas',
+
+    'blogs' => 'Blog',
+    'integrations' => 'Integrations',
+    'partner' => 'Partner',
+    'update' => 'Update',
+    'why_rushly' => 'Why Rushly',
 ];

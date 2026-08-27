@@ -13,4 +13,6 @@ return [
     'new'               =>  'New',
     'old'               =>  'Old',
     
+
+    'user' => 'User',
 ];

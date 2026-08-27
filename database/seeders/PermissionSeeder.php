@@ -463,6 +463,31 @@ class PermissionSeeder extends Seeder
                 'regenerate' => 'zatca_regenerate',
             ],
 
+            // Geographic reference data: countries / cities / areas. These
+            // tables carry NO company_id, so the rows are shared by every
+            // tenant — the screens say so, and delete is refused while
+            // anything still references the row.
+            'country' => [
+                'read'   => 'country_read',
+                'create' => 'country_create',
+                'update' => 'country_update',
+                'delete' => 'country_delete',
+            ],
+
+            'city' => [
+                'read'   => 'city_read',
+                'create' => 'city_create',
+                'update' => 'city_update',
+                'delete' => 'city_delete',
+            ],
+
+            'area' => [
+                'read'   => 'area_read',
+                'create' => 'area_create',
+                'update' => 'area_update',
+                'delete' => 'area_delete',
+            ],
+
             // Knowledge Base — gates the per-sub-page screenshot upload/delete
             // (and the WMS KB equivalents). `knowledge_base_read` now gates the
             // page itself but is deliberately absent from THIS (tenant) catalog:

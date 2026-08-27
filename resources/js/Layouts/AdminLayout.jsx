@@ -10,7 +10,7 @@ import {
     Wallet, ShieldAlert, DollarSign, CreditCard, BadgeDollarSign,
     UserCog, HardDrive, Briefcase, Tags, BellRing, KeyRound, Layers,
     Plug, MapPinned, Layout, ScrollText, Sliders, BookOpen, PackagePlus,
-    Smartphone,
+    Smartphone, Globe2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/Components/ui/Button';
@@ -100,6 +100,9 @@ const NAV = [
         { tKey: 'menu_general_settings',        icon: Sliders,       route: 'general-settings.index',         match: ['admin/general-settings'], perm: 'general_settings_read' },
         { tKey: 'menu_integrations',            icon: Plug,          route: 'integrations.index',             match: ['admin/integrations'], perm: 'integrations_read' },
         { tKey: 'menu_mobile_apps',             icon: Smartphone,    route: 'mobile-apps.index',              match: ['admin/settings/mobile-apps'], perm: 'mobile_apps_read' },
+        { tKey: 'menu_countries',               icon: Globe2,        route: 'country.index',                  match: ['admin/countries'], perm: 'country_read' },
+        { tKey: 'menu_cities',                  icon: Building2,     route: 'city.index',                     match: ['admin/cities'], perm: 'city_read' },
+        { tKey: 'menu_areas',                   icon: MapPin,        route: 'area.index',                     match: ['admin/areas'], perm: 'area_read' },
         { tKey: 'menu_delivery_category',       icon: Tags,          route: 'delivery-category.index',        match: ['admin/delivery-category'], perm: 'delivery_category_read' },
         { tKey: 'menu_delivery_charge',         icon: DollarSign,    route: 'delivery-charge.index',          match: ['admin/delivery-charge'], perm: 'delivery_charge_read' },
         { tKey: 'menu_delivery_type',           icon: Truck,         route: 'delivery-type.index',            match: ['admin/delivery-type'], perm: 'delivery_type_read' },

@@ -1029,26 +1029,26 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::post('integrations/odoo/vendors/{id}/sync', [\App\Http\Controllers\Backend\OdooSettingsController::class, 'syncVendor'])->name('odoo.vendors.sync')->middleware('hasPermission:integrations_update');
 
                         // Countries / Cities / Areas
-                        Route::get('countries',              [CountryController::class, 'index'])->name('country.index');
-                        Route::get('countries/create',       [CountryController::class, 'create'])->name('country.create');
-                        Route::post('countries/store',       [CountryController::class, 'store'])->name('country.store');
-                        Route::get('countries/edit/{id}',    [CountryController::class, 'edit'])->name('country.edit');
-                        Route::put('countries/update/{id}',  [CountryController::class, 'update'])->name('country.update');
-                        Route::delete('countries/delete/{id}', [CountryController::class, 'destroy'])->name('country.delete');
+                        Route::get('countries',              [CountryController::class, 'index'])->name('country.index')->middleware('hasPermission:country_read');
+                        Route::get('countries/create',       [CountryController::class, 'create'])->name('country.create')->middleware('hasPermission:country_create');
+                        Route::post('countries/store',       [CountryController::class, 'store'])->name('country.store')->middleware('hasPermission:country_create');
+                        Route::get('countries/edit/{id}',    [CountryController::class, 'edit'])->name('country.edit')->middleware('hasPermission:country_update');
+                        Route::put('countries/update/{id}',  [CountryController::class, 'update'])->name('country.update')->middleware('hasPermission:country_update');
+                        Route::delete('countries/delete/{id}', [CountryController::class, 'destroy'])->name('country.delete')->middleware('hasPermission:country_delete');
 
-                        Route::get('cities',              [CityController::class, 'index'])->name('city.index');
-                        Route::get('cities/create',       [CityController::class, 'create'])->name('city.create');
-                        Route::post('cities/store',       [CityController::class, 'store'])->name('city.store');
-                        Route::get('cities/edit/{id}',    [CityController::class, 'edit'])->name('city.edit');
-                        Route::put('cities/update/{id}',  [CityController::class, 'update'])->name('city.update');
-                        Route::delete('cities/delete/{id}', [CityController::class, 'destroy'])->name('city.delete');
+                        Route::get('cities',              [CityController::class, 'index'])->name('city.index')->middleware('hasPermission:city_read');
+                        Route::get('cities/create',       [CityController::class, 'create'])->name('city.create')->middleware('hasPermission:city_create');
+                        Route::post('cities/store',       [CityController::class, 'store'])->name('city.store')->middleware('hasPermission:city_create');
+                        Route::get('cities/edit/{id}',    [CityController::class, 'edit'])->name('city.edit')->middleware('hasPermission:city_update');
+                        Route::put('cities/update/{id}',  [CityController::class, 'update'])->name('city.update')->middleware('hasPermission:city_update');
+                        Route::delete('cities/delete/{id}', [CityController::class, 'destroy'])->name('city.delete')->middleware('hasPermission:city_delete');
 
-                        Route::get('areas',              [AreaController::class, 'index'])->name('area.index');
-                        Route::get('areas/create',       [AreaController::class, 'create'])->name('area.create');
-                        Route::post('areas/store',       [AreaController::class, 'store'])->name('area.store');
-                        Route::get('areas/edit/{id}',    [AreaController::class, 'edit'])->name('area.edit');
-                        Route::put('areas/update/{id}',  [AreaController::class, 'update'])->name('area.update');
-                        Route::delete('areas/delete/{id}', [AreaController::class, 'destroy'])->name('area.delete');
+                        Route::get('areas',              [AreaController::class, 'index'])->name('area.index')->middleware('hasPermission:area_read');
+                        Route::get('areas/create',       [AreaController::class, 'create'])->name('area.create')->middleware('hasPermission:area_create');
+                        Route::post('areas/store',       [AreaController::class, 'store'])->name('area.store')->middleware('hasPermission:area_create');
+                        Route::get('areas/edit/{id}',    [AreaController::class, 'edit'])->name('area.edit')->middleware('hasPermission:area_update');
+                        Route::put('areas/update/{id}',  [AreaController::class, 'update'])->name('area.update')->middleware('hasPermission:area_update');
+                        Route::delete('areas/delete/{id}', [AreaController::class, 'destroy'])->name('area.delete')->middleware('hasPermission:area_delete');
 
                         //currency settings
                         Route::get('currency',                      [CurrencyController::class, 'index'])->name('currency.index')->middleware('hasPermission:currency_read');

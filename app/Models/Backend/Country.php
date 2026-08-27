@@ -26,4 +26,9 @@ class Country extends Model
         return $this->belongsToMany(Merchant::class, 'merchant_countries', 'country_id', 'merchant_id')
             ->withTimestamps();
     }
+
+    public function cities()
+    {
+        return $this->hasMany(City::class, 'country_id');
+    }
 }

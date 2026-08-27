@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, router } from '@inertiajs/react';
 import {
-    Plus, Filter, Eraser, Eye, ListTree, Upload, Download, ChevronDown,
-    Search, Package, Rows3, LayoutGrid,
+    Plus, Filter, Eraser, Eye, Upload, Download, ChevronDown,
+    Search, Package, Rows3, LayoutGrid, MoreVertical, Copy, Edit, Trash2,
+    User, Phone, Map, MapPin, Store, History, Check,
 } from 'lucide-react';
 import MerchantLayout from '@/Layouts/MerchantLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
@@ -10,6 +11,10 @@ import { Input } from '@/Components/ui/Input';
 import { Select } from '@/Components/ui/Select';
 import { Button } from '@/Components/ui/Button';
 import Pagination from '@/Components/merchant/Pagination';
+import {
+    DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+    DropdownMenuSeparator,
+} from '@/Components/ui/DropdownMenu';
 import { cn } from '@/lib/utils';
 
 /**
@@ -17,10 +22,26 @@ import { cn } from '@/lib/utils';
  * (Admin/Parcel/Index): KPI chip strip, collapsed filter panel, list/card view
  * toggle, tinted status pills.
  *
- * Deliberately NOT ported from the admin page: row selection and bulk actions
- * (assign deliveryman / hub / pickup date), the priority toggle and the inline
- * status-change modal. Those are courier-side operations — a merchant has no
- * route to perform them, so surfacing the controls would only produce dead UI.
+ * Column-for-column with the admin list where a merchant has the data and the
+ * route: actions menu, tracking id with copy, recipient block (name / phone /
+ * city+area / address), shop, the COD + charge breakdown, status with the
+ * updated-on stamp, attempts and 3PL courier.
+ *
+ * NOT ported, each for a concrete reason rather than taste:
+ *   - row selection + bulk assign (deliveryman / hub / pickup date): no
+ *     merchant route exists for any of them.
+ *   - priority toggle: same, courier-side only.
+ *   - print label: the admin route is parcel.print-label; the merchant panel
+ *     has no equivalent, so the column would be a dead link.
+ *   - change-status control: a merchant route DOES exist, but
+ *     MerchantParcelRepository::statusUpdate() does a bare Parcel::find($id)
+ *     with no ownership check and no whitelist of allowed statuses. Putting a
+ *     control on it would advertise that. Flagged separately.
+ *   - the CLIENT column: on a merchant's own list it is always themselves.
+ *     Replaced with the shop the shipment was booked from.
+ *   - the invoice column: the admin reads $p->admin_parcel_invoice, which is
+ *     not a relation on Parcel and resolves to null for every row, so that
+ *     column is dead there too.
  */
 
 /**
@@ -118,6 +139,78 @@ function StatusPill({ label, color }) {
     );
 }
 
+/**
+ * Tracking id with a copy button, as on the admin list. Falls back silently
+ * when the clipboard API is unavailable (non-secure context, or denied).
+ */
+function TrackingCell({ value, href }) {
+    const [copied, setCopied] = React.useState(false);
+    const copy = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+            await navigator.clipboard.writeText(value ?? '');
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+        } catch (_) { /* clipboard unavailable — the id is still selectable */ }
+    };
+    return (
+        <div className="space-y-0.5">
+            <a href={href} className="font-mono text-xs text-primary hover:underline break-all">
+                {value || '—'}
+            </a>
+            {value && (
+                <button
+                    type="button"
+                    onClick={copy}
+                    className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground"
+                >
+                    {copied
+                        ? <><Check className="h-3 w-3" /> Copied</>
+                        : <><Copy className="h-3 w-3" /> Copy</>}
+                </button>
+            )}
+        </div>
+    );
+}
+
+function RowActions({ row, permissions, t, onDelete }) {
+    // Delivered (9) and Partial delivered (10) are terminal — the admin list
+    // hides edit/delete on them and so does this one.
+    const terminal = row.status === 9 || row.status === 10;
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreVertical className="h-4 w-4" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-44">
+                <DropdownMenuItem onClick={() => { window.location.href = row.urls.view; }}>
+                    <Eye className="h-4 w-4 me-2" /> {t.view}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { window.location.href = row.urls.logs; }}>
+                    <History className="h-4 w-4 me-2" /> {t.logs}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { window.location.href = row.urls.clone; }}>
+                    <Copy className="h-4 w-4 me-2" /> {t.clone}
+                </DropdownMenuItem>
+                {!terminal && (permissions.update || permissions.delete) && <DropdownMenuSeparator />}
+                {!terminal && permissions.update && (
+                    <DropdownMenuItem onClick={() => { window.location.href = row.urls.edit; }}>
+                        <Edit className="h-4 w-4 me-2" /> {t.edit}
+                    </DropdownMenuItem>
+                )}
+                {!terminal && permissions.delete && (
+                    <DropdownMenuItem onClick={() => onDelete(row)} className="text-destructive focus:text-destructive">
+                        <Trash2 className="h-4 w-4 me-2" /> {t.delete}
+                    </DropdownMenuItem>
+                )}
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+}
+
 function FilterField({ label, className, children }) {
     return (
         <div className={className}>
@@ -195,41 +288,70 @@ function KpiChips({ counts = {}, filterUrl, activeStatus, t = {} }) {
  * reflowed for a grid. Used when the merchant picks the card view, and the
  * better default on narrow screens where a 7-column row would scroll.
  */
-function ParcelCard({ row, currency, t }) {
+function ParcelCard({ row, currency, t, permissions, onDelete }) {
     return (
         <Card className="h-full">
             <CardContent className="p-4 flex flex-col gap-3 h-full">
                 <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                        <a href={row.details_url} className="text-primary hover:underline font-mono text-xs break-all">
-                            {row.tracking_id}
-                        </a>
-                        {row.invoice_id && (
-                            <div className="text-[11px] text-muted-foreground mt-0.5">
-                                {t.invoice_id}: {row.invoice_id}
-                            </div>
+                        <TrackingCell value={row.tracking_id} href={row.urls?.view || row.details_url} />
+                        {row.courier_name && (
+                            <div className="mt-1 text-[10px] font-medium text-rose-600">3PL: {row.courier_name}</div>
                         )}
                     </div>
-                    <StatusPill label={row.status_label} color={row.status_color} />
+                    <div className="flex items-start gap-1">
+                        <StatusPill label={row.status_label} color={row.status_color} />
+                        <RowActions row={row} permissions={permissions} t={t} onDelete={onDelete} />
+                    </div>
                 </div>
 
-                <div className="min-w-0">
-                    <div className="font-medium truncate">{row.customer_name}</div>
+                <div className="min-w-0 space-y-0.5">
+                    {row.customer_name && (
+                        <div className="flex items-center gap-1 text-sm font-medium">
+                            <User className="h-3 w-3 text-muted-foreground" /> {row.customer_name}
+                        </div>
+                    )}
                     {row.customer_phone && (
-                        <div className="text-[11px] text-muted-foreground">{row.customer_phone}</div>
+                        <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                            <Phone className="h-3 w-3" /> {row.customer_phone}
+                        </div>
+                    )}
+                    {(row.city || row.area) && (
+                        <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                            <Map className="h-3 w-3" /> {[row.city, row.area].filter(Boolean).join(', ')}
+                        </div>
+                    )}
+                    {row.customer_address && (
+                        <div className="flex items-start gap-1 text-[11px] text-muted-foreground">
+                            <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
+                            <span className="truncate">{row.customer_address}</span>
+                        </div>
+                    )}
+                    {row.shop_name && (
+                        <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                            <Store className="h-3 w-3" /> {row.shop_name}
+                        </div>
                     )}
                 </div>
 
-                <div className="flex items-center justify-between gap-2 mt-auto pt-2 border-t border-border">
-                    <Money value={row.amount} currency={currency} />
-                    <div className="inline-flex gap-1.5">
-                        <a href={row.details_url} className="inline-flex items-center gap-1.5 h-7 px-2.5 text-xs rounded-md border border-input hover:bg-muted/40 no-underline">
-                            <Eye className="h-3 w-3" /> {t.view}
-                        </a>
-                        <a href={row.logs_url} className="inline-flex items-center gap-1.5 h-7 px-2.5 text-xs rounded-md border border-input hover:bg-muted/40 no-underline">
-                            <ListTree className="h-3 w-3" /> {t.logs}
-                        </a>
+                <div className="mt-auto space-y-1 border-t border-border pt-2 text-[11px]">
+                    <div className="flex items-baseline justify-between gap-2">
+                        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t.cod}</span>
+                        <span className="text-sm font-bold"><Money value={row.amount} currency={currency} /></span>
                     </div>
+                    <div className="flex items-baseline justify-between gap-2">
+                        <span className="text-muted-foreground">{t.total_charge}</span>
+                        <span className="tabular-nums"><Money value={row.total_delivery_amount} currency={currency} /></span>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-2">
+                        <span className="font-semibold">{t.current_payable}</span>
+                        <span className="font-semibold tabular-nums"><Money value={row.current_payable} currency={currency} /></span>
+                    </div>
+                    {row.updated_at && (
+                        <div className="pt-0.5 text-[10px] text-muted-foreground">
+                            {t.updated_on}: {row.updated_at}
+                        </div>
+                    )}
                 </div>
             </CardContent>
         </Card>
@@ -243,6 +365,7 @@ export default function Index({
     filters = {},
     lookups = {},
     pagination = null,
+    permissions = {},
     urls = {},
     t = {},
 }) {
@@ -317,6 +440,13 @@ export default function Index({
     const onSubmit = (e) => {
         e.preventDefault();
         form.post(urls.filter, { preserveScroll: true });
+    };
+
+    const del = (row) => {
+        if (!row?.urls?.delete) return;
+        if (window.confirm(t.delete_confirm || 'Delete this shipment?')) {
+            router.delete(row.urls.delete, { preserveScroll: true });
+        }
     };
 
     const showing = pagination?.total != null
@@ -457,7 +587,7 @@ export default function Index({
             ) : viewMode === 'cards' ? (
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     {rows.map((r) => (
-                        <ParcelCard key={r.id} row={r} currency={currency} t={t} />
+                        <ParcelCard key={r.id} row={r} currency={currency} t={t} permissions={permissions} onDelete={del} />
                     ))}
                 </div>
             ) : (
@@ -465,43 +595,118 @@ export default function Index({
                     <CardContent className="p-0">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
-                                <thead className="bg-muted/30 text-xs uppercase tracking-wide text-muted-foreground">
+                                <thead className="bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
                                     <tr>
-                                        <th className="text-start font-medium px-4 py-2.5 w-12">#</th>
-                                        <th className="text-start font-medium px-4 py-2.5">{t.tracking_id}</th>
-                                        <th className="text-start font-medium px-4 py-2.5">{t.recipient_info}</th>
-                                        <th className="text-end   font-medium px-4 py-2.5">{t.amount}</th>
-                                        <th className="text-start font-medium px-4 py-2.5">{t.status}</th>
-                                        <th className="text-start font-medium px-4 py-2.5">{t.payment}</th>
-                                        <th className="text-end   font-medium px-4 py-2.5 w-32">{/* actions */}</th>
+                                        <th className="px-2.5 py-2 text-start font-medium">{t.actions}</th>
+                                        <th className="px-2.5 py-2 text-start font-medium">{t.tracking_id}</th>
+                                        <th className="px-2.5 py-2 text-start font-medium">{t.recipient_info}</th>
+                                        <th className="px-2.5 py-2 text-start font-medium">{t.shop}</th>
+                                        <th className="px-2.5 py-2 text-end   font-medium">{t.amount}</th>
+                                        <th className="px-2.5 py-2 text-start font-medium">{t.status}</th>
+                                        <th className="px-2.5 py-2 text-start font-medium">{t.payment}</th>
+                                        <th className="px-2.5 py-2 text-center font-medium">{t.attempts}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border">
                                     {rows.map((r) => (
                                         <tr key={r.id} className="hover:bg-muted/20 transition-colors">
-                                            <td className="px-4 py-2.5 tabular-nums align-top text-muted-foreground">{r.serial}</td>
-                                            <td className="px-4 py-2.5 align-top">
-                                                <a href={r.details_url} className="text-primary hover:underline font-mono text-xs">{r.tracking_id}</a>
-                                                {r.invoice_id && <div className="text-[11px] text-muted-foreground">{t.invoice_id}: {r.invoice_id}</div>}
+                                            <td className="px-2.5 py-2 align-top">
+                                                <RowActions row={r} permissions={permissions} t={t} onDelete={del} />
                                             </td>
-                                            <td className="px-4 py-2.5 align-top">
-                                                <div className="font-medium">{r.customer_name}</div>
-                                                {r.customer_phone && <div className="text-[11px] text-muted-foreground">{r.customer_phone}</div>}
+
+                                            <td className="px-2.5 py-2 align-top">
+                                                <TrackingCell value={r.tracking_id} href={r.urls?.view || r.details_url} />
+                                                {r.invoice_id && (
+                                                    <div className="text-[10px] text-muted-foreground mt-1">
+                                                        {t.invoice_id}: {r.invoice_id}
+                                                    </div>
+                                                )}
+                                                {r.courier_name && (
+                                                    <div className="mt-1 text-[10px] font-medium text-rose-600">
+                                                        3PL: {r.courier_name}
+                                                    </div>
+                                                )}
                                             </td>
-                                            <td className="px-4 py-2.5 text-end align-top"><Money value={r.amount} currency={currency} /></td>
-                                            <td className="px-4 py-2.5 align-top">
-                                                <StatusPill label={r.status_label} color={r.status_color} />
-                                            </td>
-                                            <td className="px-4 py-2.5 align-top text-xs text-muted-foreground">{r.payment_label || <span>—</span>}</td>
-                                            <td className="px-4 py-2.5 align-top text-end">
-                                                <div className="inline-flex gap-1.5">
-                                                    <a href={r.details_url} className="inline-flex items-center gap-1.5 h-7 px-2.5 text-xs rounded-md border border-input hover:bg-muted/40 no-underline">
-                                                        <Eye className="h-3 w-3" /> {t.view}
-                                                    </a>
-                                                    <a href={r.logs_url} className="inline-flex items-center gap-1.5 h-7 px-2.5 text-xs rounded-md border border-input hover:bg-muted/40 no-underline">
-                                                        <ListTree className="h-3 w-3" /> {t.logs}
-                                                    </a>
+
+                                            <td className="px-2.5 py-2 align-top">
+                                                <div className="max-w-[220px] space-y-0.5">
+                                                    {r.customer_name && (
+                                                        <div className="flex items-center gap-1 text-sm font-medium">
+                                                            <User className="h-3 w-3 text-muted-foreground" /> {r.customer_name}
+                                                        </div>
+                                                    )}
+                                                    {r.customer_phone && (
+                                                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                            <Phone className="h-3 w-3" /> {r.customer_phone}
+                                                        </div>
+                                                    )}
+                                                    {(r.city || r.area) && (
+                                                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                            <Map className="h-3 w-3" /> {[r.city, r.area].filter(Boolean).join(', ')}
+                                                        </div>
+                                                    )}
+                                                    {r.customer_address && (
+                                                        <div className="flex items-start gap-1 text-xs text-muted-foreground">
+                                                            <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
+                                                            <span className="truncate">{r.customer_address}</span>
+                                                        </div>
+                                                    )}
                                                 </div>
+                                            </td>
+
+                                            <td className="px-2.5 py-2 align-top">
+                                                {r.shop_name ? (
+                                                    <div className="flex items-center gap-1 text-xs">
+                                                        <Store className="h-3 w-3 text-muted-foreground" /> {r.shop_name}
+                                                    </div>
+                                                ) : <span className="text-xs text-muted-foreground">—</span>}
+                                            </td>
+
+                                            <td className="px-2.5 py-2 align-top">
+                                                <div className="min-w-[150px]">
+                                                    <div className="flex items-baseline justify-between gap-2">
+                                                        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t.cod}</span>
+                                                        <span className="text-sm font-bold tabular-nums">
+                                                            <Money value={r.amount} currency={currency} />
+                                                        </span>
+                                                    </div>
+                                                    <div className="mt-1.5 space-y-0.5 border-t border-border/60 pt-1.5 text-[11px]">
+                                                        <div className="flex items-baseline justify-between gap-2">
+                                                            <span className="text-muted-foreground">{t.total_charge}</span>
+                                                            <span className="tabular-nums"><Money value={r.total_delivery_amount} currency={currency} /></span>
+                                                        </div>
+                                                        <div className="flex items-baseline justify-between gap-2">
+                                                            <span className="text-muted-foreground">{t.vat}</span>
+                                                            <span className="tabular-nums"><Money value={r.vat_amount} currency={currency} /></span>
+                                                        </div>
+                                                        <div className="flex items-baseline justify-between gap-2 pt-0.5">
+                                                            <span className="font-semibold text-foreground">{t.current_payable}</span>
+                                                            <span className="font-semibold tabular-nums"><Money value={r.current_payable} currency={currency} /></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            <td className="px-2.5 py-2 align-top">
+                                                <div className="space-y-1">
+                                                    <StatusPill label={r.status_label} color={r.status_color} />
+                                                    {r.partial_delivered && r.status !== 10 && (
+                                                        <div><StatusPill label={r.partial_delivered_label} color="#16a34a" /></div>
+                                                    )}
+                                                    {r.updated_at && (
+                                                        <div className="text-[10px] text-muted-foreground">
+                                                            {t.updated_on}: {r.updated_at}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+
+                                            <td className="px-2.5 py-2 align-top text-xs text-muted-foreground">
+                                                {r.payment_label || <span>—</span>}
+                                            </td>
+
+                                            <td className="px-2.5 py-2 align-top text-center font-medium tabular-nums">
+                                                {r.attempts ?? 0}
                                             </td>
                                         </tr>
                                     ))}

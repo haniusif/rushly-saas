@@ -139,6 +139,11 @@ class MerchantParcelController extends Controller
         $currency   = settings()->currency;
         $kpiCounts  = $this->statusCounts($merchant->id, $cfg['page_kind']);
 
+        // The row now renders city, area, shop and 3PL. Load them for the whole
+        // page in one go — per row that would be four queries x 10 rows. Done on
+        // the collection so the repository's query methods stay untouched.
+        $paginator->getCollection()->load(['city', 'area', 'shop', 'lastParcel3pl']);
+
         $rows = collect($paginator->items())->map(function ($p) use (&$i, $statusList) {
             return [
                 'serial'        => $i++,
@@ -161,8 +166,41 @@ class MerchantParcelController extends Controller
                 'status_color'  => \App\Support\ParcelStatusHelper::color((int) $p->status),
                 'payment_label' => strip_tags((string) ($p->payment_status_string ?? '')),
                 'created_at'    => optional($p->created_at)->toDateTimeString(),
+                'updated_at'    => optional($p->updated_at)->format('Y-m-d H:i'),
+
+                // Recipient detail — the admin list shows city/area/address
+                // under the name, so the merchant list does too.
+                'customer_address' => (string) ($p->customer_address ?? ''),
+                'city'          => optional($p->city)->en_name ?: optional($p->city)->name,
+                'area'          => optional($p->area)->en_name ?: optional($p->area)->name,
+
+                // The admin list's CLIENT column names the merchant. On a
+                // merchant's own list that is always themselves, so it carries
+                // no information — the shop the shipment was booked from is the
+                // useful equivalent.
+                'shop_name'     => optional($p->shop)->name,
+
+                // Charge breakdown, matching the admin AMOUNT cell.
+                'total_delivery_amount' => (float) ($p->total_delivery_amount ?? 0),
+                'vat_amount'            => (float) ($p->vat_amount ?? 0),
+                'current_payable'       => (float) ($p->current_payable ?? 0),
+
+                'partial_delivered'       => (bool) ($p->partial_delivered ?? false),
+                'partial_delivered_label' => \App\Support\ParcelStatusHelper::label(\App\Enums\ParcelStatus::PARTIAL_DELIVERED),
+                'attempts'      => (int) ($p->number_of_attempts ?? 0),
+                'courier_name'  => $p->lastParcel3pl
+                    ? (optional($p->lastParcel3pl)->company_name ?: optional($p->lastParcel3pl)->parcel_3pl_name)
+                    : null,
+
                 'details_url'   => route('merchant-panel.parcel.details', $p->id),
                 'logs_url'      => route('merchant-panel.parcel.logs', $p->id),
+                'urls'          => [
+                    'view'   => route('merchant-panel.parcel.details', $p->id),
+                    'logs'   => route('merchant-panel.parcel.logs', $p->id),
+                    'clone'  => route('merchant-parcel.clone', $p->id),
+                    'edit'   => route('merchant-panel.parcel.edit', $p->id),
+                    'delete' => route('merchant-panel.parcel.delete', $p->id),
+                ],
             ];
         })->values();
 
@@ -198,6 +236,12 @@ class MerchantParcelController extends Controller
                     'label'  => $l['label'],
                     'active' => (bool) $l['active'],
                 ])->values(),
+            ],
+            'permissions' => [
+                // Both routes exist for merchants. Status change is deliberately
+                // NOT surfaced — see the note on statusUpdate().
+                'update' => true,
+                'delete' => true,
             ],
             'urls' => [
                 'create'       => route('merchant-panel.parcel.create'),
@@ -256,6 +300,20 @@ class MerchantParcelController extends Controller
                 'chip_returned'  => __('parcel.chip_returned')  ?: 'Returned',
                 'chip_cancelled' => __('parcel.chip_cancelled') ?: 'Cancelled',
                 'chip_failed'    => __('parcel.chip_failed')    ?: 'Failed',
+                // Columns ported from the admin list.
+                'shop'            => __('menus.shop') ?: 'Shop',
+                'cod'             => __('parcel.cod') ?: 'COD',
+                'total_charge'    => __('parcel.total_charge') ?: 'Total charge',
+                'vat'             => __('parcel.vat') ?: 'VAT',
+                'current_payable' => __('parcel.current_payable') ?: 'Current payable',
+                'updated_on'      => __('parcel.updated_on') ?: 'Updated on',
+                'attempts'        => __('parcel.attempts') ?: 'Attempts',
+                'courier_name'    => __('parcel.courier_name') ?: 'Courier',
+                'clone'           => __('levels.clone') ?: 'Clone',
+                'edit'            => __('levels.edit') ?: 'Edit',
+                'delete'          => __('levels.delete') ?: 'Delete',
+                'actions'         => __('levels.actions') ?: 'Actions',
+                'delete_confirm'  => 'Delete this shipment?',
             ],
         ]);
     }

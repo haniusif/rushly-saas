@@ -90,11 +90,54 @@ class MerchantParcelController extends Controller
         ]);
     }
 
+    /**
+     * Per-status counts for the chip strip above the merchant's parcel list.
+     *
+     * One grouped query rather than a count per chip, and always scoped to
+     * THIS merchant — the admin equivalent counts the whole company, which
+     * would leak other merchants' volumes onto a merchant-facing page.
+     *
+     * The parcel-bank page counts only banked parcels so its chips agree with
+     * the rows below them.
+     */
+    private function statusCounts(int $merchantId, string $pageKind): array
+    {
+        $base = \App\Models\Backend\Parcel::query()->where('merchant_id', $merchantId);
+        if ($pageKind === 'bank') {
+            $base->where('parcel_bank', 'on');
+        }
+
+        $counts = (clone $base)
+            ->selectRaw('status, COUNT(*) as c')
+            ->groupBy('status')
+            ->pluck('c', 'status');
+
+        $one = fn ($status) => (int) ($counts[$status] ?? 0);
+
+        return [
+            'total'     => (int) $counts->sum(),
+            'pending'   => $one(\App\Enums\ParcelStatus::PENDING),
+            'assigned'  => $one(\App\Enums\ParcelStatus::PICKUP_ASSIGN),
+            'picked_up' => $one(\App\Enums\ParcelStatus::RECEIVED_WAREHOUSE),
+            'ofd'       => $one(\App\Enums\ParcelStatus::DELIVERY_MAN_ASSIGN),
+            'delivered' => $one(\App\Enums\ParcelStatus::DELIVERED),
+            'returned'  => $one(\App\Enums\ParcelStatus::RETURN_RECEIVED_BY_MERCHANT),
+            // Deliberately counts ONLY status CANCELLED, not the whole family of
+            // *_CANCEL codes. Clicking the chip filters on a single status
+            // (MerchantParcelRepository::filter does `where status = ?`), so an
+            // aggregated count would advertise a number the filtered list can
+            // never show. The admin list has that mismatch; not reproducing it.
+            'cancelled' => $one(\App\Enums\ParcelStatus::CANCELLED),
+            'failed'    => $one(\App\Enums\ParcelStatus::DELIVERY_RE_SCHEDULE),
+        ];
+    }
+
     private function renderParcelList(string $component, Request $request, $paginator, $merchant, array $cfg)
     {
         $i = (($paginator->currentPage() - 1) * $paginator->perPage()) + 1;
         $statusList = (array) trans('merchantParcelStatusFilter');
         $currency   = settings()->currency;
+        $kpiCounts  = $this->statusCounts($merchant->id, $cfg['page_kind']);
 
         $rows = collect($paginator->items())->map(function ($p) use (&$i, $statusList) {
             return [
@@ -107,6 +150,9 @@ class MerchantParcelController extends Controller
                 'amount'        => (float) ($p->cash_collection ?? 0),
                 'status'        => (int) $p->status,
                 'status_label'  => $statusList[$p->status] ?? (string) $p->status,
+                // Same curated hex the admin list renders its pills from, so
+                // both pages colour a given status identically.
+                'status_color'  => \App\Support\ParcelStatusHelper::color((int) $p->status),
                 'payment_label' => strip_tags((string) ($p->payment_status_string ?? '')),
                 'created_at'    => optional($p->created_at)->toDateTimeString(),
                 'details_url'   => route('merchant-panel.parcel.details', $p->id),
@@ -117,10 +163,12 @@ class MerchantParcelController extends Controller
         $statusOptions = collect($statusList)->map(fn ($label, $key) => [
             'value' => (string) $key,
             'label' => (string) $label,
+            'color' => \App\Support\ParcelStatusHelper::color((int) $key),
         ])->values();
 
         return Inertia::render($component, [
             'rows'       => $rows,
+            'kpi_counts' => $kpiCounts,
             'currency'   => $currency,
             'filters'    => [
                 'parcel_date'           => $request->parcel_date,
@@ -183,6 +231,25 @@ class MerchantParcelController extends Controller
                 'view'          => __('levels.view') ?: 'View',
                 'logs'          => __('parcel.logs') ?: 'Logs',
                 'empty'         => __('levels.no_data_found') ?: ($cfg['page_kind'] === 'bank' ? 'No parcels in bank.' : 'No parcels yet.'),
+                'list'          => __('levels.list') ?: 'List',
+                'all'           => __('levels.all') ?: 'All',
+                'date_label'    => __('parcel.date') ?: 'Date',
+                'status_label'  => __('parcel.status') ?: 'Status',
+                'showing'       => __('levels.showing') ?: 'Showing',
+                'of'            => __('levels.of') ?: 'of',
+                'active'        => __('levels.active') ?: 'active',
+                'view_list'     => __('levels.list') ?: 'List',
+                'view_cards'    => __('levels.cards') ?: 'Cards',
+                // Chip strip above the table. Same keys the admin list uses.
+                'chip_total'     => __('parcel.chip_total')     ?: 'Total',
+                'chip_pending'   => __('parcel.chip_pending')   ?: 'Pending',
+                'chip_assigned'  => __('parcel.chip_assigned')  ?: 'Assigned',
+                'chip_picked_up' => __('parcel.chip_picked_up') ?: 'Picked up',
+                'chip_ofd'       => __('parcel.chip_ofd')       ?: 'OFD',
+                'chip_delivered' => __('parcel.chip_delivered') ?: 'Delivered',
+                'chip_returned'  => __('parcel.chip_returned')  ?: 'Returned',
+                'chip_cancelled' => __('parcel.chip_cancelled') ?: 'Cancelled',
+                'chip_failed'    => __('parcel.chip_failed')    ?: 'Failed',
             ],
         ]);
     }

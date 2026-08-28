@@ -22,6 +22,17 @@ return [
             ],
         ],
 
+        'ecoexpress' => [
+            'class'  => \App\Shipping\Providers\EcoExpress\EcoExpressProvider::class,
+            'config' => [
+                // Plain HTTP on 8443 — that is what EcoExpress deployed, not a
+                // typo. Their published spec points at staging.ecofreight.ae:9443
+                // over HTTPS, which does not resolve. Override per environment.
+                'base_url' => env('ECOEXPRESS_BASE_URL', 'http://staging1.focalsoft.ae:8443'),
+                'timeout'  => 30,
+            ],
+        ],
+
         // Future: 'oto' => [...], 'aramex_v2' => [...]
     ],
 

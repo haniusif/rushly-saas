@@ -120,7 +120,31 @@ class ConnectionService
             $conn->remote_company_id = trim((string) $input['remote_company_id']) ?: null;
         }
         if (array_key_exists('settings', $input)) {
-            $conn->settings = (array) $input['settings'];
+            // MERGE, never replace. Secret settings (an OAuth client secret,
+            // say) are deliberately not sent back to the browser, so the form
+            // posts them blank unless the operator retypes one. A wholesale
+            // assignment would read that blank as "clear it" and destroy the
+            // stored credential the first time someone edited an unrelated
+            // field. Blank values are dropped and the existing value survives;
+            // a non-blank value overwrites as expected.
+            //
+            // Clearing a setting on purpose is therefore not something the form
+            // can express — that is the right trade here, since silently losing
+            // a credential is far worse than needing a deliberate action to
+            // unset one.
+            // The '••••••' mask is also dropped. The edit form renders it in
+            // place of a stored secret, so it comes straight back on save;
+            // taking it at face value would overwrite a real client secret with
+            // six bullet characters. Same guard the password branch above uses.
+            $incoming = array_filter(
+                (array) $input['settings'],
+                fn ($v) => $v !== null && $v !== '' && ! (is_string($v) && str_starts_with($v, '••')),
+            );
+
+            $conn->settings = array_merge(
+                is_array($conn->settings) ? $conn->settings : [],
+                $incoming,
+            );
         }
         if (array_key_exists('status', $input)) {
             $conn->status = (string) $input['status'];

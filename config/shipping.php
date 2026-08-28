@@ -20,6 +20,24 @@ return [
                 'timeout'            => 30,
                 'integration_source' => env('LOGESTECHS_INTEGRATION_SOURCE', 'API'),
             ],
+
+            // Connection-form spec. The form and its validation are both built
+            // from this, so a provider's credential shape lives in one place
+            // instead of being hardcoded in the Blade/JSX and again in the
+            // controller's validate() call.
+            //
+            // name        'foo' is a column on shipping_connections;
+            //             'settings.foo' goes into the JSON settings bag.
+            // secret      never echoed back to the browser; blank on edit means
+            //             "keep the stored value".
+            // resolve     renders the domain lookup button next to the field.
+            'form' => [
+                ['name' => 'domain',            'label' => 'Domain',     'type' => 'text',     'placeholder' => 'salesksa.logestechs.com', 'resolve' => true,
+                 'hint' => 'Paste the tenant domain and resolve to fill the company id.'],
+                ['name' => 'remote_company_id', 'label' => 'Company ID', 'type' => 'text',     'placeholder' => '496', 'mono' => true],
+                ['name' => 'email',             'label' => 'Email',      'type' => 'email',    'required' => true, 'placeholder' => 'account@example.com'],
+                ['name' => 'password',          'label' => 'Password',   'type' => 'password', 'required' => true, 'secret' => true],
+            ],
         ],
 
         'ecoexpress' => [
@@ -30,6 +48,19 @@ return [
                 // over HTTPS, which does not resolve. Override per environment.
                 'base_url' => env('ECOEXPRESS_BASE_URL', 'http://staging1.focalsoft.ae:8443'),
                 'timeout'  => 30,
+            ],
+
+            // EcoExpress authenticates with OAuth2 client credentials and has
+            // no username/password at all, which is why the form had to become
+            // provider-driven: the shared form required a password this
+            // provider does not have.
+            'form' => [
+                ['name' => 'settings.client_id',     'label' => 'Client ID',      'type' => 'text',     'required' => true, 'mono' => true,
+                 'placeholder' => '17bcbc8e-…'],
+                ['name' => 'settings.client_secret', 'label' => 'Client secret',  'type' => 'password', 'required' => true, 'secret' => true],
+                ['name' => 'settings.account_no',    'label' => 'Account number', 'type' => 'text',     'required' => true, 'mono' => true,
+                 'placeholder' => 'T000020',
+                 'hint' => 'The EcoExpress account the shipments are billed to.'],
             ],
         ],
 

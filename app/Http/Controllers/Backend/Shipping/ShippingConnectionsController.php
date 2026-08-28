@@ -68,6 +68,7 @@ class ShippingConnectionsController extends Controller
                 'logo_url' => $this->logoUrlWithVersion($provider->logo_url),
             ],
             'connection' => null,
+            'fields'     => self::formSpec($provider->code),
             'urls' => [
                 'submit'           => route('shipping.connections.store', ['provider' => $provider->code]),
                 'test'             => route('shipping.connections.test'),
@@ -80,7 +81,7 @@ class ShippingConnectionsController extends Controller
 
     public function store(Request $request, string $provider)
     {
-        $data = $this->validateForm($request);
+        $data = $this->validateForm($request, false, $provider);
 
         try {
             $conn = $this->service->store(
@@ -108,6 +109,7 @@ class ShippingConnectionsController extends Controller
             'mode'       => 'edit',
             'provider'   => ['code' => $conn->provider->code, 'name' => $conn->provider->name, 'logo_url' => $this->logoUrlWithVersion($conn->provider->logo_url)],
             'connection' => $this->serialize($conn, includePasswordMask: true),
+            'fields'     => self::formSpec($conn->provider->code),
             'urls' => [
                 'submit'         => route('shipping.connections.update', $conn->id),
                 'test'           => route('shipping.connections.test'),
@@ -126,7 +128,7 @@ class ShippingConnectionsController extends Controller
         $conn      = $this->repo->findForCompany($id, $companyId);
         abort_if(! $conn, 404);
 
-        $data = $this->validateForm($request, edit: true);
+        $data = $this->validateForm($request, edit: true, providerCode: $conn->provider->code);
         $this->service->update($conn, $data);
 
         Toastr::success('Connection updated.', 'Success');
@@ -230,17 +232,67 @@ class ShippingConnectionsController extends Controller
 
     // -------------------------------------------------------------------
 
-    private function validateForm(Request $request, bool $edit = false): array
+    /**
+     * The field spec for a provider, from config/shipping.php.
+     *
+     * Falls back to the Logestechs-shaped set so a provider added without a
+     * spec still gets a usable form rather than an empty one.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function formSpec(string $providerCode): array
     {
-        return $request->validate([
-            'connection_name'   => ['required', 'string', 'max:100'],
-            'domain'            => ['nullable', 'string', 'max:255'],
-            'remote_company_id' => ['nullable', 'string', 'max:64'],
-            'email'             => ['nullable', 'email', 'max:191'],
-            'password'          => [$edit ? 'nullable' : 'required', 'string', 'max:191'],
-            'settings'          => ['nullable', 'array'],
-            'status'            => ['nullable', 'in:active,paused'],
-        ]);
+        $spec = config('shipping.providers.' . $providerCode . '.form');
+
+        if (is_array($spec) && $spec !== []) {
+            return $spec;
+        }
+
+        return [
+            ['name' => 'domain',            'label' => 'Domain',     'type' => 'text'],
+            ['name' => 'remote_company_id', 'label' => 'Company ID', 'type' => 'text', 'mono' => true],
+            ['name' => 'email',             'label' => 'Email',      'type' => 'email',    'required' => true],
+            ['name' => 'password',          'label' => 'Password',   'type' => 'password', 'required' => true, 'secret' => true],
+        ];
+    }
+
+    /**
+     * Build validation rules from the provider's spec rather than hardcoding
+     * one provider's credential shape for all of them.
+     *
+     * Two rules that are easy to get wrong and matter:
+     *
+     *  - A `secret` field is never required on EDIT. The browser is never sent
+     *    the stored value, so demanding it back would force the operator to
+     *    retype a client secret to change an unrelated field.
+     *  - `settings.*` fields are validated by their dotted path, which is what
+     *    Laravel needs to reach into the nested array.
+     */
+    private function validateForm(Request $request, bool $edit = false, ?string $providerCode = null): array
+    {
+        $rules = [
+            'connection_name' => ['required', 'string', 'max:100'],
+            'settings'        => ['nullable', 'array'],
+            'status'          => ['nullable', 'in:active,paused'],
+        ];
+
+        foreach (self::formSpec($providerCode ?? 'logestechs') as $field) {
+            $name     = (string) ($field['name'] ?? '');
+            if ($name === '') {
+                continue;
+            }
+            $required = (bool) ($field['required'] ?? false);
+            $secret   = (bool) ($field['secret'] ?? false);
+
+            $rule = [];
+            $rule[] = ($required && ! ($edit && $secret)) ? 'required' : 'nullable';
+            $rule[] = ($field['type'] ?? 'text') === 'email' ? 'email' : 'string';
+            $rule[] = 'max:' . (int) ($field['max'] ?? 255);
+
+            $rules[$name] = $rule;
+        }
+
+        return $request->validate($rules);
     }
 
     /**
@@ -269,13 +321,50 @@ class ShippingConnectionsController extends Controller
             'remote_company_id' => $c->remote_company_id,
             'email'             => $c->email,
             'password_masked'   => $includePasswordMask && $c->password_encrypted ? '••••••' : '',
-            'settings'          => $c->settings ?: [],
+            // Settings are redacted, not passed through. They carry provider
+            // credentials — an OAuth client secret, an API key — and this array
+            // is serialised into the Inertia page props, i.e. straight into the
+            // HTML the browser receives. Anything the spec marks `secret` is
+            // replaced with a has-a-value flag so the form can show "already
+            // set" without ever shipping the value.
+            'settings'          => $this->redactSettings($c),
             'status'            => $c->status,
             'is_default'        => $c->is_default,
             'is_ready'          => $c->isReady(),
             'last_tested_at'    => optional($c->last_tested_at)->toIso8601String(),
             'last_sync_at'      => optional($c->last_sync_at)->toIso8601String(),
         ];
+    }
+
+    /**
+     * Settings with every `secret` field stripped.
+     *
+     * A secret that has a stored value becomes the '••••••' mask, so the form
+     * can render "already set, leave blank to keep" without the plaintext ever
+     * reaching the browser. Non-secret settings pass through so they can
+     * prefill normally.
+     *
+     * @return array<string, mixed>
+     */
+    private function redactSettings(ShippingConnection $c): array
+    {
+        $settings = is_array($c->settings) ? $c->settings : [];
+
+        foreach (self::formSpec($c->provider->code) as $field) {
+            if (! ($field['secret'] ?? false)) {
+                continue;
+            }
+            $name = (string) ($field['name'] ?? '');
+            if (! str_starts_with($name, 'settings.')) {
+                continue;
+            }
+            $key = substr($name, strlen('settings.'));
+            if (($settings[$key] ?? '') !== '') {
+                $settings[$key] = '••••••';
+            }
+        }
+
+        return $settings;
     }
 
     private function strings(): array

@@ -621,6 +621,43 @@ class IntegrationsController extends Controller
                     'settings_url' => route('shipping.connections.index'),
                 ];
             })(),
+            (function () {
+                // EcoExpress rides the same Shipping module as Logestechs:
+                // connection state lives in shipping_connections, tenant-scoped,
+                // not in env.
+                $companyId   = settings()->id ?? null;
+                $connections = \App\Shipping\Models\ShippingConnection::query()
+                    ->where('company_id', $companyId)
+                    ->whereHas('provider', fn ($p) => $p->where('code', 'ecoexpress'))
+                    ->get();
+
+                $active  = $connections->where('status', 'active')->count();
+                $total   = $connections->count();
+                $default = $connections->firstWhere('is_default', true);
+
+                return [
+                    'key'      => 'ecoexpress',
+                    'name'     => 'EcoExpress',
+                    'host'     => 'ecofreight.ae',
+                    'base_url' => (string) config('shipping.providers.ecoexpress.config.base_url'),
+                    'key_set'  => $active > 0,
+                    'key_tail' => null,
+                    'extras'   => array_filter([
+                        'Connections' => $total > 0 ? "{$active} active / {$total} total" : null,
+                        'Default'     => $default ? $default->connection_name : null,
+                        'Module'      => 'Shipping (new module)',
+                        // Stated on the card so an operator does not go hunting
+                        // for buttons that cannot exist: EcoExpress publishes
+                        // neither endpoint.
+                        'Limitations' => 'No cancel / no label API — use the EcoExpress portal',
+                    ]),
+                    'parcels'  => \App\Shipping\Models\Shipment::query()
+                        ->where('company_id', $companyId)
+                        ->whereHas('connection.provider', fn ($p) => $p->where('code', 'ecoexpress'))
+                        ->count(),
+                    'settings_url' => route('shipping.connections.index'),
+                ];
+            })(),
             [
                 'key' => 'imile', 'name' => 'iMile', 'host' => 'imile.com',
                 'base_url' => $imileBase !== '' ? $imileBase : '— (planned, NDA docs pending)',

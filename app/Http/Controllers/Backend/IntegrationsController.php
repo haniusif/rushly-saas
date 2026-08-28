@@ -649,7 +649,7 @@ class IntegrationsController extends Controller
                         // Stated on the card so an operator does not go hunting
                         // for buttons that cannot exist: EcoExpress publishes
                         // neither endpoint.
-                        'Limitations' => 'No cancel / no label API — use the EcoExpress portal',
+                        'Limitations' => 'No cancellation API — cancel in the EcoExpress portal',
                     ]),
                     'parcels'  => \App\Shipping\Models\Shipment::query()
                         ->where('company_id', $companyId)

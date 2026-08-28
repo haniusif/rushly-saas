@@ -27,11 +27,13 @@ use Illuminate\Support\Facades\Cache;
  * ~30 minutes (expires_in 1799), so they are cached per connection and reused
  * rather than minted per request.
  *
- * NOT SUPPORTED — EcoExpress publishes no cancellation and no AWB/label
- * endpoint. cancelShipment() and printAwb() therefore throw
- * ProviderUnavailableException with a reason, which is the contract's
- * documented way to express a missing capability. Both are worth revisiting if
- * EcoExpress adds the endpoints.
+ * NOT SUPPORTED — EcoExpress publishes no cancellation endpoint, so
+ * cancelShipment() throws ProviderUnavailableException with a reason, which is
+ * the contract's documented way to express a missing capability.
+ *
+ * LABELS DO EXIST, but only as a `pdfURL` on the create response — there is no
+ * endpoint to ask for a label by shipment id afterwards. printAwb() therefore
+ * reads the URL persisted at create time and downloads it.
  */
 class EcoExpressProvider extends AbstractProvider implements ShippingProviderInterface
 {
@@ -205,8 +207,18 @@ class EcoExpressProvider extends AbstractProvider implements ShippingProviderInt
 
         // The create response wraps results in `data`, one entry per submitted
         // shipment. We submit exactly one, so the first entry is ours.
+        //
+        // Field names are from the live response, not the spec: the AWB comes
+        // back as `awbNo` (not awb_number), and `pdfURL` carries a ready-made
+        // label. The alternatives are kept as fallbacks in case their naming
+        // settles differently between environments.
         $first = is_array($body['data'] ?? null) ? ($body['data'][0] ?? []) : [];
-        $awb   = $first['awb_number'] ?? $first['awbNumber'] ?? $first['tracking_number'] ?? null;
+        $awb   = $first['awbNo'] ?? $first['awb_number'] ?? $first['awbNumber'] ?? null;
+        $pdf   = $first['pdfURL'] ?? $first['pdf_url'] ?? null;
+
+        // Their own shipment id, which is what /track keys on. Falls back to
+        // the AWB when absent so the caller always has a handle.
+        $remoteId = $first['id'] ?? $awb;
 
         if (! $awb) {
             throw new ProviderRejectedShipmentException(
@@ -214,7 +226,7 @@ class EcoExpressProvider extends AbstractProvider implements ShippingProviderInt
             );
         }
 
-        return $s->withRemote((string) $awb, (string) $awb, null, $body);
+        return $s->withRemote((string) $remoteId, (string) $awb, $pdf ? (string) $pdf : null, $body);
     }
 
     /**
@@ -257,8 +269,10 @@ class EcoExpressProvider extends AbstractProvider implements ShippingProviderInt
     /** @return TrackingDTO[] oldest event first */
     public function getTracking(ConnectionDTO $c, string $remoteShipmentId): array
     {
+        // trackingNumber is an ARRAY, even for one shipment. Sending a bare
+        // string returns HTTP 400 with no explanation.
         $resp = $this->call($c, 'POST', '/connect/client/order/shipment/track', [
-            'trackingNumber' => $remoteShipmentId,
+            'trackingNumber' => [$remoteShipmentId],
         ]);
         $body = $resp->json() ?? [];
 
@@ -270,20 +284,28 @@ class EcoExpressProvider extends AbstractProvider implements ShippingProviderInt
         $out  = [];
 
         foreach ($rows as $row) {
-            // Their payload nests the event list under the shipment; tolerate
-            // both a flat list and a nested one rather than assuming a shape
-            // the sandbox could not be made to produce with a real AWB.
-            $events = is_array($row['status'] ?? null) ? $row['status']
-                : (is_array($row['events'] ?? null) ? $row['events'] : [$row]);
+            // The event history is `activities`, each entry carrying the SHORT
+            // code the StatusMapper keys on ("SIR"), the human name and a
+            // timestamp. The row's own top-level `status` is only the latest
+            // event rendered as a full NAME, not a code, so it cannot be mapped
+            // and is deliberately ignored.
+            $events = is_array($row['activities'] ?? null) ? $row['activities'] : [];
 
             foreach ($events as $e) {
-                $code = (string) ($e['status_desc'] ?? $e['statusDesc'] ?? $e['code'] ?? '');
+                $code = (string) ($e['code'] ?? '');
+                $desc = trim((string) ($e['desc'] ?? ''));
+                $name = (string) ($e['name'] ?? '');
+
                 $out[] = new TrackingDTO(
                     remoteShipmentId: $remoteShipmentId,
                     rawStatus:        $code,
                     localStatus:      StatusMapper::toLocal($code),
-                    description:      (string) ($e['status_name'] ?? $e['statusName'] ?? $e['description'] ?? ''),
-                    occurredAt:       $e['status_datetime'] ?? $e['statusDateTime'] ?? $e['date'] ?? null,
+                    // `desc` carries the failure reason when there is one and is
+                    // empty otherwise, so fall back to the status name. This is
+                    // where the detail lost by the many-to-one status mapping
+                    // survives.
+                    description:      $desc !== '' ? $desc : $name,
+                    occurredAt:       $e['date'] ?? null,
                     raw:              is_array($e) ? $e : [],
                 );
             }
@@ -293,15 +315,46 @@ class EcoExpressProvider extends AbstractProvider implements ShippingProviderInt
     }
 
     /**
-     * Not supported. EcoExpress returns no label bytes and publishes no label
-     * endpoint; the AWB number comes back on create and the printed label is
-     * produced on their side.
+     * EcoExpress does return labels, but as a URL on the CREATE response
+     * (`pdfURL`) rather than from a print endpoint — there is no way to ask for
+     * a label by shipment id later. The URL is persisted on the shipment at
+     * create time, so fetching bytes here means reading it back and
+     * downloading, which is what this does.
+     *
+     * Only single-shipment printing is supported: their labels come one PDF per
+     * shipment and merging PDFs is not something to do inside a provider.
      */
     public function printAwb(ConnectionDTO $c, array $remoteShipmentIds): string
     {
-        throw new ProviderUnavailableException(
-            'EcoExpress does not return AWB labels over the API. Print from the EcoExpress portal.'
-        );
+        $ids = array_values(array_filter($remoteShipmentIds));
+
+        if (count($ids) !== 1) {
+            throw new ProviderUnavailableException(
+                'EcoExpress returns one label per shipment; batch printing is not supported.'
+            );
+        }
+
+        $url = \App\Shipping\Models\Shipment::query()
+            ->where('company_id', $c->companyId)
+            ->where('remote_shipment_id', (string) $ids[0])
+            ->value('awb_pdf_url');
+
+        if (! $url) {
+            throw new ProviderUnavailableException(
+                'No stored label URL for this shipment. EcoExpress only returns the label '
+                . 'when the shipment is created, so it cannot be re-fetched afterwards.'
+            );
+        }
+
+        $resp = \Illuminate\Support\Facades\Http::timeout((int) $this->config('timeout', 30))->get($url);
+
+        if (! $resp->successful()) {
+            throw new ProviderUnavailableException(
+                'EcoExpress label download failed: HTTP ' . $resp->status()
+            );
+        }
+
+        return $resp->body();
     }
 
     /**

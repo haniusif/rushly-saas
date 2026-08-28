@@ -199,13 +199,35 @@ class ShippingConnectionsController extends Controller
         // sent the sentinel, pull the saved password (and any other unfilled
         // fields) off the matching connection. Strictly scoped to the
         // tenant's own rows.
-        if ($connectionId > 0 && ($password === '' || $password === '__keep__')) {
+        $settings = (array) $request->input('settings', []);
+
+        if ($connectionId > 0) {
             $existing = $this->repo->findForCompany($connectionId, $companyId);
             if ($existing) {
-                $password        = (string) $existing->password_encrypted;
+                if ($password === '' || $password === '__keep__') {
+                    $password = (string) $existing->password_encrypted;
+                }
                 $email           = $email           ?: $existing->email;
                 $remoteCompanyId = $remoteCompanyId ?: $existing->remote_company_id;
                 $domain          = $domain          ?: $existing->domain;
+
+                // Settings need the same hydration, and for the same reason.
+                // A secret is never sent to the browser — the edit form shows
+                // the '••••••' mask — so testing a saved connection posts the
+                // mask back. Without this, Test failed with invalid_client on
+                // a connection whose stored credentials were perfectly good,
+                // which reads as "your credentials are broken" when nothing is.
+                // Blank and masked values fall back to what is stored; a
+                // retyped value still wins so a NEW secret can be tested
+                // before it is saved.
+                $stored = is_array($existing->settings) ? $existing->settings : [];
+                foreach ($stored as $key => $value) {
+                    $posted = $settings[$key] ?? '';
+                    if ($posted === '' || $posted === null
+                        || (is_string($posted) && str_starts_with($posted, '••'))) {
+                        $settings[$key] = $value;
+                    }
+                }
             }
         }
 
@@ -218,7 +240,7 @@ class ShippingConnectionsController extends Controller
             domain:          $domain,
             email:           $email,
             password:        $password !== '' ? $password : null,
-            settings:        (array) $request->input('settings', []),
+            settings:        $settings,
         );
 
         $result = $this->service->test($candidate);

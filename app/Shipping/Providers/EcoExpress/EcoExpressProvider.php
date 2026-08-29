@@ -12,7 +12,6 @@ use App\Shipping\Exceptions\ProviderUnavailableException;
 use App\Shipping\Providers\AbstractProvider;
 use App\Shipping\Providers\EcoExpress\Mappers\ShipmentRequestMapper;
 use App\Shipping\Providers\EcoExpress\Mappers\StatusMapper;
-use Illuminate\Support\Facades\Cache;
 
 /**
  * EcoExpress (Eco Freight / Focalsoft) — UAE courier.
@@ -55,14 +54,33 @@ class EcoExpressProvider extends AbstractProvider implements ShippingProviderInt
     /**
      * Mint or reuse a bearer token.
      *
-     * Cached at 80% of the advertised lifetime so a token can never expire
-     * mid-flight on a slow call.
+     * Held in memory for the life of the request, NOT in the cache.
      *
-     * The key hashes the client id AND the secret. Hashing only the id looks
-     * sufficient but is not: rotating a secret — or typing the wrong one —
-     * leaves the key unchanged, so the old token keeps being served and the
-     * connection reports healthy on credentials that no longer work. Caught by
-     * a test that expected a bad secret to fail and got ok=true.
+     * stancl/tenancy's CacheTenancyBootstrapper wraps the cache in per-tenant
+     * TAGS, and this deployment runs cache.default=file, which cannot do tags.
+     * So any Cache:: call inside a tenant web request throws "This cache store
+     * does not support tagging" — which is exactly what Test Connection
+     * returned. It passed under tinker only because CLI has no tenant context,
+     * so the facade was the plain file store: a bug that could not be
+     * reproduced from the console.
+     *
+     * The provider instance is resolved once per request by the factory, so an
+     * instance property gives reuse within a request — the common case, where
+     * a test or a batch makes several calls — without depending on a store at
+     * all. The cost is one extra auth round-trip per request, which beats
+     * being coupled to the cache driver.
+     *
+     * The key includes the secret as well as the client id: keying on the id
+     * alone means rotating a secret leaves the key unchanged, so a stale token
+     * keeps being served and the connection reports healthy on credentials
+     * that no longer work.
+     *
+     * @var array<string, array{token: string, expires: int}>
+     */
+    private array $tokenCache = [];
+
+    /**
+     * Mint or reuse a bearer token.
      */
     private function token(ConnectionDTO $c): string
     {
@@ -75,12 +93,11 @@ class EcoExpressProvider extends AbstractProvider implements ShippingProviderInt
             );
         }
 
-        $cacheKey = 'shipping:ecoexpress:token:' . ($c->id ?? 'adhoc')
-            . ':' . sha1($clientId . ':' . $clientSecret);
+        $cacheKey = ($c->id ?? 'adhoc') . ':' . sha1($clientId . ':' . $clientSecret);
 
-        $cached = Cache::get($cacheKey);
-        if (is_string($cached) && $cached !== '') {
-            return $cached;
+        $hit = $this->tokenCache[$cacheKey] ?? null;
+        if ($hit && $hit['expires'] > time()) {
+            return $hit['token'];
         }
 
         // Form-encoded, NOT JSON. The published spec shows a JSON body; the
@@ -103,8 +120,13 @@ class EcoExpressProvider extends AbstractProvider implements ShippingProviderInt
             );
         }
 
+        // Expire at 80% of the advertised lifetime so a token can never lapse
+        // mid-flight on a slow call.
         $ttl = (int) ($body['expires_in'] ?? 1799);
-        Cache::put($cacheKey, $tok, max(60, (int) floor($ttl * 0.8)));
+        $this->tokenCache[$cacheKey] = [
+            'token'   => $tok,
+            'expires' => time() + max(60, (int) floor($ttl * 0.8)),
+        ];
 
         return $tok;
     }

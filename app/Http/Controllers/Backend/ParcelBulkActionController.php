@@ -234,7 +234,7 @@ public function apply(Request $request)
         'bulk_note'      => ['nullable','string','max:2000','required_if:action_type,add_note'],
         'status'         => ['nullable','integer'],
         'deliveryman_id' => ['nullable','integer','exists:delivery_man,id'],
-        'company'        => ['nullable','string','in:panda,zajel,aramex,jet,logestechs'],
+        'company'        => ['nullable','string','in:panda,zajel,aramex,jet,logestechs,ecoexpress'],
         // Logestechs uses the new Shipping module — connection picks the
         // remote_company_id + email + password. Optional; if blank, the
         // tenant's default Logestechs connection is used.
@@ -303,8 +303,13 @@ public function apply(Request $request)
             return $this->assignJetBulk($parcels, $rwh_parcels, $request);
         }
 
-        if ($company === 'logestechs') {
-            return $this->assignLogestechsBulk($parcels, $rwh_parcels, $request);
+        // Providers that live in the Shipping module all go through the same
+        // path; only the code and the label differ.
+        $shippingModuleProviders = ['logestechs' => 'Logestechs', 'ecoexpress' => 'EcoExpress'];
+        if (isset($shippingModuleProviders[$company])) {
+            return $this->assignShippingModuleBulk(
+                $parcels, $rwh_parcels, $request, $company, $shippingModuleProviders[$company]
+            );
         }
 
         if ($company === '') {
@@ -1000,13 +1005,20 @@ public function change_status($parcels, Request $request)
 
 
     /**
-     * Bulk-assign parcels to Logestechs via the generic Shipping module.
+     * Bulk-assign parcels to any provider in the Shipping module.
+     *
+     * The body was already provider-agnostic — it resolves a connection and
+     * hands each parcel to ShipmentService::dispatchCreate — but the provider
+     * code was hardcoded to 'logestechs', so a second provider could not reach
+     * it. Now parameterised, which is what let EcoExpress be added without
+     * duplicating any of this.
+     *
      * Picks the connection from `connection_id` if supplied, otherwise the
-     * tenant's default Logestechs connection. Each parcel becomes a queued
-     * CreateShipmentJob — the loop returns immediately with a queued summary
-     * rather than blocking on the provider for N parcels.
+     * tenant's default connection FOR THAT PROVIDER. Each parcel becomes a
+     * queued CreateShipmentJob — the loop returns immediately with a queued
+     * summary rather than blocking on the provider for N parcels.
      */
-    protected function assignLogestechsBulk($parcels, int $rwhCount, Request $request)
+    protected function assignShippingModuleBulk($parcels, int $rwhCount, Request $request, string $providerCode, string $providerLabel)
     {
         if (count($parcels) !== $rwhCount) {
             return back()->with('error', __('All selected shipment must be RECEIVED_WAREHOUSE'));
@@ -1020,10 +1032,18 @@ public function change_status($parcels, Request $request)
                 ->where('company_id', settings()->id ?? null)
                 ->first()
             : app(\App\Shipping\Repositories\ShippingConnectionRepository::class)
-                ->defaultForCompany((int) (settings()->id ?? 0), 'logestechs');
+                ->defaultForCompany((int) (settings()->id ?? 0), $providerCode);
+
+        // A connection_id supplied by the client is checked against the
+        // provider too: without this, picking EcoExpress while passing a
+        // Logestechs connection id would ship the batch through the wrong
+        // carrier.
+        if ($connection && $connectionId && $connection->provider?->code !== $providerCode) {
+            return back()->with('error', __('That connection does not belong to :p.', ['p' => $providerLabel]));
+        }
 
         if (! $connection) {
-            return back()->with('error', __('No active Logestechs connection. Add one at /admin/shipping/connections first.'));
+            return back()->with('error', __('No active :p connection. Add one at /admin/shipping/connections first.', ['p' => $providerLabel]));
         }
 
         $service = app(\App\Shipping\Services\ShipmentService::class);
@@ -1224,6 +1244,25 @@ public function parcel_bulk_action(Request $request)
     // Logestechs connections available to this tenant via the new Shipping
     // module. The bulk-assign UI renders these as a picker; the picked
     // connection_id is what assignLogestechsBulk uses to route the batch.
+    // Connections for every Shipping-module provider, grouped by provider code
+    // so the form can show the right list once a company is chosen. Previously
+    // only Logestechs connections were fetched, so selecting any other
+    // Shipping-module provider offered nothing to ship with.
+    $shippingConns = \App\Shipping\Models\ShippingConnection::query()
+        ->with('provider')
+        ->where('company_id', settings()->id ?? null)
+        ->where('status', 'active')
+        ->whereHas('provider', fn ($p) => $p->whereIn('code', ['logestechs', 'ecoexpress']))
+        ->get()
+        ->groupBy(fn ($c) => $c->provider->code)
+        ->map(fn ($group) => $group->map(fn ($c) => [
+            'id'                => $c->id,
+            'connection_name'   => $c->connection_name,
+            'is_default'        => (bool) $c->is_default,
+            'remote_company_id' => $c->remote_company_id,
+            'email'             => $c->email,
+        ])->values());
+
     $logestechsConns = \App\Shipping\Models\ShippingConnection::query()
         ->with('provider')
         ->where('company_id', settings()->id ?? null)
@@ -1244,6 +1283,7 @@ public function parcel_bulk_action(Request $request)
             ['value' => 'aramex',     'label' => 'Aramex'],
             ['value' => 'jet',        'label' => 'J&T (Jet)'],
             ['value' => 'logestechs', 'label' => 'Logestechs'],
+            ['value' => 'ecoexpress', 'label' => 'EcoExpress'],
         ],
         'logestechs_connections' => $logestechsConns->map(fn ($c) => [
             'id'              => $c->id,
@@ -1252,6 +1292,11 @@ public function parcel_bulk_action(Request $request)
             'remote_company_id' => $c->remote_company_id,
             'email'           => $c->email,
         ])->values(),
+        // Keyed by provider code; the form reads the list for whichever company
+        // is selected. `logestechs_connections` above is kept so nothing that
+        // still reads it breaks.
+        'shipping_connections'  => $shippingConns,
+        'shipping_providers'    => ['logestechs', 'ecoexpress'],
         'logestechs_manage_url' => route('shipping.connections.index'),
         'urls' => [
             'apply'  => route('parcel.bulk_action_apply'),

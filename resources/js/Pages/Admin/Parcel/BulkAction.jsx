@@ -121,11 +121,16 @@ export default function BulkAction({
     hubs = [],
     companies = [],
     logestechs_connections = [],
+    shipping_connections = {},
+    shipping_providers = [],
     logestechs_manage_url = '#',
     urls = {},
     t = {},
 }) {
     // Pre-pick the default connection if any. Falls back to the first active.
+    // Kept for the initial form value; the per-provider default is applied when
+    // the company changes, since the right connection depends on which provider
+    // is selected.
     const defaultLogestechsConnection = React.useMemo(() => {
         const def = logestechs_connections.find((c) => c.is_default);
         return def ? def.id : (logestechs_connections[0]?.id || '');
@@ -288,7 +293,12 @@ export default function BulkAction({
     const showStatusGroup    = form.data.action_type === 'change_status' && form.data.status;
     const showStatusSelect   = form.data.action_type === 'change_status';
     const showCompanySelect  = form.data.action_type === 'assign_3pl';
-    const showLogestechs     = form.data.action_type === 'assign_3pl' && form.data.company === 'logestechs';
+    // Any provider in the Shipping module needs a connection picked, not just
+    // Logestechs. The list comes keyed by provider code so adding a third
+    // provider is a backend change only.
+    const isShippingModule   = (shipping_providers || []).includes(form.data.company);
+    const showConnection     = form.data.action_type === 'assign_3pl' && isShippingModule;
+    const activeConnections  = (shipping_connections || {})[form.data.company] || [];
     const showCancelHint     = form.data.action_type === 'cancel';
     const showExport         = form.data.action_type === 'export_excel';
     const showPrint          = form.data.action_type === 'print_awbs';
@@ -297,7 +307,7 @@ export default function BulkAction({
         ids.length > 0 &&
         form.data.action_type &&
         (form.data.action_type !== 'change_status' || !!form.data.status) &&
-        (form.data.action_type !== 'assign_3pl'    || (!!form.data.company && (form.data.company !== 'logestechs' || !!form.data.connection_id))) &&
+        (form.data.action_type !== 'assign_3pl'    || (!!form.data.company && (!isShippingModule || !!form.data.connection_id))) &&
         (!needsDriver   || !!form.data.driver_id) &&
         (!needsDate     || !!form.data.schedule_at) &&
         (!needsHub      || !!form.data.hub_id) &&
@@ -426,7 +436,18 @@ export default function BulkAction({
                                     <Field icon={Network} label={t.select_3pl_company} required error={form.errors.company}>
                                         <Select
                                             value={form.data.company}
-                                            onChange={(e) => form.setData('company', e.target.value)}
+                                            onChange={(e) => {
+                                                const code = e.target.value;
+                                                form.setData('company', code);
+                                                // Re-point the connection at the newly chosen
+                                                // provider. Carrying the previous one over would
+                                                // pair, say, EcoExpress with a Logestechs
+                                                // connection — the backend rejects that, but the
+                                                // form should not offer it in the first place.
+                                                const list = (shipping_connections || {})[code] || [];
+                                                const def  = list.find((c) => c.is_default) || list[0];
+                                                form.setData('connection_id', def ? def.id : '');
+                                            }}
                                         >
                                             <option value="">{t.select_3pl_company}</option>
                                             {companies.map((c) => (
@@ -438,9 +459,9 @@ export default function BulkAction({
                             </div>
                             )}
 
-                            {showLogestechs && (
+                            {showConnection && (
                                 <div className="mt-4 rounded-md border border-violet-200 bg-violet-50/40 p-4 space-y-2">
-                                    {logestechs_connections.length > 0 ? (
+                                    {activeConnections.length > 0 ? (
                                         <Field
                                             icon={Network}
                                             label={t.logestechs_connection_label}
@@ -452,7 +473,7 @@ export default function BulkAction({
                                                 value={form.data.connection_id}
                                                 onChange={(e) => form.setData('connection_id', e.target.value)}
                                             >
-                                                {logestechs_connections.map((c) => (
+                                                {activeConnections.map((c) => (
                                                     <option key={c.id} value={c.id}>
                                                         {c.connection_name}
                                                         {c.email ? ` — ${c.email}` : ''}

@@ -123,7 +123,7 @@ class ParcelController extends Controller
      */
     private function renderParcelIndex($paginator, Request $request, $paginate)
     {
-        $deliverymans = $this->deliveryman->all();
+        $deliverymans = $this->deliveryman->selectable();
         $hubs         = $this->hub->all();
         $merchants    = \App\Models\Backend\Merchant::companywise()
             ->where('status', 1)
@@ -1068,7 +1068,7 @@ class ParcelController extends Controller
         return redirect()->back();
        
     }
-        $deliveryman    = $this->deliveryman->all();
+        $deliveryman    = $this->deliveryman->selectable();
         $data = [];
         if($parcel->lastParcel3pl){
           $lastParcel3pl = $parcel->lastParcel3pl;  

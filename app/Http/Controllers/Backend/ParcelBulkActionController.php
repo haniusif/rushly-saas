@@ -1136,7 +1136,7 @@ public function change_status($parcels, Request $request)
 public function parcel_bulk_action(Request $request)
 {
     $merchants    = $this->merchant->all();
-    $deliverymans = $this->deliveryman->all();
+    $deliverymans = $this->deliveryman->selectable();
     $hubs         = $this->hub->all();
 
     // Single source of truth: every status the controller can apply,

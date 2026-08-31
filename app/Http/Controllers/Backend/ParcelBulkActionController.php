@@ -1051,11 +1051,36 @@ public function change_status($parcels, Request $request)
         $skipped = 0;
         $errors  = [];
 
+        // On a SYNC queue connection the job has already run by the time
+        // dispatchCreate returns, so the outcome is knowable now. Counting
+        // every dispatch as "queued" reported "1 queued, 0 failed" for a
+        // shipment that had in fact already failed — the operator was told it
+        // worked. Re-read the row and report what actually happened.
+        $isSync  = (string) config('shipping.queue.connection') === 'sync';
+        $created = 0;
+
         foreach ($parcels as $p) {
             try {
                 $shipment = $service->dispatchCreate($p, $connection);
+
                 if ($shipment->remote_shipment_id) {
                     $skipped++;
+                    continue;
+                }
+
+                if (! $isSync) {
+                    $queued++;
+                    continue;
+                }
+
+                $shipment = $shipment->fresh();
+                if ($shipment->state === 'failed') {
+                    $errors[] = __('Parcel :id failed: :msg', [
+                        'id'  => $p->id,
+                        'msg' => $shipment->last_sync_error ?: 'unknown error',
+                    ]);
+                } elseif ($shipment->remote_shipment_id) {
+                    $created++;
                 } else {
                     $queued++;
                 }
@@ -1064,11 +1089,18 @@ public function change_status($parcels, Request $request)
             }
         }
 
-        $summary = __(':q queued, :s already shipped, :f failed', [
-            'q' => $queued, 's' => $skipped, 'f' => count($errors),
-        ]);
+        $summary = $isSync
+            ? __(':c shipped, :s already shipped, :f failed', [
+                'c' => $created, 's' => $skipped, 'f' => count($errors),
+            ])
+            : __(':q queued, :s already shipped, :f failed', [
+                'q' => $queued, 's' => $skipped, 'f' => count($errors),
+            ]);
         if (! empty($errors)) {
-            return back()->with('warning', $summary)->with('errors_list', $errors);
+            // Nothing succeeded at all -> an error, not a warning. A warning
+            // next to "0 shipped" reads as partial success.
+            $level = ($queued + $created + $skipped) === 0 ? 'error' : 'warning';
+            return back()->with($level, $summary)->with('errors_list', $errors);
         }
         return back()->with('success', $summary);
     }

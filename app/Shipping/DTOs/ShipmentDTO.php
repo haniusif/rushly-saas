@@ -61,11 +61,12 @@ final class ShipmentDTO
             name:    (string) ($hub->name ?? $parcel->merchant->business_name ?? ''),
             phone:   (string) ($hub->phone ?? $parcel->pickup_phone ?: ($parcel->merchant->user->mobile ?? '')),
             line1:   (string) ($hub->address ?? $parcel->pickup_address ?? ''),
-            // Hubs are free text with no city_id, so the hub NAME doubles as
-            // the locality ("Dubai", "AbuDhabi"). Providers resolve it to their
-            // own codes; AddressDTO stays provider-neutral.
-            city:    (string) ($hub->name ?? ''),
-            region:  (string) ($hub->name ?? ''),
+            // Prefer the hub's CITY now that hubs carry one. The hub name is
+            // kept as the fallback for hubs whose city has not been set yet —
+            // it is what the origin was resolved from before the column
+            // existed, and it still works for hubs named after their city.
+            city:    (string) (optional($hub?->city)->en_name ?: optional($hub?->city)->name ?: $hub?->name ?? ''),
+            region:  (string) (optional($hub?->city)->en_name ?: optional($hub?->city)->name ?: $hub?->name ?? ''),
         );
 
         return new self(

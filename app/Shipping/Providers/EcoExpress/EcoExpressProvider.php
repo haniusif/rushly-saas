@@ -218,6 +218,15 @@ class EcoExpressProvider extends AbstractProvider implements ShippingProviderInt
             throw new ProviderRejectedShipmentException('EcoExpress connection has no account number.');
         }
 
+        // Refuse anything outside EcoExpress's UAE-only coverage BEFORE calling
+        // them, with a reason an operator can act on. Otherwise the failure
+        // arrives as "Shipper state is not valid" from the carrier, which says
+        // nothing about the actual cause — that the parcel is not a UAE
+        // shipment at all.
+        if ($reason = ShipmentRequestMapper::unmappableReason($s)) {
+            throw new ProviderRejectedShipmentException($reason);
+        }
+
         $payload = ['data' => [ShipmentRequestMapper::map($c, $s, $accountNo)]];
 
         $resp = $this->call($c, 'POST', '/connect/client/order/shipment/create', $payload);

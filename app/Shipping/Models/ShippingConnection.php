@@ -70,12 +70,53 @@ class ShippingConnection extends Model
         return $query->where('status', 'active');
     }
 
+    /**
+     * Is this connection usable for shipping?
+     *
+     * Driven by the provider's field spec in config/shipping.php — the same
+     * declaration the connection form and its validation are built from — so
+     * "required to save" and "ready to ship" cannot drift apart.
+     *
+     * It used to hardcode remote_company_id + email + password, which is
+     * Logestechs' credential shape. EcoExpress authenticates with an OAuth
+     * client id/secret and an account number and has none of those three, so
+     * it was permanently "not ready" and every assign failed with
+     * "Connection is not ready (status / credentials / remote_company_id
+     * missing)" — a message describing fields that provider does not use.
+     */
     public function isReady(): bool
     {
-        return $this->status === 'active'
-            && filled($this->remote_company_id)
-            && filled($this->email)
-            && filled($this->password_encrypted);
+        if ($this->status !== 'active') {
+            return false;
+        }
+
+        $code = $this->provider?->code;
+        $spec = $code ? config('shipping.providers.' . $code . '.form') : null;
+
+        // No spec: fall back to the original check rather than declaring a
+        // provider ready on no evidence.
+        if (! is_array($spec) || $spec === []) {
+            return filled($this->remote_company_id)
+                && filled($this->email)
+                && filled($this->password_encrypted);
+        }
+
+        foreach ($spec as $field) {
+            if (! ($field['required'] ?? false)) {
+                continue;
+            }
+
+            $name  = (string) ($field['name'] ?? '');
+            $value = str_starts_with($name, 'settings.')
+                ? (is_array($this->settings) ? ($this->settings[substr($name, 9)] ?? null) : null)
+                : ($name === 'password' ? $this->password_encrypted : $this->{$name} ?? null);
+
+            if (blank($value)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

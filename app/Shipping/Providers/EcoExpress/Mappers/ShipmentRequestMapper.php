@@ -17,6 +17,32 @@ final class ShipmentRequestMapper
     /** UAE is the only origin the account is provisioned for. */
     private const DEFAULT_COUNTRY = 'UNITED ARAB EMIRATES';
 
+    /**
+     * Thrown-equivalent: returns the reason a shipment cannot be mapped, or
+     * null when it can. Checked before building the payload so an unshippable
+     * parcel is refused with a clear message instead of a wire rejection.
+     */
+    public static function unmappableReason(ShipmentDTO $s): ?string
+    {
+        $to = LocationMapper::stateCode(null, $s->recipient->region ?: $s->recipient->city);
+        if (! $to) {
+            return sprintf(
+                'EcoExpress delivers within the UAE only; "%s" is not one of its emirates.',
+                $s->recipient->city ?: $s->recipient->region ?: 'unknown destination'
+            );
+        }
+
+        $from = LocationMapper::stateCode(null, $s->sender->region ?: $s->sender->city);
+        if (! $from) {
+            return sprintf(
+                'The origin hub "%s" does not map to a UAE emirate EcoExpress recognises.',
+                $s->sender->region ?: $s->sender->city ?: 'unknown origin'
+            );
+        }
+
+        return null;
+    }
+
     public static function map(ConnectionDTO $c, ShipmentDTO $s, string $accountNo): array
     {
         $sender    = $s->sender;
@@ -68,13 +94,19 @@ final class ShipmentRequestMapper
      */
     private static function party($addr, ?string $companyName): array
     {
+        // state <- our CITY (their states are emirates), city <- our AREA
+        // (their cities are districts). Passing our city through as their city
+        // is what the first attempt did, and it was rejected on both counts.
+        $state = LocationMapper::stateCode(null, $addr->region ?: $addr->city);
+        $city  = LocationMapper::cityName(null, $addr->area ?: $addr->city);
+
         return [
             'company_name' => (string) ($companyName ?? $addr->name ?? ''),
             'name'         => (string) ($addr->name ?? ''),
             'address'      => trim(implode(', ', array_filter([$addr->line1 ?? null, $addr->line2 ?? null]))),
             'country'      => (string) ($addr->country ?: self::DEFAULT_COUNTRY),
-            'state'        => (string) ($addr->region ?? ''),
-            'city'         => (string) ($addr->city ?? ''),
+            'state'        => (string) ($state ?? ''),
+            'city'         => (string) ($city ?? ''),
             'mobile_no_1'  => self::phone($addr->phone ?? ''),
             'mobile_no_2'  => '',
         ];

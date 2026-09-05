@@ -152,6 +152,7 @@ export default function Create({ urls = {}, lookups = {}, google_maps_key = '', 
         name:    hub?.name    ?? '',
         phone:   hub?.phone   ?? '',
         address: hub?.address ?? '',
+        city_id: hub?.city_id ?? '',
         lat:     hub?.lat     ?? '',
         long:    hub?.long    ?? '',
         status:  hub?.status  ?? 1,
@@ -212,6 +213,20 @@ export default function Create({ urls = {}, lookups = {}, google_maps_key = '', 
                                     <Field icon={MapPin} label={t.address} required error={form.errors.address} hint={t.address_hint} className="md:col-span-2">
                                         <Input ref={addressInputRef} value={form.data.address}
                                             onChange={(e) => form.setData('address', e.target.value)} maxLength={191} />
+                                    </Field>
+                                    {/* The hub's city is the pickup origin a 3PL
+                                        carrier is given. Picked from the list
+                                        rather than typed, so it maps to a real
+                                        carrier region instead of being matched
+                                        on a free-text name. */}
+                                    <Field icon={Building2} label={t.city} error={form.errors.city_id} hint={t.city_hint} className="md:col-span-2">
+                                        <Select value={form.data.city_id ?? ''}
+                                            onChange={(e) => form.setData('city_id', e.target.value)}>
+                                            <option value="">—</option>
+                                            {(lookups.cities || []).map((c) => (
+                                                <option key={c.id} value={c.id}>{c.label}</option>
+                                            ))}
+                                        </Select>
                                     </Field>
                                 </div>
                             </CardContent>

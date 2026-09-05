@@ -9,12 +9,21 @@ class Area extends Model
 {
     protected $table = 'areas';
 
+    // area_code and region_id are real columns on `areas` but were absent
+    // here, so mass assignment silently dropped them.
     protected $fillable = [
         'city_id',
+        'region_id',
         'name',
         'en_name',
+        'area_code',
         'sorting',
         'is_active',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+        'sorting'   => 'integer',
     ];
 
     /**

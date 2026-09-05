@@ -34,6 +34,7 @@ class HubRepository implements HubInterface{
             $hub->name     = $request->name;
             $hub->phone    = $request->phone;
             $hub->address  = $request->address;
+            $hub->city_id  = $request->city_id ?: null;
             $hub->hub_lat  = $request->lat;
             $hub->hub_long = $request->long;
             $hub->status   = $request->status;
@@ -52,6 +53,7 @@ class HubRepository implements HubInterface{
             $hub->name     = $request->name;
             $hub->phone    = $request->phone;
             $hub->address  = $request->address;
+            $hub->city_id  = $request->city_id ?: null;
             $hub->hub_lat  = $request->lat;
             $hub->hub_long = $request->long;
             $hub->status   = $request->status;

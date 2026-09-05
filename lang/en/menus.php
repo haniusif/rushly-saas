@@ -133,4 +133,15 @@ return [
    'child_companies'             => 'Sub-accounts',
    'child_companies_new'         => 'New sub-account',
    'child_companies_subtitle'    => 'Companies you have created under your account.',
+
+    'city' => 'Cities',
+    'city_single' => 'City',
+    'area' => 'Areas',
+
+    'blogs' => 'Blog',
+    'integrations' => 'Integrations',
+    'partner' => 'Partner',
+    'update' => 'Update',
+    'why_rushly' => 'Why Rushly',
+    'shop' => 'Shop',
 ];

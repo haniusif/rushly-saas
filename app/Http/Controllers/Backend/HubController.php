@@ -98,6 +98,27 @@ class HubController extends Controller
         ]);
     }
 
+    /**
+     * Cities for the hub form, active first and alphabetical.
+     *
+     * The hub's city is the pickup origin a 3PL integration reads, so it is a
+     * real selection rather than free text — matching a carrier's own city
+     * list by typed name is what made the origin unreliable before.
+     */
+    private static function cityOptions(): array
+    {
+        return \App\Models\Backend\City::query()
+            ->orderByRaw('is_active DESC')
+            ->orderBy('en_name')
+            ->get(['id', 'name', 'en_name', 'city_code'])
+            ->map(fn ($c) => [
+                'id'    => $c->id,
+                'label' => trim(($c->en_name ?: $c->name) . ($c->city_code ? " ({$c->city_code})" : '')),
+            ])
+            ->values()
+            ->all();
+    }
+
     public function create()
     {
         return Inertia::render('Admin/Hub/Create', [
@@ -110,6 +131,7 @@ class HubController extends Controller
                     ['value' => 1, 'label' => __('status.1') ?: 'Active'],
                     ['value' => 0, 'label' => __('status.0') ?: 'Inactive'],
                 ],
+                'cities' => self::cityOptions(),
             ],
             'google_maps_key' => googleMapSettingKey(),
             't' => [
@@ -118,6 +140,8 @@ class HubController extends Controller
                 'name'        => __('levels.name') ?: 'Name',
                 'phone'       => __('levels.phone') ?: 'Phone',
                 'address'     => __('levels.address') ?: 'Address',
+                'city'        => __('menus.city_single') ?: 'City',
+                'city_hint'   => 'Used as the pickup origin when handing shipments to a 3PL carrier.',
                 'address_hint'=> 'Start typing — autocomplete from Google Places',
                 'lat'         => 'Latitude',
                 'long'        => 'Longitude',
@@ -155,6 +179,7 @@ class HubController extends Controller
                 'name'    => $hub->name,
                 'phone'   => $hub->phone,
                 'address' => $hub->address,
+                'city_id' => $hub->city_id,
                 'lat'     => $hub->lat,
                 'long'    => $hub->long,
                 'status'  => (int) $hub->status,
@@ -168,6 +193,7 @@ class HubController extends Controller
                     ['value' => 1, 'label' => __('status.1') ?: 'Active'],
                     ['value' => 0, 'label' => __('status.0') ?: 'Inactive'],
                 ],
+                'cities' => self::cityOptions(),
             ],
             'google_maps_key' => googleMapSettingKey(),
             't' => [
@@ -176,6 +202,8 @@ class HubController extends Controller
                 'name'        => __('levels.name') ?: 'Name',
                 'phone'       => __('levels.phone') ?: 'Phone',
                 'address'     => __('levels.address') ?: 'Address',
+                'city'        => __('menus.city_single') ?: 'City',
+                'city_hint'   => 'Used as the pickup origin when handing shipments to a 3PL carrier.',
                 'address_hint'=> 'Start typing — autocomplete from Google Places',
                 'lat'         => 'Latitude',
                 'long'        => 'Longitude',
@@ -283,6 +311,8 @@ class HubController extends Controller
                 'name'      => $hub->name,
                 'phone'     => $hub->phone,
                 'address'   => $hub->address,
+                'city'      => optional($hub->city)->en_name ?: optional($hub->city)->name,
+                'city_code' => optional($hub->city)->city_code,
                 'lat'       => $hub->hub_lat ?? $hub->lat ?? null,
                 'long'      => $hub->hub_long ?? $hub->long ?? null,
                 'status'    => (int) $hub->status,
@@ -326,6 +356,7 @@ class HubController extends Controller
                 'name'             => __('levels.name') ?: 'Name',
                 'phone'            => __('levels.phone') ?: 'Phone',
                 'address'          => __('levels.address') ?: 'Address',
+                'city'             => __('menus.city_single') ?: 'City',
                 'status'           => __('levels.status') ?: 'Status',
                 'active'           => __('levels.active') ?: 'Active',
                 'inactive'         => __('levels.inactive') ?: 'Inactive',

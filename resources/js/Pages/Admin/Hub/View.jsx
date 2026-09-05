@@ -133,6 +133,11 @@ export default function View({
                         <div className="mt-3 space-y-0.5">
                             <Row icon={Phone} label={t.phone}><span className="font-mono">{hub.phone}</span></Row>
                             <Row icon={MapPin} label={t.address}>{hub.address}</Row>
+                            <Row icon={MapPin} label={t.city}>
+                                {hub.city
+                                    ? `${hub.city}${hub.city_code ? ` (${hub.city_code})` : ''}`
+                                    : <span className="text-muted-foreground">—</span>}
+                            </Row>
                             <Row label={t.coordinates}>
                                 {hub.lat || hub.long ? (
                                     <span className="font-mono text-xs">{hub.lat ?? '—'}, {hub.long ?? '—'}</span>

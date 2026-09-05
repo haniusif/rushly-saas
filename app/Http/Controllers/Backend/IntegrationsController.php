@@ -76,7 +76,8 @@ class IntegrationsController extends Controller
 
         return Inertia::render('Admin/Integrations/Index', [
             'integrations' => $integrations,
-            'three_pls'    => collect($this->buildThreePls())->map($attachLogo)->all(),
+            'three_pls'    => collect($this->buildThreePls())->map($attachLogo)->map(fn (array $p) => $this->attachCourier($p, $companyId))->all(),
+            'couriers'     => $this->courierOptions($companyId),
             'accounting'   => collect($this->buildAccounting($companyId))->map($attachLogo)->all(),
             'erp'          => collect($this->buildErp($companyId))->map($attachLogo)->all(),
             'payments'     => collect($this->buildPayments($companyId))->map($attachLogo)->all(),
@@ -86,6 +87,7 @@ class IntegrationsController extends Controller
             ],
             'urls' => [
                 'index' => route('integrations.index'),
+                'three_pl_courier' => route('integrations.three_pl_courier'),
             ],
             't' => [
                 'title'             => 'Integrations',
@@ -95,6 +97,9 @@ class IntegrationsController extends Controller
                 'three_pl_title'    => '3PL (Courier) Integrations',
                 'three_pl_help'     => 'Outbound courier handover. Credentials live in .env and apply across all tenants — see 3PL.md in the repo root for the current state and known issues.',
                 'three_pl_note'     => '3PL credentials are global (not per-tenant). Edit .env on the server to change.',
+                'three_pl_courier'      => 'Courier for this carrier',
+                'three_pl_courier_hint' => 'When this carrier accepts a shipment the parcel is marked out for delivery under this courier.',
+                'three_pl_courier_none' => 'None — leave parcel status unchanged',
                 'connected'         => 'Connected',
                 'needs_config'      => 'Needs config',
                 'disabled'          => 'Disabled',
@@ -524,6 +529,95 @@ class IntegrationsController extends Controller
         return null;
     }
 
+
+    /**
+     * Nominate the courier record that represents a 3PL carrier for this
+     * tenant.
+     *
+     * Only the legacy carriers (Panda, Zajel, Aramex, J&T) come through here.
+     * Logestechs and EcoExpress live in the Shipping module and carry the
+     * same setting on their own connection row, edited at
+     * /admin/shipping/connections.
+     *
+     * Sending an empty courier clears the mapping, which is the supported way
+     * to turn the handover off again for one carrier.
+     */
+    public function saveThreePlCourier(Request $request)
+    {
+        $data = $request->validate([
+            'carrier_code'    => ['required', 'string', 'max:40'],
+            'delivery_man_id' => ['nullable', 'integer'],
+        ]);
+
+        $companyId = (int) (settings()->id ?? 0);
+        $carrier   = strtolower(trim($data['carrier_code']));
+        $courierId = $data['delivery_man_id'] ?? null;
+
+        if ($courierId) {
+            // A courier from another tenant would put parcels into a
+            // stranger's delivery list, so the id is checked, not trusted.
+            $owned = \App\Models\Backend\DeliveryMan::where('id', (int) $courierId)
+                ->where('company_id', $companyId)
+                ->exists();
+
+            if (! $owned) {
+                Toastr::error('That courier does not belong to this company.', 'Error');
+                return back();
+            }
+
+            \App\Models\Backend\ThreePlCourier::updateOrCreate(
+                ['company_id' => $companyId, 'carrier_code' => $carrier],
+                ['delivery_man_id' => (int) $courierId],
+            );
+        } else {
+            \App\Models\Backend\ThreePlCourier::where('company_id', $companyId)
+                ->where('carrier_code', $carrier)
+                ->delete();
+        }
+
+        Toastr::success('Courier updated.', 'Success');
+        return back();
+    }
+
+    /**
+     * Attach the tenant's nominated courier to a 3PL card.
+     *
+     * Shipping-module carriers are skipped: their courier is per-connection,
+     * set on the connection edit screen, so offering a second control here
+     * would be two switches for one lamp.
+     */
+    private function attachCourier(array $p, ?int $companyId): array
+    {
+        if (! empty($p['settings_url'])) {
+            return $p + ['courier_delivery_man_id' => null, 'courier_editable' => false];
+        }
+
+        $courierId = \App\Models\Backend\ThreePlCourier::where('company_id', $companyId)
+            ->where('carrier_code', $p['key'])
+            ->value('delivery_man_id');
+
+        return $p + [
+            'courier_delivery_man_id' => $courierId ? (int) $courierId : null,
+            'courier_editable'        => true,
+        ];
+    }
+
+    /**
+     * Couriers this tenant can nominate to stand in for a carrier. The plain
+     * delivery_man list - there is no 'is a 3PL' flag to filter on, and
+     * tenants already improvise these records by name ('Panda Delivery').
+     */
+    private function courierOptions(?int $companyId): array
+    {
+        return \App\Models\Backend\DeliveryMan::query()
+            ->where('delivery_man.company_id', (int) $companyId)
+            ->join('users', 'users.id', '=', 'delivery_man.user_id')
+            ->orderBy('users.name')
+            ->get(['delivery_man.id', 'users.name'])
+            ->map(fn ($d) => ['id' => $d->id, 'name' => $d->name ?: ('#' . $d->id)])
+            ->values()
+            ->all();
+    }
     private function buildThreePls(): array
     {
         $pandaKey   = (string) config('services.deliverypanda.key');
@@ -617,6 +711,43 @@ class IntegrationsController extends Controller
                     'parcels'  => \App\Shipping\Models\Shipment::query()
                         ->where('company_id', $companyId)
                         ->whereHas('connection.provider', fn ($p) => $p->where('code', 'logestechs'))
+                        ->count(),
+                    'settings_url' => route('shipping.connections.index'),
+                ];
+            })(),
+            (function () {
+                // EcoExpress rides the same Shipping module as Logestechs:
+                // connection state lives in shipping_connections, tenant-scoped,
+                // not in env.
+                $companyId   = settings()->id ?? null;
+                $connections = \App\Shipping\Models\ShippingConnection::query()
+                    ->where('company_id', $companyId)
+                    ->whereHas('provider', fn ($p) => $p->where('code', 'ecoexpress'))
+                    ->get();
+
+                $active  = $connections->where('status', 'active')->count();
+                $total   = $connections->count();
+                $default = $connections->firstWhere('is_default', true);
+
+                return [
+                    'key'      => 'ecoexpress',
+                    'name'     => 'EcoExpress',
+                    'host'     => 'ecofreight.ae',
+                    'base_url' => (string) config('shipping.providers.ecoexpress.config.base_url'),
+                    'key_set'  => $active > 0,
+                    'key_tail' => null,
+                    'extras'   => array_filter([
+                        'Connections' => $total > 0 ? "{$active} active / {$total} total" : null,
+                        'Default'     => $default ? $default->connection_name : null,
+                        'Module'      => 'Shipping (new module)',
+                        // Stated on the card so an operator does not go hunting
+                        // for buttons that cannot exist: EcoExpress publishes
+                        // neither endpoint.
+                        'Limitations' => 'No cancellation API — cancel in the EcoExpress portal',
+                    ]),
+                    'parcels'  => \App\Shipping\Models\Shipment::query()
+                        ->where('company_id', $companyId)
+                        ->whereHas('connection.provider', fn ($p) => $p->where('code', 'ecoexpress'))
                         ->count(),
                     'settings_url' => route('shipping.connections.index'),
                 ];

@@ -12,8 +12,10 @@ use App\Observers\ParcelZidObserver;
 use App\Fulfillment\Listeners\RouteToFulfillmentListener;
 use App\Oms\Events\OrderReceived;
 use App\Oms\Listeners\LogOrderReceivedListener;
+use App\Shipping\Events\ShipmentCreated;
 use App\Shipping\Events\ShipmentDelivered;
 use App\Shipping\Events\ShipmentStatusChanged;
+use App\Shipping\Listeners\HandOffToThreePlCourier;
 use App\Shipping\Listeners\SendShipmentNotifications;
 use App\Shipping\Listeners\StoreTrackingHistory;
 use App\Shipping\Listeners\UpdateParcelStatus;
@@ -34,6 +36,12 @@ class EventServiceProvider extends ServiceProvider
     protected $listen = [
         Registered::class => [
             SendEmailVerificationNotification::class,
+        ],
+        // A carrier accepted the shipment: the parcel has left the
+        // warehouse, so move it to out-for-delivery under the courier that
+        // stands in for that carrier. See ThreePlCourierHandoff.
+        ShipmentCreated::class => [
+            HandOffToThreePlCourier::class,
         ],
         ShipmentStatusChanged::class => [
             UpdateParcelStatus::class,

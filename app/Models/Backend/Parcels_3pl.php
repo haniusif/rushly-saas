@@ -87,5 +87,41 @@ class Parcels_3pl extends Model
                 // Best-effort; don't block the save.
             }
         });
+
+        // The carrier has accepted the parcel, so it is no longer sitting in
+        // our warehouse - move it to out-for-delivery under the courier that
+        // represents that carrier.
+        //
+        // Hooked here for the same reason company_id is: the legacy carriers
+        // (Panda, Zajel, Aramex, J&T) write this row from 15+ call sites
+        // across ParcelController and ParcelBulkActionController, and one
+        // model hook is a great deal safer than fifteen edits. The Shipping
+        // module's carriers do not write this table at all; they get the same
+        // treatment from Shipping\Listeners\HandOffToThreePlCourier.
+        //
+        // Only on create, and only with an AWB: a row saved without one is a
+        // failed submission, not a handover.
+        static::created(function (Parcels_3pl $row) {
+            $awb = trim((string) $row->awb_number);
+            if ($awb === '' || $awb === '-') {
+                return;
+            }
+
+            try {
+                $parcel = Parcel::withoutGlobalScopes()->find($row->parcel_id);
+                if (! $parcel) {
+                    return;
+                }
+
+                app(\App\Services\ThreePlCourierHandoff::class)->handoff(
+                    parcel:      $parcel,
+                    carrierCode: (string) $row->parcel_3pl_name,
+                    awb:         $awb,
+                );
+            } catch (\Throwable) {
+                // The shipment exists at the carrier either way; never let a
+                // bookkeeping step fail the save that recorded it.
+            }
+        });
     }
 }

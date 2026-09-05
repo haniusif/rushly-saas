@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import {
     Plug, Settings, ExternalLink, Truck, Info, Store, Calculator, Network,
     ShoppingBag, ShoppingCart, PackageOpen, Package2, Plane, Rocket, Boxes, Package,
@@ -194,7 +194,7 @@ function EcommerceCard({ i, permissions, t }) {
     );
 }
 
-function ThreePlCard({ p, t }) {
+function ThreePlCard({ p, t, couriers = [], onCourierChange = () => {} }) {
     return (
         <Card className="flex flex-col h-full">
             <CardContent className="p-5 flex flex-col h-full">
@@ -232,6 +232,29 @@ function ThreePlCard({ p, t }) {
                         </DLRow>
                     )}
                 </dl>
+
+                {/* Which courier stands in for this carrier. Setting it is
+                    what lets a successful handover move the parcel to
+                    out-for-delivery; blank keeps status untouched. Shipping-
+                    module carriers set theirs on the connection instead. */}
+                {p.courier_editable && (
+                    <div className="mb-4">
+                        <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                            {t.three_pl_courier}
+                        </label>
+                        <select
+                            className="flex h-8 w-full rounded-md border border-input bg-background px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            value={p.courier_delivery_man_id ?? ''}
+                            onChange={(e) => onCourierChange(p.key, e.target.value)}
+                        >
+                            <option value="">{t.three_pl_courier_none}</option>
+                            {couriers.map((c) => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                        </select>
+                        <p className="text-[11px] text-muted-foreground mt-1">{t.three_pl_courier_hint}</p>
+                    </div>
+                )}
 
                 <div className="mt-auto pt-3 border-t border-border flex flex-wrap items-center justify-between gap-2">
                     {p.settings_url ? (
@@ -321,7 +344,16 @@ function AccountingCard({ a, t, fallbackIcon = Calculator }) {
     );
 }
 
-export default function Index({ integrations = [], three_pls = [], accounting = [], erp = [], payments = [], location = [], permissions = {}, t = {} }) {
+export default function Index({ integrations = [], three_pls = [], accounting = [], erp = [], payments = [], location = [], couriers = [], permissions = {}, urls = {}, t = {} }) {
+    // Saving the courier is a one-field POST rather than a form: the card is
+    // otherwise read-only, and a reload keeps every other card's state.
+    const saveCourier = (carrierCode, deliveryManId) => {
+        router.post(urls.three_pl_courier, {
+            carrier_code: carrierCode,
+            delivery_man_id: deliveryManId || null,
+        }, { preserveScroll: true });
+    };
+
     return (
         <AdminLayout title={t.title} breadcrumbs={[t.breadcrumb_settings, t.title]}>
             <Head title={t.title} />
@@ -354,7 +386,7 @@ export default function Index({ integrations = [], three_pls = [], accounting = 
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {three_pls.map((p) => (
-                    <ThreePlCard key={p.key} p={p} t={t} />
+                    <ThreePlCard key={p.key} p={p} t={t} couriers={couriers} onCourierChange={saveCourier} />
                 ))}
             </div>
 

@@ -918,6 +918,11 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::get('api-docs/merchant',             [ApiDocsController::class, 'merchant'])->name('api-docs.merchant')->middleware('hasPermission:integrations_read');
                         Route::get('integrations/{platform}/edit',  [IntegrationsController::class, 'edit'])->name('integrations.edit')->middleware('hasPermission:integrations_update');
                         Route::put('integrations/{platform}',       [IntegrationsController::class, 'update'])->name('integrations.update')->middleware('hasPermission:integrations_update');
+                        // Nominate the courier record that represents a 3PL
+                        // carrier. Only the legacy env-configured carriers use
+                        // this; Shipping-module providers carry their own on
+                        // the connection row. See ThreePlCourierHandoff.
+                        Route::post('integrations/3pl-courier',     [IntegrationsController::class, 'saveThreePlCourier'])->name('integrations.three_pl_courier')->middleware('hasPermission:integrations_update');
 
                         // Per-Salla-merchant management
                         Route::get('integrations/salla/stores',            [\App\Http\Controllers\Backend\SallaStoresController::class, 'index'])->name('salla.stores.index')->middleware('hasPermission:integrations_read');

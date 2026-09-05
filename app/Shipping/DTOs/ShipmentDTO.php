@@ -46,10 +46,27 @@ final class ShipmentDTO
             country: null,
         );
 
+        // Sender = the HUB the parcel ships from, falling back to the
+        // merchant's pickup details.
+        //
+        // It previously carried name/phone/line1 only — no city, area or
+        // region — so any provider needing an origin locality received blanks.
+        // EcoExpress rejected exactly that: "Shipper city is not valid,
+        // Shipper state is not valid". The hub is the real physical origin, so
+        // its name and address fill the locality; merchant details remain the
+        // fallback for parcels with no hub assigned.
+        $hub = $parcel->hub;
+
         $sender = new AddressDTO(
-            name:    (string) ($parcel->merchant->business_name ?? ''),
-            phone:   (string) ($parcel->pickup_phone ?: ($parcel->merchant->user->mobile ?? '')),
-            line1:   (string) ($parcel->pickup_address ?? ''),
+            name:    (string) ($hub->name ?? $parcel->merchant->business_name ?? ''),
+            phone:   (string) ($hub->phone ?? $parcel->pickup_phone ?: ($parcel->merchant->user->mobile ?? '')),
+            line1:   (string) ($hub->address ?? $parcel->pickup_address ?? ''),
+            // Prefer the hub's CITY now that hubs carry one. The hub name is
+            // kept as the fallback for hubs whose city has not been set yet —
+            // it is what the origin was resolved from before the column
+            // existed, and it still works for hubs named after their city.
+            city:    (string) (optional($hub?->city)->en_name ?: optional($hub?->city)->name ?: $hub?->name ?? ''),
+            region:  (string) (optional($hub?->city)->en_name ?: optional($hub?->city)->name ?: $hub?->name ?? ''),
         );
 
         return new self(

@@ -92,7 +92,7 @@ return [
                 ['path' => 'Edit',   'desc' => 'Update all fields (phone, name, tracking_id, details).'],
             ],
             'fields' => ['phone', 'name', 'tracking_id', 'details', 'created_by', 'company_id'],
-            'cross_links' => 'created_by logs the reporting staff member. Company-scoped. tracking_id links back to a parcel for context (no FK enforced).',
+            'cross_links' => 'created_by logs the reporting staff member. Company-scoped. tracking_id links back to a shipment for context (no FK enforced).',
             'notes'       => 'No status workflow — all reports are equal priority and the system is a simple historical registry. details stored as rich HTML, stripped for previews (max 140 chars). Activity log includes the created_by user name.',
         ],
 

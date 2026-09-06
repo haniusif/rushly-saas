@@ -113,6 +113,6 @@ return [
     'total_due_amount'                      => 'إجمالي المبلغ المستحق (بدون الدفعات المعلَّقة)',
     'return_charges'                        => 'رسوم الإرجاع',
     'total_charges'                         => 'إجمالي الرسوم',
-    'delivery_man_income'                   => 'إيرادات مندوب التوصيل'
-
+    'delivery_man_income'                   => 'إيرادات مندوب التوصيل',
+    'parcel_finance_reports' => 'تقارير مالية الشحنات',
 ];

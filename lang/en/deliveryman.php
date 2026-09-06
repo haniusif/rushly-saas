@@ -91,4 +91,6 @@ return array (
   'wizard_prev'                   => 'Previous',
   'wizard_submit'                 => 'Submit',
   'wizard_step_of'                => 'Step :current of :total',
+
+    'password_keep_hint' => 'Leave blank to keep the current password.',
 );

@@ -77,3 +77,4 @@ temp/
 
 # Claude Code local config
 .claude/
+/public/apks

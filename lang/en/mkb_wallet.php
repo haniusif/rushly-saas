@@ -23,7 +23,7 @@ return [
                 ['label' => 'Approved', 'tone' => 'ok'],
                 ['label' => 'Rejected', 'tone' => 'bad'],
             ],
-            'cross_links' => 'When you Create a shipment and your account is in Wallet mode, the wallet is debited the moment the parcel is saved. If the balance is below the calculated charges, the form blocks the submission and links you here.',
+            'cross_links' => 'When you Create a shipment and your account is in Wallet mode, the wallet is debited the moment the shipment is saved. If the balance is below the calculated charges, the form blocks the submission and links you here.',
             'notes'       => 'Recharges are not refundable as cash — the credit stays in the wallet and is consumed by future shipments. Refunds for cancelled shipments are credited back automatically.',
         ],
 

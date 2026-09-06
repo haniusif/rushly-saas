@@ -162,13 +162,6 @@
       hidden.value = boxes.map(b => b.value).join('');
     };
 
-    const submitIfComplete = () => {
-      if (boxes.every(b => b.value.length === 1)) {
-        syncHidden();
-        form.submit();
-      }
-    };
-
     boxes.forEach((box, i) => {
       box.addEventListener('input', (e) => {
         // Keep only the last typed digit (handles autofill mid-box too).
@@ -177,7 +170,6 @@
         box.classList.toggle('filled', box.value.length === 1);
         syncHidden();
         if (box.value && i < 5) boxes[i + 1].focus();
-        submitIfComplete();
       });
 
       box.addEventListener('keydown', (e) => {
@@ -210,7 +202,6 @@
         const nextIdx = Math.min(i + digits.length, 5);
         boxes[nextIdx].focus();
         syncHidden();
-        submitIfComplete();
       });
 
       box.addEventListener('focus', () => box.select());

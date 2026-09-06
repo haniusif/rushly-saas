@@ -8,7 +8,7 @@ return [
         'cod-charges' => [
             'icon'    => 'Settings',
             'label'   => 'COD charges',
-            'purpose' => 'Per-location COD percentage / flat fee applied when a parcel collects cash on delivery. Read-only on this side — managed by the operator.',
+            'purpose' => 'Per-location COD percentage / flat fee applied when a shipment collects cash on delivery. Read-only on this side — managed by the operator.',
             'pages' => [
                 ['path' => 'Index', 'desc' => 'Table of locations with the corresponding COD charge. Filter by location to find a specific row.'],
             ],
@@ -36,7 +36,7 @@ return [
         'pickup-points' => [
             'icon'    => 'Store',
             'label'   => 'Pickup points (shops)',
-            'purpose' => 'The list of your physical pickup locations — each parcel is collected from one of them. Add a new one when you open a new branch.',
+            'purpose' => 'The list of your physical pickup locations — each shipment is collected from one of them. Add a new one when you open a new branch.',
             'pages' => [
                 ['path' => 'Index',  'desc' => 'List of registered pickup points: name, contact, address, status.'],
                 ['path' => 'Create', 'desc' => 'Add a new pickup point: name, contact person, phone, city, area, address.'],
@@ -50,7 +50,7 @@ return [
                 ['label' => 'Inactive', 'tone' => 'default'],
             ],
             'cross_links' => 'Selected on every shipment in Create — only Active pickup points are listed in the dropdown.',
-            'notes'       => 'Deactivating a pickup point does not affect parcels already picked up from it; it only hides it from new shipments.',
+            'notes'       => 'Deactivating a pickup point does not affect shipments already picked up from it; it only hides it from new shipments.',
         ],
 
     ],

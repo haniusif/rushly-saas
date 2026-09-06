@@ -30,5 +30,7 @@ return [
     'current_balance'                 => 'Current Balance',
     'payment_withdrawal'              => 'Payment Withdrawal',
     'merchant_payment_withdrawal'     => 'Client Payment Withdrawal',
-    'merchant_details'                =>  'Client Details'
+    'merchant_details'                =>  'Client Details',
+    'shipment_ids' => 'Shipment IDs',
+    'total_cod' => 'Total COD',
 ];

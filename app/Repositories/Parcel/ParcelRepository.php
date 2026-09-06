@@ -287,6 +287,26 @@ public function filter($request, $paginate = 10)
                     $query->where('invoice_no', 'like', '%' . $request->invoice_id . '%');
                 }
 
+                // Free-text search. It used to live only on the separate
+                // parcel.specific.search endpoint, which applied NO other
+                // filter — so searching dropped the filters and filtering
+                // dropped the search, silently, in both directions. Handling
+                // it here lets the two compose. Grouped so the ORs cannot
+                // widen the surrounding AND chain.
+                if (trim((string) $request->search) !== '') {
+                    $term = trim((string) $request->search);
+                    $query->where(function ($q) use ($term) {
+                        $q->where('tracking_id', 'like', '%' . $term . '%')
+                          ->orWhere('customer_name', 'like', '%' . $term . '%')
+                          ->orWhere('customer_phone', 'like', '%' . $term . '%')
+                          ->orWhere('customer_address', 'like', '%' . $term . '%')
+                          ->orWhere('invoice_no', 'like', '%' . $term . '%')
+                          ->orWhereHas('merchant', function ($m) use ($term) {
+                              $m->where('business_name', 'like', '%' . $term . '%');
+                          });
+                    });
+                }
+
                 // ✅ Filter parcels that have or don’t have 3PL records
                 if ($has_3pl !== null) {
                     if ($has_3pl) {
@@ -337,6 +357,26 @@ public function filter($request, $paginate = 10)
 
                 if ($request->invoice_id) {
                     $query->where('invoice_no', 'like', '%' . $request->invoice_id . '%');
+                }
+
+                // Free-text search. It used to live only on the separate
+                // parcel.specific.search endpoint, which applied NO other
+                // filter — so searching dropped the filters and filtering
+                // dropped the search, silently, in both directions. Handling
+                // it here lets the two compose. Grouped so the ORs cannot
+                // widen the surrounding AND chain.
+                if (trim((string) $request->search) !== '') {
+                    $term = trim((string) $request->search);
+                    $query->where(function ($q) use ($term) {
+                        $q->where('tracking_id', 'like', '%' . $term . '%')
+                          ->orWhere('customer_name', 'like', '%' . $term . '%')
+                          ->orWhere('customer_phone', 'like', '%' . $term . '%')
+                          ->orWhere('customer_address', 'like', '%' . $term . '%')
+                          ->orWhere('invoice_no', 'like', '%' . $term . '%')
+                          ->orWhereHas('merchant', function ($m) use ($term) {
+                              $m->where('business_name', 'like', '%' . $term . '%');
+                          });
+                    });
                 }
 
                 // ✅ Filter parcels that have or don’t have 3PL records

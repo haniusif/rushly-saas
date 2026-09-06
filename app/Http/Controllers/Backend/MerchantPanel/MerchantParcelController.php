@@ -90,11 +90,59 @@ class MerchantParcelController extends Controller
         ]);
     }
 
+    /**
+     * Per-status counts for the chip strip above the merchant's parcel list.
+     *
+     * One grouped query rather than a count per chip, and always scoped to
+     * THIS merchant — the admin equivalent counts the whole company, which
+     * would leak other merchants' volumes onto a merchant-facing page.
+     *
+     * The parcel-bank page counts only banked parcels so its chips agree with
+     * the rows below them.
+     */
+    private function statusCounts(int $merchantId, string $pageKind): array
+    {
+        $base = \App\Models\Backend\Parcel::query()->where('merchant_id', $merchantId);
+        if ($pageKind === 'bank') {
+            $base->where('parcel_bank', 'on');
+        }
+
+        $counts = (clone $base)
+            ->selectRaw('status, COUNT(*) as c')
+            ->groupBy('status')
+            ->pluck('c', 'status');
+
+        $one = fn ($status) => (int) ($counts[$status] ?? 0);
+
+        return [
+            'total'     => (int) $counts->sum(),
+            'pending'   => $one(\App\Enums\ParcelStatus::PENDING),
+            'assigned'  => $one(\App\Enums\ParcelStatus::PICKUP_ASSIGN),
+            'picked_up' => $one(\App\Enums\ParcelStatus::RECEIVED_WAREHOUSE),
+            'ofd'       => $one(\App\Enums\ParcelStatus::DELIVERY_MAN_ASSIGN),
+            'delivered' => $one(\App\Enums\ParcelStatus::DELIVERED),
+            'returned'  => $one(\App\Enums\ParcelStatus::RETURN_RECEIVED_BY_MERCHANT),
+            // Deliberately counts ONLY status CANCELLED, not the whole family of
+            // *_CANCEL codes. Clicking the chip filters on a single status
+            // (MerchantParcelRepository::filter does `where status = ?`), so an
+            // aggregated count would advertise a number the filtered list can
+            // never show. The admin list has that mismatch; not reproducing it.
+            'cancelled' => $one(\App\Enums\ParcelStatus::CANCELLED),
+            'failed'    => $one(\App\Enums\ParcelStatus::DELIVERY_RE_SCHEDULE),
+        ];
+    }
+
     private function renderParcelList(string $component, Request $request, $paginator, $merchant, array $cfg)
     {
         $i = (($paginator->currentPage() - 1) * $paginator->perPage()) + 1;
         $statusList = (array) trans('merchantParcelStatusFilter');
         $currency   = settings()->currency;
+        $kpiCounts  = $this->statusCounts($merchant->id, $cfg['page_kind']);
+
+        // The row now renders city, area, shop and 3PL. Load them for the whole
+        // page in one go — per row that would be four queries x 10 rows. Done on
+        // the collection so the repository's query methods stay untouched.
+        $paginator->getCollection()->load(['city', 'area', 'shop', 'lastParcel3pl']);
 
         $rows = collect($paginator->items())->map(function ($p) use (&$i, $statusList) {
             return [
@@ -106,21 +154,76 @@ class MerchantParcelController extends Controller
                 'customer_phone'=> $p->customer_phone,
                 'amount'        => (float) ($p->cash_collection ?? 0),
                 'status'        => (int) $p->status,
-                'status_label'  => $statusList[$p->status] ?? (string) $p->status,
+                // merchantParcelStatusFilter only covers 7 of the status codes
+                // (1,2,5,7,9,26,32), so anything else — Returned (30),
+                // Cancelled (41) — used to fall through to the raw NUMBER and
+                // the column literally read "30" / "41". Fall back to the
+                // canonical label instead; the number is the last resort.
+                'status_label'  => $statusList[$p->status]
+                    ?? (\App\Support\ParcelStatusHelper::label((int) $p->status) ?: (string) $p->status),
+                // Same curated hex the admin list renders its pills from, so
+                // both pages colour a given status identically.
+                'status_color'  => \App\Support\ParcelStatusHelper::color((int) $p->status),
                 'payment_label' => strip_tags((string) ($p->payment_status_string ?? '')),
                 'created_at'    => optional($p->created_at)->toDateTimeString(),
+                'updated_at'    => optional($p->updated_at)->format('Y-m-d H:i'),
+
+                // Recipient detail — the admin list shows city/area/address
+                // under the name, so the merchant list does too.
+                'customer_address' => (string) ($p->customer_address ?? ''),
+                'city'          => optional($p->city)->en_name ?: optional($p->city)->name,
+                'area'          => optional($p->area)->en_name ?: optional($p->area)->name,
+
+                // The admin list's CLIENT column names the merchant. On a
+                // merchant's own list that is always themselves, so it carries
+                // no information — the shop the shipment was booked from is the
+                // useful equivalent.
+                'shop_name'     => optional($p->shop)->name,
+
+                // Charge breakdown, matching the admin AMOUNT cell.
+                'total_delivery_amount' => (float) ($p->total_delivery_amount ?? 0),
+                'vat_amount'            => (float) ($p->vat_amount ?? 0),
+                'current_payable'       => (float) ($p->current_payable ?? 0),
+
+                'partial_delivered'       => (bool) ($p->partial_delivered ?? false),
+                'partial_delivered_label' => \App\Support\ParcelStatusHelper::label(\App\Enums\ParcelStatus::PARTIAL_DELIVERED),
+                'attempts'      => (int) ($p->number_of_attempts ?? 0),
+                'priority'      => (int) ($p->priority_type_id ?? 2),
+                // The single transition a merchant may make, or null. Mirrors
+                // MERCHANT_ALLOWED_TRANSITIONS so the UI cannot offer more than
+                // the endpoint accepts.
+                'can_cancel'    => (int) $p->status === ParcelStatus::PENDING,
+                'courier_name'  => $p->lastParcel3pl
+                    ? (optional($p->lastParcel3pl)->company_name ?: optional($p->lastParcel3pl)->parcel_3pl_name)
+                    : null,
+
                 'details_url'   => route('merchant-panel.parcel.details', $p->id),
                 'logs_url'      => route('merchant-panel.parcel.logs', $p->id),
+                'urls'          => [
+                    'view'        => route('merchant-panel.parcel.details', $p->id),
+                    'logs'        => route('merchant-panel.parcel.logs', $p->id),
+                    'clone'       => route('merchant-parcel.clone', $p->id),
+                    'edit'        => route('merchant-panel.parcel.edit', $p->id),
+                    'delete'      => route('merchant-panel.parcel.delete', $p->id),
+                    'print'       => route('merchant-panel.parcel.print', $p->id),
+                    'print_label' => route('merchant-panel.parcel.print-label', $p->id),
+                    // Only meaningful once delivered, same rule as the admin list.
+                    'delivered_info' => (int) $p->status === \App\Enums\ParcelStatus::DELIVERED
+                        ? route('merchant-panel.parcel.delivered-info', $p->id)
+                        : null,
+                ],
             ];
         })->values();
 
         $statusOptions = collect($statusList)->map(fn ($label, $key) => [
             'value' => (string) $key,
             'label' => (string) $label,
+            'color' => \App\Support\ParcelStatusHelper::color((int) $key),
         ])->values();
 
         return Inertia::render($component, [
             'rows'       => $rows,
+            'kpi_counts' => $kpiCounts,
             'currency'   => $currency,
             'filters'    => [
                 'parcel_date'           => $request->parcel_date,
@@ -145,7 +248,18 @@ class MerchantParcelController extends Controller
                     'active' => (bool) $l['active'],
                 ])->values(),
             ],
+            'permissions' => [
+                // Both routes exist for merchants. Status change is deliberately
+                // NOT surfaced — see the note on statusUpdate().
+                'update' => true,
+                'delete' => true,
+            ],
             'urls' => [
+                // The drawer appends /{id}; the admin page uses its own base.
+                'tracking_json_base' => url('/merchant/parcel/tracking-json'),
+                'priority_status'    => route('merchant-panel.parcel.priority-update'),
+                'bulk_print_labels'  => route('merchant-panel.parcel.bulk-print-labels'),
+                'bulk_cancel'        => route('merchant-panel.parcel.bulk-cancel'),
                 'create'       => route('merchant-panel.parcel.create'),
                 'filter'       => route('merchant-panel.parcel.filter'),
                 'reset'        => $cfg['page_kind'] === 'bank'
@@ -183,6 +297,51 @@ class MerchantParcelController extends Controller
                 'view'          => __('levels.view') ?: 'View',
                 'logs'          => __('parcel.logs') ?: 'Logs',
                 'empty'         => __('levels.no_data_found') ?: ($cfg['page_kind'] === 'bank' ? 'No parcels in bank.' : 'No parcels yet.'),
+                'list'          => __('levels.list') ?: 'List',
+                'all'           => __('levels.all') ?: 'All',
+                'date_label'    => __('parcel.date') ?: 'Date',
+                'status_label'  => __('parcel.status') ?: 'Status',
+                'showing'       => __('levels.showing') ?: 'Showing',
+                'of'            => __('levels.of') ?: 'of',
+                'active'        => __('levels.active') ?: 'active',
+                'view_list'     => __('levels.list') ?: 'List',
+                'view_cards'    => __('levels.cards') ?: 'Cards',
+                // Chip strip above the table. Same keys the admin list uses.
+                'chip_total'     => __('parcel.chip_total')     ?: 'Total',
+                'chip_pending'   => __('parcel.chip_pending')   ?: 'Pending',
+                'chip_assigned'  => __('parcel.chip_assigned')  ?: 'Assigned',
+                'chip_picked_up' => __('parcel.chip_picked_up') ?: 'Picked up',
+                'chip_ofd'       => __('parcel.chip_ofd')       ?: 'OFD',
+                'chip_delivered' => __('parcel.chip_delivered') ?: 'Delivered',
+                'chip_returned'  => __('parcel.chip_returned')  ?: 'Returned',
+                'chip_cancelled' => __('parcel.chip_cancelled') ?: 'Cancelled',
+                'chip_failed'    => __('parcel.chip_failed')    ?: 'Failed',
+                // Columns ported from the admin list.
+                'shop'            => __('menus.shop') ?: 'Shop',
+                'cod'             => __('parcel.cod') ?: 'COD',
+                'total_charge'    => __('parcel.total_charge') ?: 'Total charge',
+                'vat'             => __('parcel.vat') ?: 'VAT',
+                'current_payable' => __('parcel.current_payable') ?: 'Current payable',
+                'updated_on'      => __('parcel.updated_on') ?: 'Updated on',
+                'attempts'        => __('parcel.attempts') ?: 'Attempts',
+                'courier_name'    => __('parcel.courier_name') ?: 'Courier',
+                'clone'           => __('levels.clone') ?: 'Clone',
+                'edit'            => __('levels.edit') ?: 'Edit',
+                'delete'          => __('levels.delete') ?: 'Delete',
+                'actions'         => __('levels.actions') ?: 'Actions',
+                'delete_confirm'  => 'Delete this shipment?',
+                'print_label'     => __('parcel.print_label') ?: 'Print label',
+                'print'           => __('parcel.print') ?: 'Print',
+                'pod'             => __('parcel.pod') ?: 'POD',
+                'track'           => __('parcel.track') ?: 'Track shipment',
+                'search_all_ph'   => 'Tracking ID, customer or phone',
+                'priority'          => __('parcel.priority') ?: 'Priority',
+                'status_update'     => __('parcel.status_update') ?: 'Status',
+                'change_status'     => __('parcel.change_status') ?: 'Change',
+                'bulk_print_labels' => __('parcel.bulk_print_labels') ?: 'Print labels',
+                'bulk_cancel'       => __('parcel.bulk_cancel') ?: 'Cancel selected',
+                'selected'          => __('parcel.selected') ?: 'selected',
+                'cancel_confirm'    => 'Cancel the selected shipment(s)? Only Pending ones will be cancelled.',
             ],
         ]);
     }
@@ -704,16 +863,77 @@ class MerchantParcelController extends Controller
 
 
     // Parcel update
+    /**
+     * Fetch a parcel that belongs to the signed-in merchant, or abort.
+     *
+     * Parcel carries a tenant global scope, so a lookup can never cross into
+     * another COMPANY. It does not, however, distinguish two merchants inside
+     * the same company — for that the merchant_id has to be checked explicitly,
+     * which is what details(), logs() and edit() already do inline. The write
+     * paths below did not, so any merchant could address a sibling merchant's
+     * shipment by id.
+     */
+    private function ownedParcelOrAbort($id)
+    {
+        $parcel   = $this->repo->get($id);
+        $merchant = $this->currentMerchant();
+
+        if (! $parcel) {
+            abort(404);
+        }
+        if (! $merchant || (int) $parcel->merchant_id !== (int) $merchant->id) {
+            abort(403);
+        }
+
+        return $parcel;
+    }
+
+    /**
+     * Statuses a merchant may set on their own shipment, keyed by the status it
+     * may be moved FROM.
+     *
+     * Deliberately tiny. Before this, the endpoint accepted any status id, so a
+     * merchant could mark their own shipment Delivered — which drives COD
+     * settlement — or push a sibling merchant's shipment into any state at all.
+     * The rule mirrors what the app already tells merchants in the knowledge
+     * base: changes are theirs to make only while the shipment is still
+     * Pending; after pickup it belongs to the courier and goes through Support.
+     */
+    private const MERCHANT_ALLOWED_TRANSITIONS = [
+        ParcelStatus::PENDING => [ParcelStatus::CANCELLED],
+    ];
+
     public function statusUpdate($id, $status_id)
     {
-        $this->repo->statusUpdate($id, $status_id);
-        Toastr::success(__('parcel.update_msg'),__('message.success'));
+        $parcel   = $this->ownedParcelOrAbort($id);
+        $from     = (int) $parcel->status;
+        $to       = (int) $status_id;
+        $allowed  = self::MERCHANT_ALLOWED_TRANSITIONS[$from] ?? [];
+
+        if (! in_array($to, $allowed, true)) {
+            Toastr::error(__('parcel.status_change_not_allowed'), __('message.error'));
+            return redirect()->route('merchant-panel.parcel.index');
+        }
+
+        $this->repo->statusUpdate($id, $to, $parcel->merchant_id);
+        Toastr::success(__('parcel.update_msg'), __('message.success'));
+
         return redirect()->route('merchant-panel.parcel.index');
     }
 
     public function update(StoreRequest $request,$id)
     {
         $userID = Auth::user()->id;
+
+        // edit() already refuses another merchant's shipment and anything past
+        // Pending; the write half enforced neither, so the form guard could be
+        // walked straight around by POSTing to this route.
+        $parcel = $this->ownedParcelOrAbort($id);
+        if ((int) $parcel->status !== ParcelStatus::PENDING) {
+            Toastr::error(__('parcel.edit_error_message'), __('message.error'));
+            return redirect()->route('merchant-panel.parcel.index');
+        }
+
         if($this->repo->update($id, $request,$userID)){
             Toastr::success(__('parcel.update_msg'),__('message.success'));
             return redirect()->route('merchant-panel.parcel.index');
@@ -727,7 +947,9 @@ class MerchantParcelController extends Controller
     public function destroy($id)
     {
         $userID = Auth::user()->id;
-        $parcel = $this->repo->get($id);
+        // Was checking the status but not the owner, so a merchant could delete
+        // a sibling merchant's Pending shipment.
+        $parcel = $this->ownedParcelOrAbort($id);
         if($parcel->status == ParcelStatus::PENDING){
             $this->repo->delete($id,$userID);
             Toastr::success(__('parcel.delete_msg'),__('message.success'));
@@ -737,6 +959,138 @@ class MerchantParcelController extends Controller
             Toastr::error(__('parcel.delete_error_message'),__('message.error'));
             return redirect()->route('merchant-panel.parcel.index');
         }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Label / print / tracking — merchant-side mirrors of the admin endpoints
+    |--------------------------------------------------------------------------
+    | The rendering itself lives in ParcelController and is reused rather than
+    | duplicated: the label PDF, the tracking JSON and the delivered-info page
+    | are the same artefacts, and a second copy would drift.
+    |
+    | What differs is authorisation. The admin controller resolves a shipment
+    | with a bare repo->get($id), which is correct there — an admin may see any
+    | shipment in the tenant. A merchant may not, so every one of these guards
+    | ownership first and only then delegates.
+    */
+
+    public function printLabel($id)
+    {
+        $parcel = $this->ownedParcelOrAbort($id);
+
+        return app(\App\Http\Controllers\Backend\ParcelController::class)
+            ->printMultipleParcelLabels(collect([$parcel]));
+    }
+
+    public function printWithTracking($id)
+    {
+        $this->ownedParcelOrAbort($id);
+
+        return app(\App\Http\Controllers\Backend\ParcelController::class)->parcelPrint($id);
+    }
+
+    public function trackingJson($id)
+    {
+        $this->ownedParcelOrAbort($id);
+
+        return app(\App\Http\Controllers\Backend\ParcelController::class)->trackingJson($id);
+    }
+
+    public function deliveredInfo($id)
+    {
+        $this->ownedParcelOrAbort($id);
+
+        return app(\App\Http\Controllers\Backend\ParcelController::class)->deliveredInfo($id);
+    }
+
+    /**
+     * Flip the priority flag on the merchant's own shipment.
+     *
+     * Mirrors ParcelController::priorityUpdate, including its inverted
+     * contract: the client posts the CURRENT value and the server flips it
+     * (receives 1 -> stores 2, anything else -> stores 1). Priority is already
+     * a field merchants set on the booking form, so exposing the toggle grants
+     * nothing new — but the lookup is scoped, unlike the admin one, which may
+     * legitimately reach any shipment in the tenant.
+     */
+    public function priorityUpdate(Request $request)
+    {
+        $parcel = $this->ownedParcelOrAbort($request->id);
+
+        $parcel->priority_type_id = (1 === (int) $request->priority) ? 2 : 1;
+        $parcel->save();
+
+        return response()->json(['id' => $parcel->id, 'priority' => $parcel->priority_type_id]);
+    }
+
+    /**
+     * Print labels for several shipments at once.
+     *
+     * The id list arrives from the client, so it is filtered to this
+     * merchant's shipments before anything is rendered — a merchant cannot
+     * widen the set by adding ids they do not own. Reuses the admin renderer.
+     */
+    public function bulkPrintLabels(Request $request)
+    {
+        $merchant = $this->currentMerchant();
+        $ids      = array_filter(array_map('intval', (array) $request->input('ids', [])));
+
+        if (! $ids) {
+            Toastr::error(__('parcel.no_data_to_preview'), __('message.error'));
+            return redirect()->route('merchant-panel.parcel.index');
+        }
+
+        $parcels = \App\Models\Backend\Parcel::whereIn('id', $ids)
+            ->where('merchant_id', $merchant->id)
+            ->get();
+
+        if ($parcels->isEmpty()) {
+            abort(403);
+        }
+
+        return app(\App\Http\Controllers\Backend\ParcelController::class)
+            ->printMultipleParcelLabels($parcels);
+    }
+
+    /**
+     * Cancel several shipments at once.
+     *
+     * Same policy as the single-shipment path: this merchant's shipments only,
+     * and only those still Pending. Anything else in the selection is skipped
+     * rather than failing the whole batch, and the count of each is reported.
+     */
+    public function bulkCancel(Request $request)
+    {
+        $merchant = $this->currentMerchant();
+        $ids      = array_filter(array_map('intval', (array) $request->input('ids', [])));
+
+        if (! $ids) {
+            return redirect()->route('merchant-panel.parcel.index');
+        }
+
+        $parcels = \App\Models\Backend\Parcel::whereIn('id', $ids)
+            ->where('merchant_id', $merchant->id)
+            ->get();
+
+        $cancelled = 0;
+        foreach ($parcels as $parcel) {
+            if ((int) $parcel->status !== ParcelStatus::PENDING) {
+                continue;
+            }
+            $this->repo->statusUpdate($parcel->id, ParcelStatus::CANCELLED, $merchant->id);
+            $cancelled++;
+        }
+
+        $skipped = count($ids) - $cancelled;
+        if ($cancelled) {
+            Toastr::success(__('parcel.bulk_cancelled', ['count' => $cancelled]), __('message.success'));
+        }
+        if ($skipped > 0) {
+            Toastr::error(__('parcel.bulk_cancel_skipped', ['count' => $skipped]), __('message.error'));
+        }
+
+        return redirect()->route('merchant-panel.parcel.index');
     }
 
     public function parcelImportExport()

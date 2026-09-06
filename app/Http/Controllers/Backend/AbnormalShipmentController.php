@@ -44,7 +44,7 @@ class AbnormalShipmentController extends Controller
             'closed_lost'=> (clone $base)->where('status', 'closed_lost')->count(),
         ];
 
-        $deliverymans = $this->deliveryman->all();
+        $deliverymans = $this->deliveryman->selectable();
         $threshold    = $this->repo->getThresholdDays();
 
         $rows = collect($paginator->items())->map(fn ($a) => [
@@ -132,7 +132,7 @@ class AbnormalShipmentController extends Controller
         }
         $a->loadMissing(['parcel.merchant', 'assignedTo']);
 
-        $deliverymans = $this->deliveryman->all();
+        $deliverymans = $this->deliveryman->selectable();
         $events       = ParcelEvent::where('parcel_id', $a->parcel_id)
                             ->orderByDesc('id')->limit(15)->get();
         $autoEscalate = max(1, (int) $this->getConfig('abnormal_auto_escalation_days', 7));

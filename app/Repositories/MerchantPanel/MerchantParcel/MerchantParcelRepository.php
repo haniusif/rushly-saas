@@ -113,10 +113,32 @@ public function parcel_by_daterange($merchant_id, $from, $to , $paginate = 10)
             ->first();
     }
 
-    public function statusUpdate($id, $status_id) {
-        $parcel         = Parcel::find($id);
+    /**
+     * Set a shipment's status.
+     *
+     * $merchantId is required and is applied to the lookup. The controller
+     * already refuses another merchant's shipment, but this method is a public
+     * entry point on the repository — scoping here too means a future caller
+     * cannot reintroduce the hole by forgetting the guard. Previously this was
+     * a bare Parcel::find($id) with no owner and no whitelist.
+     *
+     * Returns false when the shipment is not this merchant's, rather than
+     * fataling on null as it used to.
+     */
+    public function statusUpdate($id, $status_id, $merchantId = null) {
+        $query = Parcel::where('id', $id);
+        if ($merchantId !== null) {
+            $query->where('merchant_id', $merchantId);
+        }
+
+        $parcel = $query->first();
+        if (! $parcel) {
+            return false;
+        }
+
         $parcel->status = $status_id;
         $parcel->save();
+
         return true;
     }
 

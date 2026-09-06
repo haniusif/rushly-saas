@@ -31,5 +31,6 @@ return array (
   'added_msg'                => 'Cash received from Couriers successfully.',
   'added_msg'                => 'Account successfully added.',
   'not_enough_balance'       => 'Not Enough Balance.',
-  'subscribe'                => 'Subscribe'
+  'subscribe'                => 'Subscribe',
+    'update_account' => 'Account could not be updated.',
 );

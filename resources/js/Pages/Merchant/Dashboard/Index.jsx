@@ -235,15 +235,12 @@ export default function Index({
     ];
 
     return (
-        <MerchantLayout title={t.merchant_dashboard} breadcrumbs={[t.dashboard, t.merchant_dashboard]}>
+        <MerchantLayout title={t.merchant_dashboard}>
             <Head title={t.merchant_dashboard} />
 
-            {/* Header + filter */}
-            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-5">
-                <div>
-                    <h1 className="text-2xl font-semibold mb-1">{t.merchant_dashboard}</h1>
-                    <p className="text-sm text-muted-foreground m-0">{t.dashboard}</p>
-                </div>
+            {/* Date filter. The page heading is drawn by MerchantLayout from
+                the `title` prop — do not re-render it here. */}
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-end gap-3 mb-5">
                 <form onSubmit={onFilter} className="flex items-center gap-2">
                     <div className="relative">
                         <Calendar className="absolute top-1/2 start-3 -translate-y-1/2 text-muted-foreground h-3.5 w-3.5" />

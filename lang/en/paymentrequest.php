@@ -9,4 +9,6 @@ return [
         'update_msg'      => 'Payment request submited successfully update.',
         'deleted_msg'     => 'Payment request successfully deleted.',
         'error_msg'       => 'Something went wrong.',
+
+    'delete_msg' => 'Payment request deleted successfully.',
 ];

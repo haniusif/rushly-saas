@@ -72,8 +72,8 @@ return [
     //salary
     'parcel_reports'               => 'Shipment Reports',
     'all_reports'                  => 'All Reports',
-    'parcels_chart'                => 'Parcels — last 8 days',
-    'parcels_breakdown'            => 'Parcels by status',
+    'parcels_chart'                => 'Shipments — last 8 days',
+    'parcels_breakdown'            => 'Shipments by status',
     'series_total'                 => 'Total',
     'current_balance'              => 'Current Balance',
     'opening_balance'              => 'Opening Balance',
@@ -105,9 +105,9 @@ return [
     // Inertia admin dashboard (Admin/Dashboard/Index.jsx) — labels passed
     // as the `t` prop by DashbordController::adminDashboardLabels().
     'ledger_summary'               => 'Ledger summary',
-    'recent_parcels'               => 'Recent parcels',
+    'recent_parcels'               => 'Recent shipments',
     'hub_parcels_title'            => 'Top hubs',
-    'pipeline_title'               => 'Parcel pipeline',
+    'pipeline_title'               => 'Shipment pipeline',
     'pipeline_assigned'            => 'Assigned to courier',
     'pipeline_partial'             => 'Partial delivery',
     'pipeline_delivered'           => 'Delivered',
@@ -131,8 +131,8 @@ return [
     'accounts'                  => 'Accounts',
     'bank_balance'              => 'Bank balance',
     'bank_opening_balance'      => 'Bank opening balance',
-    'parcels_profit'            => 'Parcels profit',
-    'parcels_sales'             => 'Parcels sales',
+    'parcels_profit'            => 'Shipments profit',
+    'parcels_sales'             => 'Shipments sales',
     'payable_amount'            => 'Payable amount',
     'payments'                  => 'Payments',
     'pending_amount'            => 'Pending amount',

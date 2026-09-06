@@ -17,7 +17,7 @@ return [
             'fields' => [
                 'date_range', 'status', 'cash_collection', 'count',
             ],
-            'cross_links' => 'Same parcels appear individually in Shipments. The aggregated cash-collection figure matches Total Summary.',
+            'cross_links' => 'Same shipments appear individually in Shipments. The aggregated cash-collection figure matches Total Summary.',
             'notes'       => 'The report is generated live each time you filter — there is no cache. Large date ranges can take a few seconds.',
         ],
 
@@ -63,7 +63,7 @@ return [
             'pages' => [
                 ['path' => 'Filter',  'desc' => 'Filter by date, transaction type (INCOME / EXPENSE) or tracking id.'],
                 ['path' => 'Results', 'desc' => 'Rows show date, tracking id, type, amount and the running balance after that line.'],
-                ['path' => 'Details', 'desc' => 'Each row links to the parcel and the originating event (delivery, return, charge adjustment).'],
+                ['path' => 'Details', 'desc' => 'Each row links to the shipment and the originating event (delivery, return, charge adjustment).'],
             ],
             'fields' => [
                 'statement_id', 'date', 'tracking_id', 'type', 'amount', 'note',

@@ -186,6 +186,10 @@ return [
         'weight' => 'The Weight has already been taken.',
         'user_assigned' => 'The User already assigned.',
         'user_exists' => 'The User already exists.',
+            'same_day' => 'Same day',
+        'next_day' => 'Next day',
+        'sub_city' => 'Sub city',
+        'outside_city' => 'Outside city',
     ],
 
 ];

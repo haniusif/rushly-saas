@@ -39,7 +39,7 @@ class NdrController extends Controller
         $paginator      = $this->repo->all($request);
         $stats          = $this->repo->stats();
         $failureReasons = $this->failureReasonOptions();
-        $deliverymans   = $this->deliveryman->all();
+        $deliverymans   = $this->deliveryman->selectable();
 
         $rows = collect($paginator->items())->map(fn ($n) => [
             'id'              => $n->id,

@@ -463,9 +463,36 @@ class PermissionSeeder extends Seeder
                 'regenerate' => 'zatca_regenerate',
             ],
 
+            // Geographic reference data: countries / cities / areas. These
+            // tables carry NO company_id, so the rows are shared by every
+            // tenant — the screens say so, and delete is refused while
+            // anything still references the row.
+            'country' => [
+                'read'   => 'country_read',
+                'create' => 'country_create',
+                'update' => 'country_update',
+                'delete' => 'country_delete',
+            ],
+
+            'city' => [
+                'read'   => 'city_read',
+                'create' => 'city_create',
+                'update' => 'city_update',
+                'delete' => 'city_delete',
+            ],
+
+            'area' => [
+                'read'   => 'area_read',
+                'create' => 'area_create',
+                'update' => 'area_update',
+                'delete' => 'area_delete',
+            ],
+
             // Knowledge Base — gates the per-sub-page screenshot upload/delete
-            // (and the WMS KB equivalents). Read remains open to any logged-in
-            // admin; only writes are permission-gated.
+            // (and the WMS KB equivalents). `knowledge_base_read` now gates the
+            // page itself but is deliberately absent from THIS (tenant) catalog:
+            // the admin KB is platform-facing, so tenant role editors must not be
+            // able to grant it back. It lives in the super-admin catalog only.
             'knowledge_base' => [
                 'update' => 'knowledge_base_update',
             ],
@@ -526,7 +553,19 @@ class PermissionSeeder extends Seeder
             ],
 
             'knowledge_base' => [
+                'read'   => 'knowledge_base_read',
                 'update' => 'knowledge_base_update',
+            ],
+
+            // Platform-facing landing pages. Super-admin-only by design: both
+            // routes carry hasPermission middleware and neither key appears in
+            // the tenant catalog, so a company admin cannot grant them.
+            'summary'              => [
+                'read'             => 'summary_read',
+            ],
+
+            'operations_dashboard' => [
+                'read'             => 'operations_dashboard_read',
             ],
 
             'database_backup'       => [

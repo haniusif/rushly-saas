@@ -290,12 +290,12 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                 // XSS Protection
                 Route::get('/dashboard',             [DashbordController::class, 'index'])->name('dashboard.index');
                 // Lightweight home for tenant admins — KPIs, 7-day trend, recent shipments.
-                Route::get('/summary',               [\App\Http\Controllers\Backend\SummaryController::class, 'index'])->name('summary.index');
+                Route::get('/summary',               [\App\Http\Controllers\Backend\SummaryController::class, 'index'])->name('summary.index')->middleware('hasPermission:summary_read');
                 // Executive Operations Command Center — expanded KPI grid, health
                 // gauges, 14-day timeline, funnel, alerts, activity feed, quick
                 // actions. Same permission set as /summary since it's the same
                 // audience (tenant admins).
-                Route::get('/operations-dashboard',  [\App\Http\Controllers\Backend\OperationsController::class, 'index'])->name('operations.index');
+                Route::get('/operations-dashboard',  [\App\Http\Controllers\Backend\OperationsController::class, 'index'])->name('operations.index')->middleware('hasPermission:operations_dashboard_read');
 
                 // Onboarding tour engine — JSON endpoints consumed by the React
                 // TourProvider. Session-auth'd, tenant-scoped. Open to any
@@ -349,8 +349,8 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         // Reading is open to any logged-in admin; only screenshot
                         // upload/delete requires the knowledge_base_update permission.
                         Route::prefix('knowledge-base')->name('admin.kb.')->group(function () {
-                            Route::get('/',                                          [AdminKnowledgeBaseController::class, 'index'])->name('index');
-                            Route::get('{section}',                                  [AdminKnowledgeBaseController::class, 'show'])->name('show');
+                            Route::get('/',                                          [AdminKnowledgeBaseController::class, 'index'])->name('index')->middleware('hasPermission:knowledge_base_read');
+                            Route::get('{section}',                                  [AdminKnowledgeBaseController::class, 'show'])->name('show')->middleware('hasPermission:knowledge_base_read');
                             Route::post('{section}/screenshot/{sub}',                [AdminKnowledgeBaseController::class, 'uploadScreenshot'])->name('screenshot.upload')->middleware('hasPermission:knowledge_base_update');
                             Route::delete('{section}/screenshot/{sub}',              [AdminKnowledgeBaseController::class, 'deleteScreenshot'])->name('screenshot.delete')->middleware('hasPermission:knowledge_base_update');
                         });
@@ -535,7 +535,7 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                             Route::get('/pdf/{invoice_id}',     [MerchantInvoiceController::class, 'InvoicePdf'])->name('pdf')->middleware('hasPermission:invoice_read');
                             Route::get('/csv/{invoice_id}',     [MerchantInvoiceController::class, 'InvoiceCSV'])->name('csv')->middleware('hasPermission:invoice_read');
                         });
-                        Route::get('paid/invoice',               [MerchantInvoiceController::class, 'PaidInvoice'])->name('paid.invoice.index');
+                        Route::get('paid/invoice',               [MerchantInvoiceController::class, 'PaidInvoice'])->name('paid.invoice.index')->middleware('hasPermission:paid_invoice_read');
                         //liquid fragile
                         Route::get('liquid-fragile/index',  [LiquidFragileController::class, 'index'])->name('liquid-fragile.index')->middleware('hasPermission:liquid_fragile_read');
                         Route::get('liquid-fragile/edit',   [LiquidFragileController::class, 'edit'])->name('liquid.fragile.edit')->middleware('hasPermission:liquid_fragile_update');
@@ -1152,7 +1152,7 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         //Payout
                         Route::prefix('payout')->name('payout.')->group(function () {
                             //stripe payment gateway
-                            Route::get('/',                                     [PayoutController::class, 'index'])->name('index');
+                            Route::get('/',                                     [PayoutController::class, 'index'])->name('index')->middleware('hasPermission:payout_read');
                             Route::get('/merchant/payout',                      [PayoutController::class, 'merchantPayout'])->name('merchant.payout');
                             Route::get('/stripe',                               [PayoutController::class, 'stripe'])->name('merchant.stripe');
                             Route::post('/stripe/post',                         [PayoutController::class, 'stripePost'])->name('merchant.stripe.post');
@@ -1374,8 +1374,25 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::get('parcel/edit/{id}',       [MerchantParcelController::class, 'edit'])->name('merchant-panel.parcel.edit');
                         Route::get('parcel/details/{id}',    [MerchantParcelController::class, 'details'])->name('merchant-panel.parcel.details');
                         Route::get('parcel/logs/{id}',       [MerchantParcelController::class, 'logs'])->name('merchant-panel.parcel.logs');
+
+                        // Label / print / tracking. Each guards ownership then
+                        // delegates to ParcelController so the artefacts stay
+                        // identical to the admin ones.
+                        Route::get('parcel/print-label/{id}',    [MerchantParcelController::class, 'printLabel'])->name('merchant-panel.parcel.print-label');
+                        Route::get('parcel/print/{id}',          [MerchantParcelController::class, 'printWithTracking'])->name('merchant-panel.parcel.print');
+                        Route::get('parcel/tracking-json/{id}',  [MerchantParcelController::class, 'trackingJson'])->name('merchant-panel.parcel.tracking-json');
+                        Route::get('parcel/delivered-info/{id}', [MerchantParcelController::class, 'deliveredInfo'])->name('merchant-panel.parcel.delivered-info');
+
+                        // Priority toggle + bulk operations. All POST, all scoped to
+                        // the signed-in merchant's own shipments inside the controller.
+                        Route::post('parcel/priority/update',    [MerchantParcelController::class, 'priorityUpdate'])->name('merchant-panel.parcel.priority-update');
+                        Route::post('parcel/bulk/print-labels',  [MerchantParcelController::class, 'bulkPrintLabels'])->name('merchant-panel.parcel.bulk-print-labels');
+                        Route::post('parcel/bulk/cancel',        [MerchantParcelController::class, 'bulkCancel'])->name('merchant-panel.parcel.bulk-cancel');
                         Route::put('parcel/update/{id}',     [MerchantParcelController::class, 'update'])->name('merchant-panel.parcel.update');
-                        Route::get('parcel/status-update/{id}/{status_id}',   [MerchantParcelController::class, 'statusUpdate'])->name('merchant-panel.parcel.status-update');
+                        // POST, not GET: a state change behind a GET is triggerable by a
+                        // link, an <img> src or a prefetch, and carries no CSRF token. No UI
+                        // referenced this route, so changing the verb breaks nothing.
+                        Route::post('parcel/status-update/{id}/{status_id}',  [MerchantParcelController::class, 'statusUpdate'])->name('merchant-panel.parcel.status-update');
                         Route::delete('parcel/delete/{id}',     [MerchantParcelController::class, 'destroy'])->name('merchant-panel.parcel.delete');
                         Route::post('parcel/merchant',          [MerchantParcelController::class, 'getMerchant'])->name('merchant-panel.parcel.merchant.get');
                         Route::post('parcel/merchant/shops',    [MerchantParcelController::class, 'merchantShops'])->name('merchant-panel.parcel.merchant.shops');

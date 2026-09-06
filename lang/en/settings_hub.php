@@ -17,7 +17,7 @@ return [
     'delivery_category_desc' => 'Define how shipments are categorised across the operations flow.',
     'delivery_charge_desc'   => 'Configure per-zone or per-weight delivery pricing tables.',
     'delivery_type_desc'     => 'Standard, express, same-day — define your service levels.',
-    'liquid_desc'            => 'Flag liquid and fragile parcel handling rules.',
+    'liquid_desc'            => 'Flag liquid and fragile shipment handling rules.',
     'packaging_desc'         => 'Maintain packaging units used at fulfillment.',
     'assets_desc'            => 'Categorise warehouse assets and equipment.',
     'label_desc'             => 'Pick the shipping AWB label layout (5 carrier-style templates).',

@@ -21,7 +21,7 @@ return [
   'expense'              => 'Expense',
   'income'               => 'Income',
   'user_role'            => 'Users & Roles',
-  'parcel_bank'          => 'Parcels Bank',
+  'parcel_bank'          => 'Shipments Bank',
   'account_heads'        => 'Account Heads',
   'account'              => 'Account',
   'bank_transaction'     => 'Bank Transactions',
@@ -115,7 +115,7 @@ return [
 
    // Merchant panel pages
    'payment_received'            => 'Payments received',
-   'parcel_reports'              => 'Parcel reports',
+   'parcel_reports'              => 'Shipment reports',
    'reports'                     => 'Reports',
    'total_summery'               => 'Total summary',
 

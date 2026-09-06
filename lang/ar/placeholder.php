@@ -73,4 +73,6 @@ return [
     'client_id'                         => 'أدخل معرّف العميل',
     'client_secret'                     => 'أدخل سر العميل',
     'enter_address'         => 'أدخل العنوان',
+
+    'address' => 'العنوان',
 ];

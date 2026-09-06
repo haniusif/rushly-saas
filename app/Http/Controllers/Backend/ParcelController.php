@@ -123,17 +123,31 @@ class ParcelController extends Controller
      */
     private function renderParcelIndex($paginator, Request $request, $paginate)
     {
-        $deliverymans = $this->deliveryman->all();
+        $deliverymans = $this->deliveryman->selectable();
         $hubs         = $this->hub->all();
         $merchants    = \App\Models\Backend\Merchant::companywise()
             ->where('status', 1)
             ->orderBy('business_name')
             ->get(['id', 'business_name']);
 
+        // The courier column walks lastDeliveryMan -> deliveryMan -> user. Load
+        // that chain for the whole page in one pass; per row it is three
+        // queries, so a 10-row page was issuing thirty on its own.
+        $paginator->getCollection()->load(['lastDeliveryMan.deliveryMan.user']);
+
         $rows = collect($paginator->items())->map(function ($p) {
             $statusId = (int) $p->status;
             $invoice  = $p->admin_parcel_invoice ?? null;
-            $assignedDeliveryman = optional(optional($p->lastParcelEvent)->deliveryMan->user ?? null)->name;
+            // lastDeliveryMan, NOT lastParcelEvent. lastParcelEvent is the
+            // latest event of ANY kind, so as soon as anything happened after
+            // the assignment — a status change, a hub receipt, a delivery
+            // attempt — that newer event became the "last" one, its
+            // delivery_man_id was null, and the courier name silently vanished
+            // from the column. It only ever showed while the assignment was
+            // still the single most recent event, which in practice is almost
+            // never. lastDeliveryMan filters to driver-bearing events, which is
+            // what this column has always meant.
+            $assignedDeliveryman = optional(optional($p->lastDeliveryMan)->deliveryMan->user ?? null)->name;
             return [
                 'id'                    => $p->id,
                 'tracking_id'           => $p->tracking_id,
@@ -1054,7 +1068,7 @@ class ParcelController extends Controller
         return redirect()->back();
        
     }
-        $deliveryman    = $this->deliveryman->all();
+        $deliveryman    = $this->deliveryman->selectable();
         $data = [];
         if($parcel->lastParcel3pl){
           $lastParcel3pl = $parcel->lastParcel3pl;  

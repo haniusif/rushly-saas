@@ -8,10 +8,10 @@ return [
         'list' => [
             'icon'    => 'Package',
             'label'   => 'Shipments list',
-            'purpose' => 'Searchable table of every parcel you have created, with the current delivery status, tracking ID and the amount being collected on delivery.',
+            'purpose' => 'Searchable table of every shipment you have created, with the current delivery status, tracking ID and the amount being collected on delivery.',
             'pages' => [
                 ['path' => 'Index',          'desc' => 'Paginated list with filters: status, date range, tracking ID, customer phone. Row actions: view details, print label, view event log, clone, edit (when allowed), delete (when status is still Pending).'],
-                ['path' => 'Status badges',  'desc' => 'Colour-coded badges show where the parcel is in its lifecycle — Pending, Picked, In transit, At hub, Out for delivery, Delivered, Returned, Cancelled.'],
+                ['path' => 'Status badges',  'desc' => 'Colour-coded badges show where the shipment is in its lifecycle — Pending, Picked, In transit, At hub, Out for delivery, Delivered, Returned, Cancelled.'],
                 ['path' => 'Bulk select',    'desc' => 'Use the row checkboxes to print labels in batch or export the selection to Excel.'],
             ],
             'fields' => [
@@ -27,8 +27,8 @@ return [
                 ['label' => 'Returned',    'tone' => 'warn'],
                 ['label' => 'Cancelled',   'tone' => 'bad'],
             ],
-            'cross_links' => 'Each row links to the details page (full event timeline and proof of delivery), to the parcel logs, and — once delivered — to the matching invoice in Accounting.',
-            'notes'       => 'Editing and deletion are only allowed while the parcel is still Pending. After pickup, the parcel is on the courier and changes must be requested via Support.',
+            'cross_links' => 'Each row links to the details page (full event timeline and proof of delivery), to the shipment logs, and — once delivered — to the matching invoice in Accounting.',
+            'notes'       => 'Editing and deletion are only allowed while the shipment is still Pending. After pickup, the shipment is on the courier and changes must be requested via Support.',
         ],
 
         'create' => [
@@ -36,9 +36,9 @@ return [
             'label'   => 'Create shipment',
             'purpose' => 'Form to create a single shipment. The delivery charge, COD fee and VAT are calculated automatically from your pricing matrix the moment you pick a city + delivery type + weight.',
             'pages' => [
-                ['path' => 'Form',         'desc' => 'Sections: Pickup point (your shop), Recipient (name, phone, city, area, address), Package (weight, category, priority), Charges (auto-calculated). Submit to save as Pending — the parcel is now in the dispatch queue.'],
+                ['path' => 'Form',         'desc' => 'Sections: Pickup point (your shop), Recipient (name, phone, city, area, address), Package (weight, category, priority), Charges (auto-calculated). Submit to save as Pending — the shipment is now in the dispatch queue.'],
                 ['path' => 'Auto-pricing', 'desc' => 'As you change city / weight / delivery type, the delivery charge updates in real time. The COD charge depends on the cash_collection amount and your COD rate.'],
-                ['path' => 'Priority',     'desc' => 'Mark the parcel as Liquid / Fragile or High priority — couriers handle these differently and the charge may differ.'],
+                ['path' => 'Priority',     'desc' => 'Mark the shipment as Liquid / Fragile or High priority — couriers handle these differently and the charge may differ.'],
             ],
             'fields' => [
                 'shop_id', 'customer_name', 'customer_phone', 'customer_address',
@@ -61,7 +61,7 @@ return [
                 ['path' => 'Template','desc' => 'Download the latest CSV template from the Index page header. Column order matters; do not rename headers.'],
             ],
             'fields' => ['csv_file', 'expected_headers', 'valid_rows', 'invalid_rows'],
-            'cross_links' => 'Same downstream effect as Create — every imported row becomes a Pending parcel in the Shipments list.',
+            'cross_links' => 'Same downstream effect as Create — every imported row becomes a Pending shipment in the Shipments list.',
             'notes'       => 'Hard cap of 1000 rows per file. For larger batches, split the CSV. Imports run synchronously — keep the browser open until you see the success toast.',
         ],
 
@@ -82,8 +82,8 @@ return [
                 'cash_collection', 'cash_collected', 'delivery_charge',
                 'cod_charge', 'vat_amount', 'total_payable',
             ],
-            'cross_links' => 'Linked to Accounting (the invoice once delivered), to NDR (if any attempts failed), and to Reports (the parcel appears in Shipments report and Total summary).',
-            'notes'       => 'If a parcel is stuck at the same status for several days, it may show up under "Abnormal shipments" on the admin side — they will reach out via Support if action is needed.',
+            'cross_links' => 'Linked to Accounting (the invoice once delivered), to NDR (if any attempts failed), and to Reports (the shipment appears in Shipments report and Total summary).',
+            'notes'       => 'If a shipment is stuck at the same status for several days, it may show up under "Abnormal shipments" on the admin side — they will reach out via Support if action is needed.',
         ],
 
     ],

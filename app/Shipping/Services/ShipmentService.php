@@ -88,6 +88,14 @@ class ShipmentService
     public function createNow(Parcel $parcel, ShippingConnection $connection): Shipment
     {
         $shipment = $this->dispatchCreate($parcel, $connection);
+
+        // On a sync queue connection CreateShipmentJob has already run inside
+        // dispatchCreate, against its own freshly-loaded instance - which
+        // leaves this one stale, still carrying a null remote id. Without the
+        // refresh the guard below misses, executeCreate runs a second time,
+        // and the carrier is asked to create the same shipment twice.
+        $shipment = $shipment->fresh() ?: $shipment;
+
         if ($shipment->remote_shipment_id) {
             return $shipment;
         }

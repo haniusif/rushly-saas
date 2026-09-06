@@ -1,14 +1,17 @@
 import * as React from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
+import { createPortal } from 'react-dom';
 import {
     ArrowLeft, Edit, Printer, FileText, Phone, MapPin, MessageCircle,
     Package, Paperclip, Clock, Wallet, Receipt, Building2, Truck,
     Copy as CopyIcon, AlertCircle, ExternalLink, Hash, Calendar,
-    Flame,
+    Flame, X, Loader2,
 } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { Button } from '@/Components/ui/Button';
+import { Select } from '@/Components/ui/Select';
+import { Label } from '@/Components/ui/Label';
 import { cn } from '@/lib/utils';
 
 const COLOR_TO_CLASSES = {
@@ -143,10 +146,223 @@ function TimelineEvent({ event, isCreation }) {
     );
 }
 
+
+/**
+ * Hand this parcel to a courier company.
+ *
+ * Lives in a modal off the header rather than inline: handing a parcel over
+ * is an occasional action, and this page is read far more often than it is
+ * acted on.
+ *
+ * The endpoint answers JSON rather than an Inertia redirect, so this posts
+ * with fetch and reloads on success - which is what refreshes the shipment
+ * card and the timeline entry the handover writes.
+ */
+function AssignThreePlModal({ open, cfg = {}, t = {}, onClose }) {
+    const [company, setCompany] = React.useState('');
+    const [connId, setConnId]   = React.useState('');
+    const [busy, setBusy]       = React.useState(false);
+    const [error, setError]     = React.useState(null);
+
+    const isModule = (cfg.module_providers || []).includes(company);
+    const conns    = (cfg.connections || {})[company] || [];
+
+    // Default to the carrier's default account, so the common case is one pick.
+    React.useEffect(() => {
+        const d = conns.find((c) => c.is_default) || conns[0];
+        setConnId(d ? String(d.id) : '');
+        setError(null);
+    }, [company]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Reopening starts clean - a stale carrier rejection must not look like
+    // the result of the attempt the operator is about to make.
+    React.useEffect(() => {
+        if (open) { setCompany(''); setError(null); }
+    }, [open]);
+
+    React.useEffect(() => {
+        if (!open) return undefined;
+        const onKey = (e) => { if (e.key === 'Escape' && !busy) onClose?.(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [open, busy, onClose]);
+
+    if (!open) return null;
+
+    const submit = async (e) => {
+        e?.preventDefault?.();
+        if (!company || busy) return;
+        setBusy(true);
+        setError(null);
+        try {
+            const token = document.querySelector('meta[name="csrf-token"]')?.content || '';
+            const res = await fetch(cfg.url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    company,
+                    connection_id: isModule && connId ? Number(connId) : undefined,
+                }),
+            });
+            const body = await res.json().catch(() => ({}));
+            if (!res.ok || body.error) {
+                setError(body.error || 'The carrier rejected the shipment.');
+                return;
+            }
+            onClose?.();
+            router.reload({ preserveScroll: true });
+        } catch (err) {
+            setError(err.message || 'Request failed.');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40" onClick={() => !busy && onClose?.()} />
+
+            <div
+                role="dialog"
+                aria-modal="true"
+                className="relative bg-background rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto"
+            >
+                <div className="flex items-start justify-between border-b border-border px-5 py-3">
+                    <div>
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                            {t.assign_3pl_eyebrow || 'Courier handover'}
+                        </div>
+                        <div className="text-base font-semibold mt-0.5">{t.assign_3pl_title}</div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => !busy && onClose?.()}
+                        className="p-1 -m-1 rounded-md hover:bg-accent text-muted-foreground"
+                        aria-label={t.assign_3pl_close || 'Close'}
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+
+                <form onSubmit={submit} className="px-5 py-4 space-y-4">
+                    <p className="text-sm text-muted-foreground">{t.assign_3pl_help}</p>
+
+                    <div className="space-y-1.5">
+                        <Label htmlFor="a3pl-company">{t.assign_3pl_company}</Label>
+                        <Select
+                            id="a3pl-company"
+                            value={company}
+                            onChange={(e) => setCompany(e.target.value)}
+                        >
+                            <option value="">{t.assign_3pl_pick}</option>
+                            {(cfg.companies || []).map((c) => (
+                                <option key={c.value} value={c.value}>{c.label}</option>
+                            ))}
+                        </Select>
+                    </div>
+
+                    {/* Only the Shipping-module carriers have per-tenant
+                        accounts; the legacy four read theirs from env. */}
+                    {isModule && (
+                        <div className="space-y-1.5">
+                            <Label htmlFor="a3pl-conn">{t.assign_3pl_conn}</Label>
+                            {conns.length === 0 ? (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    {t.assign_3pl_noconn}
+                                    <a href={cfg.manage_url} className="text-primary hover:underline">
+                                        {t.assign_3pl_manage}
+                                    </a>
+                                </div>
+                            ) : (
+                                <Select
+                                    id="a3pl-conn"
+                                    value={connId}
+                                    onChange={(e) => setConnId(e.target.value)}
+                                >
+                                    {conns.map((c) => (
+                                        <option key={c.id} value={c.id}>
+                                            {c.name}{c.is_default ? ' •' : ''}
+                                        </option>
+                                    ))}
+                                </Select>
+                            )}
+                        </div>
+                    )}
+
+                    {error && (
+                        <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">
+                            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                            <span>{error}</span>
+                        </div>
+                    )}
+
+                    <div className="flex justify-end gap-2 border-t border-border pt-4">
+                        <Button
+                            type="button"
+                            onClick={() => !busy && onClose?.()}
+                            className="bg-transparent text-foreground border border-input hover:bg-accent"
+                        >
+                            {t.assign_3pl_cancel || 'Cancel'}
+                        </Button>
+                        <Button type="submit" disabled={!company || busy || (isModule && conns.length === 0)}>
+                            {busy
+                                ? <Loader2 className="me-1 h-4 w-4 animate-spin" />
+                                : <Truck className="me-1 h-4 w-4" />}
+                            {busy ? t.assign_3pl_sending : t.assign_3pl_submit}
+                        </Button>
+                    </div>
+                </form>
+            </div>
+        </div>,
+        document.body,
+    );
+}
+
+/** The handover that already exists, from either the module or the legacy path. */
+function ThreePlCard({ info, t }) {
+    return (
+        <Card>
+            <CardContent className="p-4">
+                <div className="mb-2 flex items-center gap-2">
+                    <Truck className="h-4 w-4 text-primary" />
+                    <div className="text-sm font-semibold">{t.three_pl_title}</div>
+                </div>
+                <div className="grid gap-2 text-sm sm:grid-cols-4">
+                    <div>
+                        <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t.three_pl_carrier}</div>
+                        <div className="font-semibold">{info.carrier || '—'}</div>
+                    </div>
+                    <div>
+                        <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t.awb}</div>
+                        <div className="font-mono font-semibold">{info.awb || '—'}</div>
+                    </div>
+                    <div>
+                        <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t.three_pl_created}</div>
+                        <div className="font-mono text-xs">{info.created_at || '—'}</div>
+                    </div>
+                    <div>
+                        <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t.three_pl_label}</div>
+                        {info.label_url
+                            ? <a href={info.label_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-primary hover:underline">
+                                {t.three_pl_open} <ExternalLink className="h-3 w-3" />
+                              </a>
+                            : <span className="text-muted-foreground">—</span>}
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
 export default function Details({
     parcel = {}, sender = {}, recipient = {}, attachments = [], events = [],
-    panda_3pl = null, currency = '', permissions = {}, urls = {}, t = {},
+    panda_3pl = null, three_pl = null, assign_3pl = null, currency = '', permissions = {}, urls = {}, t = {},
 }) {
+    const [assignOpen, setAssignOpen] = React.useState(false);
+
     // Group timeline by date.
     const groupedByDate = React.useMemo(() => {
         const groups = new Map();
@@ -187,6 +403,15 @@ export default function Details({
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
+                        {assign_3pl?.can && (
+                            <button
+                                type="button"
+                                onClick={() => setAssignOpen(true)}
+                                className="inline-flex h-9 items-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent"
+                            >
+                                <Truck className="h-4 w-4 me-1" /> {t.assign_3pl_button}
+                            </button>
+                        )}
                         <a href={urls.logs} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent">
                             <Clock className="h-4 w-4 me-1" /> {t.logs}
                         </a>
@@ -214,6 +439,11 @@ export default function Details({
                         <Party icon={MapPin}    title={t.recipient_info} {...recipient} />
                     </div>
 
+
+                    {/* The handover that exists, then the control to make one.
+                        Both sit above attachments so an operator sees carrier
+                        state before scrolling into the timeline. */}
+                    {three_pl && <ThreePlCard info={three_pl} t={t} />}
                     {/* Panda 3PL block (only when present) */}
                     {panda_3pl && (
                         <Card>
@@ -308,6 +538,23 @@ export default function Details({
                             <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
                                 <Hash className="h-4 w-4 text-muted-foreground" /> {t.tracking_id}
                             </div>
+                            {/* Scannable tracking id. The white plate is not
+                                decoration - a QR inverted by dark mode fails
+                                on a lot of scanners, so the code keeps its
+                                own light ground in both themes. */}
+                            {parcel.qr && (
+                                <div className="mb-3 flex flex-col items-center gap-1.5">
+                                    <div className="rounded-md border border-border bg-white p-2">
+                                        <img
+                                            src={parcel.qr}
+                                            alt={`${t.tracking_id}: ${parcel.tracking_id}`}
+                                            className="block h-24 w-24"
+                                            style={{ imageRendering: 'pixelated' }}
+                                        />
+                                    </div>
+                                    <span className="font-mono text-[11px] font-semibold">{parcel.tracking_id}</span>
+                                </div>
+                            )}
                             <DetailRow label={t.booking_date}><span className="font-mono text-xs">{parcel.created_at || '—'}</span></DetailRow>
                             <DetailRow label={t.invoice}>{parcel.invoice_no || '—'}</DetailRow>
                             <DetailRow label={t.weight}>{parcel.weight} {parcel.weight_unit || ''}</DetailRow>
@@ -347,6 +594,14 @@ export default function Details({
                     )}
                 </div>
             </div>
+            {assign_3pl?.can && (
+                <AssignThreePlModal
+                    open={assignOpen}
+                    cfg={assign_3pl}
+                    t={t}
+                    onClose={() => setAssignOpen(false)}
+                />
+            )}
         </AdminLayout>
     );
 }

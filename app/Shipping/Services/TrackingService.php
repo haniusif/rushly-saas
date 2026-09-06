@@ -36,10 +36,16 @@ class TrackingService
         $errors    = 0;
 
         foreach ($rows as $shipment) {
+                // Both providers key tracking on the AWB - EcoExpress on
+                // trackingNumber, Logestechs on ?barcode= - while
+                // remote_shipment_id holds the carrier's own internal row id.
+                // Passing that returns No data available for your search,
+                // so this sync was silently doing nothing. Fall back to the
+                // remote id only when there is no AWB.
             try {
                 $dto = $provider->getStatus(
                     ConnectionDTO::fromModel($connection),
-                    (string) $shipment->remote_shipment_id,
+                    (string) ($shipment->awb_number ?: $shipment->remote_shipment_id),
                 );
 
                 $old = $shipment->current_status_local;

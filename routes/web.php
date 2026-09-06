@@ -555,6 +555,10 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::get('parcel/details/{id}',                   [ParcelController::class, 'details'])->name('parcel.details')->middleware('hasPermission:parcel_read');
                         Route::get('parcel/tracking-offcanvas/{id}',        [ParcelController::class, 'trackingOffcanvas'])->name('parcel.tracking_offcanvas')->middleware('hasPermission:parcel_read');
                         Route::get('parcel/tracking-json/{id}',             [ParcelController::class, 'trackingJson'])->name('parcel.tracking_json')->middleware('hasPermission:parcel_read');
+                        // Carrier's own event history, polled live. Separate
+                        // from tracking-json so the drawer only hits the
+                        // provider when the operator opens that tab.
+                        Route::get('parcel/carrier-tracking/{id}',          [ParcelController::class, 'carrierTracking'])->name('parcel.carrier_tracking')->middleware('hasPermission:parcel_read');
 
                         Route::post('parcel/inline-update/',                   [ParcelController::class, 'inlineupdate'])->name('parcel.inline.update')->middleware('hasPermission:parcel_read');
                         

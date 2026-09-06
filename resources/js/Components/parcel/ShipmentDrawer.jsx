@@ -249,15 +249,125 @@ function TimelineEvent({ event, isCreation }) {
     );
 }
 
-export default function ShipmentDrawer({ parcelId, onClose }) {
+/**
+ * The carrier's own event history for a parcel already handed to a 3PL.
+ *
+ * Fetched when the tab is first opened rather than with the drawer, because
+ * it is a live call out to the carrier - not something to spend on every
+ * shipment an operator merely glances at.
+ */
+function CarrierTracking({ info }) {
+    const [state, setState] = React.useState({ loading: true, error: null, payload: null });
+
+    React.useEffect(() => {
+        let alive = true;
+        setState({ loading: true, error: null, payload: null });
+        fetch(info.url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+            .then(async (r) => {
+                const body = await r.json().catch(() => ({}));
+                if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
+                return body;
+            })
+            .then((p) => { if (alive) setState({ loading: false, error: null, payload: p }); })
+            .catch((e) => { if (alive) setState({ loading: false, error: e.message || 'Failed to load.', payload: null }); });
+        return () => { alive = false; };
+    }, [info.url]);
+
+    const { loading, error, payload } = state;
+    const events = payload?.events || [];
+
+    return (
+        <div className="p-4 space-y-4">
+            {/* What we know locally shows immediately; only the event list
+                waits on the carrier. */}
+            <div className="rounded-md border border-border bg-card p-4">
+                <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                    <Truck className="h-4 w-4 text-primary" /> {payload?.carrier || info.carrier}
+                </div>
+                <DetailRow label="AWB">
+                    <span className="font-mono font-semibold">{payload?.awb || info.awb || '—'}</span>
+                </DetailRow>
+                {(payload?.remote_id) && (
+                    <DetailRow label="Carrier ref"><span className="font-mono">{payload.remote_id}</span></DetailRow>
+                )}
+                <DetailRow label="Label">
+                    {(payload?.label_url || info.label_url)
+                        ? <a href={payload?.label_url || info.label_url} target="_blank" rel="noreferrer" className="text-primary hover:underline font-medium">Open PDF</a>
+                        : <span className="text-muted-foreground">—</span>}
+                </DetailRow>
+            </div>
+
+            {loading && (
+                <div className="grid place-items-center py-12">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    <div className="mt-2 text-xs text-muted-foreground">Asking the carrier…</div>
+                </div>
+            )}
+
+            {/* A carrier being unreachable is reported, not hidden - the
+                shipment itself is still real and the AWB above still valid. */}
+            {!loading && (error || payload?.error) && (
+                <div className="rounded-md border border-amber-300/50 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                    <span>{error || payload?.error}</span>
+                </div>
+            )}
+
+            {!loading && payload?.note && (
+                <div className="rounded-md bg-muted/40 p-2.5 text-xs text-muted-foreground">{payload.note}</div>
+            )}
+
+            {!loading && !error && events.length === 0 && !payload?.error && (
+                <div className="rounded-md border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
+                    The carrier has not reported any events yet.
+                </div>
+            )}
+
+            {events.length > 0 && (
+                <div>
+                    <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                        <Clock className="h-4 w-4" /> Carrier events
+                    </div>
+                    <ol className="relative space-y-3 border-s border-border ps-4">
+                        {events.map((ev, i) => (
+                            <li key={i} className="relative">
+                                <span className="absolute -start-[21px] top-1.5 h-2 w-2 rounded-full bg-primary" />
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="font-mono text-xs font-semibold">{ev.raw_status}</span>
+                                    {ev.local_label && <StatusPill label={ev.local_label} color={ev.local_color} />}
+                                </div>
+                                {ev.description && (
+                                    <div className="mt-0.5 text-xs text-muted-foreground">{ev.description}</div>
+                                )}
+                                <div className="mt-0.5 font-mono text-[10px] text-muted-foreground">{ev.occurred_at || '—'}</div>
+                            </li>
+                        ))}
+                    </ol>
+                </div>
+            )}
+        </div>
+    );
+}
+
+/**
+ * `baseUrl` is the tracking-json endpoint WITHOUT the id. It defaults to the
+ * admin one so existing callers are unaffected; the merchant list passes its
+ * own, which resolves the same payload but refuses another merchant's
+ * shipment.
+ */
+export default function ShipmentDrawer({ parcelId, onClose, baseUrl = '/admin/parcel/tracking-json' }) {
     const open = parcelId != null;
     const [data, setData] = React.useState(null);
     const [loading, setLoading] = React.useState(false);
     const [error, setError] = React.useState(null);
+    // Which pane the body shows. Reset per parcel so opening a second
+    // shipment never lands on a tab that one does not have.
+    const [tab, setTab] = React.useState('shipment');
+    React.useEffect(() => { setTab('shipment'); }, [parcelId]);
     const trackingUrl = React.useMemo(() => {
         if (!open) return null;
-        return `/admin/parcel/tracking-json/${parcelId}`;
-    }, [parcelId, open]);
+        return `${String(baseUrl).replace(/\/$/, '')}/${parcelId}`;
+    }, [parcelId, open, baseUrl]);
 
     React.useEffect(() => {
         if (!open) {
@@ -354,6 +464,32 @@ export default function ShipmentDrawer({ parcelId, onClose }) {
                     </div>
                 )}
 
+                {/* Tabs. Only drawn when this parcel is actually with a
+                    courier company - a single lonely tab is just noise. */}
+                {data && !loading && data.three_pl && (
+                    <div className="flex items-center gap-1 border-b border-border px-3 bg-background">
+                        {[
+                            ['shipment', 'Shipment'],
+                            ['carrier',  data.three_pl.carrier || 'Carrier tracking'],
+                        ].map(([key, label]) => (
+                            <button
+                                key={key}
+                                type="button"
+                                onClick={() => setTab(key)}
+                                className={cn(
+                                    'relative px-3 py-2 text-xs font-medium transition-colors',
+                                    tab === key
+                                        ? 'text-foreground after:absolute after:inset-x-2 after:-bottom-px after:h-0.5 after:bg-primary'
+                                        : 'text-muted-foreground hover:text-foreground',
+                                )}
+                            >
+                                {key === 'carrier' ? <Truck className="inline h-3.5 w-3.5 me-1 -mt-0.5" /> : null}
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
                 {/* Body */}
                 <div className="flex-1 overflow-y-auto">
                     {loading && (
@@ -367,7 +503,7 @@ export default function ShipmentDrawer({ parcelId, onClose }) {
                             <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" /> {error}
                         </div>
                     )}
-                    {data && !loading && (
+                    {data && !loading && tab === 'shipment' && (
                         <div className="p-4 space-y-4">
                             {/* Overview KPI row — replaces the long plain
                                 action bar (moved into the sticky bar above). */}
@@ -437,6 +573,10 @@ export default function ShipmentDrawer({ parcelId, onClose }) {
                                 label={data.t.timeline}
                             />
                         </div>
+                    )}
+
+                    {data && !loading && tab === 'carrier' && data.three_pl && (
+                        <CarrierTracking info={data.three_pl} />
                     )}
                 </div>
             </div>

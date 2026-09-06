@@ -161,7 +161,8 @@ class LabelTemplateController extends Controller
                 'city_code' => 'RUH', 'state' => 'Riyadh',
             ],
             'isCod' => true, 'codAmount' => 350.00,
-            'awb' => '8686', 'rushlyAwb' => '8686',
+            // rushlyAwb mirrors the real label: the QR carries the tracking id.
+            'awb' => '8686', 'rushlyAwb' => 'RL-000000008686',
             'date' => date('Y-m-d'),
             'description' => 'Sample preview shipment',
             'orderNumber' => 'ORD-PREVIEW',

@@ -1142,6 +1142,22 @@ class ParcelController extends Controller
             'parcel' => [
                 'id'                   => $parcel->id,
                 'tracking_id'          => $parcel->tracking_id,
+                // QR of the tracking id, rendered server-side with the same
+                // generator the AWB labels use. Deliberately the TRACKING id,
+                // not the row id the printed labels encode: the tracking id is
+                // the identifier the merchant, the courier and the carrier all
+                // share, and it is not a sequential internal key.
+                'qr'                   => (function () use ($parcel) {
+                    $value = (string) ($parcel->tracking_id ?: $parcel->id);
+                    if ($value === '') { return null; }
+                    try {
+                        return 'data:image/png;base64,' . \DNS2D::getBarcodePNG($value, 'QRCODE', 6, 6);
+                    } catch (\Throwable $e) {
+                        // A missing barcode extension must not take the whole
+                        // details page down over a decoration.
+                        return null;
+                    }
+                })(),
                 'awb_label'            => $parcel->awb_label,
                 'invoice_no'           => $parcel->invoice_no,
                 'status'               => (int) $parcel->status,
@@ -1199,6 +1215,70 @@ class ParcelController extends Controller
                 'status'   => $data['Current status']  ?? null,
                 'datetime' => $data['Status datetime'] ?? null,
             ],
+            // Assign-to-3PL panel. The React details page lost this in the
+            // port from Blade, where it was Panda-only and hidden behind
+            // d-none anyway. Module providers need a connection picked; the
+            // legacy carriers read their credentials from env.
+            'assign_3pl' => [
+                'can' => hasPermission('parcel_update'),
+                'url' => route('parcel.3pl_details', $parcel->id),
+                'companies' => [
+                    ['value' => 'panda',      'label' => 'Panda'],
+                    ['value' => 'zajel',      'label' => 'Zajel'],
+                    ['value' => 'aramex',     'label' => 'Aramex'],
+                    ['value' => 'jet',        'label' => 'J&T (Jet)'],
+                    ['value' => 'logestechs', 'label' => 'Logestechs'],
+                    ['value' => 'ecoexpress', 'label' => 'EcoExpress'],
+                ],
+                // Keyed by provider code so the form can show the right list
+                // once a carrier is chosen.
+                'connections' => \App\Shipping\Models\ShippingConnection::query()
+                    ->with('provider')
+                    ->where('company_id', settings()->id ?? null)
+                    ->where('status', 'active')
+                    ->whereHas('provider', fn ($p) => $p->whereIn('code', ['logestechs', 'ecoexpress']))
+                    ->orderByDesc('is_default')
+                    ->orderBy('connection_name')
+                    ->get()
+                    ->groupBy(fn ($c) => $c->provider->code)
+                    ->map(fn ($g) => $g->map(fn ($c) => [
+                        'id'         => $c->id,
+                        'name'       => $c->connection_name,
+                        'is_default' => (bool) $c->is_default,
+                    ])->values()),
+                'module_providers' => ['logestechs', 'ecoexpress'],
+                'manage_url'       => route('shipping.connections.index'),
+            ],
+            // Whatever handover already exists, from either half of the split:
+            // the Shipping module writes the shipments table, the legacy
+            // carriers write parcels_3pl. Newest first, module preferred.
+            'three_pl' => (function () use ($parcel) {
+                $s = \App\Shipping\Models\Shipment::with('connection.provider')
+                    ->where('parcel_id', $parcel->id)
+                    ->whereNotNull('remote_shipment_id')
+                    ->latest('id')->first();
+                if ($s) {
+                    return [
+                        'carrier'    => $s->connection?->provider?->name ?? $s->connection?->provider?->code,
+                        'awb'        => $s->awb_number,
+                        'label_url'  => $s->awb_pdf_url,
+                        'state'      => $s->state,
+                        'remote_id'  => $s->remote_shipment_id,
+                        'created_at' => optional($s->created_at)->format('Y-m-d H:i'),
+                    ];
+                }
+                $l = \App\Models\Backend\Parcels_3pl::where('parcel_id', $parcel->id)
+                    ->latest('id')->first();
+                if (! $l || ! $l->awb_number || $l->awb_number === '-') return null;
+                return [
+                    'carrier'    => ucfirst((string) $l->parcel_3pl_name),
+                    'awb'        => $l->awb_number,
+                    'label_url'  => ($l->awb_pdf && $l->awb_pdf !== '-') ? $l->awb_pdf : null,
+                    'state'      => $l->current_status,
+                    'remote_id'  => null,
+                    'created_at' => optional($l->created_at)->format('Y-m-d H:i'),
+                ];
+            })(),
             'currency'    => settings()->currency,
             'permissions' => [
                 'edit'          => hasPermission('parcel_update'),
@@ -1241,6 +1321,25 @@ class ParcelController extends Controller
                 'finance'            => 'Finance',
                 'shipment_creation'  => __('parcel.parcel_create') ?: 'Shipment created',
                 'attempts'           => 'Delivery attempts',
+                'assign_3pl_button'  => 'Assign to 3PL',
+                'assign_3pl_eyebrow' => 'Courier handover',
+                'assign_3pl_cancel'  => __('levels.cancel') ?: 'Cancel',
+                'assign_3pl_close'   => 'Close',
+                'assign_3pl_title'   => 'Assign to a courier company',
+                'assign_3pl_help'    => 'Hands this shipment to the carrier and, once they accept it, marks the parcel out for delivery.',
+                'assign_3pl_company' => 'Courier company',
+                'assign_3pl_pick'    => 'Select a company',
+                'assign_3pl_conn'    => 'Account',
+                'assign_3pl_noconn'  => 'No account configured for this carrier.',
+                'assign_3pl_manage'  => 'Manage accounts',
+                'assign_3pl_submit'  => 'Send to carrier',
+                'assign_3pl_sending' => 'Sending…',
+                'three_pl_title'     => 'Courier shipment',
+                'three_pl_carrier'   => 'Carrier',
+                'three_pl_label'     => 'Label',
+                'three_pl_open'      => 'Open PDF',
+                'three_pl_state'     => 'State',
+                'three_pl_created'   => 'Handed over',
                 'panda_tracking'     => 'Panda 3PL tracking',
                 'awb'                => 'AWB',
                 'current_status'     => 'Current status',
@@ -1269,6 +1368,92 @@ class ParcelController extends Controller
             ->get();
 
         return view('backend.parcel.partials.tracking_offcanvas', compact('parcel', 'parcelevents'));
+    }
+
+    /**
+     * The carrier's own event history for this parcel.
+     *
+     * Polled live rather than served from our timeline: the local timeline
+     * only carries events the StatusMapper could map onto our lifecycle, and
+     * the carrier's own list is both fuller and more specific - the reason a
+     * delivery attempt failed, which our single status cannot express.
+     *
+     * Never fails the request outright. A carrier being down is not a reason
+     * to show the operator nothing about a shipment we do have an AWB for.
+     */
+    public function carrierTracking($id)
+    {
+        $parcel = $this->repo->details($id);
+        if (! $parcel) {
+            return response()->json(['error' => __('Parcel not found.')], 404);
+        }
+
+        $shipment = \App\Shipping\Models\Shipment::with('connection.provider')
+            ->where('parcel_id', $parcel->id)
+            ->whereNotNull('remote_shipment_id')
+            ->latest('id')->first();
+
+        // Legacy carriers (Panda, Zajel, Aramex, J&T) have no module
+        // connection to poll, so the row we stored is the whole story.
+        if (! $shipment) {
+            $legacy = \App\Models\Backend\Parcels_3pl::where('parcel_id', $parcel->id)->latest('id')->first();
+            if (! $legacy || ! $legacy->awb_number || $legacy->awb_number === '-') {
+                return response()->json(['error' => __('This shipment has not been handed to a courier company.')], 404);
+            }
+
+            return response()->json([
+                'carrier'   => ucfirst((string) $legacy->parcel_3pl_name),
+                'awb'       => $legacy->awb_number,
+                'label_url' => ($legacy->awb_pdf && $legacy->awb_pdf !== '-') ? $legacy->awb_pdf : null,
+                'live'      => false,
+                'note'      => __('This carrier has no tracking API wired up. Showing the last status we recorded.'),
+                'events'    => $legacy->current_status ? [[
+                    'raw_status'  => $legacy->current_status,
+                    'description' => null,
+                    'occurred_at' => optional($legacy->status_datetime)->format('Y-m-d H:i:s'),
+                    'local_label' => null,
+                    'local_color' => null,
+                ]] : [],
+            ]);
+        }
+
+        $head = [
+            'carrier'   => $shipment->connection?->provider?->name ?? $shipment->connection?->provider?->code,
+            'awb'       => $shipment->awb_number,
+            'label_url' => $shipment->awb_pdf_url,
+            'remote_id' => $shipment->remote_shipment_id,
+            'live'      => true,
+        ];
+
+        try {
+            $provider = app(\App\Shipping\Factory\ShippingProviderFactory::class)
+                ->forConnection($shipment->connection);
+            // Keyed on the AWB, not remote_shipment_id - see the note in
+            // TrackingService::syncConnection.
+
+            $events = $provider->getTracking(
+                \App\Shipping\DTOs\ConnectionDTO::fromModel($shipment->connection),
+                (string) ($shipment->awb_number ?: $shipment->remote_shipment_id),
+            );
+        } catch (\Throwable $e) {
+            return response()->json($head + [
+                'events' => [],
+                'error'  => $e->getMessage(),
+            ]);
+        }
+
+        $rows = collect($events)->map(fn ($e) => [
+            'raw_status'  => $e->rawStatus,
+            'description' => $e->description,
+            'occurred_at' => $e->occurredAt,
+            'local_label' => $e->localStatus ? \App\Support\ParcelStatusHelper::label($e->localStatus) : null,
+            'local_color' => $e->localStatus ? \App\Support\ParcelStatusHelper::color($e->localStatus) : null,
+        ])
+        // Newest first, matching the local timeline directly above it.
+        ->sortByDesc(fn ($r) => $r['occurred_at'] ?? '')
+        ->values();
+
+        return response()->json($head + ['events' => $rows]);
     }
 
     /**
@@ -1386,6 +1571,34 @@ class ParcelController extends Controller
                 'created_at' => optional($parcel->created_at)->format('Y-m-d H:i:s'),
                 'label'      => __('parcel.parcel_create') ?: 'Parcel created',
             ],
+            // Tells the drawer whether this parcel is with a courier company,
+            // and where to poll that carrier for its own event history. The
+            // poll is a live provider call, so the drawer only makes it when
+            // the operator opens the tracking tab.
+            'three_pl' => (function () use ($parcel) {
+                $s = \App\Shipping\Models\Shipment::with('connection.provider')
+                    ->where('parcel_id', $parcel->id)
+                    ->whereNotNull('remote_shipment_id')
+                    ->latest('id')->first();
+                if ($s) {
+                    return [
+                        'carrier'   => $s->connection?->provider?->name ?? $s->connection?->provider?->code,
+                        'awb'       => $s->awb_number,
+                        'label_url' => $s->awb_pdf_url,
+                        'live'      => true,
+                        'url'       => route('parcel.carrier_tracking', $parcel->id),
+                    ];
+                }
+                $l = \App\Models\Backend\Parcels_3pl::where('parcel_id', $parcel->id)->latest('id')->first();
+                if (! $l || ! $l->awb_number || $l->awb_number === '-') { return null; }
+                return [
+                    'carrier'   => ucfirst((string) $l->parcel_3pl_name),
+                    'awb'       => $l->awb_number,
+                    'label_url' => ($l->awb_pdf && $l->awb_pdf !== '-') ? $l->awb_pdf : null,
+                    'live'      => false,
+                    'url'       => route('parcel.carrier_tracking', $parcel->id),
+                ];
+            })(),
             'currency' => settings()->currency,
             't' => [
                 'sender_info'    => __('levels.sender_info') ?: 'Sender',
@@ -1583,10 +1796,12 @@ class ParcelController extends Controller
         return response()->json($response);
     }
 
-    if ($company === 'logestechs') {
-        // Logestechs is handled through the generic Shipping module — no more
-        // per-request email/password input. The admin picks a pre-configured
-        // connection (or we pick the default). See /admin/shipping/connections.
+    // Providers that live in the Shipping module share one path; only the
+    // code and the label differ. This was hardcoded to Logestechs, which is
+    // why EcoExpress could be configured but never assigned from this screen.
+    $shippingModuleProviders = ['logestechs' => 'Logestechs', 'ecoexpress' => 'EcoExpress'];
+    if (isset($shippingModuleProviders[$company])) {
+        $label        = $shippingModuleProviders[$company];
         $connectionId = (int) $request->input('connection_id', 0);
         $connection   = $connectionId
             ? \App\Shipping\Models\ShippingConnection::query()
@@ -1595,31 +1810,41 @@ class ParcelController extends Controller
                 ->where('company_id', settings()->id ?? null)
                 ->first()
             : app(\App\Shipping\Repositories\ShippingConnectionRepository::class)
-                ->defaultForCompany((int) (settings()->id ?? 0), 'logestechs');
+                ->defaultForCompany((int) (settings()->id ?? 0), $company);
+
+        // A connection_id from the client is checked against the provider too:
+        // without this, picking EcoExpress while passing a Logestechs
+        // connection id would ship the parcel through the wrong carrier.
+        if ($connection && $connectionId && $connection->provider?->code !== $company) {
+            return response()->json([
+                'error' => 'That connection does not belong to ' . $label . '.',
+            ], 422);
+        }
 
         if (! $connection) {
             return response()->json([
-                'error' => 'No active Logestechs connection. Add one at /admin/shipping/connections first.',
+                'error' => 'No active ' . $label . ' connection. Add one at /admin/shipping/connections first.',
             ], 422);
         }
 
         try {
             $shipment = app(\App\Shipping\Services\ShipmentService::class)->createNow($parcel, $connection);
             return response()->json([
-                'success'    => true,
-                'shipment_id'=> $shipment->id,
-                'awb_number' => $shipment->awb_number,
-                'awb_pdf'    => $shipment->awb_pdf_url,
-                'response'   => $shipment->response_payload,
+                'success'     => true,
+                'company'     => $company,
+                'shipment_id' => $shipment->id,
+                'awb_number'  => $shipment->awb_number,
+                'awb_pdf'     => $shipment->awb_pdf_url,
+                'response'    => $shipment->response_payload,
             ]);
         } catch (\App\Shipping\Exceptions\ProviderRejectedShipmentException $e) {
             return response()->json([
-                'error'   => 'Logestechs rejected the shipment: ' . $e->getMessage(),
+                'error'   => $label . ' rejected the shipment: ' . $e->getMessage(),
                 'details' => $e->payload,
             ], 422);
         } catch (\Throwable $e) {
             return response()->json([
-                'error'   => 'Logestechs request failed: ' . $e->getMessage(),
+                'error' => $label . ' request failed: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -3075,7 +3300,13 @@ public function printMultipleParcelLabels($parcels)
             $data['isCod'] = $isCod;
             $data['codAmount'] = $codAmount;
             $data['awb'] = (string) $parcel->id;
-            $data['rushlyAwb'] = (string) $parcel->id;
+            // The QR on the label encodes this. It carries the TRACKING id,
+            // not the row id: every scan endpoint the mobile apps call resolves
+            // a scanned code with where('tracking_id', ...) - AdminSorting,
+            // Deliveryman, DeliveryManParcel - so a QR holding the primary key
+            // matched nothing. The row id is also sequential, which a label
+            // handed to a courier should not be broadcasting.
+            $data['rushlyAwb'] = (string) ($parcel->tracking_id ?: $parcel->id);
             $data['date'] = $dropoff_time;
             $data['description'] = $description;
             $data['orderNumber'] = $order_reference;

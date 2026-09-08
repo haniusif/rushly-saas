@@ -26,9 +26,12 @@ use App\Models\User;
 use App\Repositories\Wallet\WalletInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Traits\TrackingTrait;
 use Illuminate\Support\Str;
 
 class MerchantParcelRepository implements MerchantParcelInterface {
+    use TrackingTrait;
+
 
     protected $walletRepo;
     public function __construct(WalletInterface $walletRepo)
@@ -178,8 +181,18 @@ public function parcel_by_daterange($merchant_id, $from, $to , $paginate = 10)
         return Packaging::companywise()->where('status',Status::ACTIVE)->get();
     }
 
-    public function RandomTrackingID(){
-        return Str::upper(settings()->par_track_prefix).random_int(11111111,99999999);  
+    /**
+     * Kept as an alias so nothing outside breaks, but the id now comes from
+     * the same TrackingTrait every other creation path uses.
+     *
+     * This method used to produce a DIFFERENT shape from the rest of the app:
+     * prefix + 8 digits, with no parcel id on the end, and Str::upper() on a
+     * par_track_prefix that is currently an empty string - so merchant-created
+     * shipments came out as eight bare digits while everything else got
+     * RL-XXXXXXXXNNNN. Six distinct formats ended up in the parcels table.
+     */
+    public function RandomTrackingID($id = null){
+        return $id ? $this->generateTrackingId($id) : $this->trackingId();
     }
 
     public function store($request,$merchant_id) {
@@ -305,9 +318,11 @@ public function parcel_by_daterange($merchant_id, $from, $to , $paginate = 10)
                 $parcel->liquid_fragile_amount  = $chargeDetails->liquidFragileAmount ?? 0;
             }
           
-            $parcel->tracking_id             = $this->RandomTrackingID();
-            
             $parcel->save();
+
+            // After the insert: the id is part of the tracking number, which is
+            // what makes it unique without a retry loop.
+            $parcel->update(['tracking_id' => $this->generateTrackingId($parcel->id)]);
 
             try {
                 //wallet
@@ -472,9 +487,11 @@ public function parcel_by_daterange($merchant_id, $from, $to , $paginate = 10)
                 $parcel->liquid_fragile_amount  = $duplicate_parcel->liquid_fragile_amount;
             }
  
-            $parcel->tracking_id             = $this->RandomTrackingID();
-            
             $parcel->save();
+
+            // After the insert: the id is part of the tracking number, which is
+            // what makes it unique without a retry loop.
+            $parcel->update(['tracking_id' => $this->generateTrackingId($parcel->id)]);
 
             try { 
                 //wallet

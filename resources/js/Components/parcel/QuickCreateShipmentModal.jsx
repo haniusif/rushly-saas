@@ -13,6 +13,7 @@ function csrf() {
 
 const EMPTY = {
     merchant_id: '',
+    shop_id: '',
     pickup_phone: '',
     pickup_address: '',
     customer_name: '',
@@ -42,6 +43,10 @@ export default function QuickCreateShipmentModal({
     storeUrl,
     parcelIndexUrl,
     t = (k) => k,
+
+    // 'merchant' is the signed-in merchant, so there is no merchant to pick
+    // and the server ignores any that is sent. 'admin' files for anyone.
+    audience = 'admin',
 }) {
     const [form, setForm] = React.useState(EMPTY);
     const [lookups, setLookups] = React.useState(null);
@@ -85,6 +90,33 @@ export default function QuickCreateShipmentModal({
 
     // Picking a merchant prefills its pickup details, but never overwrites
     // something already typed by hand.
+    const shops = lookups?.shops || [];
+
+    // A lone pickup point is not a question. Fill it in and say which one was
+    // used, rather than showing a select with one option or two inputs the
+    // merchant would only retype.
+    React.useEffect(() => {
+        if (!lookups || shops.length !== 1) return;
+        setForm((f) => ({
+            ...f,
+            shop_id:        String(shops[0].id),
+            pickup_phone:   f.pickup_phone   || shops[0].phone   || '',
+            pickup_address: f.pickup_address || shops[0].address || '',
+        }));
+    }, [lookups]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Several pickup points: choosing one fills the contact details from it.
+    React.useEffect(() => {
+        if (!form.shop_id || shops.length < 2) return;
+        const sh = shops.find((x) => String(x.id) === String(form.shop_id));
+        if (!sh) return;
+        setForm((f) => ({
+            ...f,
+            pickup_phone:   sh.phone   || '',
+            pickup_address: sh.address || '',
+        }));
+    }, [form.shop_id]); // eslint-disable-line react-hooks/exhaustive-deps
+
     // One merchant means there is nothing to choose. The merchant panel
     // always sends exactly one; an admin tenant with a single merchant gets
     // the same courtesy.
@@ -219,6 +251,7 @@ export default function QuickCreateShipmentModal({
                         <div className="space-y-3">
                             {sectionTitle(t('quick_ship_pickup'))}
 
+                            {audience === 'admin' && (
                             <div className="space-y-1.5">
                                 <Label htmlFor="qs-merchant">{t('quick_ship_merchant')}</Label>
                                 <Select id="qs-merchant" value={form.merchant_id} onChange={set('merchant_id')}>
@@ -231,11 +264,32 @@ export default function QuickCreateShipmentModal({
                                     <p className="text-xs text-rose-600">{fieldError('merchant_id')}</p>
                                 )}
                             </div>
+                            )}
 
-                            <div className="grid gap-3 sm:grid-cols-2">
-                                {field('pickup_phone', t('quick_ship_pickup_phone'), { inputMode: 'tel' })}
-                                {field('pickup_address', t('quick_ship_pickup_address'))}
-                            </div>
+                            {shops.length === 1 ? (
+                                // Nothing to choose: state what will be used.
+                                <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
+                                    <div className="font-medium">{shops[0].name}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                        {[shops[0].phone, shops[0].address].filter(Boolean).join(' - ')}
+                                    </div>
+                                </div>
+                            ) : shops.length > 1 ? (
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="qs-shop">{t('quick_ship_pickup')}</Label>
+                                    <Select id="qs-shop" value={form.shop_id} onChange={set('shop_id')}>
+                                        <option value="">-</option>
+                                        {shops.map((sh) => (
+                                            <option key={sh.id} value={sh.id}>{sh.name}</option>
+                                        ))}
+                                    </Select>
+                                </div>
+                            ) : (
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    {field('pickup_phone', t('quick_ship_pickup_phone'), { inputMode: 'tel' })}
+                                    {field('pickup_address', t('quick_ship_pickup_address'))}
+                                </div>
+                            )}
                         </div>
 
                         {/* ---------- Receiver ---------- */}

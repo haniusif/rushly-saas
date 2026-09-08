@@ -75,28 +75,7 @@ class ShopsController extends Controller
 
     //merchant shops create page
     public function create(){
-        return Inertia::render('Merchant/Shops/Create', [
-            'urls' => [
-                'store'  => route('merchant-panel.shops.store'),
-                'cancel' => route('merchant-panel.shops.index'),
-            ],
-            't' => [
-                'title'        => __('merchantshops.title') ?: 'Pickup point',
-                'add'          => __('levels.add') ?: 'Add',
-                'name'         => __('levels.name') ?: 'Name',
-                'name_ph'      => __('merchantPlaceholder.name') ?: 'Name',
-                'contact'      => __('levels.phone') ?: 'Contact',
-                'contact_ph'   => __('merchantPlaceholder.phone') ?: 'Phone',
-                'address'      => __('levels.address') ?: 'Address',
-                'address_ph'   => __('placeholder.address') ?: 'Address',
-                'status'       => __('levels.status') ?: 'Status',
-                'active'       => __('levels.active') ?: 'Active',
-                'inactive'     => __('levels.inactive') ?: 'Inactive',
-                'save'         => __('levels.save') ?: 'Save',
-                'cancel'       => __('levels.cancel') ?: 'Cancel',
-                'title_index'  => __('merchantshops.title') ?: 'Pickup points',
-            ],
-        ]);
+        return Inertia::render('Merchant/Shops/Create', $this->shopFormProps());
     }
 
     //merchant shops store
@@ -112,7 +91,61 @@ class ShopsController extends Controller
 
     public function edit($id){ // shop id
         $shop = $this->repo->get($id);
-        return view('backend.merchant_panel.shops.edit', compact('shop'));
+        abort_if(! $shop, 404);
+
+        // A merchant may only edit their own pickup points. get() takes a bare
+        // id, so without this any merchant could open another one by URL.
+        $merchantId = Auth::user()->merchant->id ?? null;
+        abort_if($merchantId && (int) $shop->merchant_id !== (int) $merchantId, 403);
+
+        // Renders the same Inertia page as create, in edit mode. It used to be
+        // the last Blade screen in this section, which is why it looked
+        // nothing like the list it was reached from.
+        return Inertia::render('Merchant/Shops/Create', $this->shopFormProps($shop));
+    }
+
+    /** Shared prop bag for the create and edit screens. */
+    private function shopFormProps($shop = null): array
+    {
+        return [
+            'mode' => $shop ? 'edit' : 'create',
+            'shop' => $shop ? [
+                'id'         => $shop->id,
+                'name'       => $shop->name,
+                'contact_no' => $shop->contact_no,
+                'address'    => $shop->address,
+                'status'     => (string) $shop->status,
+                'lat'        => $shop->merchant_lat,
+                'long'       => $shop->merchant_long,
+            ] : null,
+            'urls' => [
+                'store'  => route('merchant-panel.shops.store'),
+                'update' => $shop ? route('merchant-panel.shops.update', $shop->id) : null,
+                'cancel' => route('merchant-panel.shops.index'),
+            ],
+            't' => $this->shopFormLabels(),
+        ];
+    }
+
+    private function shopFormLabels(): array
+    {
+        return [
+            'title'        => __('merchantshops.title') ?: 'Pickup point',
+            'add'          => __('levels.add') ?: 'Add',
+            'edit'         => __('levels.edit') ?: 'Edit',
+            'name'         => __('levels.name') ?: 'Name',
+            'name_ph'      => __('merchantPlaceholder.name') ?: 'Name',
+            'contact'      => __('levels.phone') ?: 'Contact',
+            'contact_ph'   => __('merchantPlaceholder.phone') ?: 'Phone',
+            'address'      => __('levels.address') ?: 'Address',
+            'address_ph'   => __('placeholder.address') ?: 'Address',
+            'status'       => __('levels.status') ?: 'Status',
+            'active'       => __('levels.active') ?: 'Active',
+            'inactive'     => __('levels.inactive') ?: 'Inactive',
+            'save'         => __('levels.save') ?: 'Save',
+            'cancel'       => __('levels.cancel') ?: 'Cancel',
+            'title_index'  => __('merchantshops.title') ?: 'Pickup points',
+        ];
     }
 
     public function update($id, UpdateRequest $request){

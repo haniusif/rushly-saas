@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { Head, useForm } from '@inertiajs/react';
-import { ArrowLeft, Save, Store, User, Phone, MapPin } from 'lucide-react';
+import { useForm } from '@inertiajs/react';
+import { ArrowLeft, Save, User, Phone, MapPin } from 'lucide-react';
 import MerchantLayout from '@/Layouts/MerchantLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { Input } from '@/Components/ui/Input';
@@ -20,33 +20,36 @@ function Field({ label, required, error, icon: Icon, children }) {
     );
 }
 
-export default function Create({ urls = {}, t = {} }) {
+export default function Create({ mode = 'create', shop = null, urls = {}, t = {} }) {
+    const isEdit = mode === 'edit' && shop;
+
     const form = useForm({
-        name: '',
-        contact_no: '',
-        address: '',
-        status: '1',
-        lat: '',
-        long: '',
+        name:       shop?.name       ?? '',
+        contact_no: shop?.contact_no ?? '',
+        address:    shop?.address    ?? '',
+        status:     shop?.status     ?? '1',
+        lat:        shop?.lat        ?? '',
+        long:       shop?.long       ?? '',
+        // The update route is a PUT; Inertia spoofs it through POST.
+        ...(shop ? { _method: 'put' } : {}),
     });
 
     const submit = (e) => {
         e.preventDefault();
-        form.post(urls.store, { preserveScroll: true });
+        form.post(isEdit ? urls.update : urls.store, { preserveScroll: true });
     };
 
-    return (
-        <MerchantLayout title={t.title} breadcrumbs={[t.title_index, t.add]}>
-            <Head title={`${t.add} · ${t.title}`} />
+    const action = isEdit ? t.edit : t.add;
 
-            <div className="mb-4 flex items-center gap-3">
+    return (
+        <MerchantLayout title={`${action} ${t.title}`} breadcrumbs={[t.title_index, action]}>
+            {/* No <h1> and no <Head> here: MerchantLayout already renders the
+                breadcrumb trail and a heading from its title prop, so a second
+                one printed the same words twice down the page. */}
+            <div className="mb-4">
                 <a href={urls.cancel} className="inline-flex h-9 items-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent no-underline">
                     <ArrowLeft className="h-4 w-4 me-1" /> {t.cancel}
                 </a>
-                <div className="flex items-center gap-2">
-                    <Store className="h-5 w-5 text-primary" />
-                    <h1 className="text-xl font-semibold m-0">{t.add} — {t.title}</h1>
-                </div>
             </div>
 
             <form onSubmit={submit}>

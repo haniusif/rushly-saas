@@ -73,6 +73,9 @@ class ZidParcelController extends Controller
             'note'             => isset($meta['zid_order_code']) ? 'Zid order '.$meta['zid_order_code'] : null,
             'status'           => 'pending',
         ]);
+        // Rewritten with the parcel id so this matches every other
+        // creation path; the value above only keeps the column non-null.
+        $this->applyTrackingId($parcel);
 
         ZidOrderLink::create([
             'company_id'        => $merchant->company_id,

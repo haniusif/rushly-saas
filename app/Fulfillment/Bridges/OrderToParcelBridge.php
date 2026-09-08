@@ -91,6 +91,9 @@ class OrderToParcelBridge
             'note'             => $note,
             'status'           => ParcelStatus::PENDING,
         ]);
+        // Rewritten with the parcel id so this matches every other
+        // creation path; the value above only keeps the column non-null.
+        $this->applyTrackingId($parcel);
 
         // `oms_order_id` isn't in the Parcel model's $fillable (adding it
         // would touch a widely-used domain model). Assign directly + save

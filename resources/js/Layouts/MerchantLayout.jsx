@@ -358,6 +358,7 @@ function Topbar({ onSidebarOpen, user, brand, theme }) {
                 lookupsUrl="/merchant/parcel/quick-create/lookups"
                 storeUrl="/merchant/parcel/quick-store"
                 parcelIndexUrl="/merchant/parcel/index"
+                audience="merchant"
                 t={t}
             />
         </header>

@@ -75,6 +75,9 @@ class WooCommerceParcelController extends Controller
             'note'             => isset($meta['wc_order_number']) ? 'WooCommerce order '.$meta['wc_order_number'] : null,
             'status'           => 'pending',
         ]);
+        // Rewritten with the parcel id so this matches every other
+        // creation path; the value above only keeps the column non-null.
+        $this->applyTrackingId($parcel);
 
         WooCommerceOrderLink::create([
             'company_id'   => $merchant->company_id,

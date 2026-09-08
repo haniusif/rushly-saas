@@ -561,6 +561,19 @@ class MerchantParcelController extends Controller
                 'pickup_phone'   => optional($merchant->user)->mobile,
                 'pickup_address' => $merchant->address,
             ]] : [],
+            // The merchant's pickup points. One of them means there is
+            // nothing to choose, and the modal collapses the pickup fields to
+            // a single line rather than asking a question with one answer.
+            'shops' => collect($this->repo->getShops($merchant->id ?? 0))
+                ->filter()
+                ->map(fn ($sh) => [
+                    'id'      => $sh->id,
+                    'name'    => $sh->name,
+                    'phone'   => $sh->contact_no,
+                    'address' => $sh->address,
+                ])
+                ->unique('id')
+                ->values(),
             'cities' => collect($this->repo->cities())->map(fn ($c) => [
                 'id'   => $c->id,
                 'name' => $c->en_name ?: $c->name,

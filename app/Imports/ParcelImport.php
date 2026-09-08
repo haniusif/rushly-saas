@@ -20,6 +20,7 @@ use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\Importable;
 use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
+use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 use Maatwebsite\Excel\Concerns\WithValidation;
 
 use Illuminate\Support\Str;
@@ -27,8 +28,25 @@ use Illuminate\Support\Str;
 use App\Traits\TrackingTrait;
 
 
-class ParcelImport implements ToModel, WithHeadingRow ,WithValidation , SkipsEmptyRows
+class ParcelImport implements ToModel, WithHeadingRow ,WithValidation , SkipsEmptyRows, WithMultipleSheets
 {
+    /**
+     * Read the FIRST sheet only.
+     *
+     * Without this, Maatwebsite imports every sheet in the workbook. The
+     * template ships Shipments + Cities + Areas, so a merchant uploading it
+     * back produced one parcel per lookup row: 28 cities + 518 areas = 546
+     * blank parcels on top of their real rows, every time. The Areas rows even
+     * carried a city, because normalizeRow aliases city_id -> customer_city_id.
+     *
+     * The preview step reads only the first sheet, so it showed the right
+     * count and the damage was invisible until the parcels existed.
+     */
+    public function sheets(): array
+    {
+        return [0 => $this];
+    }
+
     use Importable;
     use TrackingTrait;
     /**
@@ -49,7 +67,30 @@ class ParcelImport implements ToModel, WithHeadingRow ,WithValidation , SkipsEmp
         $delivery_type_id = $row['delivery_type_id'];
         $liquid_fragile   = $row['liquid_fragile'];
         $packaging_id     = $row['packaging_id'];
-        $shop_id          = $row['shop_id'];
+        // The shop id comes out of a spreadsheet and is only validated to
+        // EXIST - not to belong to this row's merchant. Left unscoped, a row
+        // can pair merchant A with merchant B's pickup point, which puts the
+        // wrong address on the parcel and sends the driver to the wrong place.
+        $shop_id = $row['shop_id'] ?: null;
+        if ($shop_id && $merchant) {
+            $owns = MerchantShops::where('id', (int) $shop_id)
+                ->where('merchant_id', $merchant->id)
+                ->exists();
+            if (! $owns) {
+                $shop_id = null;
+            }
+        }
+
+        // Nulled above, or never supplied: fall back to the merchant's only
+        // pickup point when there is exactly one, the same way the merchant-side
+        // importer does. Nothing to disambiguate, and a null pickup point leaves
+        // the parcel with no collection address at all.
+        if (! $shop_id && $merchant) {
+            $only = MerchantShops::where('merchant_id', $merchant->id)->take(2)->get();
+            if ($only->count() === 1) {
+                $shop_id = $only->first()->id;
+            }
+        }
         $pickup_phone     = $row['pickup_phone'];
         $pickup_address   = $row['pickup_address'];
         $pickup_lat       = $row['pickup_lat'];
@@ -208,13 +249,22 @@ class ParcelImport implements ToModel, WithHeadingRow ,WithValidation , SkipsEmp
         '*.pickup_address'    => ['nullable', 'string', 'max:191'],
         '*.pickup_phone'      => ['nullable', 'max:20'],
         '*.weight'            => ['required', 'numeric', 'min:0.1'],
-        '*.merchant_id'       => ['required', 'exists:merchants,id'],
+        // Scoped to the current tenant. A bare exists check let an admin
+        // import a parcel for a merchant belonging to another company, while
+        // company_id on the parcel was stamped with their own.
+        '*.merchant_id'       => ['required', Rule::exists('merchants', 'id')->where('company_id', settings()->id ?? 0)],
         '*.selling_price'     => ['nullable', 'numeric', 'min:0'],
         '*.pickup_lat'        => ['nullable', 'numeric', 'between:-90,90'],
         '*.pickup_long'       => ['nullable', 'numeric', 'between:-180,180'],
         '*.customer_lat'      => ['nullable', 'numeric', 'between:-90,90'],
         '*.customer_long'     => ['nullable', 'numeric', 'between:-180,180'],
-        '*.packaging_id'      => ['nullable', 'numeric', 'exists:packagings,id'],
+        // Tenant-scoped, but keeping the shared defaults: packagings holds
+        // both per-company rows and seeded rows with a NULL company_id that
+        // every tenant uses. A bare exists check also accepted another
+        // company's packaging.
+        '*.packaging_id'      => ['nullable', 'numeric', Rule::exists('packagings', 'id')->where(function ($q) {
+            $q->where('company_id', settings()->id ?? 0)->orWhereNull('company_id');
+        })],
         '*.liquid_fragile'    => ['nullable', 'in:0,1,true,false,TRUE,FASLE'],
     ];
     

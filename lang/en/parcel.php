@@ -259,4 +259,11 @@ return array (
     'bulk_cancel' => 'Cancel selected',
     'selected' => 'selected',
     'change_status' => 'Change',
+    'import_too_many_rows' => 'This file has :count shipments. The most that can be imported at once is :max. Please split it into smaller files.',
+    'import_already_done' => 'This exact file was already imported on :when and created :count shipments. Nothing has been imported again. If you meant to add more, change the file or upload a different one.',
+    'import_err_required' => 'Required.',
+    'import_err_numeric' => 'Must be a number.',
+    'import_err_phone' => 'Not a valid phone number.',
+    'import_session_expired' => 'Your preview session expired. Please upload the file again.',
+    'import_fix_rows_first' => ':count row(s) still have problems. Fix them and save before importing.',
 );

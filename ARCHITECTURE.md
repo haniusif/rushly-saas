@@ -521,7 +521,7 @@ Autoloaded via `composer.json` `files`. ~60 helper functions grouped:
 `MerchantParcelExport`, `ParcelSampleExport`, `ShipmentTemplateExport`, `ShipmentExport`, `ShipmentsWorkbookExport`, `DeliverymanReports`, `HubReports`, `MerchantReports`, `InvoiceExport`, `ReportExports`, `CitiesSheetExport`, `AreasSheetExport`.
 
 ### Imports (`app/Imports/`)
-`ParcelImport`, `ParcelImport2`, `MParcelImport`.
+`ParcelImport`, `MParcelImport`.
 
 ### Console Commands
 | Command | Purpose |

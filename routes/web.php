@@ -1407,6 +1407,9 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::post('m_parcel/file-import', [MerchantParcelController::class, 'm_parcelImport'])->name('merchant-panel.m_parcel.file-import.post');
 
                         Route::post('m_parcel/file-import-confirm', [MerchantParcelController::class, 'm_parcelImportConfirm'])->name('merchant-panel.parcel.import.confirm');
+                        // Save the rows corrected inline in the preview. Nothing
+                        // is imported here; it re-validates and redraws.
+                        Route::post('m_parcel/file-import-update', [MerchantParcelController::class, 'm_parcelImportUpdate'])->name('merchant-panel.parcel.import.update');
 
                         
                         Route::get('parcel/file-export',    [MerchantParcelController::class, 'parcelExport'])->name('merchant-panel.parcel.file-export');

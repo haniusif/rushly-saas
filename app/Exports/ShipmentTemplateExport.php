@@ -31,19 +31,26 @@ class ShipmentTemplateExport implements FromArray, WithHeadings, WithEvents, Wit
 
     public function headings(): array
     {
+        // Column ORDER is the merchant's, from the reordered sheet they sent
+        // back: what identifies the shipment first, then where it is collected,
+        // then who receives it, then what it weighs and what to collect.
+        // Required columns (the trailing star) are unchanged.
+        //
+        // Anything keyed off a column letter below - number formats, the two
+        // phone columns, the City/Area validations - has to move with it.
         return [
-            "Pickup point",
-            "Pickup phone",
-            "Pickup address",
-            "COD *",
-            "Reference number",
-            "Weight *",
-            "Customer Name *",
-            "Customer Phone *",
-            "City *",
-            "Area",
-            "Customer Address *",
-            "Note",
+            "Reference number",   // A
+            "Pickup point",       // B
+            "Pickup phone",       // C
+            "Pickup address",     // D
+            "Customer Name *",    // E
+            "Customer Phone *",   // F
+            "City *",             // G
+            "Area",               // H
+            "Customer Address *", // I
+            "Weight *",           // J
+            "COD *",              // K
+            "Note",               // L
         ];
     }
 
@@ -71,12 +78,12 @@ class ShipmentTemplateExport implements FromArray, WithHeadings, WithEvents, Wit
                 $event->sheet->getStyle('A1:L1')->getAlignment()->setWrapText(true);
 
                 // Number formats
-                $sheet->getStyle('D:D')->getNumberFormat()->setFormatCode('#,##0.00'); // COD
-                $sheet->getStyle('F:F')->getNumberFormat()->setFormatCode('0.00');     // Weight
+                $sheet->getStyle('K:K')->getNumberFormat()->setFormatCode('#,##0.00'); // COD
+                $sheet->getStyle('J:J')->getNumberFormat()->setFormatCode('0.00');     // Weight
 
                 // Phones as text (to preserve + and leading zeros)
-                $sheet->getStyle('B:B')->getNumberFormat()->setFormatCode('@'); // Pickup phone
-                $sheet->getStyle('H:H')->getNumberFormat()->setFormatCode('@'); // Customer phone
+                $sheet->getStyle('C:C')->getNumberFormat()->setFormatCode('@'); // Pickup phone
+                $sheet->getStyle('F:F')->getNumberFormat()->setFormatCode('@'); // Customer phone
 
                 // Alignments
                 $event->sheet->getStyle('A:L')->getAlignment()
@@ -90,12 +97,12 @@ class ShipmentTemplateExport implements FromArray, WithHeadings, WithEvents, Wit
 
                 // --- Data Validations ---
 
-                // City (Column I) -> Named Range =CityNames
+                // City (Column G) -> Named Range =CityNames
                 // NOTE: If your CityNames points to English names, you're set.
                 // If it points to Arabic names, change your source or your UI text accordingly.
                 $maxRows = max($lastRow + 500, 2000); // allow plenty of blank rows
                 for ($r = 2; $r <= $maxRows; $r++) {
-                    $cell = "I{$r}";
+                    $cell = "G{$r}";
                     $dv = $sheet->getCell($cell)->getDataValidation();
                     $dv->setType(DataValidation::TYPE_LIST);
                     $dv->setAllowBlank(true);
@@ -108,18 +115,21 @@ class ShipmentTemplateExport implements FromArray, WithHeadings, WithEvents, Wit
                     $dv->setError('Please choose a city from the dropdown list.');
                 }
 
-                // Area (Column J) -> Dependent on City (Column I)
+                // Area (Column H) -> Dependent on City (Column G)
                 // Uses Cities!A (id) and Cities!B (name). If you used English names in Cities!C, swap B->C below.
                 // Formula per row:
-                // =INDIRECT("Areas_" & INDEX(Cities!$A$2:$A$1000, MATCH($I2, Cities!$B$2:$B$1000,0)))
+                // =INDIRECT("Areas_" & INDEX(Cities!$A$2:$A$1000, MATCH($G2, Cities!$B$2:$B$1000,0)))
                 for ($r = 2; $r <= $maxRows; $r++) {
-                    $cell = "J{$r}";
+                    $cell = "H{$r}";
                     $dv = $sheet->getCell($cell)->getDataValidation();
                     $dv->setType(DataValidation::TYPE_LIST);
                     $dv->setAllowBlank(true);
                     $dv->setShowDropDown(true);
                     $dv->setErrorStyle(DataValidation::STYLE_STOP);
-                    $dv->setFormula1('=INDIRECT("Areas_"&INDEX(Cities!$A$2:$A$1000, MATCH($I'.$r.', Cities!$B$2:$B$1000, 0)))');
+                    // IFERROR -> NoAreas: a city with no areas has no
+                    // Areas_<id> range, and the bare INDIRECT would resolve to
+                    // #REF! and block the cell entirely.
+                    $dv->setFormula1('=IFERROR(INDIRECT("Areas_"&INDEX(Cities!$A$2:$A$1000, MATCH($G'.$r.', Cities!$B$2:$B$1000, 0))), NoAreas)');
                     $dv->setPromptTitle('Choose an area');
                     $dv->setPrompt('Pick an area that belongs to the selected city.');
                     $dv->setErrorTitle('Invalid value');

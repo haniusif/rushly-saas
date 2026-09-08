@@ -36,6 +36,21 @@ use Inertia\Inertia;
 class MerchantParcelController extends Controller
 {
     /**
+     * Ceiling on rows per uploaded sheet.
+     *
+     * The binding constraint is time, not file size: the confirm step walks
+     * every row and issues several queries each - shop, city, area, delivery
+     * charge, COD charge, the insert, then a second write for the tracking id.
+     * php8.4-fpm allows 300s, which this sits comfortably inside. Without a cap
+     * a large sheet simply times out halfway, leaving some rows imported and no
+     * way to tell which.
+     */
+    public const IMPORT_MAX_ROWS = 1000;
+
+    /** Upload ceiling in megabytes, mirrored into the validation rule below. */
+    public const IMPORT_MAX_MB = 5;
+
+    /**
      * Display a listing of the resource.
      *
      * @return \Illuminate\Http\Response
@@ -1097,8 +1112,9 @@ class MerchantParcelController extends Controller
     {
         return Inertia::render('Merchant/Parcel/Import', [
             'step' => 'upload',
-            'urls' => $this->importUrls(),
-            't'    => $this->importLabels(),
+            'urls'   => $this->importUrls(),
+            'limits' => $this->importLimits(),
+            't'      => $this->importLabels(),
         ]);
     }
 
@@ -1113,8 +1129,20 @@ class MerchantParcelController extends Controller
             'parcel_index'   => route('merchant-panel.parcel.index'),
             'upload'         => route('merchant-panel.m_parcel.file-import.post'),
             'confirm'        => route('merchant-panel.parcel.import.confirm'),
+            'update'         => route('merchant-panel.parcel.import.update'),
             'cancel'         => route('merchant-panel.parcel.parcel-import'),
             'sample'         => route('exports.shipment-template'),
+        ];
+    }
+
+    /** What the upload screen tells the merchant before they pick a file. */
+    private function importLimits(): array
+    {
+        return [
+            'max_rows' => self::IMPORT_MAX_ROWS,
+            'max_mb'   => self::IMPORT_MAX_MB,
+            'accepted' => ['.xlsx', '.xls', '.csv'],
+            'preview'  => 100,
         ];
     }
 
@@ -1140,6 +1168,32 @@ class MerchantParcelController extends Controller
             'back'              => __('levels.back') ?: 'Back',
             'validation_errors' => __('parcel.validation_errors') ?: 'Validation errors',
             'row_number'        => __('parcel.row_number') ?: 'Row',
+            'edit_hint'         => 'Correct any highlighted cell here, save, then import.',
+            'only_problems'     => 'Only rows with problems',
+            'all_rows'          => 'All rows',
+            'save_changes'      => 'Save changes',
+            'saving'            => 'Saving…',
+            'saved_ok'          => 'Changes saved.',
+            'no_problems'       => 'No problems found — ready to import.',
+            'problems_remain'   => 'Fix the highlighted cells before importing.',
+            'unsaved'           => 'You have unsaved changes.',
+            'row'               => 'Row',
+            'drop_here'         => 'Drag your file here, or browse',
+            'file_selected'     => 'Ready to upload',
+            'remove_file'       => 'Remove',
+            'requirements'      => 'Before you upload',
+            'req_format'        => 'Accepted formats',
+            'req_size'          => 'Maximum file size',
+            'req_rows'          => 'Maximum shipments per file',
+            'req_required'      => 'Required columns',
+            'req_required_hint' => 'Marked with * in the template. Every other column is optional.',
+            'shipments'         => 'shipments',
+            'columns'           => 'columns',
+            'ready_to_import'   => 'ready to import',
+            'previewing'        => 'previewing',
+            'required_col'      => 'required',
+            'errors_count'      => 'problems found',
+            'fix_and_retry'     => 'Correct these rows in your file and upload it again.',
         ];
     }
     
@@ -1147,149 +1201,234 @@ class MerchantParcelController extends Controller
  
 public function m_parcelImport(Request $request)
 {
-    // ✅ Validate the uploaded file
     $request->validate([
-        'file' => 'required|mimes:xlsx,xls,csv|max:5120',
+        'file' => 'required|mimes:xlsx,xls,csv|max:' . (self::IMPORT_MAX_MB * 1024),
     ]);
 
-    // 📁 Store the uploaded file temporarily
-    $path = $request->file('file')->store('imports');
-
-    // 📊 Read the first sheet from the Excel file
+    $path  = $request->file('file')->store('imports');
     $sheet = Excel::toCollection(null, Storage::path($path))->first();
 
     if (blank($sheet) || $sheet->count() === 0) {
         return back()->withErrors(['file' => 'The uploaded file is empty or invalid.']);
     }
 
-    // 1️⃣ Get raw headers (may include `*` for required fields)
-    $rawHeaders = collect($sheet->first() ?? [])
-        ->map(fn($h) => trim((string) $h))
-        ->values();
-
+    $rawHeaders = collect($sheet->first() ?? [])->map(fn ($h) => trim((string) $h))->values();
     if ($rawHeaders->isEmpty()) {
         return back()->withErrors(['file' => 'No header row was found in the Excel file.']);
     }
 
-    // 2️⃣ Detect required columns (any column name ending with `*`)
-    $required = $rawHeaders
-        ->filter(fn($h) => preg_match('/\*\s*$/u', $h))
-        ->map(fn($h) => preg_replace('/\s*\*\s*$/u', '', $h))
+    // A trailing star marks a required column. It is only a HINT from the
+    // sheet - the authoritative list is self::importRequiredColumns(), so a
+    // merchant who retypes the headers without stars cannot switch validation
+    // off. That is exactly how 546 blank parcels per import got through.
+    $headers  = $rawHeaders->map(fn ($h) => preg_replace('/\s*\*\s*$/u', '', $h))->values();
+    $required = collect(self::importRequiredColumns())
+        ->filter(fn ($c) => $headers->contains($c))
         ->values();
 
-    // 3️⃣ Clean headers (remove the `*`)
-    $headers = $rawHeaders->map(fn($h) => preg_replace('/\s*\*\s*$/u', '', $h))->values();
-
-    // 4️⃣ Define the expected columns (in the correct order, without `*`)
-    $expected = collect([
-        'Pickup point',
-        'Pickup phone',
-        'Pickup address',
-        'COD',
-        'Reference number',
-        'Weight',
-        'Customer Name',
-        'Customer Phone',
-        'City',
-        'Area',
-        'Customer Address',
-        'Note',
-    ]);
-
-    // ❗ Check for missing columns
-    $missing = $expected->diff($headers);
+    $expected = collect(self::importExpectedColumns());
+    $missing  = $expected->diff($headers);
     if ($missing->isNotEmpty()) {
         return back()->withErrors([
-            'file' => 'The Excel file is missing the following columns: ' . $missing->implode(', ')
+            'file' => 'The Excel file is missing the following columns: ' . $missing->implode(', '),
         ]);
     }
 
-    // 5️⃣ Remove empty rows
-    $rows = $sheet->slice(1)->values()->filter(function ($row) {
-        return collect($row)->filter(fn($c) => !is_null($c) && trim((string)$c) !== '')->isNotEmpty();
-    })->values();
+    $rows = $sheet->slice(1)->values()
+        ->filter(fn ($row) => collect($row)->filter(fn ($c) => ! is_null($c) && trim((string) $c) !== '')->isNotEmpty())
+        ->values();
 
-    // 6️⃣ Convert Arabic digits to English (if any)
-    $toEnglishDigits = function ($value) {
-        if ($value === null) return $value;
-        $str = (string) $value;
-        $nums = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩','٫','٬','،'];
-        $rep  = ['0','1','2','3','4','5','6','7','8','9','.','',''];
-        return str_replace($nums, $rep, $str);
-    };
-
-    // 7️⃣ Validate row data
-    $errors = [];
-    $normalizedRows = [];
-
-    foreach ($rows as $index => $row) {
-        // Combine column names with row values
-        $assoc = $headers->combine($row)->map(function ($v, $k) use ($toEnglishDigits) {
-            if (in_array($k, ['COD', 'Weight'])) {
-                return $toEnglishDigits($v);
-            }
-            return is_string($v) ? trim($v) : $v;
-        });
-
-        $rowNumber = $index + 2; // +2 because row 1 is the header
-
-        // ✅ Check required fields
-        foreach ($required as $col) {
-            $val = $assoc->get($col);
-            if (is_null($val) || trim((string) $val) === '') {
-                $errors[] = "Row {$rowNumber}: The field '{$col}' is required.";
-            }
-        }
-
-        // ✅ Validate numeric fields
-        if ($assoc->has('COD') && trim((string)$assoc['COD']) !== '' && !is_numeric($assoc['COD'])) {
-            $errors[] = "Row {$rowNumber}: The field 'COD' must be a numeric value.";
-        }
-        if ($assoc->has('Weight') && trim((string)$assoc['Weight']) !== '' && !is_numeric($assoc['Weight'])) {
-            $errors[] = "Row {$rowNumber}: The field 'Weight' must be a numeric value.";
-        }
-
-        // ✅ Basic phone validation (allows + and digits)
-        foreach (['Pickup phone', 'Customer Phone'] as $phoneCol) {
-            if ($assoc->has($phoneCol) && trim((string)$assoc[$phoneCol]) !== '') {
-                $p = (string) $assoc[$phoneCol];
-                if (!preg_match('/^\+?\d{7,20}$/', preg_replace('/\s+/', '', $p))) {
-                    $errors[] = "Row {$rowNumber}: The phone number in '{$phoneCol}' is invalid.";
-                }
-            }
-        }
-
-        $normalizedRows[] = $assoc;
+    if ($rows->count() > self::IMPORT_MAX_ROWS) {
+        return back()->withErrors([
+            'file' => trans('parcel.import_too_many_rows', [
+                'count' => number_format($rows->count()),
+                'max'   => number_format(self::IMPORT_MAX_ROWS),
+            ]),
+        ]);
     }
 
-    // ❗ Return errors if any
-    if (!empty($errors)) {
-        return back()->withErrors($errors);
-    }
+    $normalized = $rows->map(fn ($row) => $this->normalizeImportRow($headers, $row))->values()->all();
 
-    // 📦 Store data in session for the confirmation step
+    // Deliberately NOT refused on error any more. The merchant corrects the
+    // bad cells in the preview and saves; refusing the whole file sent them
+    // back to Excel to hunt for a row number.
+    $errors = $this->validateImportRows($normalized, $required);
+
+    $this->putImportRows($path, $normalized);
+
     session([
         'm_import.path'    => $path,
-        'm_import.headers' => $headers,
-        'm_import.total'   => count($normalizedRows),
-        // 'm_import.rows'  => collect($normalizedRows)->toArray(), // optional
+        'm_import.hash'    => hash_file('sha256', Storage::path($path)),
+        'm_import.name'    => $request->file('file')->getClientOriginalName(),
+        'm_import.headers' => $headers->values()->all(),
+        'm_import.required'=> $required->values()->all(),
+        'm_import.total'   => count($normalized),
     ]);
 
-    // 📊 Preview the first 100 rows
-    $previewRows = collect($normalizedRows)->take(100);
+    return $this->renderImportPreview($normalized, $errors);
+}
+
+/**
+ * Save the rows the merchant corrected in the preview, re-validate, and show
+ * the result. Nothing is imported here.
+ */
+public function m_parcelImportUpdate(Request $request)
+{
+    if (! session('m_import.path')) {
+        Toastr::error(trans('parcel.import_session_expired'), trans('message.error'));
+        return redirect()->route('merchant-panel.parcel.parcel-import');
+    }
+
+    $headers  = collect(session('m_import.headers', []));
+    $required = collect(session('m_import.required', []));
+
+    $incoming = collect($request->input('rows', []))->values();
+
+    // Rebuilt against the session's headers rather than trusted as posted, so
+    // a crafted payload cannot introduce columns the sheet never had.
+    $rows = $incoming->map(function ($row) use ($headers) {
+        $clean = [];
+        foreach ($headers as $h) {
+            $v = is_array($row) ? ($row[$h] ?? null) : null;
+            $clean[$h] = is_string($v) ? trim($v) : $v;
+        }
+        return $clean;
+    })->values()->all();
+
+    $rows   = $this->convertArabicDigits($rows);
+    $errors = $this->validateImportRows($rows, $required);
+
+    $this->putImportRows(session('m_import.path'), $rows);
+    session(['m_import.total' => count($rows)]);
+
+    return $this->renderImportPreview($rows, $errors, saved: true);
+}
+
+/** The one place the preview screen is built, so both steps agree. */
+private function renderImportPreview(array $rows, array $errors, bool $saved = false)
+{
+    $headers = collect(session('m_import.headers', []));
 
     return Inertia::render('Merchant/Parcel/Import', [
-        'step'         => 'preview',
-        'headers'      => $headers->values()->all(),
-        'preview_rows' => $previewRows->map(fn ($r) => $r->values()->all())->values()->all(),
-        'total_rows'   => count($normalizedRows),
-        'preview_count' => $previewRows->count(),
-        'expected'     => $expected->values()->all(),
-        'urls'         => $this->importUrls(),
-        't'            => $this->importLabels(),
+        'step'          => 'preview',
+        'headers'       => $headers->values()->all(),
+        'required'      => collect(session('m_import.required', []))->values()->all(),
+        // Every row travels, keyed by header, because every row is editable.
+        'rows'          => $rows,
+        'row_errors'    => $errors,
+        'error_count'   => collect($errors)->sum(fn ($cols) => count($cols)),
+        'total_rows'    => count($rows),
+        'saved'         => $saved,
+        'expected'      => self::importExpectedColumns(),
+        'urls'          => $this->importUrls(),
+        'limits'        => $this->importLimits(),
+        't'             => $this->importLabels(),
     ]);
 }
 
+/** Header-keyed row, trimmed, with Arabic-Indic digits folded to Western. */
+private function normalizeImportRow($headers, $row): array
+{
+    $out = [];
+    foreach ($headers as $i => $h) {
+        $v = $row[$i] ?? null;
+        $out[$h] = is_string($v) ? trim($v) : $v;
+    }
+    return $this->convertArabicDigits([$out])[0];
+}
+
+private function convertArabicDigits(array $rows): array
+{
+    $nums = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩','٫','٬','،'];
+    $rep  = ['0','1','2','3','4','5','6','7','8','9','.','',''];
+
+    foreach ($rows as $i => $row) {
+        foreach (self::importNumericColumns() as $col) {
+            if (isset($row[$col]) && $row[$col] !== null && $row[$col] !== '') {
+                $rows[$i][$col] = str_replace($nums, $rep, (string) $row[$col]);
+            }
+        }
+    }
+    return $rows;
+}
+
+/**
+ * Cell-level problems, as errors[rowIndex][column] = message.
+ *
+ * Cell level rather than a flat list so the preview can outline the offending
+ * input instead of printing a row number and leaving the merchant to count.
+ */
+private function validateImportRows(array $rows, $required): array
+{
+    $required = collect($required);
+    $errors   = [];
+
+    foreach ($rows as $i => $row) {
+        foreach ($required as $col) {
+            $v = $row[$col] ?? null;
+            if (is_null($v) || trim((string) $v) === '') {
+                $errors[$i][$col] = trans('parcel.import_err_required');
+            }
+        }
+
+        foreach (self::importNumericColumns() as $col) {
+            $v = $row[$col] ?? null;
+            if ($v !== null && trim((string) $v) !== '' && ! is_numeric($v)) {
+                $errors[$i][$col] = trans('parcel.import_err_numeric');
+            }
+        }
+
+        foreach (['Pickup phone', 'Customer Phone'] as $col) {
+            $v = $row[$col] ?? null;
+            if ($v !== null && trim((string) $v) !== ''
+                && ! preg_match('/^\+?\d{7,20}$/', preg_replace('/\s+/', '', (string) $v))) {
+                $errors[$i][$col] = trans('parcel.import_err_phone');
+            }
+        }
+    }
+
+    return $errors;
+}
+
+/** Where the working copy of the rows lives while the merchant edits them. */
+private function importRowsPath(string $filePath): string
+{
+    return $filePath . '.rows.json';
+}
+
+private function putImportRows(string $filePath, array $rows): void
+{
+    Storage::put($this->importRowsPath($filePath), json_encode($rows, JSON_UNESCAPED_UNICODE));
+}
+
+private function getImportRows(string $filePath): array
+{
+    $p = $this->importRowsPath($filePath);
+    return Storage::exists($p) ? (json_decode(Storage::get($p), true) ?: []) : [];
+}
+
+/**
+ * The authoritative column contract. Required-ness lives HERE, on the server,
+ * not in whatever headers the uploaded sheet happens to carry.
+ */
+public static function importExpectedColumns(): array
+{
+    return [
+        'Reference number', 'Pickup point', 'Pickup phone', 'Pickup address',
+        'Customer Name', 'Customer Phone', 'City', 'Area',
+        'Customer Address', 'Weight', 'COD', 'Note',
+    ];
+}
+
+public static function importRequiredColumns(): array
+{
+    return ['Customer Name', 'Customer Phone', 'City', 'Customer Address', 'Weight', 'COD'];
+}
+
+public static function importNumericColumns(): array
+{
+    return ['COD', 'Weight'];
+}
 
 
 
@@ -1303,30 +1442,120 @@ public function m_parcelImportConfirm(Request $request)
         return back();
     }
 
+    $merchant = \App\Models\Backend\Merchant::where('user_id', auth()->id())->first()
+        ?? \App\Models\Backend\Merchant::find(auth()->user()->merchant->id ?? 0);
+
+    $hash = session('m_import.hash') ?: hash_file('sha256', Storage::path($path));
+
+    // A slow import can outlive the browser, a proxy, or the operator's
+    // patience - and a retry used to import the whole sheet a second time.
+    // Refuse the repeat, and say exactly what already happened.
+    $previous = \App\Models\Backend\ParcelImportRun::where('merchant_id', $merchant->id ?? 0)
+        ->where('file_hash', $hash)
+        ->blocking()
+        ->first();
+
+    if ($previous) {
+        return back()->withErrors([
+            'file' => trans('parcel.import_already_done', [
+                'when'  => optional($previous->created_at)->format('Y-m-d H:i'),
+                'count' => number_format($previous->imported_count ?: $previous->row_count),
+            ]),
+        ]);
+    }
+
+    $run = \App\Models\Backend\ParcelImportRun::create([
+        'company_id'  => settings()->id ?? null,
+        'merchant_id' => $merchant->id ?? 0,
+        'file_hash'   => $hash,
+        'file_name'   => session('m_import.name'),
+        'row_count'   => (int) session('m_import.total', 0),
+        'status'      => \App\Models\Backend\ParcelImportRun::RUNNING,
+    ]);
+
      try {
         // نفّذ الاستيراد الفعلي بالاعتماد على كلاس الاستيراد الخاص بك
         // إن كنت تفضّل ParcelImport بدلاً من MParcelImport استبدله هنا:
+        $before = \App\Models\Backend\Parcel::withoutGlobalScopes()
+            ->where('merchant_id', $merchant->id ?? 0)->count();
+
+        // Imported from the CORRECTED rows, not from the uploaded file. The
+        // merchant edits cells in the preview, and importing the original
+        // bytes would throw those edits away. model() takes a header-keyed
+        // row and does its own normalisation, so it can be driven directly.
+        $rows = $this->getImportRows($path);
+        if (empty($rows)) {
+            throw new \RuntimeException('The corrected rows for this import could not be read.');
+        }
+
+        $stillBad = $this->validateImportRows($rows, collect(session('m_import.required', [])));
+        if (! empty($stillBad)) {
+            $run->update(['status' => \App\Models\Backend\ParcelImportRun::FAILED, 'error' => 'rows still invalid']);
+            return back()->withErrors([
+                'file' => trans('parcel.import_fix_rows_first', ['count' => count($stillBad)]),
+            ]);
+        }
+
         $import = new MParcelImport();
-        $import->import(Storage::path($path));
+        foreach ($rows as $row) {
+            $import->model($row);
+        }
+
+        $after = \App\Models\Backend\Parcel::withoutGlobalScopes()
+            ->where('merchant_id', $merchant->id ?? 0)->count();
+
+        $run->update([
+            'status'         => \App\Models\Backend\ParcelImportRun::COMPLETED,
+            'imported_count' => max(0, $after - $before),
+        ]);
 
         // تنظيف جلسة المعاينة والملف المؤقت
         Storage::delete($path);
-        session()->forget(['m_import.path', 'm_import.headers', 'm_import.total']);
+        Storage::delete($this->importRowsPath($path));
+        session()->forget(['m_import.path', 'm_import.hash', 'm_import.name', 'm_import.headers', 'm_import.required', 'm_import.total']);
 
         Toastr::success(__('parcel.added_msg'), __('message.success'));
         return redirect()->route('merchant-panel.parcel.index');
 
     } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
-        $failures = $e->failures();
-        $importErrors = [];
-        foreach ($failures as $failure) {
-            $importErrors[$failure->row()][] = $failure->errors()[0] ?? 'خطأ غير معروف في الصف';
-        }
-        return $importErrors;
-        // لا نحذف الملف هنا كي يقدر يعيد التأكيد بعد التصحيح إن لزم
-        return back()->with('importErrors', $importErrors);
-    } catch (\Throwable $th) {
+        // Released, not left blocking: the sheet needs correcting and the
+        // corrected file must be importable. A repeat of the SAME bytes is
+        // still pointless, but it will fail the same way rather than double
+        // anything.
+        $run->update(['status' => \App\Models\Backend\ParcelImportRun::FAILED, 'error' => 'row validation']);
 
+        // Row-level failures raised by the import itself, after the preview
+        // pass had already accepted the file.
+        //
+        // Flattened into the same "Row N: message" strings the preview step
+        // produces, because that is the only shape this page can show: it
+        // renders Inertia's errors bag and flattens it. What was here before
+        // returned the raw keyed array - which rendered as bare JSON - and
+        // the back() call underneath it was unreachable. That line would not
+        // have worked either: it flashes an importErrors prop the page never
+        // reads.
+        //
+        // The uploaded file is deliberately NOT deleted, so the operator can
+        // correct the sheet and confirm again without re-uploading.
+        $rowLabel     = __('parcel.row_number') ?: 'Row';
+        $importErrors = [];
+
+        foreach ($e->failures() as $failure) {
+            foreach ($failure->errors() as $message) {
+                $importErrors[] = $rowLabel . ' ' . $failure->row() . ': ' . $message;
+            }
+        }
+
+        if (empty($importErrors)) {
+            $importErrors[] = 'خطأ غير معروف في الصف';
+        }
+
+        return back()->withErrors($importErrors);
+    } catch (\Throwable $th) {
+        $run->update([
+            'status' => \App\Models\Backend\ParcelImportRun::FAILED,
+            'error'  => mb_substr($th->getMessage(), 0, 1000),
+        ]);
 
         Toastr::error('حدث خطأ أثناء الاستيراد: ' . $th->getMessage(), 'خطأ');
         return back();

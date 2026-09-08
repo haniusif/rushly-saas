@@ -16,13 +16,31 @@ use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\Importable;
 use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
+use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
 use App\Enums\ParcelStatus;
 use App\Enums\DeliveryTime;
 use App\Traits\TrackingTrait;
 
-class MParcelImport implements ToModel, WithHeadingRow, SkipsEmptyRows
+class MParcelImport implements ToModel, WithHeadingRow, SkipsEmptyRows, WithMultipleSheets
 {
+    /**
+     * Read the FIRST sheet only.
+     *
+     * Without this, Maatwebsite imports every sheet in the workbook. The
+     * template ships Shipments + Cities + Areas, so a merchant uploading it
+     * back produced one parcel per lookup row: 28 cities + 518 areas = 546
+     * blank parcels on top of their real rows, every time. The Areas rows even
+     * carried a city, because normalizeRow aliases city_id -> customer_city_id.
+     *
+     * The preview step reads only the first sheet, so it showed the right
+     * count and the damage was invisible until the parcels existed.
+     */
+    public function sheets(): array
+    {
+        return [0 => $this];
+    }
+
     use Importable, TrackingTrait;
 
     public function headingRow(): int
@@ -116,34 +134,79 @@ class MParcelImport implements ToModel, WithHeadingRow, SkipsEmptyRows
         $merchant = Merchant::with('user')->find($merchantId);
         if (!$merchant) return null;
 
-        // Resolve shop id by pickup_point (shop name) or fallback to provided shop_id
+        // Resolve the pickup point: by name, then by an explicit shop_id, then
+        // by the merchant only having one.
         $shopId = null;
+        $shop   = null;
+
         if (!empty($row['pickup_point'])) {
             $shop = MerchantShops::where('merchant_id', $merchant->id)
                 ->where('name', $row['pickup_point'])
                 ->first();
             if ($shop) $shopId = $shop->id;
         }
+
         if (!$shopId && !empty($row['shop_id'])) {
-            $shopId = (int) $row['shop_id'];
+            // Scoped to this merchant. The id comes straight out of a
+            // spreadsheet, and taking it on trust would let one merchant file
+            // parcels against another merchant's pickup point.
+            $shop = MerchantShops::where('merchant_id', $merchant->id)
+                ->where('id', (int) $row['shop_id'])
+                ->first();
+            if ($shop) $shopId = $shop->id;
         }
 
-        // Resolve city/area ids if only names provided (optional)
-        $cityId = $row['customer_city_id'];
-        $areaId = $row['customer_area_id'];
-        if (!$cityId && !empty($row['city']) && class_exists(City::class)) {
-            
-                $cityId = City::where('name', $row['city'])
-        ->orWhere('en_name', $row['city'])
-        ->value('id');
-        
+        // Almost every merchant has exactly one pickup point, and repeating its
+        // name on every row is pure friction: a blank cell or a typo used to
+        // leave merchant_shop_id null with no error and no pickup address on
+        // the parcel. With a single shop there is nothing to disambiguate, so
+        // use it. Merchants with several still have to say which one.
+        if (!$shopId) {
+            $only = MerchantShops::where('merchant_id', $merchant->id)->take(2)->get();
+            if ($only->count() === 1) {
+                $shop   = $only->first();
+                $shopId = $shop->id;
+            }
         }
-        if (!$areaId && !empty($row['area']) && class_exists(Area::class)) {
-             
-                $areaId = Area::where('name', $row['area'])
-        ->orWhere('en_name', $row['area'])
-        ->value('id');
-        
+
+        // Resolve city and area. Names match in either language, and an id
+        // typed straight into the sheet is verified rather than trusted.
+        $cityId = $row['customer_city_id'] ?: null;
+        $areaId = $row['customer_area_id'] ?: null;
+
+        if ($cityId && ! City::whereKey((int) $cityId)->exists()) {
+            $cityId = null;
+        }
+
+        if (! $cityId && ! empty($row['city'])) {
+            $cityId = City::where(function ($q) use ($row) {
+                $q->where('name', $row['city'])->orWhere('en_name', $row['city']);
+            })->value('id');
+        }
+
+        // The area has to belong to the city on the same row. Eight area names
+        // exist in more than one city - الروضة, الشاطئ, Al Nakheel among them -
+        // so matching on name alone silently attached whichever row the table
+        // happened to return first, putting the parcel in the wrong city's area.
+        //
+        // The name comparison is wrapped in its own closure on purpose: left
+        // ungrouped, the orWhere escapes the city_id filter and the constraint
+        // stops meaning anything.
+        if ($areaId) {
+            $belongs = Area::whereKey((int) $areaId)
+                ->when($cityId, fn ($q) => $q->where('city_id', $cityId))
+                ->exists();
+            if (! $belongs) {
+                $areaId = null;
+            }
+        }
+
+        if (! $areaId && ! empty($row['area'])) {
+            $areaId = Area::when($cityId, fn ($q) => $q->where('city_id', $cityId))
+                ->where(function ($q) use ($row) {
+                    $q->where('name', $row['area'])->orWhere('en_name', $row['area']);
+                })
+                ->value('id');
         }
 
         // Defaults
@@ -155,6 +218,15 @@ class MParcelImport implements ToModel, WithHeadingRow, SkipsEmptyRows
         // Map fields
         $pickup_phone     = $row['pickup_phone'];
         $pickup_address   = $row['pickup_address'];
+
+        // Blank pickup columns fall back to the resolved shop rather than
+        // landing on the parcel as null - the shop is where the driver goes.
+        if (blank($pickup_phone) && $shop) {
+            $pickup_phone = $shop->contact_no;
+        }
+        if (blank($pickup_address) && $shop) {
+            $pickup_address = $shop->address;
+        }
         $pickup_lat       = $row['pickup_lat'];
         $pickup_long      = $row['pickup_long'];
 

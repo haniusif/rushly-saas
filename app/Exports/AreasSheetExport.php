@@ -37,6 +37,23 @@ class AreasSheetExport implements FromArray, WithHeadings, WithTitle, WithEvents
                 }
                 $event->sheet->getStyle('A1:E1')->getFont()->setBold(true);
 
+                // A deliberately blank one-cell range. 15 of 28 cities have no
+                // areas at all, so Areas_<city_id> does not exist for them and
+                // the dependent INDIRECT resolves to #REF! - which, with a STOP
+                // error style, makes Excel reject the cell and pop an error the
+                // moment the dropdown is opened. The Shipments sheet falls back
+                // to this range, giving an empty list instead of an error.
+                $makeEmpty = function () use ($book, $sheet) {
+                    foreach ($book->getNamedRanges() as $nr) {
+                        if ($nr->getName() === 'NoAreas') {
+                            $book->removeNamedRange('NoAreas');
+                            break;
+                        }
+                    }
+                    $book->addNamedRange(new NamedRange('NoAreas', $sheet, 'Z1:Z1'));
+                };
+                $makeEmpty();
+
                 // Build named ranges per city_id over C (name)
                 // Data starts at row 2
                 $count = count($this->rows);

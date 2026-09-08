@@ -20,9 +20,83 @@ const EMPTY = {
     customer_phone: '',
     customer_address: '',
     city_id: '',
+    area_id: '',
     cash_collection: '',
     note: '',
 };
+
+/**
+ * A select you can type into.
+ *
+ * 28 cities would survive a plain dropdown; 518 areas would not, and the two
+ * should behave the same way or the form teaches one habit and then breaks it.
+ * Deliberately dependency-free: filter, arrow keys, Enter, Escape.
+ */
+function SearchSelect({ id, value, onChange, options, placeholder, emptyText, disabled }) {
+    const [open, setOpen]   = React.useState(false);
+    const [query, setQuery] = React.useState('');
+    const [hi, setHi]       = React.useState(0);
+    const boxRef = React.useRef(null);
+
+    const selected = options.find((o) => String(o.id) === String(value));
+
+    const shown = React.useMemo(() => {
+        const q = query.trim().toLowerCase();
+        if (!q) return options.slice(0, 50);
+        return options.filter((o) => String(o.name).toLowerCase().includes(q)).slice(0, 50);
+    }, [query, options]);
+
+    React.useEffect(() => {
+        const onDoc = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', onDoc);
+        return () => document.removeEventListener('mousedown', onDoc);
+    }, []);
+
+    const pick = (o) => { onChange(String(o.id)); setOpen(false); setQuery(''); };
+
+    const onKey = (e) => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); setHi((i) => Math.min(i + 1, shown.length - 1)); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setHi((i) => Math.max(i - 1, 0)); }
+        else if (e.key === 'Enter' && open && shown[hi]) { e.preventDefault(); pick(shown[hi]); }
+        else if (e.key === 'Escape') { setOpen(false); }
+    };
+
+    return (
+        <div className="relative" ref={boxRef}>
+            <Input
+                id={id}
+                autoComplete="off"
+                disabled={disabled}
+                value={open ? query : (selected ? selected.name : '')}
+                placeholder={disabled ? emptyText : placeholder}
+                onFocus={() => { if (!disabled) { setOpen(true); setQuery(''); setHi(0); } }}
+                onChange={(e) => { setQuery(e.target.value); setOpen(true); setHi(0); }}
+                onKeyDown={onKey}
+            />
+            {open && !disabled && (
+                <div className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-border bg-card shadow-lg">
+                    {shown.length === 0 ? (
+                        <div className="px-3 py-2 text-xs text-muted-foreground">{emptyText}</div>
+                    ) : shown.map((o, i) => (
+                        <button
+                            key={o.id}
+                            type="button"
+                            onMouseEnter={() => setHi(i)}
+                            onClick={() => pick(o)}
+                            className={[
+                                'block w-full px-3 py-1.5 text-start text-sm',
+                                i === hi ? 'bg-accent' : 'hover:bg-accent/60',
+                                String(o.id) === String(value) ? 'font-semibold' : '',
+                            ].join(' ')}
+                        >
+                            {o.name}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
 
 /**
  * Navbar quick-create shipment modal.
@@ -91,6 +165,13 @@ export default function QuickCreateShipmentModal({
     // Picking a merchant prefills its pickup details, but never overwrites
     // something already typed by hand.
     const shops = lookups?.shops || [];
+
+    // Areas arrive grouped by city id, so narrowing is a lookup, not a
+    // fetch - the whole point of a modal that is supposed to be quick.
+    const areasForCity = React.useMemo(
+        () => (form.city_id ? (lookups?.areas?.[String(form.city_id)] || []) : []),
+        [lookups, form.city_id],
+    );
 
     // A lone pickup point is not a question. Fill it in and say which one was
     // used, rather than showing a select with one option or two inputs the
@@ -296,25 +377,49 @@ export default function QuickCreateShipmentModal({
                         <div className="space-y-3 border-t border-border pt-4">
                             {sectionTitle(t('quick_ship_receiver'))}
 
+                            {/* Order follows how the shipment is actually
+                                described out loud: who, how to reach them,
+                                where - narrowing city, then area, then the
+                                street address. Money and notes come last. */}
                             <div className="grid gap-3 sm:grid-cols-2">
                                 {field('customer_name', t('quick_ship_receiver_name'))}
                                 {field('customer_phone', t('quick_ship_receiver_phone'), { inputMode: 'tel' })}
                             </div>
 
-                            {field('customer_address', t('quick_ship_receiver_address'))}
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="qs-city">{t('quick_ship_city')}</Label>
+                                    <SearchSelect
+                                        id="qs-city"
+                                        value={form.city_id}
+                                        onChange={(v) => setForm((f) => ({ ...f, city_id: v, area_id: '' }))}
+                                        options={lookups?.cities || []}
+                                        placeholder={t('quick_ship_city')}
+                                        emptyText={t('quick_ship_no_match')}
+                                    />
+                                    {fieldError('city_id') && (
+                                        <p className="text-xs text-rose-600">{fieldError('city_id')}</p>
+                                    )}
+                                </div>
 
-                            <div className="space-y-1.5">
-                                <Label htmlFor="qs-city">{t('quick_ship_city')}</Label>
-                                <Select id="qs-city" value={form.city_id} onChange={set('city_id')}>
-                                    <option value="">— {t('quick_ship_city')} —</option>
-                                    {(lookups?.cities || []).map((c) => (
-                                        <option key={c.id} value={c.id}>{c.name}</option>
-                                    ))}
-                                </Select>
-                                {fieldError('city_id') && (
-                                    <p className="text-xs text-rose-600">{fieldError('city_id')}</p>
-                                )}
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="qs-area">{t('quick_ship_area')}</Label>
+                                    <SearchSelect
+                                        id="qs-area"
+                                        value={form.area_id}
+                                        onChange={(v) => setForm((f) => ({ ...f, area_id: v }))}
+                                        options={areasForCity}
+                                        placeholder={t('quick_ship_area')}
+                                        emptyText={form.city_id ? t('quick_ship_no_match') : t('quick_ship_pick_city_first')}
+                                        disabled={!form.city_id}
+                                    />
+                                    {fieldError('area_id') && (
+                                        <p className="text-xs text-rose-600">{fieldError('area_id')}</p>
+                                    )}
+                                </div>
                             </div>
+
+                            {field('customer_address', t('quick_ship_receiver_address'))}
                         </div>
 
                         {/* ---------- COD + notes ---------- */}

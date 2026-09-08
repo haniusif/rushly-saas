@@ -239,8 +239,6 @@ class MerchantParcelController extends Controller
         return Inertia::render($component, [
             'rows'       => $rows,
             'kpi_counts' => $kpiCounts,
-            // Consumed by the LocationPicker in the shared ParcelForm.
-            'google_maps_key' => (string) googleMapSettingKey(),
             'currency'   => $currency,
             'filters'    => [
                 'parcel_date'           => $request->parcel_date,
@@ -479,6 +477,10 @@ class MerchantParcelController extends Controller
                 'price' => (float) ($p->price ?? 0),
             ])->values(),
             'cities'        => $cities,
+            // Tenant's own Google Maps key, read per company by
+            // googleMapSettingKey(). Without it the LocationPicker in
+            // ParcelForm falls back to a configure-your-key notice.
+            'google_maps_key' => (string) googleMapSettingKey(),
             'currency'      => settings()->currency,
             'urls' => [
                 'store'             => route('merchant-panel.parcel.store'),
@@ -578,6 +580,16 @@ class MerchantParcelController extends Controller
                 'id'   => $c->id,
                 'name' => $c->en_name ?: $c->name,
             ])->values(),
+            // All areas, grouped by city. 518 rows is a few KB and saves a
+            // round trip per city change inside a modal that is meant to be
+            // quick; the picker filters them client-side.
+            'areas' => collect(\App\Models\Backend\Area::orderBy('city_id')->orderBy('sorting')->orderBy('id')
+                ->get(['id', 'name', 'en_name', 'city_id']))
+                ->groupBy('city_id')
+                ->map(fn ($g) => $g->map(fn ($a) => [
+                    'id'   => $a->id,
+                    'name' => $a->en_name ?: $a->name,
+                ])->values()),
             'currency' => settings()->currency,
         ]);
     }
@@ -602,6 +614,7 @@ class MerchantParcelController extends Controller
             'customer_phone'   => ['required', 'string', 'max:191'],
             'customer_address' => ['required', 'string', 'max:191'],
             'city_id'          => ['required', 'numeric'],
+            'area_id'          => ['nullable', 'numeric'],
             'cash_collection'  => ['nullable', 'numeric', 'min:0'],
             'note'             => ['nullable', 'string', 'max:1000'],
         ]);

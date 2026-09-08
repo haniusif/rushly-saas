@@ -41,6 +41,9 @@ const DICTIONARY = {
         search_placeholder: 'Search…',
         // Navbar quick-create shipment modal
         quick_ship_action: 'New shipment',
+        quick_ship_area: 'Area',
+        quick_ship_no_match: 'No match',
+        quick_ship_pick_city_first: 'Pick a city first',
         quick_ship_title: 'Quick shipment',
         quick_ship_subtitle: 'Pickup, receiver, COD and notes. Everything else uses your defaults.',
         quick_ship_pickup: 'Pickup',
@@ -322,6 +325,9 @@ const DICTIONARY = {
         search_placeholder: 'بحث…',
         // نافذة إنشاء شحنة سريعة من الشريط العلوي
         quick_ship_action: 'شحنة جديدة',
+        quick_ship_area: 'المنطقة',
+        quick_ship_no_match: 'لا توجد نتائج',
+        quick_ship_pick_city_first: 'اختر المدينة أولاً',
         quick_ship_title: 'شحنة سريعة',
         quick_ship_subtitle: 'الاستلام والمستلم والدفع عند الاستلام والملاحظات. الباقي حسب الإعدادات الافتراضية.',
         quick_ship_pickup: 'الاستلام',

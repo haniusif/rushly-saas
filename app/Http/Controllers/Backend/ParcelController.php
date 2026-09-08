@@ -683,7 +683,16 @@ class ParcelController extends Controller
                 'id'   => $c->id,
                 'name' => $c->en_name ?: $c->name,
             ])->values(),
-            'currency' => settings()->currency,
+                        // Grouped by city so the modal area picker filters without a
+            // round trip; same shape the merchant panel returns.
+            'areas' => collect(\App\Models\Backend\Area::orderBy('city_id')->orderBy('sorting')->orderBy('id')
+                ->get(['id', 'name', 'en_name', 'city_id']))
+                ->groupBy('city_id')
+                ->map(fn ($g) => $g->map(fn ($a) => [
+                    'id'   => $a->id,
+                    'name' => $a->en_name ?: $a->name,
+                ])->values()),
+'currency' => settings()->currency,
         ]);
     }
 
@@ -713,6 +722,7 @@ class ParcelController extends Controller
             'customer_phone'   => ['required', 'string', 'max:191'],
             'customer_address' => ['required', 'string', 'max:191'],
             'city_id'          => ['required', 'numeric'],
+            'area_id'          => ['nullable', 'numeric'],
             'cash_collection'  => ['nullable', 'numeric', 'min:0'],
             'note'             => ['nullable', 'string', 'max:1000'],
         ]);

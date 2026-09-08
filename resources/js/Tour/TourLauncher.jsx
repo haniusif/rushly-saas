@@ -33,7 +33,7 @@ export default function TourLauncher({ label = 'Take a tour' }) {
             <button
                 type="button"
                 onClick={() => setOpen((o) => !o)}
-                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent"
+                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground hover:bg-accent"
                 aria-haspopup="menu"
                 aria-expanded={open}
                 title={label}

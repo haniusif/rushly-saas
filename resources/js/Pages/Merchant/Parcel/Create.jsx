@@ -1,30 +1,8 @@
 import * as React from 'react';
-import { Head, useForm } from '@inertiajs/react';
-import { Save, X, AlertCircle, MapPin, Phone, User, FileText, Hash, Tag, Boxes, Truck, Building2 } from 'lucide-react';
+import { useForm } from '@inertiajs/react';
 import MerchantLayout from '@/Layouts/MerchantLayout';
-import { Card, CardContent } from '@/Components/ui/Card';
-import { Input } from '@/Components/ui/Input';
-import { Select } from '@/Components/ui/Select';
-import { Textarea } from '@/Components/ui/Textarea';
+import ParcelForm from '@/Components/parcel/ParcelForm';
 import { Label } from '@/Components/ui/Label';
-
-function Field({ label, required, error, hint, icon: Icon, children }) {
-    return (
-        <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                {Icon && <Icon className="h-3 w-3" />}
-                {label} {required && <span className="text-destructive">*</span>}
-            </Label>
-            {children}
-            {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}
-            {error && (
-                <p className="text-xs text-destructive flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" /> {error}
-                </p>
-            )}
-        </div>
-    );
-}
 
 function fmt(n) {
     const v = Number(n) || 0;
@@ -64,6 +42,7 @@ export default function Create({
     packagings = [],
     cities = [],
     currency = '',
+    google_maps_key = '',
     urls = {},
     t = {},
     // Edit-mode props: when `parcel` is provided, the form is pre-filled and
@@ -241,208 +220,51 @@ export default function Create({
 
     return (
         <MerchantLayout title={pageTitle} breadcrumbs={[t.dashboard, t.shipments, crumbLast]}>
-            <Head title={pageTitle} />
-            <form onSubmit={onSubmit}>
-                <div className="grid gap-3 lg:grid-cols-3">
-                    {/* ─── main form ──────────────────────────────────────────── */}
-                    <div className="lg:col-span-2 space-y-3">
-                        <Card>
-                            <CardContent className="p-5">
-                                <h2 className="text-lg font-semibold mb-4">{t.title}</h2>
-
-                                <div className="grid gap-4 md:grid-cols-2">
-                                    <Field label={t.pickup_point} icon={Building2} error={form.errors.shop_id}>
-                                        <Select value={form.data.shop_id} onChange={(e) => form.setData('shop_id', e.target.value)}>
-                                            <option value="">{t.pickup_point_ph}</option>
-                                            {shops.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                        </Select>
-                                    </Field>
-                                    <Field label={t.pickup_phone} icon={Phone} error={form.errors.pickup_phone} required>
-                                        <Input value={form.data.pickup_phone} onChange={(e) => form.setData('pickup_phone', e.target.value)} placeholder={t.pickup_phone} />
-                                    </Field>
-                                    <Field label={t.pickup_address} icon={MapPin} error={form.errors.pickup_address} required>
-                                        <Input value={form.data.pickup_address} onChange={(e) => form.setData('pickup_address', e.target.value)} placeholder={t.pickup_address} />
-                                    </Field>
-                                    <Field label={t.cod} icon={Hash} error={form.errors.cash_collection} required>
-                                        <Input
-                                            type="number" step="0.01" min="0"
-                                            value={form.data.cash_collection}
-                                            onChange={(e) => form.setData('cash_collection', e.target.value)}
-                                            placeholder={t.cod_ph}
-                                        />
-                                    </Field>
-                                    <Field label={t.reference_number} icon={FileText} error={form.errors.reference_number}>
-                                        <Input value={form.data.reference_number} onChange={(e) => form.setData('reference_number', e.target.value)} placeholder={t.reference_ph} />
-                                    </Field>
-                                    <Field label={t.category} icon={Tag} error={form.errors.category_id} required>
-                                        <Select value={form.data.category_id} onChange={(e) => form.setData('category_id', e.target.value)}>
-                                            <option value="">{t.select}</option>
-                                            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                        </Select>
-                                    </Field>
-                                    <Field label={t.weight} error={form.errors.weight} required>
-                                        <Select value={form.data.weight} onChange={(e) => form.setData('weight', e.target.value)} disabled={!form.data.category_id}>
-                                            <option value="">{t.select} {t.weight}</option>
-                                            {weights.map((w) => <option key={w.value} value={w.value}>{w.label}</option>)}
-                                        </Select>
-                                    </Field>
-                                    <Field label={t.extra_weight} error={form.errors.extra_weight}>
-                                        <Input
-                                            type="number" step="0.1" min="0"
-                                            value={form.data.extra_weight}
-                                            onChange={(e) => form.setData('extra_weight', e.target.value)}
-                                            placeholder={t.extra_weight}
-                                        />
-                                    </Field>
-                                    <Field label={t.delivery_type} icon={Truck} error={form.errors.delivery_type_id} required>
-                                        <Select value={form.data.delivery_type_id} onChange={(e) => form.setData('delivery_type_id', e.target.value)}>
-                                            <option value="">{t.select} {t.delivery_type}</option>
-                                            {delivery_types.map((dt) => <option key={dt.id} value={dt.id}>{dt.name}</option>)}
-                                        </Select>
-                                    </Field>
-                                    <Field label={t.customer_name} icon={User} error={form.errors.customer_name} required>
-                                        <Input value={form.data.customer_name} onChange={(e) => form.setData('customer_name', e.target.value)} placeholder={t.customer_name} />
-                                    </Field>
-                                    <Field label={t.customer_phone} icon={Phone} error={form.errors.customer_phone} required>
-                                        <Input value={form.data.customer_phone} onChange={(e) => form.setData('customer_phone', e.target.value)} placeholder={t.customer_phone} />
-                                    </Field>
-                                    <Field label={t.city} error={form.errors.city_id}>
-                                        <Select value={form.data.city_id} onChange={(e) => form.setData('city_id', e.target.value)}>
-                                            <option value="">{t.city_ph}</option>
-                                            {cities.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                        </Select>
-                                    </Field>
-                                    <Field label={t.area} error={form.errors.area_id}>
-                                        <Select value={form.data.area_id} onChange={(e) => form.setData('area_id', e.target.value)} disabled={!form.data.city_id}>
-                                            <option value="">{t.area_ph}</option>
-                                            {areas.map((a) => <option key={a.id} value={a.id}>{a.name || a.title}</option>)}
-                                        </Select>
-                                    </Field>
-                                </div>
-
-                                <div className="mt-4 space-y-4">
-                                    <Field label={t.customer_address} icon={MapPin} error={form.errors.customer_address} required>
-                                        <Input value={form.data.customer_address} onChange={(e) => form.setData('customer_address', e.target.value)} placeholder={t.customer_address} />
-                                    </Field>
-                                    <Field label={t.note} error={form.errors.note}>
-                                        <Textarea
-                                            rows={4}
-                                            value={form.data.note}
-                                            onChange={(e) => form.setData('note', e.target.value)}
-                                        />
-                                    </Field>
-
-                                    <div className="grid md:grid-cols-2 gap-4">
-                                        {fragile_liquid.active && (
-                                            <label className="flex items-start gap-2 rounded-md border border-input p-3 cursor-pointer hover:bg-muted/30">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={form.data.fragileLiquid}
-                                                    onChange={(e) => form.setData('fragileLiquid', e.target.checked)}
-                                                    className="mt-0.5"
-                                                />
-                                                <div>
-                                                    <div className="text-sm font-medium">{t.liquid_check_label}</div>
-                                                    <div className="text-[11px] text-muted-foreground">
-                                                        {t.liquid_fragile} (+{fmt(fragile_liquid.charge)} {currency})
-                                                    </div>
-                                                </div>
-                                            </label>
-                                        )}
-                                        <Field label={t.packaging} icon={Boxes} error={form.errors.packaging_id}>
-                                            <Select value={form.data.packaging_id} onChange={(e) => form.setData('packaging_id', e.target.value)}>
-                                                <option value="">{t.select} {t.packaging}</option>
-                                                {packagings.map((p) => (
-                                                    <option key={p.id} value={p.id}>
-                                                        {p.name} ({fmt(p.price)} {currency})
-                                                    </option>
-                                                ))}
-                                            </Select>
-                                        </Field>
-                                    </div>
-
-                                    <label className="flex items-center gap-2 text-sm">
-                                        <input
-                                            type="checkbox"
-                                            checked={form.data.parcel_bank}
-                                            onChange={(e) => form.setData('parcel_bank', e.target.checked)}
-                                        />
-                                        {t.parcel_bank}
-                                    </label>
-                                </div>
-
-                                <div className="mt-6 flex items-center gap-2 border-t border-border pt-4">
-                                    <button
-                                        type="submit"
-                                        disabled={form.processing}
-                                        className="inline-flex items-center gap-1.5 h-10 px-4 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
-                                    >
-                                        <Save className="h-4 w-4" /> {t.save}
-                                    </button>
-                                    <a href={urls.cancel} className="inline-flex items-center gap-1.5 h-10 px-4 text-sm font-medium rounded-md border border-input bg-background hover:bg-muted/40 no-underline">
-                                        <X className="h-4 w-4" /> {t.cancel}
-                                    </a>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    {/* ─── charge summary ─────────────────────────────────────── */}
-                    <aside className="lg:col-span-1">
-                        <Card className="sticky top-4">
-                            <CardContent className="p-0">
-                                <div className="px-5 py-3 border-b border-border">
-                                    <h3 className="text-sm font-semibold m-0">{t.charge_details}</h3>
-                                </div>
-                                <ul className="divide-y divide-border list-none m-0 p-0 text-sm">
-                                    <li className="flex items-center justify-between px-5 py-2.5">
-                                        <span className="text-muted-foreground">{t.cash_collection}</span>
-                                        <span className="tabular-nums font-medium">{fmt(cash)} <span className="text-xs text-muted-foreground">{currency}</span></span>
-                                    </li>
-                                    <li className="flex items-center justify-between px-5 py-2.5">
-                                        <span className="text-muted-foreground">{t.delivery_charge}</span>
-                                        <span className="tabular-nums">{fmt(deliveryCharge)} <span className="text-xs text-muted-foreground">{currency}</span></span>
-                                    </li>
-                                    <li className="flex items-center justify-between px-5 py-2.5">
-                                        <span className="text-muted-foreground">{t.cod_charge}</span>
-                                        <span className="tabular-nums">{fmt(codCharge)} <span className="text-xs text-muted-foreground">{currency}</span></span>
-                                    </li>
-                                    {form.data.fragileLiquid && fragile_liquid.active && (
-                                        <li className="flex items-center justify-between px-5 py-2.5">
-                                            <span className="text-muted-foreground">{t.liquid_charge}</span>
-                                            <span className="tabular-nums">{fmt(liquidCharge)} <span className="text-xs text-muted-foreground">{currency}</span></span>
-                                        </li>
-                                    )}
-                                    {packagingPrice > 0 && (
-                                        <li className="flex items-center justify-between px-5 py-2.5">
-                                            <span className="text-muted-foreground">{t.packaging_charge}</span>
-                                            <span className="tabular-nums">{fmt(packagingPrice)} <span className="text-xs text-muted-foreground">{currency}</span></span>
-                                        </li>
-                                    )}
-                                    <li className="flex items-center justify-between px-5 py-2.5 bg-muted/20">
-                                        <span className="font-semibold">{t.total_charge}</span>
-                                        <span className="tabular-nums font-semibold">{fmt(totalCharge)} <span className="text-xs text-muted-foreground">{currency}</span></span>
-                                    </li>
-                                    <li className="flex items-center justify-between px-5 py-2.5">
-                                        <span className="text-muted-foreground">{t.vat}</span>
-                                        <span className="tabular-nums">{fmt(vat)} <span className="text-xs text-muted-foreground">{currency}</span></span>
-                                    </li>
-                                    <li className="flex items-center justify-between px-5 py-2.5">
-                                        <span className="text-muted-foreground">{t.net_payable}</span>
-                                        <span className="tabular-nums">{fmt(netPayable)} <span className="text-xs text-muted-foreground">{currency}</span></span>
-                                    </li>
-                                    <li className="flex items-center justify-between px-5 py-3 bg-emerald-50/40">
-                                        <span className="font-semibold text-emerald-800">{t.current_payable}</span>
-                                        <span className={`tabular-nums font-semibold ${currentPayable > 0 ? 'text-emerald-700' : 'text-foreground'}`}>
-                                            {fmt(currentPayable)} <span className="text-xs text-muted-foreground">{currency}</span>
-                                        </span>
-                                    </li>
-                                </ul>
-                            </CardContent>
-                        </Card>
-                    </aside>
-                </div>
-            </form>
+            {/* Same component the admin create screen uses. Everything that
+                depends on the merchant's own rate card - weight bands, areas,
+                the delivery charge and the whole charge summary - is still
+                resolved HERE and handed over, because those numbers are what
+                the merchant is billed on and the shared component's own
+                approximation is not the same calculation. */}
+            <ParcelForm
+                form={form}
+                mode={isEdit ? 'edit' : 'create'}
+                audience={'merchant'}
+                lookups={{
+                    merchants: merchant?.id ? [{ id: merchant.id, name: merchant.name || '', vat: merchant.vat || 0 }] : [],
+                    cities,
+                    categories,
+                    packagings,
+                    delivery_types,
+                }}
+                initialShops={shops}
+                weightOptions={weights.length ? weights : null}
+                areaOptions={areas}
+                deliveryCharge={deliveryCharge}
+                charges={{
+                    cash,
+                    deliveryCharge,
+                    codCharge,
+                    liquidCharge,
+                    packagingCharge: packagingPrice,
+                    totalCharge,
+                    vat,
+                    netPayable,
+                    currentPayable,
+                }}
+                showReference
+                showExtraWeight
+                showParcelBank
+                settings={{
+                    currency,
+                    vat_tax: merchant?.vat || 0,
+                    fragile_liquid_charge: fragile_liquid?.charge || 0,
+                    google_maps_key: google_maps_key || '',
+                }}
+                urls={urls}
+                t={t}
+                onSubmit={onSubmit}
+            />
         </MerchantLayout>
     );
 }

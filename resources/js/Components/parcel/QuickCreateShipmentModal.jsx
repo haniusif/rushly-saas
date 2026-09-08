@@ -85,6 +85,15 @@ export default function QuickCreateShipmentModal({
 
     // Picking a merchant prefills its pickup details, but never overwrites
     // something already typed by hand.
+    // One merchant means there is nothing to choose. The merchant panel
+    // always sends exactly one; an admin tenant with a single merchant gets
+    // the same courtesy.
+    React.useEffect(() => {
+        if (!lookups || form.merchant_id) return;
+        const list = lookups.merchants || [];
+        if (list.length === 1) setForm((f) => ({ ...f, merchant_id: String(list[0].id) }));
+    }, [lookups]); // eslint-disable-line react-hooks/exhaustive-deps
+
     React.useEffect(() => {
         if (!form.merchant_id || !lookups) return;
         const m = (lookups.merchants || []).find((x) => String(x.id) === String(form.merchant_id));

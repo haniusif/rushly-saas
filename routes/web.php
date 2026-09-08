@@ -1368,6 +1368,10 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::get('parcel/index',           [MerchantParcelController::class, 'index'])->name('merchant-panel.parcel.index');
                         Route::get('parcel-bank/index',      [MerchantParcelController::class, 'parcelBank'])->name('merchant-panel.parcel-bank.index');
                         Route::get('parcel/create',          [MerchantParcelController::class, 'create'])->name('merchant-panel.parcel.create');
+                        // Navbar Quick Shipment modal. merchant_id is taken from
+                        // the session inside quickStore, never from the request.
+                        Route::get('parcel/quick-create/lookups', [MerchantParcelController::class, 'quickCreateLookups'])->name('merchant-panel.parcel.quick-create.lookups');
+                        Route::post('parcel/quick-store',         [MerchantParcelController::class, 'quickStore'])->name('merchant-panel.parcel.quick-store');
                         Route::post('parcel/store',          [MerchantParcelController::class, 'store'])->name('merchant-panel.parcel.store');
                         Route::get('parcel/clone/{id}',      [MerchantParcelController::class, 'duplicate'])->name('merchant-parcel.clone');
                         Route::post('parcel/clone-store',    [MerchantParcelController::class, 'duplicateStore'])->name('merchant-parcel.clone-store');

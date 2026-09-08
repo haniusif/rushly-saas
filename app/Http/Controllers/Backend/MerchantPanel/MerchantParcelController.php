@@ -239,6 +239,8 @@ class MerchantParcelController extends Controller
         return Inertia::render($component, [
             'rows'       => $rows,
             'kpi_counts' => $kpiCounts,
+            // Consumed by the LocationPicker in the shared ParcelForm.
+            'google_maps_key' => (string) googleMapSettingKey(),
             'currency'   => $currency,
             'filters'    => [
                 'parcel_date'           => $request->parcel_date,
@@ -532,6 +534,117 @@ class MerchantParcelController extends Controller
                 'current_payable'    => __('parcel.Current_payable') ?: 'Current payable',
             ],
         ];
+    }
+
+    /**
+     * Lookups for the navbar Quick Shipment modal.
+     *
+     * The merchant panel has exactly one merchant - the one signed in - so the
+     * list is a single entry. The modal is shared with the admin topbar, which
+     * genuinely picks from many, and returning the same shape keeps one
+     * component instead of two.
+     */
+    public function quickCreateLookups()
+    {
+        $merchant = $this->currentMerchant();
+
+        return response()->json([
+            'merchants' => $merchant ? [[
+                'id'             => $merchant->id,
+                'name'           => $merchant->business_name,
+                'vat'            => (float) ($merchant->vat ?? 0),
+                'cod_charges'    => [
+                    'inside_city'  => (float) (data_get($merchant, 'cod_charges.inside_city') ?? 0),
+                    'sub_city'     => (float) (data_get($merchant, 'cod_charges.sub_city') ?? 0),
+                    'outside_city' => (float) (data_get($merchant, 'cod_charges.outside_city') ?? 0),
+                ],
+                'pickup_phone'   => optional($merchant->user)->mobile,
+                'pickup_address' => $merchant->address,
+            ]] : [],
+            'cities' => collect($this->repo->cities())->map(fn ($c) => [
+                'id'   => $c->id,
+                'name' => $c->en_name ?: $c->name,
+            ])->values(),
+            'currency' => settings()->currency,
+        ]);
+    }
+
+    /**
+     * Create a shipment from the merchant navbar's Quick Shipment modal.
+     *
+     * merchant_id is NOT taken from the request. The admin version accepts one
+     * because an admin legitimately files for any merchant; here it would let
+     * a merchant file against somebody else's account.
+     *
+     * Category, delivery type and all pricing are resolved server-side, then
+     * handed to the same repository store() the full form uses, so tracking
+     * ids, parcel events and wallet handling behave identically.
+     */
+    public function quickStore(Request $request)
+    {
+        $data = $request->validate([
+            'pickup_phone'     => ['required', 'string', 'max:191'],
+            'pickup_address'   => ['required', 'string', 'max:191'],
+            'customer_name'    => ['required', 'string', 'max:191'],
+            'customer_phone'   => ['required', 'string', 'max:191'],
+            'customer_address' => ['required', 'string', 'max:191'],
+            'city_id'          => ['required', 'numeric'],
+            'cash_collection'  => ['nullable', 'numeric', 'min:0'],
+            'note'             => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $merchant = $this->currentMerchant();
+        if (! $merchant) {
+            return response()->json(['message' => __('parcel.error_msg')], 422);
+        }
+
+        $categoryId     = optional(collect($this->repo->deliveryCategories())->first())->id;
+        $deliveryTypeId = 2; // next day, the merchant form's own default
+
+        if (! $categoryId) {
+            return response()->json([
+                'message' => __('Configure at least one delivery category before using quick create.'),
+            ], 422);
+        }
+
+        $cash    = (float) ($data['cash_collection'] ?? 0);
+        $codPct  = (float) (data_get($merchant, 'cod_charges.inside_city') ?? 0);
+        $cod     = $cash * ($codPct / 100);
+        $vatRate = (float) ($merchant->vat ?? 0);
+        $vat     = $cod * ($vatRate / 100);
+        $payable = $cash - $cod - $vat;
+
+        $request->merge([
+            'merchant_id'      => $merchant->id,
+            'category_id'      => $categoryId,
+            'delivery_type_id' => $deliveryTypeId,
+            'cash_collection'  => $cash,
+            'vat_tex'          => $vatRate,
+            'chargeDetails'    => json_encode([
+                'totalCashCollection'       => $cash,
+                'codChargeAmount'           => $cod,
+                'liquidFragileAmount'       => 0,
+                'packagingAmount'           => 0,
+                'totalDeliveryChargeAmount' => $cod,
+                'vatTex'                    => $vatRate,
+                'VatAmount'                 => $vat,
+                'netPayable'                => $payable,
+                'currentPayable'            => $payable,
+            ]),
+        ]);
+
+        if (! $this->repo->store($request, $merchant->id)) {
+            return response()->json(['message' => __('parcel.error_msg')], 422);
+        }
+
+        $parcel = \App\Models\Backend\Parcel::withoutGlobalScopes()
+            ->where('merchant_id', $merchant->id)->latest('id')->first();
+
+        return response()->json([
+            'ok'          => true,
+            'tracking_id' => $parcel->tracking_id ?? null,
+            'id'          => $parcel->id ?? null,
+        ]);
     }
 
     public function store(StoreRequest $request)

@@ -288,6 +288,30 @@ export default function ParcelForm({
     t = {},
     initialShops = [],
     onSubmit,
+
+    // 'admin' picks the merchant from a list; 'merchant' IS the merchant, so
+    // that field disappears and the shop select is usable immediately.
+    audience = 'admin',
+
+    // The merchant panel resolves these on the server - weights per category,
+    // areas per city, and the delivery charge from the merchant's own rate
+    // card. Passed in rather than recomputed here, because a client-side
+    // approximation of a rate card is worse than the real number.
+    weightOptions = null,
+    areaOptions = null,
+    deliveryCharge: deliveryChargeProp = null,
+
+    // Fields the merchant panel has and the admin form does not.
+    showReference = false,
+    showExtraWeight = false,
+    showParcelBank = false,
+
+    // A caller that already knows the numbers passes them here and this
+    // component just renders them. The merchant panel does: it tiers the COD
+    // rate by delivery type and defines net payable differently, and quietly
+    // recomputing either of those here would change what a merchant is
+    // charged. Whoever owns the arithmetic keeps owning it.
+    charges = null,
 }) {
     const {
         merchants = [], cities = [], categories = [], packagings = [], delivery_types = [],
@@ -340,6 +364,9 @@ export default function ParcelForm({
         return c?.areas || [];
     }, [form.data.city_id, cities]);
 
+    // A server-resolved area list wins over the embedded one.
+    const areaList = areaOptions ?? areas;
+
     React.useEffect(() => {
         if (form.data.area_id && !areas.find((a) => String(a.id) === String(form.data.area_id))) {
             form.setData('area_id', '');
@@ -354,13 +381,28 @@ export default function ParcelForm({
     const codCharge = cashCollection * (codPct / 100);
     const liquidCharge = form.data.fragileLiquid ? Number(settings.fragile_liquid_charge || 0) : 0;
     const packagingCharge = Number(packaging?.price || 0);
-    const deliveryCharge = 0;
+    // Admin still has no rate-card lookup, so it keeps showing zero here; the
+    // merchant panel passes the real figure in.
+    const deliveryCharge = Number(deliveryChargeProp ?? 0) || 0;
     const totalCharge = codCharge + liquidCharge + packagingCharge + deliveryCharge;
     const vatAmount   = totalCharge * ((Number(form.data.vat_tex) || 0) / 100);
     const netPayable  = cashCollection - totalCharge - vatAmount;
     const currentPayable = netPayable;
 
+    const c = charges || {};
+    const shownCash      = charges ? Number(c.cash ?? 0)           : cashCollection;
+    const shownDelivery  = charges ? Number(c.deliveryCharge ?? 0) : deliveryCharge;
+    const shownCod       = charges ? Number(c.codCharge ?? 0)      : codCharge;
+    const shownLiquid    = charges ? Number(c.liquidCharge ?? 0)   : liquidCharge;
+    const shownPackaging = charges ? Number(c.packagingCharge ?? 0): packagingCharge;
+    const shownTotal     = charges ? Number(c.totalCharge ?? 0)    : totalCharge;
+    const shownVat       = charges ? Number(c.vat ?? 0)            : vatAmount;
+    const shownNet       = charges ? Number(c.netPayable ?? 0)     : netPayable;
+    const shownCurrent   = charges ? Number(c.currentPayable ?? 0) : currentPayable;
+
     React.useEffect(() => {
+        // The owner of the arithmetic also owns chargeDetails.
+        if (charges) return;
         form.setData('chargeDetails', JSON.stringify({
             totalCashCollection: cashCollection,
             codChargeAmount: codCharge,
@@ -396,7 +438,7 @@ export default function ParcelForm({
     // fields are green so the operator's eye moves down the form.
     const isFilled = (v) => v !== undefined && v !== null && String(v).trim() !== '';
     const stepCompletion = {
-        pickup:   isFilled(form.data.merchant_id) && isFilled(form.data.pickup_phone) && isFilled(form.data.pickup_address),
+        pickup:   (audience === 'merchant' || isFilled(form.data.merchant_id)) && isFilled(form.data.pickup_phone) && isFilled(form.data.pickup_address),
         receiver: isFilled(form.data.customer_name) && isFilled(form.data.customer_phone) && isFilled(form.data.city_id) && isFilled(form.data.customer_address),
         shipping: isFilled(form.data.delivery_type_id) && isFilled(form.data.category_id),
         amounts:  isFilled(form.data.cash_collection),
@@ -510,6 +552,7 @@ export default function ParcelForm({
                         defaultOpen={mode !== 'create' || !stepCompletion.pickup}
                     >
                         <div className="grid gap-4 md:grid-cols-2">
+                            {audience === 'admin' && (
                             <Field label={t.merchant} required error={form.errors.merchant_id} icon={Store}>
                                 <Select
                                     value={form.data.merchant_id}
@@ -520,8 +563,9 @@ export default function ParcelForm({
                                     {merchants.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                                 </Select>
                             </Field>
+                            )}
                             <Field label={t.shop} error={form.errors.shop_id} icon={Store}>
-                                <Select value={form.data.shop_id} onChange={(e) => form.setData('shop_id', e.target.value)} disabled={!form.data.merchant_id}>
+                                <Select value={form.data.shop_id} onChange={(e) => form.setData('shop_id', e.target.value)} disabled={audience === 'admin' && !form.data.merchant_id}>
                                     <option value="">—</option>
                                     {shops.map((s) => <option key={s.id} value={s.id}>{s.name || s.title}</option>)}
                                 </Select>
@@ -560,7 +604,7 @@ export default function ParcelForm({
                             <Field label={t.area} error={form.errors.area_id} icon={MapPin}>
                                 <Select value={form.data.area_id} onChange={(e) => form.setData('area_id', e.target.value)} disabled={!form.data.city_id}>
                                     <option value="">{form.data.city_id ? '—' : t.select_city_first}</option>
-                                    {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                                    {areaList.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                                 </Select>
                             </Field>
                             <Field label={t.customer_address} required error={form.errors.customer_address} className="md:col-span-2" icon={MapPin}>
@@ -626,9 +670,24 @@ export default function ParcelForm({
                             <Field label={t.weight} error={form.errors.weight} icon={Package}>
                                 <Select value={form.data.weight} onChange={(e) => form.setData('weight', e.target.value)}>
                                     <option value="">—</option>
-                                    {[0.5, 1, 2, 3, 5, 10, 15, 20].map((w) => <option key={w} value={w}>{w} kg</option>)}
+                                    {/* The merchant panel resolves the weight bands the
+                                        category actually prices; the ladder is the admin
+                                        fallback for when no lookup is wired up. */}
+                                    {(weightOptions ?? [0.5, 1, 2, 3, 5, 10, 15, 20].map((w) => ({ value: w, label: w + ' kg' })))
+                                        .map((w) => <option key={w.value} value={w.value}>{w.label}</option>)}
                                 </Select>
                             </Field>
+                            {showExtraWeight && (
+                                <Field label={t.extra_weight || 'Extra weight'} error={form.errors.extra_weight} icon={Package}>
+                                    <Input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={form.data.extra_weight ?? 0}
+                                        onChange={(e) => form.setData('extra_weight', e.target.value)}
+                                    />
+                                </Field>
+                            )}
                             <label className="md:col-span-1 flex items-center gap-2 rounded-xl border border-input bg-background px-3 py-2.5 cursor-pointer hover:bg-accent/30 transition-colors">
                                 <input
                                     type="checkbox"
@@ -660,6 +719,25 @@ export default function ParcelForm({
                             <Field label={t.selling_price} error={form.errors.selling_price} icon={Banknote}>
                                 <Input type="number" step="any" value={form.data.selling_price} onChange={(e) => form.setData('selling_price', e.target.value)} />
                             </Field>
+                            {showReference && (
+                                <Field label={t.reference_number || 'Reference number'} error={form.errors.reference_number}>
+                                    <Input
+                                        value={form.data.reference_number ?? ''}
+                                        onChange={(e) => form.setData('reference_number', e.target.value)}
+                                    />
+                                </Field>
+                            )}
+                            {showParcelBank && (
+                                <label className="flex items-center gap-2 rounded-xl border border-input bg-background px-3 py-2.5 cursor-pointer hover:bg-accent/30 transition-colors">
+                                    <input
+                                        type="checkbox"
+                                        checked={!!form.data.parcel_bank}
+                                        onChange={(e) => form.setData('parcel_bank', e.target.checked)}
+                                        className="h-4 w-4"
+                                    />
+                                    <span className="text-sm">{t.parcel_bank || 'Parcel bank'}</span>
+                                </label>
+                            )}
                             <Field label={t.invoice_no} error={form.errors.invoice_no}>
                                 <Input value={form.data.invoice_no} onChange={(e) => form.setData('invoice_no', e.target.value)} />
                             </Field>
@@ -692,19 +770,19 @@ export default function ParcelForm({
                                     <div className="text-sm font-semibold">{t.summary || t.charge_details || 'Shipment summary'}</div>
                                 </div>
                                 <div>
-                                    <ChargeRow label={t.cash_collection} value={cashCollection} currency={currency} />
-                                    <ChargeRow label={t.delivery_charge} value={deliveryCharge} currency={currency} />
-                                    <ChargeRow label={t.cod_charge}      value={codCharge}      currency={currency} />
+                                    <ChargeRow label={t.cash_collection} value={shownCash} currency={currency} />
+                                    <ChargeRow label={t.delivery_charge} value={shownDelivery} currency={currency} />
+                                    <ChargeRow label={t.cod_charge}      value={shownCod}      currency={currency} />
                                     {form.data.fragileLiquid && (
-                                        <ChargeRow label={t.liquid_charge} value={liquidCharge} currency={currency} />
+                                        <ChargeRow label={t.liquid_charge} value={shownLiquid} currency={currency} />
                                     )}
                                     {form.data.packaging_id && (
-                                        <ChargeRow label={t.packaging_charge} value={packagingCharge} currency={currency} />
+                                        <ChargeRow label={t.packaging_charge} value={shownPackaging} currency={currency} />
                                     )}
-                                    <ChargeRow label={t.total_charge}   value={totalCharge}   currency={currency} bold />
-                                    <ChargeRow label={t.vat}             value={vatAmount}     currency={currency} />
-                                    <ChargeRow label={t.net_payable}     value={netPayable}    currency={currency} />
-                                    <ChargeRow label={t.current_payable} value={currentPayable} currency={currency} bold tone={currentPayable >= 0 ? 'positive' : 'negative'} />
+                                    <ChargeRow label={t.total_charge}   value={shownTotal}   currency={currency} bold />
+                                    <ChargeRow label={t.vat}             value={shownVat}     currency={currency} />
+                                    <ChargeRow label={t.net_payable}     value={shownNet}    currency={currency} />
+                                    <ChargeRow label={t.current_payable} value={shownCurrent} currency={currency} bold tone={shownCurrent >= 0 ? 'positive' : 'negative'} />
                                 </div>
                                 {deliveryCharge === 0 && form.data.merchant_id && form.data.city_id && (
                                     <p className="mt-3 text-[11px] text-muted-foreground leading-relaxed">

@@ -3,7 +3,7 @@ import { Link, usePage, router, Head } from '@inertiajs/react';
 import {
     LayoutDashboard, Package, Wallet, FileText, MessageCircle, Store,
     Banknote, Settings, BarChart3, Receipt, Menu, X, Sun, Moon,
-    LogOut, ChevronDown, Bell, Search, Globe, Check, User,
+    LogOut, ChevronDown, Bell, Search, Globe, Check, User, PackagePlus,
     BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,7 @@ import {
 import { Input } from '@/Components/ui/Input';
 import { useT, useLocale, SUPPORTED_LOCALES } from '@/lib/i18n';
 import TourLauncher from '@/Tour/TourLauncher';
+import QuickCreateShipmentModal from '@/Components/parcel/QuickCreateShipmentModal';
 
 const NAV = [
     { group: 'nav_overview', items: [
@@ -242,6 +243,7 @@ function LanguageMenu({ accent }) {
 
 function Topbar({ onSidebarOpen, user, brand, theme }) {
     const [dark, toggleDark] = useDarkMode();
+    const [quickOpen, setQuickOpen] = React.useState(false);
     const t = useT();
     const branded = !!theme?.topbarBg;
     const brandStyle = branded
@@ -275,6 +277,17 @@ function Topbar({ onSidebarOpen, user, brand, theme }) {
             </div>
 
             <div className="ms-auto flex items-center gap-2">
+                <Button
+                    size="default"
+                    className="h-9 gap-1.5 bg-background text-foreground hover:bg-background/90"
+                    onClick={() => setQuickOpen(true)}
+                    aria-label={t('quick_ship_title')}
+                    data-tour="topbar-quick-shipment"
+                >
+                    <PackagePlus className="h-4 w-4" />
+                    <span className="hidden sm:inline">{t('quick_ship_action')}</span>
+                </Button>
+
                 <TourLauncher label={t('take_a_tour')} />
                 <LanguageMenu accent={theme?.accent} />
                 <Button variant="ghost" size="icon" onClick={toggleDark} aria-label={t('toggle_theme')}>
@@ -339,6 +352,14 @@ function Topbar({ onSidebarOpen, user, brand, theme }) {
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
+            <QuickCreateShipmentModal
+                open={quickOpen}
+                onClose={() => setQuickOpen(false)}
+                lookupsUrl="/merchant/parcel/quick-create/lookups"
+                storeUrl="/merchant/parcel/quick-store"
+                parcelIndexUrl="/merchant/parcel/index"
+                t={t}
+            />
         </header>
     );
 }

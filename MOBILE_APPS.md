@@ -6,7 +6,7 @@ Companion doc to `RUSHLY_APPS_OVERVIEW.md`. That file covers the storefront brid
 
 | # | Repo | User | State | What it does |
 |---|---|---|---|---|
-| 1 | `rushly-driver-app` | Delivery drivers (deliverymen) | **Feature-complete** | Assigned parcels, delivery outcomes (delivered/partial/not-delivered with photo), NDR, earnings, cash reconciliation, live tracking map, AWB scan, route-optimised runsheet |
+| 1 | `rushly-driver-app` | Delivery drivers (deliverymen) | **Design target — shipped app differs, see §2** | Assigned parcels, delivery outcomes (delivered/partial/not-delivered with photo), NDR, earnings, cash reconciliation, live tracking map, AWB scan, route-optimised runsheet |
 | 2 | `rushly-merchant-app` | Merchants / shop owners | **Feature-complete** | Parcel CRUD, bulk CSV import, tracking map, shops, payments (accounts + requests + statements PDF), invoices, fraud, NDR, store connections, reports |
 | 3 | `rushly-admin-app` | Back-office (super_admin, admin, incharge, hub) | **Feature-complete** | Dashboard, parcels, drivers, merchants (including onboarding approval queue), hubs, payouts, support, fraud, driver-assignment map, hub cash, WMS (stock lookup + GRN receiving + cycle count + damage reports), 3PL assign |
 | 4 | `rushly-supervisor-app` | Field supervisors | **Feature-complete** | Live drivers list + detail, unassigned parcels + assign, per-driver performance reports with date range, aggregated exceptions feed (open NDRs + stuck parcels + returning to courier) |
@@ -83,6 +83,13 @@ Router redirect gates every non-public route on `tenant_configured && authed`. "
 ---
 
 ## 2. `rushly-driver-app` — Driver mobile app
+
+> ⚠️ **Doc vs Code (2026-09-09).** This section describes a target design, not the
+> app in `haniusif/rushly-driver`. The shipped app is GetX (not Riverpod/go_router)
+> and has **no NDR, runsheet, support tickets, partial delivery or tenant select**.
+> It was rebranded **RDS Express | Driver** on 2026-09-09. See
+> [docs/apps/rushly-driver-app.md](docs/apps/rushly-driver-app.md) for the full
+> divergence table.
 
 ### Purpose
 Delivery drivers use it to see assigned parcels, mark deliveries (delivered / partial / not-delivered with photo & reason), track earnings, view NDR (Non-Delivery Reports), and open support tickets.

@@ -274,8 +274,14 @@ Key fields returned per parcel: `id`, `tracking_id`, `merchant_id`, `merchant_na
 and geo fields `customer_lat/long`, `pickup_lat/long`.
 
 > Note: the resource hard-codes `https://admin.rushly-logistic.com/shipment-location/...`
-> in the WhatsApp message and brands it "Rushly Express". `maskLast4()` exists for phone
-> masking but is not applied in `toArray()` (full `customer_phone` is returned).
+> in the WhatsApp message, and the COD line hard-codes `AED`. The brand in that message
+> is also hard-coded — "RDS Express" as of 2026-09-09 (was "Rushly Express"). Because
+> `ParcelResource` is not tenant-scoped, **every tenant sends that same brand name**;
+> the correct fix is `settings()->name`, held back because company 9 has an empty
+> `name` in `general_settings` and would render blank. The same string appears in the
+> four AWB label templates (`awb_label`, `awb_label2`, `awb_label-copy`,
+> `backend/parcel/print-label`). `maskLast4()` exists for phone masking but is not
+> applied in `toArray()` (full `customer_phone` is returned).
 
 ---
 

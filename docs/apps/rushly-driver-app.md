@@ -19,6 +19,57 @@
 
 ---
 
+> ## ⚠️ Doc vs Code — this document does not describe the shipped app (2026-09-09)
+>
+> Everything below was reverse-engineered on 2026-07-27 from a codebase that is
+> **not** the one in `haniusif/rushly-driver`. Treat it as a target design, not as
+> a description of what drivers are running.
+>
+> Evidence:
+>
+> | This doc says | The shipped repo |
+> |---|---|
+> | `name: rushly_driver` (`pubspec.yaml:1`) | `name: rushly` |
+> | Riverpod + go_router + Dio, `core/ shared/ features/` | GetX + `Get.to`, `http`, `lib/Screen/ lib/Controllers/` |
+> | Ground truth at `/var/www/rushly-driver-app` | No such path exists on the server |
+> | Tenant select, Runsheet, NDR, Cash, Earnings, Support tickets | None of these screens exist |
+> | `flutter_map` tracking map | WebView over the backend's `/deliveryMan/parcel/map/...` page |
+> | Secure storage for the token | `SharedPreferences` |
+>
+> ### What the shipped app actually is
+>
+> Flutter + **GetX**, four bottom tabs (Home / Map / Payment / Profile) plus a
+> centre scan button. Home has three tabs — Pending (`deliveryman_assign`),
+> Delivered (`delivered`), Return (`return_to_courier`) — from
+> `GET /deliveryman/dashboard`. Sanctum token in `SharedPreferences`, `apiKey`
+> header on every call, base URL from a `RUSHLY_API_BASE` dart-define.
+>
+> Rebranded **RDS Express | Driver** on 2026-09-09 (navy `#253985`, orange
+> `#E87B35`). The Android package is still `courier.rushly.rushly` because
+> `google-services.json` is keyed to it.
+>
+> Fixed in the same pass, all of which the design above would also need to avoid:
+>
+> - `ProfileController` and `DashboardController` are `permanent: true` and built
+>   **before** sign-in, so their eager `onInit` fetches ran without a token and
+>   left both screens permanently empty for the session.
+> - The Home list never repainted: all controller state is `Rx` but the view used
+>   `GetBuilder` and the controller never calls `update()`. Pull-to-refresh
+>   fetched without redrawing, and a delivered parcel stayed in Pending.
+> - The status badge was always blank — `ParcelResource` emits `statusName`, the
+>   Dart model read `status_name`.
+>
+> Known gaps in the shipped app: no NDR, no runsheet, no support tickets, no
+> partial-delivery screen, no tenant select. `deliverymanReScheduleList` is
+> fetched but never rendered. Navigate geocodes `customer_address` instead of
+> using the `customer_lat/long` the API already returns.
+>
+> See `rushly-driver/README.md` and `FEATURES.md` for the shipped app.
+
+---
+
+---
+
 ## 1. Purpose & target user
 
 `rushly-driver-app` (`name: rushly_driver`, `pubspec.yaml:1`) is the **last-mile

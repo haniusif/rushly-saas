@@ -2,6 +2,7 @@ import * as React from 'react';
 import { useForm } from '@inertiajs/react';
 import { ArrowLeft, Save, User, Phone, MapPin } from 'lucide-react';
 import MerchantLayout from '@/Layouts/MerchantLayout';
+import LocationPicker from '@/Components/map/LocationPicker';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { Input } from '@/Components/ui/Input';
 import { Select } from '@/Components/ui/Select';
@@ -20,7 +21,7 @@ function Field({ label, required, error, icon: Icon, children }) {
     );
 }
 
-export default function Create({ mode = 'create', shop = null, urls = {}, t = {} }) {
+export default function Create({ mode = 'create', shop = null, google_maps_key = '', urls = {}, t = {} }) {
     const isEdit = mode === 'edit' && shop;
 
     const form = useForm({
@@ -81,6 +82,28 @@ export default function Create({ mode = 'create', shop = null, urls = {}, t = {}
                                         placeholder={t.address_ph}
                                     />
                                 </Field>
+
+                                {/* Coordinates are what a driver actually
+                                    navigates to; the address text is only a
+                                    label. The Blade version this page replaced
+                                    had a Places autocomplete writing these, and
+                                    the React port left the columns unfillable. */}
+                                <div className="space-y-1.5">
+                                    <label className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                        <MapPin className="h-3 w-3" />
+                                        {t.location}
+                                    </label>
+                                    <LocationPicker
+                                        form={form}
+                                        defaultCenter={[24.7136, 46.6753]}
+                                        apiKey={google_maps_key || ""}
+                                        labels={{
+                                            dropoff_pin: t.pin,
+                                            map_hint:    t.map_hint,
+                                            no_key:      t.map_no_key,
+                                        }}
+                                    />
+                                </div>
                             </CardContent>
                         </Card>
                     </div>

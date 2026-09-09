@@ -123,6 +123,9 @@ class ShopsController extends Controller
                 'update' => $shop ? route('merchant-panel.shops.update', $shop->id) : null,
                 'cancel' => route('merchant-panel.shops.index'),
             ],
+            // Tenant's own Maps key. Without it the picker degrades to a
+            // notice and the coordinates stay hand-editable.
+            'google_maps_key' => (string) googleMapSettingKey(),
             't' => $this->shopFormLabels(),
         ];
     }
@@ -145,6 +148,10 @@ class ShopsController extends Controller
             'save'         => __('levels.save') ?: 'Save',
             'cancel'       => __('levels.cancel') ?: 'Cancel',
             'title_index'  => __('merchantshops.title') ?: 'Pickup points',
+            'location'     => __('levels.location') ?: 'Location on map',
+            'pin'          => __('merchantshops.title') ?: 'Pickup point',
+            'map_hint'     => 'Click on the map to place the pin, or drag it to adjust.',
+            'map_no_key'   => 'Google Maps API key not configured for this workspace. Set it under Settings then Google Map to enable the map. Coordinates below are still editable.',
         ];
     }
 

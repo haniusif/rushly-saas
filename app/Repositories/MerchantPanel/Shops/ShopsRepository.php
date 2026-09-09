@@ -4,6 +4,7 @@ namespace App\Repositories\MerchantPanel\Shops;
 use App\Models\MerchantShops;
 use App\Repositories\MerchantPanel\Shops\ShopsInterface;
 use App\Models\Backend\Merchant;
+use App\Enums\Status;
 
 class ShopsRepository implements ShopsInterface{
 
@@ -29,6 +30,16 @@ class ShopsRepository implements ShopsInterface{
                 $shop->merchant_lat= $request->lat;
                 $shop->merchant_long= $request->long;
                 $shop->status      = $request->status;
+
+                // A merchant first pickup point becomes their default.
+                // Everything that resolves a pickup point - the import
+                // template prefill, quick shipment, the parcel form - asks
+                // for the default, so a merchant whose only shop is not
+                // flagged effectively has none. Merchant creation already
+                // does this for the shop it makes; this path never did.
+                $isFirst = ! MerchantShops::where('merchant_id', $id)->exists();
+                $shop->default_shop = $isFirst ? Status::ACTIVE : Status::INACTIVE;
+
                 $shop->save();
                 return true;
 
@@ -56,7 +67,27 @@ class ShopsRepository implements ShopsInterface{
     }
 
     public function delete($id){
-        return MerchantShops::destroy($id);
+        $shop = MerchantShops::find($id);
+        if (! $shop) {
+            return 0;
+        }
+
+        $wasDefault  = (int) $shop->default_shop === (int) Status::ACTIVE;
+        $merchantId  = $shop->merchant_id;
+        $removed     = MerchantShops::destroy($id);
+
+        // Removing the default used to leave the merchant with shops but
+        // no default at all, which reads to every caller as no pickup
+        // point. Promote the oldest survivor instead.
+        if ($removed && $wasDefault) {
+            $next = MerchantShops::where('merchant_id', $merchantId)->orderBy('id')->first();
+            if ($next) {
+                $next->default_shop = Status::ACTIVE;
+                $next->save();
+            }
+        }
+
+        return $removed;
     }
     
      public function firstForMerchant(int $merchantId)

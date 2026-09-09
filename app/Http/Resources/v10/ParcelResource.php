@@ -61,13 +61,13 @@ private function formatUaePhone(?string $raw): ?string
         $link = "https://admin.rushly-logistic.com/shipment-location/{$shipmentId}";
 
         $wa_msg = "Welcome – {$customerName},\n"
-                . "I am the delivery agent from *Rushly Express*, responsible for delivering your shipment No. *{$shipmentId}* from the store *{$merchantName}*.\n\n"
+                . "I am the delivery agent from *RDS Express*, responsible for delivering your shipment No. *{$shipmentId}* from the store *{$merchantName}*.\n\n"
                 . "Your shipment will be delivered *today* to the following address:\n"
                 . "{$link}\n\n"
                 . "Please confirm your address either by sharing your *location* or any other method, and confirm your *availability at the delivery location today*.\n\n"
                 . "*Shipment details:*\n"
                 . "Collection amount:*{$amountCOD} AED*\n\n"
-                . "*Rushly Express*\n"
+                . "*RDS Express*\n"
                 . "A safe and reliable logistics partner.";
                 
 

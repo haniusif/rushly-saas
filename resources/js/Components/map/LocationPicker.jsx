@@ -9,6 +9,13 @@ import * as React from 'react';
  * merchant_long. Degrades to a notice when the tenant has no Maps key,
  * leaving the coordinates editable by hand.
  */
+// Module-scope cache for the Google Maps loader. The <script> tag may only be
+// injected once per page; every caller after the first reuses this promise.
+// These MUST be declared - ES modules are strict mode, so a bare read of an
+// undeclared binding throws ReferenceError rather than yielding undefined.
+let gmapsPromise = null;
+let gmapsKey = null;
+
 function loadGoogleMaps(apiKey) {
     if (typeof window === 'undefined') return Promise.resolve(null);
     if (window.google && window.google.maps) return Promise.resolve(window.google.maps);
@@ -55,7 +62,18 @@ export default function LocationPicker({ form, defaultCenter, labels, apiKey }) 
     React.useEffect(() => {
         if (!apiKey) return;
         let cancelled = false;
-        loadGoogleMaps(apiKey).then((maps) => {
+        // Anything thrown synchronously here would escape the effect and take
+        // the entire page down with it, so the call itself is guarded too.
+        let loader;
+        try {
+            loader = loadGoogleMaps(apiKey);
+        } catch (err) {
+            // eslint-disable-next-line no-console
+            console.error('Google Maps loader failed', err);
+            setStatus('error');
+            return;
+        }
+        loader.then((maps) => {
             if (cancelled || !maps || !mapEl.current || mapObj.current) return;
             const initial = Number.isFinite(dropLat) && Number.isFinite(dropLong)
                 ? { lat: dropLat, lng: dropLong }

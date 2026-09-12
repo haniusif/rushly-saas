@@ -195,6 +195,25 @@ to the show page.
 (`fulfillment / manual / transfer / return_to_merchant`), Merchant,
 Hub, Processed by, Status pill, Completed (relative), Open link
 
+### Outbound show
+
+- Route: `GET /admin/wms/outbound/{id}` (`wms.outbound.show`) →
+  `WmsOutboundController::show`
+- Page: `resources/js/Pages/Admin/Wms/Outbound/Show.jsx` (replaces
+  `backend.wms.outbound.show` Blade)
+
+**Toolbar**: Back; **Complete & deduct stock** (`router.put(urls.complete)`,
+behind `window.confirm`) while the outbound is not completed/cancelled and
+`permissions.manage`. **Left**: identity card (number, status + type
+pills, merchant, hub, linked fulfillment when `fulfillment_id` is set,
+processed by, created/completed) plus a callout — sky "pending
+deduction" or rose "insufficient stock" when any line is short.
+**Right**: stat cards (lines, quantity, short lines) and the items table.
+While open, each line also shows **Available** (on hand − reserved at
+that product+location, computed server-side from `wms_stock`) and is
+tinted rose when the requested quantity exceeds it — the same condition
+that makes `complete()` throw `InsufficientStockException`.
+
 ## Adjustments
 
 - Route: `GET /admin/wms/adjustments` (`wms.adjustments.index`) →

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Backend\Wms;
 use App\Enums\Wms\ProductUnit;
 use App\Http\Controllers\Backend\Wms\Concerns\RendersInertiaIndex;
 use App\Http\Controllers\Controller;
+use App\Models\Backend\Merchant;
 use App\Models\Backend\Wms\WmsProduct;
 use App\Repositories\Hub\HubInterface;
 use App\Repositories\Merchant\MerchantInterface;
@@ -91,7 +92,7 @@ class WmsProductController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'merchant_id'   => ['required', 'integer', 'exists:merchants,id'],
+            'merchant_id'   => ['required', 'integer', 'exists:merchants,id', $this->merchantHasWmsService()],
             'hub_id'        => ['required', 'integer', 'exists:hubs,id'],
             'name'          => ['required', 'string', 'max:191'],
             'sku'           => ['required', 'string', 'max:191', 'unique:wms_products,sku'],
@@ -263,7 +264,7 @@ class WmsProductController extends Controller
         if (!$product) return redirect()->route('wms.products.index');
 
         $data = $request->validate([
-            'merchant_id'   => ['required', 'integer', 'exists:merchants,id'],
+            'merchant_id'   => ['required', 'integer', 'exists:merchants,id', $this->merchantHasWmsService()],
             'hub_id'        => ['required', 'integer', 'exists:hubs,id'],
             'name'          => ['required', 'string', 'max:191'],
             'sku'           => ['required', 'string', 'max:191', 'unique:wms_products,sku,' . $product->id],
@@ -330,11 +331,42 @@ class WmsProductController extends Controller
     }
 
     /** Shared props for create + edit Inertia forms. Pass per-page extras via $extra. */
+    /**
+     * Merchants that can own WMS products: only those subscribed to the
+     * fulfillment or storage service (Merchant::SERVICE_KEYS). An existing
+     * product's merchant is kept in the list even if the service was later
+     * switched off, so the edit form never shows an empty select.
+     */
+    protected function wmsMerchants(?int $keepId = null)
+    {
+        return Merchant::companywise()
+            ->where(function ($q) use ($keepId) {
+                $q->whereJsonContains('services', 'fulfillment')
+                  ->orWhereJsonContains('services', 'storage');
+                if ($keepId) $q->orWhere('id', $keepId);
+            })
+            ->orderBy('business_name')
+            ->get(['id', 'business_name']);
+    }
+
+    /** Validation closure: the merchant must have the fulfillment or storage service. */
+    protected function merchantHasWmsService(): \Closure
+    {
+        return function ($attribute, $value, $fail) {
+            $m = Merchant::companywise()->find($value);
+            if (!$m || !($m->hasService('fulfillment') || $m->hasService('storage'))) {
+                $fail(__('This merchant does not have the fulfillment or storage service.'));
+            }
+        };
+    }
+
     protected function formProps(array $extra = []): array
     {
+        $keepId = isset($extra['product']['merchant_id']) ? (int) $extra['product']['merchant_id'] : null;
+
         return array_merge([
             'lookups' => [
-                'merchants' => $this->lookupRows($this->merchantRepo->all(), fn ($m) => ['id' => $m->id, 'name' => $m->business_name]),
+                'merchants' => $this->lookupRows($this->wmsMerchants($keepId), fn ($m) => ['id' => $m->id, 'name' => $m->business_name]),
                 'hubs'      => $this->lookupRows($this->hubRepo->all(),      fn ($h) => ['id' => $h->id, 'name' => $h->name]),
                 'units'     => $this->unitOptions(),
             ],
@@ -347,6 +379,7 @@ class WmsProductController extends Controller
                 'barcode'        => 'Barcode',
                 'barcode_hint'   => 'Leave blank to auto-generate from SKU',
                 'merchant'       => 'Merchant',
+                'merchant_hint'  => 'Only merchants with the fulfillment or storage service are listed.',
                 'hub'            => 'Hub',
                 'category'       => 'Category',
                 'unit'           => 'Unit',

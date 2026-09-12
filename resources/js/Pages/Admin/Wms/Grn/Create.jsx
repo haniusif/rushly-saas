@@ -107,7 +107,7 @@ export default function Create({ lookups = {}, next_number = '', urls = {}, t = 
                             )}
                         </div>
                         <div className="grid gap-4 md:grid-cols-2">
-                            <Field icon={Store} label={t.merchant} required error={form.errors.merchant_id}>
+                            <Field icon={Store} label={t.merchant} required error={form.errors.merchant_id} hint={t.merchant_hint}>
                                 <Select value={form.data.merchant_id} onChange={(e) => form.setData('merchant_id', e.target.value)}>
                                     <option value="">—</option>
                                     {(lookups.merchants || []).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}

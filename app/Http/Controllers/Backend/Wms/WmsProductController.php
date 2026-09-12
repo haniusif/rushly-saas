@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Backend\Wms;
 
 use App\Enums\Wms\ProductUnit;
 use App\Http\Controllers\Backend\Wms\Concerns\RendersInertiaIndex;
+use App\Http\Controllers\Backend\Wms\Concerns\ScopesWmsMerchants;
 use App\Http\Controllers\Controller;
-use App\Models\Backend\Merchant;
 use App\Models\Backend\Wms\WmsProduct;
 use App\Repositories\Hub\HubInterface;
 use App\Repositories\Merchant\MerchantInterface;
@@ -17,7 +17,7 @@ use Inertia\Inertia;
 
 class WmsProductController extends Controller
 {
-    use RendersInertiaIndex;
+    use RendersInertiaIndex, ScopesWmsMerchants;
 
     public function __construct(
         protected WmsProductRepositoryInterface $repo,
@@ -331,35 +331,6 @@ class WmsProductController extends Controller
     }
 
     /** Shared props for create + edit Inertia forms. Pass per-page extras via $extra. */
-    /**
-     * Merchants that can own WMS products: only those subscribed to the
-     * fulfillment or storage service (Merchant::SERVICE_KEYS). An existing
-     * product's merchant is kept in the list even if the service was later
-     * switched off, so the edit form never shows an empty select.
-     */
-    protected function wmsMerchants(?int $keepId = null)
-    {
-        return Merchant::companywise()
-            ->where(function ($q) use ($keepId) {
-                $q->whereJsonContains('services', 'fulfillment')
-                  ->orWhereJsonContains('services', 'storage');
-                if ($keepId) $q->orWhere('id', $keepId);
-            })
-            ->orderBy('business_name')
-            ->get(['id', 'business_name']);
-    }
-
-    /** Validation closure: the merchant must have the fulfillment or storage service. */
-    protected function merchantHasWmsService(): \Closure
-    {
-        return function ($attribute, $value, $fail) {
-            $m = Merchant::companywise()->find($value);
-            if (!$m || !($m->hasService('fulfillment') || $m->hasService('storage'))) {
-                $fail(__('This merchant does not have the fulfillment or storage service.'));
-            }
-        };
-    }
-
     protected function formProps(array $extra = []): array
     {
         $keepId = isset($extra['product']['merchant_id']) ? (int) $extra['product']['merchant_id'] : null;

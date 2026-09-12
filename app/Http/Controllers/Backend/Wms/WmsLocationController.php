@@ -130,21 +130,32 @@ class WmsLocationController extends Controller
 
     public function create()
     {
-        $hubs  = $this->hubRepo->all();
-        $types = $this->typeOptions();
-
-        return Inertia::render('Admin/Wms/Locations/Create', [
-            'mode'    => 'create',
-            'lookups' => [
-                'hubs'  => $this->lookupRows($hubs, fn ($h) => ['id' => $h->id, 'name' => $h->name]),
-                'types' => $types,
-            ],
+        return Inertia::render('Admin/Wms/Locations/Create', $this->formProps([
+            'mode' => 'create',
             'urls' => [
                 'submit' => route('wms.locations.store'),
                 'cancel' => route('wms.locations.index'),
             ],
+            't' => ['title' => 'New storage location'],
+        ]));
+    }
+
+    /**
+     * Props shared by the create and edit renders of Locations/Create.jsx —
+     * the page is dual-mode (see docs/inertia/migration-guide.md §2.3).
+     */
+    protected function formProps(array $extra): array
+    {
+        $hubs  = $this->hubRepo->all();
+        $types = $this->typeOptions();
+
+        $base = [
+            'lookups' => [
+                'hubs'  => $this->lookupRows($hubs, fn ($h) => ['id' => $h->id, 'name' => $h->name]),
+                'types' => $types,
+            ],
             't' => $this->indexLabels([
-                'title'    => 'New storage location',
+                'title'    => 'Storage location',
                 'list'     => 'Locations',
                 'identity' => 'Identity',
                 'address'  => 'Hierarchy',
@@ -159,12 +170,19 @@ class WmsLocationController extends Controller
                 'capacity' => 'Capacity',
                 'code'     => 'Code',
                 'is_active'=> 'Active',
+                'is_active_hint' => 'Inactive locations are hidden from picking/putaway suggestions.',
                 'save'     => __('levels.submit') ?: 'Save',
                 'cancel'   => __('levels.cancel') ?: 'Cancel',
                 'code_hint'=> 'Leave blank to auto-generate from rack/shelf/bin.',
                 'zone_hint'=> 'Optional grouping (e.g. cold, dry).',
+                'delete'   => __('levels.delete') ?: 'Delete',
+                'delete_confirm' => 'Delete this location?',
+                'created_at' => __('levels.created_at') ?: 'Created',
+                'updated_at' => __('parcel.updated_on') ?: 'Updated',
             ]),
-        ]);
+        ];
+
+        return array_replace_recursive($base, $extra);
     }
 
     public function store(Request $request)
@@ -198,9 +216,32 @@ class WmsLocationController extends Controller
     {
         $location = $this->repo->find($id);
         if (!$location) return redirect()->route('wms.locations.index');
-        $hubs  = $this->hubRepo->all();
-        $types = $this->typeOptions();
-        return view('backend.wms.locations.edit', compact('location', 'hubs', 'types'));
+
+        return Inertia::render('Admin/Wms/Locations/Create', $this->formProps([
+            'mode'     => 'edit',
+            'location' => [
+                'id'         => $location->id,
+                'hub_id'     => (string) ($location->hub_id ?? ''),
+                'zone'       => $location->zone ?? '',
+                'aisle'      => $location->aisle ?? '',
+                'rack'       => $location->rack ?? '',
+                'shelf'      => $location->shelf ?? '',
+                'bin'        => $location->bin ?? '',
+                'type'       => $location->type ?? '',
+                'capacity'   => $location->capacity ?? '',
+                'code'       => $location->code ?? '',
+                'is_active'  => (bool) $location->is_active,
+                'created_at' => optional($location->created_at)->toDateTimeString(),
+                'updated_at' => optional($location->updated_at)->toDateTimeString(),
+            ],
+            'permissions' => ['delete' => hasPermission('wms_manage')],
+            'urls' => [
+                'submit'  => route('wms.locations.update', $location->id),
+                'cancel'  => route('wms.locations.index'),
+                'destroy' => route('wms.locations.destroy', $location->id),
+            ],
+            't' => ['title' => 'Edit storage location'],
+        ]));
     }
 
     public function update(Request $request, int $id)

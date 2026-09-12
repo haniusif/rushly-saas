@@ -209,7 +209,94 @@ class WmsLocationController extends Controller
     {
         $location = $this->repo->find($id);
         if (!$location) return redirect()->route('wms.locations.index');
-        return view('backend.wms.locations.show', compact('location'));
+
+        $soon = now()->addDays(7);
+        $rows = collect($location->stocks ?? [])->map(function ($s) use ($soon) {
+            $qty      = (int) ($s->quantity ?? 0);
+            $reserved = (int) ($s->reserved_qty ?? 0);
+            $expiry   = $s->expiry_date ? \Carbon\Carbon::parse($s->expiry_date) : null;
+            return [
+                'id'           => $s->id,
+                'product_id'   => $s->product_id,
+                'sku'          => optional($s->product)->sku,
+                'product'      => optional($s->product)->name,
+                'product_url'  => route('wms.products.show', $s->product_id),
+                'quantity'     => $qty,
+                'reserved'     => $reserved,
+                'available'    => max($qty - $reserved, 0),
+                'batch_number' => $s->batch_number,
+                'expiry_date'  => $expiry?->format('Y-m-d'),
+                'expiring'     => $expiry ? $expiry->lte($soon) : false,
+            ];
+        })->sortBy('product')->values();
+
+        return Inertia::render('Admin/Wms/Locations/Show', [
+            'location' => [
+                'id'         => $location->id,
+                'code'       => $location->code,
+                'hub'        => optional($location->hub)->name,
+                'zone'       => $location->zone,
+                'aisle'      => $location->aisle,
+                'rack'       => $location->rack,
+                'shelf'      => $location->shelf,
+                'bin'        => $location->bin,
+                'type'       => $location->type,
+                'capacity'   => $location->capacity,
+                'is_active'  => (bool) $location->is_active,
+                'created_at' => optional($location->created_at)->toDateTimeString(),
+                'updated_at' => optional($location->updated_at)->toDateTimeString(),
+            ],
+            'stock' => [
+                'rows'     => $rows,
+                'products' => $rows->pluck('product_id')->unique()->count(),
+                'on_hand'  => $rows->sum('quantity'),
+                'reserved' => $rows->sum('reserved'),
+            ],
+            'permissions' => [
+                'update' => hasPermission('wms_manage'),
+                'delete' => hasPermission('wms_manage'),
+            ],
+            'urls' => [
+                'index'   => route('wms.locations.index'),
+                'map'     => route('wms.locations.map', ['hub_id' => $location->hub_id]),
+                'edit'    => route('wms.locations.edit', $location->id),
+                'destroy' => route('wms.locations.destroy', $location->id),
+            ],
+            't' => [
+                'title'            => 'Storage location',
+                'list'             => 'Locations',
+                'back_to_list'     => 'Back to locations',
+                'map_view'         => 'Map view',
+                'edit'             => __('levels.edit') ?: 'Edit',
+                'delete'           => __('levels.delete') ?: 'Delete',
+                'delete_confirm'   => 'Delete this location?',
+                'active'           => __('status.1') ?: 'Active',
+                'inactive'         => __('status.0') ?: 'Inactive',
+                'hierarchy'        => 'Hierarchy',
+                'zone'             => 'Zone',
+                'aisle'            => 'Aisle',
+                'rack'             => 'Rack',
+                'shelf'            => 'Shelf',
+                'bin'              => 'Bin',
+                'hub'              => 'Hub',
+                'type'             => 'Type',
+                'capacity'         => 'Capacity',
+                'created_at'       => __('levels.created_at') ?: 'Created',
+                'updated_at'       => __('parcel.updated_on') ?: 'Updated',
+                'products'         => 'Products',
+                'on_hand'          => 'On hand',
+                'reserved'         => 'Reserved',
+                'available'        => 'Available',
+                'fill'             => 'Fill',
+                'stocked_products' => 'Stocked products',
+                'stock_hint'       => 'Rows in amber expire within 7 days.',
+                'product'          => 'Product',
+                'batch'            => 'Batch',
+                'expiry'           => 'Expiry',
+                'expiring'         => 'Expiring',
+                'empty_location'   => 'Empty location.',
+            ],
+        ]);
     }
 
     public function edit(int $id)

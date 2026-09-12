@@ -87,6 +87,23 @@ Hierarchy (zone, aisle, rack, shelf, bin, capacity), Options (active
 toggle). Edit mode adds a Delete button (`permissions.delete`, behind
 `window.confirm`) and created/updated timestamps under the save card.
 
+### Location show
+
+- Route: `GET /admin/wms/locations/{id}` (`wms.locations.show`) →
+  `WmsLocationController::show`
+- Page: `resources/js/Pages/Admin/Wms/Locations/Show.jsx` (replaces
+  `backend.wms.locations.show` Blade)
+
+**Toolbar**: Back, Map view (`wms.locations.map?hub_id=`), Edit, Delete
+(confirm). **Left**: identity card — code (mono), hub, type pill
+(`standard` blue / `bulk` violet / `cold` sky / `hazmat` rose), active pill,
+a Zone › Aisle › Rack › Shelf › Bin path with empty levels dashed, and
+capacity/timestamps. **Right**: stat cards (products, on hand, reserved,
+fill % against capacity — amber ≥ 80 %, red ≥ 100 %, "—" without a
+capacity) and the stock table (product link, on hand, reserved,
+available, batch, expiry). Rows expiring within 7 days are tinted amber
+with an "Expiring" pill; `expiring` is computed server-side.
+
 ## GRN (Receiving)
 
 - Route: `GET /admin/wms/grn` (`wms.grn.index`) → `WmsGrnController::index`

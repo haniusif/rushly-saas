@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Backend\Wms;
 use App\Enums\Wms\OutboundType;
 use App\Http\Controllers\Backend\Wms\Concerns\RendersInertiaIndex;
 use App\Http\Controllers\Controller;
+use App\Models\Backend\Wms\WmsFulfillment;
 use App\Models\Backend\Wms\WmsLocation;
+use App\Models\Backend\Wms\WmsStock;
 use App\Models\Backend\Wms\WmsProduct;
 use App\Repositories\Hub\HubInterface;
 use App\Repositories\Merchant\MerchantInterface;
@@ -152,7 +154,96 @@ class WmsOutboundController extends Controller
     {
         $outbound = $this->repo->find($id);
         if (!$outbound) return redirect()->route('wms.outbound.index');
-        return view('backend.wms.outbound.show', compact('outbound'));
+
+        $isOpen = !in_array($outbound->status, ['completed', 'cancelled'], true);
+
+        // Available (on-hand − reserved) per product+location, so an open
+        // outbound shows up-front which lines will fail to deduct.
+        $available = [];
+        if ($isOpen && $outbound->items->isNotEmpty()) {
+            $available = WmsStock::companywise()
+                ->whereIn('product_id', $outbound->items->pluck('product_id'))
+                ->whereIn('location_id', $outbound->items->pluck('location_id'))
+                ->get(['product_id', 'location_id', 'quantity', 'reserved_qty'])
+                ->groupBy(fn ($s) => $s->product_id . ':' . $s->location_id)
+                ->map(fn ($g) => max((int) $g->sum('quantity') - (int) $g->sum('reserved_qty'), 0))
+                ->all();
+        }
+
+        $items = collect($outbound->items ?? [])->map(function ($it) use ($isOpen, $available) {
+            $avail = $available[$it->product_id . ':' . $it->location_id] ?? 0;
+            return [
+                'id'           => $it->id,
+                'sku'          => optional($it->product)->sku,
+                'product'      => optional($it->product)->name,
+                'product_url'  => $it->product_id ? route('wms.products.show', $it->product_id) : null,
+                'location'     => optional($it->location)->code,
+                'quantity'     => (int) $it->quantity,
+                'batch_number' => $it->batch_number,
+                'available'    => $isOpen ? $avail : null,
+                'insufficient' => $isOpen && $avail < (int) $it->quantity,
+            ];
+        })->values();
+
+        $fulfillment = $outbound->fulfillment_id
+            ? WmsFulfillment::companywise()->find($outbound->fulfillment_id, ['id', 'fulfillment_number'])
+            : null;
+
+        return Inertia::render('Admin/Wms/Outbound/Show', [
+            'outbound' => [
+                'id'                 => $outbound->id,
+                'outbound_number'    => $outbound->outbound_number,
+                'status'             => $outbound->status,
+                'type'               => $outbound->type,
+                'merchant'           => optional($outbound->merchant)->business_name,
+                'hub'                => optional($outbound->hub)->name,
+                'fulfillment_id'     => $outbound->fulfillment_id,
+                'fulfillment_number' => optional($fulfillment)->fulfillment_number,
+                'fulfillment_url'    => $fulfillment ? route('wms.fulfillment.show', $fulfillment->id) : null,
+                'processed_by'       => optional($outbound->processedBy)->name,
+                'created_at'         => optional($outbound->created_at)->toDateTimeString(),
+                'completed_at'       => optional($outbound->completed_at)->toDateTimeString(),
+            ],
+            'items'  => $items,
+            'totals' => [
+                'lines'        => $items->count(),
+                'quantity'     => $items->sum('quantity'),
+                'insufficient' => $items->where('insufficient', true)->count(),
+            ],
+            'permissions' => ['manage' => hasPermission('wms_manage')],
+            'urls' => [
+                'index'    => route('wms.outbound.index'),
+                'complete' => route('wms.outbound.complete', $outbound->id),
+            ],
+            't' => [
+                'title'              => __('Outbound') ?: 'Outbound',
+                'list'               => __('Outbound') ?: 'Outbound',
+                'back_to_list'       => __('Back to outbound') ?: 'Back to outbound',
+                'complete'           => __('Complete & deduct stock') ?: 'Complete & deduct stock',
+                'complete_confirm'   => __('Complete this outbound? Stock will be deducted.'),
+                'type'               => __('Type') ?: 'Type',
+                'merchant'           => __('Merchant') ?: 'Merchant',
+                'hub'                => __('Hub') ?: 'Hub',
+                'fulfillment'        => __('Fulfillment') ?: 'Fulfillment',
+                'processed_by'       => __('Processed By') ?: 'Processed by',
+                'created_at'         => __('levels.created_at') ?: 'Created',
+                'completed_at'       => __('Completed') ?: 'Completed',
+                'lines'              => __('Lines') ?: 'Lines',
+                'quantity'           => __('Quantity') ?: 'Quantity',
+                'short_lines'        => __('Short lines') ?: 'Short lines',
+                'items'              => __('Items') ?: 'Items',
+                'product'            => __('Product') ?: 'Product',
+                'location'           => __('Location') ?: 'Location',
+                'available'          => __('Available') ?: 'Available',
+                'available_hint'     => __('Available = on hand − reserved at that location right now.'),
+                'batch'              => __('Batch') ?: 'Batch',
+                'no_items'           => __('No items.') ?: 'No items.',
+                'open_title'         => __('Pending deduction') ?: 'Pending deduction',
+                'open_body'          => __('Nothing has left stock yet. Completing deducts every line FEFO and writes an audit row.'),
+                'insufficient_title' => __('Insufficient stock') ?: 'Insufficient stock',
+                'insufficient_body'  => __('Highlighted lines need more than is available at their location. Completing will fail until stock is received or the line is corrected.'),
+            ],
+        ]);
     }
 
     public function complete(int $id)

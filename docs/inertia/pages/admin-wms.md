@@ -151,6 +151,39 @@ Picker, Status pill, SLA cell (shows "Overdue" with alert icon if
 !in_array(status, [DISPATCHED, CANCELLED])`. Overdue rows get a rose
 background tint.
 
+### Fulfillment show
+
+- Route: `GET /admin/wms/fulfillment/{id}` (`wms.fulfillment.show`) →
+  `WmsFulfillmentController::show`
+- Page: `resources/js/Pages/Admin/Wms/Fulfillment/Show.jsx` (replaces
+  `backend.wms.fulfillment.show` Blade)
+
+**Toolbar** (gated by `permissions.manage`): Start / Continue picking
+(link to the picking page) while `pending`/`picking`; Confirm pack
+(`router.put(urls.pack)`) while `packing`; Dispatch
+(`router.put(urls.dispatch)`, behind `window.confirm`) while `ready`.
+**Left**: identity card (number, status pill, SLA-breached pill, parcel
+link → `parcel.details`, customer, merchant, hub, picker, packer, SLA
+deadline + relative, created, notes) and the **pipeline** card — the
+`pipeline` prop is a server-built list of `{key,label,state:done|now|todo,at}`.
+**Right**: stat cards (lines, required, picked, short) and the items
+table with a picked-progress bar; rows tinted emerald (`picked`) / amber
+(`short`).
+
+### Fulfillment picking
+
+- Route: `GET /admin/wms/fulfillment/{id}/picking` (`wms.fulfillment.picking`)
+- Page: `resources/js/Pages/Admin/Wms/Fulfillment/Picking.jsx` (replaces
+  `backend.wms.fulfillment.picking` Blade)
+
+Floor-oriented single-item screen: progress bar, the next `pending`/`short`
+line in location-code order (big location code, product, SKU, required
+qty), a large picked-qty input (defaults to required; a lower value
+shows the "short" hint) and one Confirm button that posts
+`{item_id, picked_qty, _method:'put'}` to `wms.fulfillment.pick`. When
+nothing is left it shows the all-done state with a Continue link back
+to the show page.
+
 ## Outbound
 
 - Route: `GET /admin/wms/outbound` (`wms.outbound.index`) → `WmsOutboundController::index`

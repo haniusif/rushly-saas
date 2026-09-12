@@ -1,7 +1,7 @@
 import * as React from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, router } from '@inertiajs/react';
 import {
-    MapPin, Building2, Layers, Grid3x3, Box, Hash, Save, ArrowLeft, AlertCircle,
+    MapPin, Building2, Layers, Grid3x3, Box, Hash, Save, ArrowLeft, AlertCircle, Trash2,
 } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
@@ -41,19 +41,28 @@ function Section({ title, children }) {
     );
 }
 
-export default function Create({ lookups = {}, urls = {}, t = {} }) {
+// Dual-mode: `mode='create'` (default) or `mode='edit'` with `location`
+// pre-filling the form and `_method: 'put'` spoofing the verb.
+export default function Create({ mode = 'create', location = null, lookups = {}, permissions = {}, urls = {}, t = {} }) {
+    const isEdit = mode === 'edit' && !!location;
     const form = useForm({
-        hub_id:   '',
-        zone:     '',
-        aisle:    '',
-        rack:     '',
-        shelf:    '',
-        bin:      '',
-        type:     (lookups.types && lookups.types[0]) || '',
-        capacity: '',
-        code:     '',
-        is_active: true,
+        hub_id:   String(location?.hub_id ?? ''),
+        zone:     location?.zone ?? '',
+        aisle:    location?.aisle ?? '',
+        rack:     location?.rack ?? '',
+        shelf:    location?.shelf ?? '',
+        bin:      location?.bin ?? '',
+        type:     location?.type || (lookups.types && lookups.types[0]) || '',
+        capacity: location?.capacity ?? '',
+        code:     location?.code ?? '',
+        is_active: location ? !!location.is_active : true,
+        ...(isEdit ? { _method: 'put' } : {}),
     });
+
+    const onDelete = () => {
+        if (!window.confirm(t.delete_confirm)) return;
+        router.delete(urls.destroy);
+    };
 
     // Auto-suggested code preview (rack-shelf-bin) — the backend will fill it
     // in if we leave the field blank, so this is purely a UX hint.
@@ -68,8 +77,8 @@ export default function Create({ lookups = {}, urls = {}, t = {} }) {
     };
 
     return (
-        <AdminLayout title={t.title} breadcrumbs={[t.list, t.title]}>
-            <Head title={t.title} />
+        <AdminLayout title={t.title} breadcrumbs={[t.list, isEdit ? (location.code || t.title) : t.title]}>
+            <Head title={isEdit && location.code ? `${t.title} · ${location.code}` : t.title} />
 
             <div className="mb-4">
                 <Link href={urls.cancel} className="inline-flex h-9 items-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent">
@@ -150,7 +159,7 @@ export default function Create({ lookups = {}, urls = {}, t = {} }) {
                             <input type="checkbox" checked={form.data.is_active} onChange={() => {}} className="mt-0.5 h-4 w-4 rounded border-input" />
                             <div className="min-w-0">
                                 <div className="text-sm font-medium">{t.is_active}</div>
-                                <div className="text-[11px] text-muted-foreground">Inactive locations are hidden from picking/putaway suggestions.</div>
+                                <div className="text-[11px] text-muted-foreground">{t.is_active_hint}</div>
                             </div>
                         </label>
                     </Section>
@@ -171,7 +180,18 @@ export default function Create({ lookups = {}, urls = {}, t = {} }) {
                                 <Link href={urls.cancel} className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent">
                                     {t.cancel}
                                 </Link>
+                                {isEdit && permissions.delete && urls.destroy && (
+                                    <Button type="button" variant="outline" onClick={onDelete} className="text-rose-600 border-rose-200 hover:bg-rose-50">
+                                        <Trash2 className="h-4 w-4 me-1" /> {t.delete}
+                                    </Button>
+                                )}
                             </div>
+                            {isEdit && (location.created_at || location.updated_at) && (
+                                <div className="pt-2 border-t border-border text-[11px] text-muted-foreground space-y-0.5">
+                                    {location.created_at && <div>{t.created_at}: {location.created_at}</div>}
+                                    {location.updated_at && <div>{t.updated_at}: {location.updated_at}</div>}
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </div>

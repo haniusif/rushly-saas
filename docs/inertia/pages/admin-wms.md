@@ -73,6 +73,20 @@ subquery on aggregated columns. Low rows get an amber background tint.
 Capacity, Edit link (only the edit action is exposed — legacy didn't
 show a delete here either)
 
+### Location form (create + edit)
+
+- Routes: `GET /admin/wms/locations/create` (`wms.locations.create`) and
+  `GET /admin/wms/locations/{id}/edit` (`wms.locations.edit`) →
+  `WmsLocationController::create` / `::edit`, both via `formProps()`
+- Page: `resources/js/Pages/Admin/Wms/Locations/Create.jsx` — dual-mode
+  (`mode='edit'` + flat `location` prop + `_method: 'put'`); the edit
+  render replaces `backend.wms.locations.edit` Blade
+
+Identity (hub, type, code with auto-preview from rack/shelf/bin),
+Hierarchy (zone, aisle, rack, shelf, bin, capacity), Options (active
+toggle). Edit mode adds a Delete button (`permissions.delete`, behind
+`window.confirm`) and created/updated timestamps under the save card.
+
 ## GRN (Receiving)
 
 - Route: `GET /admin/wms/grn` (`wms.grn.index`) → `WmsGrnController::index`

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ApprovalStatus;
 use App\Enums\Status;
 use App\Http\Requests\Merchantmanage\Payment\ProcessRequest;
 use App\Http\Requests\Merchantmanage\Payment\StoreRequest;
@@ -18,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Ramsey\Uuid\Type\Decimal;
 use Brian2694\Toastr\Facades\Toastr;
+use Inertia\Inertia;
 class MerchantmanagePaymentController extends Controller
 {
 
@@ -35,17 +37,189 @@ class MerchantmanagePaymentController extends Controller
             $this->account  = $account;
             $this->payment  = $payment;
     }
-    public function index(Request $request){
-         
-        $payments = $this->payment->all();
-        $accounts = $this->account->all();
-        return view('backend.merchantmanage.payment.index',compact('payments','request','accounts'));
-    }
-    
-    
-    
+    public function index(Request $request)
+    {
+        $hasFilter = $request->filled('date') || $request->filled('merchant_id')
+            || $request->filled('merchant_account') || $request->filled('from_account');
 
-  
+        $paginator = $hasFilter ? $this->payment->filter($request) : $this->payment->all();
+        $paginator->load(['merchant.user.upload', 'merchantAccount', 'frompayment.user', 'referencefile']);
+
+        $currency = settings()->currency;
+        $can = [
+            'create'  => hasPermission('payment_create'),
+            'update'  => hasPermission('payment_update'),
+            'delete'  => hasPermission('payment_delete'),
+            'reject'  => hasPermission('payment_reject'),
+            'process' => hasPermission('payment_process'),
+        ];
+
+        $rows = collect($paginator->items())->map(function (Payment $p) use ($can) {
+            $m = $p->merchant;
+            $u = optional($m)->user;
+            return [
+                'id'             => $p->id,
+                'merchant'       => [
+                    'name'     => optional($u)->name,
+                    'email'    => optional($u)->email,
+                    'business' => optional($m)->business_name,
+                    'image'    => optional($u)->image,
+                ],
+                'payout_account' => $this->payoutAccountSummary($p->merchantAccount),
+                'transaction_id' => $p->transaction_id,
+                'created_at'     => optional($p->created_at)->format('d M Y'),
+                'from_account'   => $this->fromAccountSummary($p->frompayment),
+                'reference_url'  => $p->referencefile ? static_asset($p->referencefile->original) : null,
+                'description'    => $p->description,
+                'status'         => (int) $p->status,
+                'status_label'   => __('approvalstatus.' . $p->status),
+                'amount'         => (float) $p->amount,
+                'urls'           => [
+                    'edit'           => $can['update']  ? route('merchatmanage.payment.edit', $p->id)          : null,
+                    'destroy'        => $can['delete']  ? route('merchantmanage.payment.delete', $p->id)       : null,
+                    'reject'         => $can['reject']  ? route('merchantmanage.payment.reject', $p->id)       : null,
+                    'cancel_reject'  => $can['reject']  ? route('merchantmanage.payment.cancel-reject', $p->id): null,
+                    'process'        => $can['process'] ? route('merchantmanage.payment.process', $p->id)      : null,
+                    'cancel_process' => $can['process'] ? route('merchantmanage.payment.cancel-process', $p->id): null,
+                ],
+            ];
+        })->values();
+
+        // Every payout account for the tenant, keyed by merchant so the
+        // filter can narrow the list client-side when a merchant is picked.
+        $merchantAccounts = MerchantPayment::whereIn(
+                'merchant_id', Merchant::companywise()->select('id')
+            )->get()
+            ->map(fn ($a) => [
+                'id'          => $a->id,
+                'merchant_id' => $a->merchant_id,
+                'label'       => $this->payoutAccountSummary($a)['label'],
+            ])->values();
+
+        return Inertia::render('Admin/MerchantPayment/Index', [
+            'rows'       => $rows,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'from'         => $paginator->firstItem(),
+                'to'           => $paginator->lastItem(),
+                'total'        => $paginator->total(),
+                'prev_url'     => $paginator->appends($request->query())->previousPageUrl(),
+                'next_url'     => $paginator->appends($request->query())->nextPageUrl(),
+            ],
+            'total_amount' => (float) collect($paginator->items())->sum('amount'),
+            'currency'     => $currency,
+            'filters'      => [
+                'date'             => $request->input('date', ''),
+                'merchant_id'      => (string) $request->input('merchant_id', ''),
+                'merchant_account' => (string) $request->input('merchant_account', ''),
+                'from_account'     => (string) $request->input('from_account', ''),
+            ],
+            'lookups' => [
+                'merchants'         => $this->merchant->merchantIdlist()->map(fn ($m) => ['id' => $m->id, 'name' => $m->business_name])->values(),
+                'merchant_accounts' => $merchantAccounts,
+                'from_accounts'     => $this->account->getAll()->map(fn ($a) => ['id' => $a->id, 'label' => $this->fromAccountSummary($a)['label']])->values(),
+            ],
+            'permissions' => $can,
+            'urls' => [
+                'index'  => route('merchant.manage.payment.index'),
+                'create' => route('merchant-manage.payment.create'),
+            ],
+            't' => [
+                'title'            => __('merchantmanage.merchant_payment_manage') ?: 'Client payments',
+                'list'             => __('levels.list') ?: 'List',
+                'section'          => __('merchantmanage.title') ?: 'Client manage',
+                'add'              => __('levels.add') ?: 'Add',
+                'filter'           => __('levels.filter') ?: 'Filter',
+                'clear'            => __('levels.clear') ?: 'Clear',
+                'all'              => __('levels.all') ?: 'All',
+                'date'             => __('parcel.date') ?: 'Date',
+                'date_from'        => __('levels.from') ?: 'From',
+                'date_to'          => __('levels.to') ?: 'To',
+                'merchant'         => __('merchant.title') ?: 'Client',
+                'merchant_account' => __('merchantmanage.merchant_account') ?: 'Client account',
+                'from_account'     => __('merchantmanage.from_account') ?: 'From account',
+                'pick_merchant_first' => __('Select a client to list their accounts') ?: 'Select a client to list their accounts',
+                'merchant_details' => __('merchantmanage.merchant_details') ?: 'Client details',
+                'payout_account'   => __('merchantmanage.merchant_account') ?: 'Payout account',
+                'transaction_id'   => __('merchantmanage.transaction_id') ?: 'Trans. ID',
+                'created_at'       => __('levels.created_at') ?: 'Created',
+                'reference'        => __('merchantmanage.reference') ?: 'Reference',
+                'download'         => __('levels.download') ?: 'Download',
+                'description'      => __('merchantmanage.description') ?: 'Description',
+                'status'           => __('levels.status') ?: 'Status',
+                'amount'           => __('merchantmanage.amount') ?: 'Amount',
+                'actions'          => __('levels.actions') ?: 'Actions',
+                'page_total'       => __('Total on this page') ?: 'Total on this page',
+                'edit'             => __('levels.edit') ?: 'Edit',
+                'delete'           => __('levels.delete') ?: 'Delete',
+                'delete_confirm'   => __('delete.payment') ?: 'Delete this payment?',
+                'reject'           => __('levels.reject') ?: 'Reject',
+                'cancel_reject'    => __('levels.cancel_reject') ?: 'Cancel reject',
+                'process'          => __('levels.process') ?: 'Process',
+                'cancel_process'   => __('levels.cancel_process') ?: 'Cancel processed',
+                'confirm_action'   => __('Are you sure?') ?: 'Are you sure?',
+                'no_rows'          => __('levels.no_data_found') ?: 'No payments found.',
+                'showing_results'  => 'Showing :from – :to of :total',
+                'status_pending'   => __('approvalstatus.' . ApprovalStatus::PENDING),
+                'status_processed' => __('approvalstatus.' . ApprovalStatus::PROCESSED),
+                'status_rejected'  => __('approvalstatus.' . ApprovalStatus::REJECT),
+            ],
+        ]);
+    }
+
+    /** Flat, display-ready summary of a merchant payout account (bank / mobile / cash). */
+    protected function payoutAccountSummary(?MerchantPayment $a): ?array
+    {
+        if (!$a) return null;
+        $method = (string) $a->payment_method;
+        $lines  = [];
+        if ($method === 'bank') {
+            $lines = array_values(array_filter([
+                $a->holder_name, $a->bank_name, $a->account_no, $a->branch_name,
+                $a->routing_no ? 'RTN ' . $a->routing_no : null,
+            ]));
+        } elseif ($method === 'mobile') {
+            $lines = array_values(array_filter([$a->mobile_company, $a->mobile_no, $a->account_type]));
+        }
+        $methodLabel = __('merchant.' . $method) ?: ucfirst($method);
+        return [
+            'method'       => $method,
+            'method_label' => $methodLabel,
+            'lines'        => $lines,
+            'label'        => $lines ? implode(' | ', $lines) : $methodLabel,
+        ];
+    }
+
+    /** Flat, display-ready summary of a courier (from) account. */
+    protected function fromAccountSummary(?Account $a): ?array
+    {
+        if (!$a) return null;
+        $gateway = (int) $a->gateway;
+        $mobileGateways = [3 => 'Bkash', 4 => 'Rocket', 5 => 'Nagad'];
+        if ($gateway === 1) {
+            $title = optional($a->user)->name;
+            $lines = [__('merchant.cash') ?: 'Cash'];
+        } elseif (isset($mobileGateways[$gateway])) {
+            $title = $a->account_holder_name;
+            $lines = array_values(array_filter([
+                $mobileGateways[$gateway], $a->mobile,
+                (int) $a->account_type === 1 ? (__('merchant.title') ?: 'Merchant') : (__('placeholder.persional') ?: 'Personal'),
+            ]));
+        } else {
+            $title = $a->account_holder_name;
+            $lines = array_values(array_filter([$a->account_no, $a->branch_name]));
+        }
+        $balance = (__('merchantmanage.current_balance') ?: 'Balance') . ': ' . $a->balance;
+        return [
+            'title'   => $title,
+            'lines'   => $lines,
+            'balance' => (float) $a->balance,
+            'label'   => implode(' | ', array_filter(array_merge([$title], $lines, [$balance]))),
+        ];
+    }
+
+    
 public function payment_get_cod(Request $request)
 {
     $ids = $request->input('ids', []);
@@ -264,17 +438,10 @@ public function payment_get_cod(Request $request)
         }
     }
 
-    public function merchantpaymentFilter(Request $request){
-        $payments = $this->payment->filter($request);
-        $totalAmount = $payments->sum('amount');
-        $accounts = $this->account->all();
-        $merchant = $this->merchant->get($request->merchant_id);
-        if($request->merchant_id):
-            $merchantaccounts = MerchantPayment::where('merchant_id',$request->merchant_id)->get();
-        else:
-            $merchantaccounts = null;
-        endif;
-        return view('backend.merchantmanage.payment.index',compact('payments','request','accounts','merchantaccounts','merchant','totalAmount'));
+    public function merchantpaymentFilter(Request $request)
+    {
+        // Legacy filter URL — the index now applies filters itself.
+        return $this->index($request);
     }
 
 }

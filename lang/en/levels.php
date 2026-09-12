@@ -104,6 +104,8 @@ return [
   'filter'                 => 'Filter',
   'clear'                  => 'Clear',
   'from'                   => 'From',
+  'to'                     => 'To',
+  'download'               => 'Download',
   'parcel'                 => 'Shipment',
   'receipt'                => 'Receipt',
   'assign_pickup'          => 'Assign Pickup',

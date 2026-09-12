@@ -50,5 +50,8 @@
     "Open abnormal": "شحنات مخالفة مفتوحة",
     "Critical": "حرجة",
     "Active Shipments Amount": "إجمالي مبالغ الشحنات النشطة",
-    "Operations overview": "نظرة عامة على العمليات"
+    "Operations overview": "نظرة عامة على العمليات",
+    "Select a client to list their accounts": "اختر عميلاً لعرض حساباته",
+    "Total on this page": "الإجمالي في هذه الصفحة",
+    "Are you sure?": "هل أنت متأكد؟"
 }

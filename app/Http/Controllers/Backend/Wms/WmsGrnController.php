@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Backend\Wms;
 
 use App\Enums\Wms\GrnStatus;
 use App\Http\Controllers\Backend\Wms\Concerns\RendersInertiaIndex;
+use App\Http\Controllers\Backend\Wms\Concerns\ScopesWmsMerchants;
 use App\Http\Controllers\Controller;
 use App\Models\Backend\Wms\WmsLocation;
 use App\Models\Backend\Wms\WmsProduct;
@@ -17,7 +18,7 @@ use Inertia\Inertia;
 
 class WmsGrnController extends Controller
 {
-    use RendersInertiaIndex;
+    use RendersInertiaIndex, ScopesWmsMerchants;
 
     public function __construct(
         protected WmsGrnRepositoryInterface $repo,
@@ -72,7 +73,7 @@ class WmsGrnController extends Controller
 
     public function create(Request $request)
     {
-        $merchants = $this->merchantRepo->all();
+        $merchants = $this->wmsMerchants();
         $hubs      = $this->hubRepo->all();
 
         // Pre-build flat arrays for the row-template JS to avoid embedding closures in Blade.
@@ -114,6 +115,7 @@ class WmsGrnController extends Controller
                 'title_index'  => 'Receiving (GRN)',
                 'grn_number'   => 'GRN number',
                 'merchant'     => 'Merchant',
+                'merchant_hint'=> 'Only merchants with the fulfillment or storage service are listed.',
                 'hub'          => 'Hub',
                 'reference'    => 'Reference number',
                 'reference_hint' => 'Supplier invoice / PO number (optional)',
@@ -146,7 +148,7 @@ class WmsGrnController extends Controller
     {
         $data = $request->validate([
             'hub_id'           => ['required', 'integer', 'exists:hubs,id'],
-            'merchant_id'      => ['required', 'integer', 'exists:merchants,id'],
+            'merchant_id'      => ['required', 'integer', 'exists:merchants,id', $this->merchantHasWmsService()],
             'reference_number' => ['nullable', 'string', 'max:191'],
             'notes'            => ['nullable', 'string'],
             'items'                       => ['required', 'array', 'min:1'],

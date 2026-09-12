@@ -255,6 +255,7 @@ return array (
   // صفحة قائمة التجار — تسميات كانت مكتوبة بالإنجليزية مباشرةً
   'index_title'              => 'التجار',
   'index_search_placeholder' => 'بحث…',
+  'contact_person'          => 'جهة الاتصال',
   'index_showing_results'    => 'عرض :from – :to من أصل :total',
   'index_wallet_active'      => 'المحفظة مفعّلة',
   'index_wallet_off'         => 'المحفظة معطّلة',

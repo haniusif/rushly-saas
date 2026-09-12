@@ -26,6 +26,8 @@ class MerchantRepository implements MerchantInterface{
         return Merchant::where('company_id',settings()->id)
             ->with([
                 'user', 'user.upload',
+                // Business logo for the index avatar.
+                'logo',
                 // For the Coverage column on the index. Limited selects keep
                 // the page light when a tenant has many merchants.
                 'countries:id,name,en_name,code',

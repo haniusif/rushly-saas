@@ -24,13 +24,29 @@ function Money({ value, currency }) {
     );
 }
 
-function Initials({ name }) {
+function Initials({ name, size }) {
     const t = (name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
     return (
-        <div className="grid h-10 w-10 place-items-center rounded-full bg-primary/10 text-primary text-xs font-semibold shrink-0">
+        <div className={cn('grid place-items-center rounded-md bg-primary/10 text-primary text-xs font-semibold shrink-0', size)}>
             {t}
         </div>
     );
+}
+
+// Business logo first (rounded square, contained — logos aren't portraits),
+// then the contact's uploaded avatar, then initials of the business name.
+function ClientAvatar({ row, className = 'h-10 w-10' }) {
+    if (row.logo) {
+        return (
+            <div className={cn('shrink-0 rounded-md border border-border bg-white p-0.5 overflow-hidden', className)}>
+                <img src={row.logo} alt="" className="h-full w-full object-contain" loading="lazy" />
+            </div>
+        );
+    }
+    if (row.image) {
+        return <img src={row.image} alt="" className={cn('shrink-0 rounded-md object-cover border border-border', className)} loading="lazy" />;
+    }
+    return <Initials name={row.business_name || row.name} size={className} />;
 }
 
 function StatusBadge({ active, on, off }) {
@@ -73,13 +89,12 @@ function MerchantCard({ row, currency, permissions, t, onImpersonate, onSendCred
         <Card className="overflow-hidden">
             <CardContent className="p-0">
                 <div className="flex items-center gap-3 p-4 border-b border-border">
-                    {row.image
-                        ? <img src={row.image} alt="" className="h-10 w-10 rounded-full object-cover" />
-                        : <Initials name={row.name} />}
+                    <ClientAvatar row={row} className="h-12 w-12" />
                     <div className="min-w-0 flex-1">
-                        <div className="font-medium truncate">{row.name || '—'}</div>
+                        <div className="font-semibold truncate" title={row.business_name || ''}>{row.business_name || row.name || '—'}</div>
                         <div className="text-xs text-muted-foreground truncate">
-                            #{row.unique_id || '—'} · {row.business_name || '—'}
+                            <span className="font-mono">#{row.unique_id || '—'}</span>
+                            {row.business_name && row.name ? ` · ${row.name}` : ''}
                         </div>
                     </div>
                     {(permissions.view || permissions.update) && (
@@ -263,11 +278,10 @@ export default function Index({
                                     <tr className="border-b border-border bg-muted/30 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                                         <th className="px-3 py-3 text-start">#</th>
                                         <th className="px-3 py-3 text-start">{t.unique_id}</th>
-                                        <th className="px-3 py-3 text-start">{t.title}</th>
-                                        <th className="px-3 py-3 text-start">{t.hub}</th>
                                         <th className="px-3 py-3 text-start">{t.business_name}</th>
+                                        <th className="px-3 py-3 text-start">{t.contact}</th>
+                                        <th className="px-3 py-3 text-start">{t.hub}</th>
                                         <th className="px-3 py-3 text-start">{t.geography}</th>
-                                        <th className="px-3 py-3 text-start">{t.phone}</th>
                                         <th className="px-3 py-3 text-start">{t.status}</th>
                                         <th className="px-3 py-3 text-end">{t.current_balance}</th>
                                         {(permissions.view || permissions.update) && <th className="px-3 py-3 text-end">{t.actions}</th>}
@@ -279,20 +293,22 @@ export default function Index({
                                             <td className="px-3 py-3 text-muted-foreground">{(pagination.from || 1) + idx}</td>
                                             <td className="px-3 py-3 font-mono text-xs">{r.unique_id || '—'}</td>
                                             <td className="px-3 py-3">
-                                                <div className="flex items-center gap-3">
-                                                    {r.image
-                                                        ? <img src={r.image} alt="" className="h-9 w-9 rounded-full object-cover" />
-                                                        : <Initials name={r.name} />}
+                                                <div className="flex items-center gap-3 min-w-[200px]">
+                                                    <ClientAvatar row={r} className="h-10 w-10" />
                                                     <div className="min-w-0">
-                                                        <div className="font-medium truncate">{r.name || '—'}</div>
-                                                        <div className="text-xs text-muted-foreground truncate">{r.email || '—'}</div>
+                                                        <div className="font-semibold truncate" title={r.business_name || ''}>{r.business_name || r.name || '—'}</div>
+                                                        {r.business_name && r.name && (
+                                                            <div className="text-xs text-muted-foreground truncate">{r.name}</div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </td>
+                                            <td className="px-3 py-3">
+                                                <div className="text-xs">{r.email || '—'}</div>
+                                                <div className="text-xs text-muted-foreground">{r.mobile || '—'}</div>
+                                            </td>
                                             <td className="px-3 py-3">{r.hub_name || '—'}</td>
-                                            <td className="px-3 py-3">{r.business_name || '—'}</td>
                                             <td className="px-3 py-3"><CoverageCell row={r} t={t} /></td>
-                                            <td className="px-3 py-3 text-muted-foreground">{r.mobile || '—'}</td>
                                             <td className="px-3 py-3">
                                                 <div className="flex flex-col gap-1">
                                                     <StatusBadge active={r.status === 1} on={t.status_active} off={t.status_inactive} />

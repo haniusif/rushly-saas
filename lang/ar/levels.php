@@ -104,6 +104,8 @@ return [
   'filter'                 => 'تصفية',
   'clear'                  => 'مسح',
   'from'                   => 'من',
+  'to'                     => 'إلى',
+  'download'               => 'تنزيل',
   'parcel'                 => 'الشحنة',
   'receipt'                => 'الإيصال',
   'assign_pickup'          => 'تعيين مندوب الاستلام',

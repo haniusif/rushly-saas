@@ -84,6 +84,25 @@ show a delete here either)
 Status pill (`draft` grey / `in_progress` sky / `completed` emerald /
 `discrepancy` rose), Created (relative), View link
 
+### GRN show
+
+- Route: `GET /admin/wms/grn/{id}` (`wms.grn.show`) → `WmsGrnController::show`
+- Page: `resources/js/Pages/Admin/Wms/Grn/Show.jsx` (replaces
+  `backend.wms.grn.show` Blade)
+
+**Toolbar**: Back, Print (`window.print()`, toolbar is `print:hidden`),
+and — only while `draft` / `in_progress` and `permissions.manage` —
+Complete (`router.put(urls.complete)`) and Delete (`router.delete(urls.destroy)`),
+both behind `window.confirm`.
+**Left column**: identity card (GRN # mono, status pill, merchant, hub,
+reference, received by/at, created, notes) + a rose "discrepancy" callout
+when `grn.has_discrepancy` and a sky "receiving in progress" callout while open.
+**Right column**: 4 stat cards (lines, expected, received, variance — red
+when ≠ 0) and the line-items table. Each item carries `mismatch` + `diff`
+(computed server-side); mismatched rows get a rose tint and show the
+signed difference next to the received qty. Condition pill:
+`good` emerald / `damaged` rose / `expired` grey.
+
 ## Fulfillment
 
 - Route: `GET /admin/wms/fulfillment` (`wms.fulfillment.index`) →

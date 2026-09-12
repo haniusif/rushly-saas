@@ -109,7 +109,7 @@ export default function Form({ title, mode = 'create', product = null, lookups =
 
                     <Section title={t.classification}>
                         <div className="grid gap-4 md:grid-cols-2">
-                            <Field icon={Store} label={t.merchant} required error={form.errors.merchant_id}>
+                            <Field icon={Store} label={t.merchant} required error={form.errors.merchant_id} hint={isEdit ? undefined : t.merchant_hint}>
                                 <Select value={form.data.merchant_id} onChange={(e) => form.setData('merchant_id', e.target.value)} disabled={isEdit}>
                                     <option value="">—</option>
                                     {(lookups.merchants || []).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}

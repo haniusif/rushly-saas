@@ -257,6 +257,7 @@ return array (
   // — labels that were previously hardcoded English in the controller's t array.
   'index_title'              => 'Merchants',
   'index_search_placeholder' => 'Search…',
+  'contact_person'          => 'Contact',
   'index_showing_results'    => 'Showing :from – :to of :total',
   'index_wallet_active'      => 'Wallet active',
   'index_wallet_off'         => 'Wallet off',

@@ -180,7 +180,86 @@ class WmsGrnController extends Controller
             Toastr::error(__('GRN not found.'));
             return redirect()->route('wms.grn.index');
         }
-        return view('backend.wms.grn.show', compact('grn'));
+        $items = collect($grn->items ?? [])->map(function ($it) {
+            $expected = (int) $it->expected_qty;
+            $received = (int) $it->received_qty;
+            return [
+                'id'              => $it->id,
+                'sku'             => optional($it->product)->sku,
+                'product'         => optional($it->product)->name,
+                'location'        => optional($it->location)->code,
+                'expected_qty'    => $expected,
+                'received_qty'    => $received,
+                'diff'            => $received - $expected,
+                'mismatch'        => $expected !== $received,
+                'batch_number'    => $it->batch_number,
+                'expiry_date'     => optional($it->expiry_date)->format('Y-m-d'),
+                'condition'       => $it->condition,
+                'condition_label' => ucfirst((string) $it->condition),
+            ];
+        })->values();
+
+        return Inertia::render('Admin/Wms/Grn/Show', [
+            'grn' => [
+                'id'               => $grn->id,
+                'grn_number'       => $grn->grn_number,
+                'status'           => $grn->status,
+                'status_label'     => ucwords(str_replace('_', ' ', $grn->status)),
+                'merchant'         => optional($grn->merchant)->business_name,
+                'hub'              => optional($grn->hub)->name,
+                'reference_number' => $grn->reference_number,
+                'received_by'      => optional($grn->receivedBy)->name,
+                'received_at'      => optional($grn->received_at)->toDateTimeString(),
+                'created_at'       => optional($grn->created_at)->toDateTimeString(),
+                'notes'            => $grn->notes,
+                'has_discrepancy'  => $grn->hasDiscrepancy(),
+            ],
+            'items'  => $items,
+            'totals' => [
+                'lines'    => $items->count(),
+                'expected' => $items->sum('expected_qty'),
+                'received' => $items->sum('received_qty'),
+            ],
+            'permissions' => ['manage' => hasPermission('wms_manage')],
+            'urls' => [
+                'index'    => route('wms.grn.index'),
+                'complete' => route('wms.grn.complete', $grn->id),
+                'destroy'  => route('wms.grn.destroy', $grn->id),
+            ],
+            't' => [
+                'title'             => __('Goods receipt') ?: 'Goods receipt',
+                'list'              => __('Receiving') ?: 'Receiving',
+                'back_to_list'      => __('Back to receiving') ?: 'Back to receiving',
+                'print'             => __('Print') ?: 'Print',
+                'complete'          => __('Complete GRN') ?: 'Complete GRN',
+                'complete_confirm'  => __('Complete this GRN? Stock will be credited and discrepancies flagged.'),
+                'delete'            => __('levels.delete') ?: 'Delete',
+                'delete_confirm'    => __('Delete this draft?'),
+                'merchant'          => __('Merchant') ?: 'Merchant',
+                'hub'               => __('Hub') ?: 'Hub',
+                'reference'         => __('Reference') ?: 'Reference',
+                'received_by'       => __('Received By') ?: 'Received by',
+                'received_at'       => __('Received At') ?: 'Received at',
+                'created_at'        => __('levels.created_at') ?: 'Created',
+                'notes'             => __('Notes') ?: 'Notes',
+                'discrepancy_title' => __('Discrepancy detected') ?: 'Discrepancy detected',
+                'discrepancy_body'  => __('One or more lines received a different quantity than expected. Highlighted rows below.'),
+                'open_title'        => __('Receiving in progress') ?: 'Receiving in progress',
+                'open_body'         => __('Stock is credited only when you press Complete. Damaged and expired lines are never credited.'),
+                'lines'             => __('Lines') ?: 'Lines',
+                'expected'          => __('Expected') ?: 'Expected',
+                'received'          => __('Received') ?: 'Received',
+                'variance'          => __('Variance') ?: 'Variance',
+                'line_items'        => __('Line items') ?: 'Line items',
+                'condition_hint'    => __('Rows in red differ from the expected quantity.'),
+                'product'           => __('Product') ?: 'Product',
+                'location'          => __('Location') ?: 'Location',
+                'batch'             => __('Batch') ?: 'Batch',
+                'expiry'            => __('Expiry') ?: 'Expiry',
+                'condition'         => __('Condition') ?: 'Condition',
+                'no_items'          => __('No items.') ?: 'No items.',
+            ],
+        ]);
     }
 
     public function edit(int $id)

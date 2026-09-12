@@ -85,7 +85,104 @@ class WmsFulfillmentController extends Controller
             Toastr::error(__('Fulfillment not found.'));
             return redirect()->route('wms.fulfillment.index');
         }
-        return view('backend.wms.fulfillment.show', compact('f'));
+        $items = collect($f->items ?? [])->map(fn ($it) => [
+            'id'                => $it->id,
+            'sku'               => optional($it->product)->sku,
+            'product'           => optional($it->product)->name,
+            'location'          => optional($it->location)->code,
+            'quantity_required' => (int) $it->quantity_required,
+            'quantity_picked'   => (int) $it->quantity_picked,
+            'status'            => $it->status,
+            'status_label'      => ucfirst((string) $it->status),
+        ])->values();
+
+        // Pipeline stages with the timestamp that closes each one.
+        $stages = [
+            FulfillmentStatus::PENDING    => ['label' => 'Pending',    'at' => $f->created_at],
+            FulfillmentStatus::PICKING    => ['label' => 'Picking',    'at' => $f->picked_at],
+            FulfillmentStatus::PACKING    => ['label' => 'Packing',    'at' => $f->packed_at],
+            FulfillmentStatus::READY      => ['label' => 'Ready',      'at' => null],
+            FulfillmentStatus::DISPATCHED => ['label' => 'Dispatched', 'at' => $f->dispatched_at],
+        ];
+        $order      = array_keys($stages);
+        $currentIdx = array_search($f->status, $order, true);
+        $pipeline   = collect($stages)->map(function ($st, $key) use ($order, $currentIdx, $f) {
+            $idx   = array_search($key, $order, true);
+            $state = $f->status === FulfillmentStatus::CANCELLED ? 'todo'
+                   : ($currentIdx !== false && $idx < $currentIdx ? 'done'
+                   : ($key === $f->status ? 'now' : 'todo'));
+            return [
+                'key'   => $key,
+                'label' => __($st['label']),
+                'state' => $state,
+                'at'    => $state === 'done' && $st['at'] ? $st['at']->diffForHumans() : null,
+            ];
+        })->values();
+
+        return Inertia::render('Admin/Wms/Fulfillment/Show', [
+            'fulfillment' => [
+                'id'                 => $f->id,
+                'fulfillment_number' => $f->fulfillment_number,
+                'status'             => $f->status,
+                'parcel'             => optional($f->parcel)->tracking_id ?? ('#' . $f->parcel_id),
+                'parcel_url'         => $f->parcel_id ? route('parcel.details', $f->parcel_id) : null,
+                'customer'           => optional($f->parcel)->customer_name,
+                'merchant'           => optional($f->merchant)->business_name,
+                'hub'                => optional($f->hub)->name,
+                'picker'             => optional($f->picker)->name,
+                'packer'             => optional($f->packer)->name,
+                'sla_deadline'       => optional($f->sla_deadline)->toDateTimeString(),
+                'sla_relative'       => optional($f->sla_deadline)->diffForHumans(),
+                'sla_breached'       => $f->isSlaBreached(),
+                'created_at'         => optional($f->created_at)->toDateTimeString(),
+                'notes'              => $f->notes,
+            ],
+            'items'    => $items,
+            'totals'   => [
+                'lines'    => $items->count(),
+                'required' => $items->sum('quantity_required'),
+                'picked'   => $items->sum('quantity_picked'),
+                'short'    => $items->where('status', 'short')->count(),
+            ],
+            'pipeline' => $pipeline,
+            'permissions' => ['manage' => hasPermission('wms_manage')],
+            'urls' => [
+                'index'    => route('wms.fulfillment.index'),
+                'picking'  => route('wms.fulfillment.picking', $f->id),
+                'pack'     => route('wms.fulfillment.pack', $f->id),
+                'dispatch' => route('wms.fulfillment.dispatch', $f->id),
+            ],
+            't' => [
+                'title'            => __('Fulfillment') ?: 'Fulfillment',
+                'list'             => __('Fulfillment') ?: 'Fulfillment',
+                'back_to_list'     => __('Back to fulfillment') ?: 'Back to fulfillment',
+                'start_picking'    => __('Start picking') ?: 'Start picking',
+                'continue_picking' => __('Continue picking') ?: 'Continue picking',
+                'confirm_pack'     => __('Confirm Pack') ?: 'Confirm pack',
+                'dispatch'         => __('Dispatch') ?: 'Dispatch',
+                'dispatch_confirm' => __('Dispatch this fulfillment? Stock will be deducted and the parcel handed to the courier workflow.'),
+                'sla_breached'     => __('SLA breached') ?: 'SLA breached',
+                'parcel'           => __('Parcel') ?: 'Parcel',
+                'customer'         => __('Customer') ?: 'Customer',
+                'merchant'         => __('Merchant') ?: 'Merchant',
+                'hub'              => __('Hub') ?: 'Hub',
+                'picker'           => __('Picker') ?: 'Picker',
+                'packer'           => __('Packer') ?: 'Packer',
+                'sla_deadline'     => __('SLA deadline') ?: 'SLA deadline',
+                'created_at'       => __('levels.created_at') ?: 'Created',
+                'notes'            => __('Notes') ?: 'Notes',
+                'pipeline'         => __('Pipeline') ?: 'Pipeline',
+                'lines'            => __('Lines') ?: 'Lines',
+                'required'         => __('Required') ?: 'Required',
+                'picked'           => __('Picked') ?: 'Picked',
+                'short'            => __('Short') ?: 'Short',
+                'items'            => __('Items') ?: 'Items',
+                'product'          => __('Product') ?: 'Product',
+                'location'         => __('Location') ?: 'Location',
+                'status'           => __('levels.status') ?: 'Status',
+                'no_items'         => __('No items.') ?: 'No items.',
+            ],
+        ]);
     }
 
     public function picking(int $id)
@@ -102,7 +199,49 @@ class WmsFulfillmentController extends Controller
             ->sortBy(fn ($i) => optional($i->location)->code ?? '')
             ->first();
 
-        return view('backend.wms.fulfillment.picking', compact('f', 'next'));
+        $items     = $f->items;
+        $remaining = $items->whereIn('status', ['pending', 'short'])->count();
+
+        return Inertia::render('Admin/Wms/Fulfillment/Picking', [
+            'fulfillment' => [
+                'id'                 => $f->id,
+                'fulfillment_number' => $f->fulfillment_number,
+                'status'             => $f->status,
+            ],
+            'next' => $next ? [
+                'id'                => $next->id,
+                'product'           => optional($next->product)->name,
+                'sku'               => optional($next->product)->sku,
+                'location'          => optional($next->location)->code,
+                'quantity_required' => (int) $next->quantity_required,
+                'status'            => $next->status,
+            ] : null,
+            'progress' => [
+                'total'     => $items->count(),
+                'done'      => $items->where('status', 'picked')->count(),
+                'remaining' => $remaining,
+            ],
+            'urls' => [
+                'show' => route('wms.fulfillment.show', $f->id),
+                'pick' => route('wms.fulfillment.pick', $f->id),
+            ],
+            't' => [
+                'title'               => __('Picking') ?: 'Picking',
+                'list'                => __('Fulfillment') ?: 'Fulfillment',
+                'back_to_fulfillment' => __('Back to fulfillment') ?: 'Back to fulfillment',
+                'progress'            => __(':done of :total items picked'),
+                'walk_to'             => __('Walk to location') ?: 'Walk to location',
+                'pick_this_many'      => __('Pick this many:') ?: 'Pick this many:',
+                'picked_qty'          => __('Picked quantity (defaults to required)'),
+                'short_hint'          => __('Less than required — the line will be marked short and offered again.'),
+                'previously_short'    => __('Previously short') ?: 'Previously short',
+                'confirm_pick'        => __('Confirm pick') ?: 'Confirm pick',
+                'more_after'          => __(':n more item(s) after this one'),
+                'all_done_title'      => __('All items picked!') ?: 'All items picked!',
+                'all_done_body'       => __('Head back to the fulfillment to pack and dispatch.'),
+                'continue'            => __('Continue') ?: 'Continue',
+            ],
+        ]);
     }
 
     public function confirmPick(Request $request, int $id)

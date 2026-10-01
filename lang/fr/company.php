@@ -8,4 +8,9 @@ return [
     'view'       => 'Affichage',
     'list_view'  => 'Vue liste',
     'card_view'  => 'Vue cartes',
+    'search'        => 'Rechercher des entreprises…',
+    'all_plans'     => 'Tous les forfaits',
+    'all_statuses'  => 'Tous les statuts',
+    'clear'         => 'Effacer',
+    'no_results'    => 'Aucune entreprise ne correspond aux filtres.',
 ];

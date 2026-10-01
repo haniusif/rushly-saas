@@ -8,4 +8,9 @@ return [
     'view'       => 'View',
     'list_view'  => 'List view',
     'card_view'  => 'Card view',
+    'search'        => 'Search companies…',
+    'all_plans'     => 'All plans',
+    'all_statuses'  => 'All statuses',
+    'clear'         => 'Clear',
+    'no_results'    => 'No companies match your filters.',
 ];

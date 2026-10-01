@@ -8,4 +8,9 @@ return [
     'view'       => '视图',
     'list_view'  => '列表视图',
     'card_view'  => '卡片视图',
+    'search'        => '搜索公司…',
+    'all_plans'     => '所有套餐',
+    'all_statuses'  => '所有状态',
+    'clear'         => '清除',
+    'no_results'    => '没有符合筛选条件的公司。',
 ];

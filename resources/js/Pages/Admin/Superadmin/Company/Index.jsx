@@ -3,6 +3,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import {
     Plus, Building2, Link as LinkIcon, Package, MoreHorizontal,
     Pencil, Trash2, RefreshCw, ExternalLink, LogIn, List, LayoutGrid,
+    Search, X,
 } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
@@ -70,9 +71,34 @@ function RowActions({ row, open, setOpenMenu, menuRef, permissions, t, onImperso
  * Props are flattened by CompanyController::index so this component only
  * consumes primitives.
  */
-export default function CompanyIndex({ rows = [], pagination = {}, permissions = {}, urls = {}, t = {} }) {
+export default function CompanyIndex({ rows = [], pagination = {}, permissions = {}, urls = {}, t = {}, filters = {}, planOptions = [] }) {
     const [openMenu, setOpenMenu] = React.useState(null);
     const menuRef = React.useRef(null);
+
+    // Search + filters. Inputs are controlled locally; we push a partial reload
+    // to the server (search is debounced). preserveState keeps focus/typing.
+    const [q, setQ] = React.useState(filters.q || '');
+    const [plan, setPlan] = React.useState(filters.plan ? String(filters.plan) : '');
+    const [status, setStatus] = React.useState(filters.status !== '' && filters.status != null ? String(filters.status) : '');
+    const searchTimer = React.useRef(null);
+
+    const applyFilters = (override = {}) => {
+        const params = { q, plan, status, ...override };
+        Object.keys(params).forEach((k) => { if (params[k] === '' || params[k] == null) delete params[k]; });
+        router.get(urls.index, params, { preserveState: true, preserveScroll: true, replace: true });
+    };
+    const onSearchChange = (v) => {
+        setQ(v);
+        if (searchTimer.current) clearTimeout(searchTimer.current);
+        searchTimer.current = setTimeout(() => applyFilters({ q: v }), 350);
+    };
+    const onPlanChange = (v) => { setPlan(v); applyFilters({ plan: v }); };
+    const onStatusChange = (v) => { setStatus(v); applyFilters({ status: v }); };
+    const clearFilters = () => {
+        setQ(''); setPlan(''); setStatus('');
+        router.get(urls.index, {}, { preserveState: true, preserveScroll: true, replace: true });
+    };
+    const hasFilters = !!(q || plan || status);
 
     // View mode (list | cards) — a per-viewer convenience, remembered locally.
     const [view, setView] = React.useState('list');
@@ -161,6 +187,48 @@ export default function CompanyIndex({ rows = [], pagination = {}, permissions =
                                 </Button>
                             )}
                         </div>
+                    </div>
+
+                    {/* Search + filters */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 px-5 py-3 border-b border-border">
+                        <div className="relative flex-1 min-w-0">
+                            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                            <input
+                                type="text"
+                                value={q}
+                                onChange={(e) => onSearchChange(e.target.value)}
+                                placeholder={t.search}
+                                className="w-full h-9 ps-9 pe-3 text-sm rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            />
+                        </div>
+                        <select
+                            value={plan}
+                            onChange={(e) => onPlanChange(e.target.value)}
+                            className="h-9 px-3 text-sm rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        >
+                            <option value="">{t.all_plans}</option>
+                            {planOptions.map((o) => (
+                                <option key={o.value} value={o.value}>{o.label}</option>
+                            ))}
+                        </select>
+                        <select
+                            value={status}
+                            onChange={(e) => onStatusChange(e.target.value)}
+                            className="h-9 px-3 text-sm rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        >
+                            <option value="">{t.all_statuses}</option>
+                            <option value="1">{t.active}</option>
+                            <option value="0">{t.inactive}</option>
+                        </select>
+                        {hasFilters && (
+                            <button
+                                type="button"
+                                onClick={clearFilters}
+                                className="inline-flex items-center gap-1 h-9 px-3 text-sm rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                            >
+                                <X className="h-3.5 w-3.5" /> {t.clear}
+                            </button>
+                        )}
                     </div>
 
                     {/* List (table) view */}

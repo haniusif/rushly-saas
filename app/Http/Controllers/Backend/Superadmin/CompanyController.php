@@ -38,10 +38,11 @@ class CompanyController extends Controller
         $this->planRepo     = $planRepo;
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        // Paginator of company-owner Users (user_type=ADMIN, company_owner=YES).
-        $companies = $this->repo->get();
+        // Paginator of company-owner Users (user_type=ADMIN, company_owner=YES),
+        // filtered by the search box + plan/status filters.
+        $companies = $this->repo->get($request);
 
         // Flatten each row for React consumption. Legacy Blade relied on
         // magic property chains (`$c->company->plan->modules`) that produce
@@ -121,7 +122,17 @@ class CompanyController extends Controller
             'urls'        => [
                 'create'    => route('company.create'),
                 'dashboard' => route('dashboard.index'),
+                'index'     => route('company.index'),
             ],
+            'filters'     => [
+                'q'      => (string) $request->get('q', ''),
+                'plan'   => $request->get('plan', ''),
+                'status' => $request->get('status', ''),
+            ],
+            'planOptions' => Plan::orderBy('name')->get(['id', 'name'])->map(fn ($p) => [
+                'value' => (string) $p->id,
+                'label' => $p->name,
+            ])->values(),
             't'           => [
                 'title'         => __('menus.company') ?: 'Companies',
                 'breadcrumb'    => __('levels.dashboard'),
@@ -148,6 +159,13 @@ class CompanyController extends Controller
                 'view'          => __('company.view') ?: 'View',
                 'list_view'     => __('company.list_view') ?: 'List view',
                 'card_view'     => __('company.card_view') ?: 'Card view',
+                'search'        => __('company.search') ?: 'Search companies…',
+                'all_plans'     => __('company.all_plans') ?: 'All plans',
+                'all_statuses'  => __('company.all_statuses') ?: 'All statuses',
+                'active'        => __('status.1') ?: 'Active',
+                'inactive'      => __('status.0') ?: 'Inactive',
+                'clear'         => __('company.clear') ?: 'Clear',
+                'no_results'    => __('company.no_results') ?: 'No companies match your filters.',
             ],
         ]);
     }

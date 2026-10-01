@@ -8,4 +8,9 @@ return [
     'view'       => 'Vista',
     'list_view'  => 'Vista de lista',
     'card_view'  => 'Vista de tarjetas',
+    'search'        => 'Buscar empresas…',
+    'all_plans'     => 'Todos los planes',
+    'all_statuses'  => 'Todos los estados',
+    'clear'         => 'Limpiar',
+    'no_results'    => 'Ninguna empresa coincide con los filtros.',
 ];

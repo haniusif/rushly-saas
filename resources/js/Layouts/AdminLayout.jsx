@@ -526,16 +526,39 @@ function FlashBanner() {
     );
 }
 
+function ImpersonationBanner({ impersonator, user }) {
+    if (!impersonator) return null;
+    const stop = () => {
+        if (typeof window !== 'undefined' && !window.confirm(`Return to ${impersonator.name}'s session?`)) return;
+        router.post(safeRoute('company.impersonate.stop'));
+    };
+    return (
+        <div className="sticky top-0 z-50 bg-amber-500 text-amber-950 text-sm">
+            <div className="flex items-center justify-between gap-3 px-4 md:px-6 py-1.5">
+                <span className="flex items-center gap-2">
+                    <span aria-hidden>👁</span>
+                    <strong>{impersonator.name}</strong> is viewing as <strong>{user?.name || 'this company'}</strong>
+                </span>
+                <button onClick={stop} className="rounded px-3 py-1 text-xs font-semibold bg-amber-950 text-amber-50 hover:bg-amber-900 transition-colors border-0">
+                    Return to admin
+                </button>
+            </div>
+        </div>
+    );
+}
+
 export default function AdminLayout({ title, breadcrumbs, children }) {
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
     const { url, props } = usePage();
     const user = props?.auth?.user;
     const brand = props?.brand;
+    const impersonator = props?.impersonator;
     const appName = props?.app?.name || 'Admin';
     const docTitle = title ? `${title} · ${appName}` : appName;
     return (
         <div className="min-h-screen bg-background text-foreground">
             <Head title={docTitle} />
+            <ImpersonationBanner impersonator={impersonator} user={user} />
             <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} currentUrl={url} brand={brand} appName={appName} />
             <div className="md:ps-64">
                 <Topbar onSidebarOpen={() => setSidebarOpen(true)} user={user} />

@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     Plus, Building2, Link as LinkIcon, Package, MoreHorizontal,
-    Pencil, Trash2, RefreshCw, ExternalLink,
+    Pencil, Trash2, RefreshCw, ExternalLink, LogIn,
 } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
@@ -28,6 +28,11 @@ export default function CompanyIndex({ rows = [], pagination = {}, permissions =
     const onDelete = (row) => {
         if (typeof window !== 'undefined' && !window.confirm(t.confirm_delete)) return;
         router.delete(row.urls.delete, { preserveScroll: true });
+    };
+
+    const onImpersonate = (row) => {
+        if (typeof window !== 'undefined' && !window.confirm(t.impersonate_confirm)) return;
+        router.post(row.urls.impersonate);
     };
 
     return (
@@ -65,7 +70,7 @@ export default function CompanyIndex({ rows = [], pagination = {}, permissions =
                                     <th className="px-5 py-3 font-medium">{t.plan}</th>
                                     <th className="px-5 py-3 font-medium">{t.subscription}</th>
                                     <th className="px-5 py-3 font-medium">{t.status}</th>
-                                    {(permissions.update || permissions.delete) && (
+                                    {(permissions.update || permissions.delete || permissions.impersonate) && (
                                         <th className="px-5 py-3 font-medium text-end">{t.actions}</th>
                                     )}
                                 </tr>
@@ -197,7 +202,7 @@ export default function CompanyIndex({ rows = [], pagination = {}, permissions =
                                             />
 
                                             {/* Actions */}
-                                            {(permissions.update || permissions.delete) && (
+                                            {(permissions.update || permissions.delete || permissions.impersonate) && (
                                                 <td className="px-5 py-3 text-end relative">
                                                     <button
                                                         type="button"
@@ -212,6 +217,15 @@ export default function CompanyIndex({ rows = [], pagination = {}, permissions =
                                                             ref={menuRef}
                                                             className="absolute end-5 top-11 z-30 min-w-[10rem] rounded-md border border-border bg-popover shadow-md overflow-hidden text-sm"
                                                         >
+                                                            {permissions.impersonate && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => { setOpenMenu(null); onImpersonate(row); }}
+                                                                    className="flex w-full items-center gap-2 px-3 py-2 text-primary hover:bg-muted"
+                                                                >
+                                                                    <LogIn className="h-3.5 w-3.5" /> {t.login_as}
+                                                                </button>
+                                                            )}
                                                             {permissions.update && (
                                                                 <a
                                                                     href={row.urls.edit}

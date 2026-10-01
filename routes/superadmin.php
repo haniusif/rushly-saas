@@ -121,6 +121,9 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::delete('/delete/{id}', 'delete')->name('delete')->middleware('hasPermission:company_delete');
                         Route::get('/subscription/switch/{id}', 'switchSubscription')->name('subscription.switch')->middleware('hasPermission:company_subscribe');
                         Route::post('/subscription/switch/store', 'switchSubscriptionStore')->name('subscription.switch.store')->middleware('hasPermission:company_subscribe');
+                        // Log in as a company's owner (impersonation). No granular
+                        // permission — the controller hard-gates it to SUPER_ADMIN.
+                        Route::post('/impersonate/{id}', 'impersonate')->whereNumber('id')->name('impersonate');
                     });
             });
 

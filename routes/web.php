@@ -207,6 +207,14 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                 ->middleware('auth')
                 ->name('merchant.impersonate.stop');
 
+            // Stop a super-admin "login as company" session and restore the
+            // super-admin. Same gate as above: reachable by whoever is logged in
+            // as long as session.impersonator_id is set (the impersonated company
+            // owner is a plain admin, so this can't be super-admin gated).
+            Route::post('/company/impersonate/stop', [\App\Http\Controllers\Backend\Superadmin\CompanyController::class, 'stopImpersonate'])
+                ->middleware('auth')
+                ->name('company.impersonate.stop');
+
             // First-run setup wizard. RequireOnboarding middleware redirects
             // Admins here on their first login into a fresh tenant.
             Route::middleware('auth')->group(function () {

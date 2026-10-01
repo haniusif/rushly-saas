@@ -7,6 +7,7 @@ use App\Http\Requests\Company\SignUpRequest;
 use App\Http\Requests\Company\StoreRequest;
 use App\Http\Requests\Company\UpdateRequest;
 use App\Http\Requests\Merchant\OtpRequest;
+use App\Enums\UserType;
 use App\Models\Backend\Superadmin\Plan;
 use App\Models\User;
 use App\Repositories\Currency\CurrencyInterface;
@@ -82,12 +83,16 @@ class CompanyController extends Controller
                 ],
                 'domains'       => $domains,
                 'urls'          => [
-                    'edit'      => route('company.edit', $u->id),
-                    'delete'    => route('company.delete', $u->company_id ?? $u->id),
-                    'subscribe' => route('company.subscription.switch', $u->id),
+                    'edit'        => route('company.edit', $u->id),
+                    'delete'      => route('company.delete', $u->company_id ?? $u->id),
+                    'subscribe'   => route('company.subscription.switch', $u->id),
+                    'impersonate' => route('company.impersonate', $u->id),
                 ],
             ];
         })->values();
+
+        // "Login as company" is super-admin only (no granular permission).
+        $canImpersonate = (int) optional(\Auth::user())->user_type === UserType::SUPER_ADMIN;
 
         return Inertia::render('Admin/Superadmin/Company/Index', [
             'rows'        => $rows,
@@ -105,10 +110,11 @@ class CompanyController extends Controller
                 ])->values(),
             ],
             'permissions' => [
-                'create'    => hasPermission('company_create'),
-                'update'    => hasPermission('company_update'),
-                'delete'    => hasPermission('company_delete'),
-                'subscribe' => hasPermission('company_subscribe'),
+                'create'      => hasPermission('company_create'),
+                'update'      => hasPermission('company_update'),
+                'delete'      => hasPermission('company_delete'),
+                'subscribe'   => hasPermission('company_subscribe'),
+                'impersonate' => $canImpersonate,
             ],
             'urls'        => [
                 'create'    => route('company.create'),
@@ -135,6 +141,8 @@ class CompanyController extends Controller
                 'expired'       => __('levels.expired'),
                 'no_data'       => __('levels.no_data_found'),
                 'confirm_delete'=> __('delete.company') ?: 'Delete this company?',
+                'login_as'      => __('company.login_as') ?: 'Login as company',
+                'impersonate_confirm' => __('company.impersonate_confirm') ?: 'Log in as this company owner? You can return to your admin session afterwards.',
             ],
         ]);
     }
@@ -379,5 +387,96 @@ class CompanyController extends Controller
         }
     }
 
-    
+    /**
+     * Log in as a company's owner user (impersonation). Mirrors the merchant
+     * impersonation flow: capture the super-admin id in the session, switch the
+     * auth user to the company owner, and land on the tenant dashboard — tenant
+     * scoping follows the authenticated user's company_id, so no host change is
+     * needed. Hard-gated to SUPER_ADMIN; returns via company.impersonate.stop.
+     *
+     * @param int $id  The company-owner User id (the id used on the index rows).
+     */
+    public function impersonate($id, Request $request)
+    {
+        $admin = \Auth::user();
+        if (! $admin) {
+            abort(403);
+        }
+
+        // Super-admin only — no granular permission for this action.
+        if ((int) $admin->user_type !== UserType::SUPER_ADMIN) {
+            abort(403);
+        }
+
+        // Target must be a company-owner admin user.
+        $owner = User::where('id', $id)
+            ->where('user_type', UserType::ADMIN)
+            ->first();
+
+        if (! $owner) {
+            Toastr::error(__('merchant.error_msg'), __('message.error'));
+            return redirect()->back();
+        }
+
+        // Don't allow nested impersonation — stop the current one first.
+        if ($request->session()->has('impersonator_id')) {
+            Toastr::error('Already impersonating. Stop the current session first.', __('message.error'));
+            return redirect()->back();
+        }
+
+        if ($admin->id === $owner->id) {
+            Toastr::error("Can't impersonate yourself.", __('message.error'));
+            return redirect()->back();
+        }
+
+        // Audit trail — spatie/activitylog, as used by merchant impersonation.
+        try {
+            activity('impersonation')
+                ->causedBy($admin)
+                ->performedOn($owner)
+                ->withProperties([
+                    'admin_id'     => $admin->id,
+                    'admin_email'  => $admin->email,
+                    'company_id'   => $owner->company_id,
+                    'target_user'  => $owner->email,
+                    'ip'           => $request->ip(),
+                ])
+                ->log('Started company impersonation');
+        } catch (\Throwable $e) { /* activity log not critical */ }
+
+        $request->session()->put('impersonator_id', $admin->id);
+        \Auth::login($owner);
+
+        return redirect()->route('dashboard.index');
+    }
+
+    /**
+     * Restore the super-admin session captured by impersonate() and return to
+     * the companies list. Reachable by the impersonated owner because the gate
+     * is "is session.impersonator_id set?", not the role.
+     */
+    public function stopImpersonate(Request $request)
+    {
+        $adminId = $request->session()->pull('impersonator_id');
+        if (! $adminId) {
+            return redirect()->route('dashboard.index');
+        }
+
+        $admin = User::find($adminId);
+        if (! $admin) {
+            \Auth::logout();
+            return redirect()->route('login');
+        }
+
+        try {
+            activity('impersonation')
+                ->causedBy($admin)
+                ->withProperties(['admin_id' => $admin->id, 'restored_at' => now()->toIso8601String()])
+                ->log('Stopped company impersonation');
+        } catch (\Throwable $e) { /* ignore */ }
+
+        \Auth::login($admin);
+        return redirect()->route('company.index');
+    }
+
 }

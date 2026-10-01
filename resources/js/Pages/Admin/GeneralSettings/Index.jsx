@@ -593,8 +593,19 @@ export default function Index({ settings = {}, lookups = {}, theme_fallbacks = {
                                     <Field label={t.currency} required error={form.errors.currency}>
                                         <Select value={form.data.currency} onChange={(e) => form.setData('currency', e.target.value)}>
                                             <option value="">—</option>
+                                            {/* Keep the current value selectable even if it was stored as a
+                                                code (e.g. "AED") and the options are keyed by symbol. */}
+                                            {form.data.currency && !(lookups.currencies || []).some((c) => String(c.value) === String(form.data.currency)) && (
+                                                <option value={form.data.currency}>{settings.currency_label || form.data.currency}</option>
+                                            )}
                                             {(lookups.currencies || []).map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
                                         </Select>
+                                        {(settings.currency_label || settings.currency) && (
+                                            <p className="mt-1.5 text-xs text-muted-foreground">
+                                                {t.current_currency || 'Current currency'}:{' '}
+                                                <span className="font-medium text-foreground">{settings.currency_label || settings.currency}</span>
+                                            </p>
+                                        )}
                                     </Field>
                                     <Field label={t.timezone} hint={t.timezone_help} error={form.errors.timezone}>
                                         <Select value={form.data.timezone} onChange={(e) => form.setData('timezone', e.target.value)}>

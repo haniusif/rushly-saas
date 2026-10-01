@@ -19,7 +19,7 @@ function toCurrentColor(svg) {
 
 export function CurrencySymbol({ meta, className = '' }) {
     const page = usePage();
-    const cur = meta || page?.props?.currency || {};
+    const cur = meta || page?.props?.tenantCurrency || {};
     const svg = cur.svg ? toCurrentColor(cur.svg) : '';
     const text = cur.symbol || cur.code || '';
 

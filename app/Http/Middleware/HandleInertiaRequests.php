@@ -58,7 +58,9 @@ class HandleInertiaRequests extends Middleware
 
             // Current tenant currency, shared so any page can render the mark
             // (SVG when present, e.g. the new SAR/AED symbols) via <CurrencySymbol/>.
-            'currency' => fn () => $this->currencyMeta(),
+            // Named tenantCurrency to avoid clashing with pages that pass their
+            // own `currency` string prop (which would override a shared `currency`).
+            'tenantCurrency' => fn () => $this->currencyMeta(),
 
             'flash' => [
                 'success'     => fn () => $request->session()->get('success'),

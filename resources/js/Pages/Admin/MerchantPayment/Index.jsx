@@ -10,21 +10,12 @@ import { Button } from '@/Components/ui/Button';
 import {
     DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from '@/Components/ui/DropdownMenu';
+import { Money } from '@/Components/CurrencySymbol';
 
 // App\Enums\ApprovalStatus
 const STATUS = { REJECT: 1, APPROVED: 2, PENDING: 3, PROCESSED: 4 };
 const STATUS_COLORS = { [STATUS.REJECT]: 'rose', [STATUS.PENDING]: 'amber', [STATUS.PROCESSED]: 'emerald', [STATUS.APPROVED]: 'sky' };
 const METHOD_ICONS = { bank: Landmark, mobile: Smartphone, cash: Banknote };
-
-function Money({ value, currency }) {
-    const n = Number(value || 0);
-    return (
-        <span className="tabular-nums">
-            <span className="text-muted-foreground text-xs me-0.5">{currency}</span>
-            {n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-        </span>
-    );
-}
 
 function DateRange({ value, onChange, t }) {
     // Wire format is "YYYY-MM-DD To YYYY-MM-DD" (the legacy repo parser splits on "To").
@@ -189,7 +180,7 @@ export default function Index({
                                     </td>
 
                                     <td className="px-4 py-3 align-top text-end font-semibold">
-                                        <Money value={r.amount} currency={currency} />
+                                        <Money value={r.amount} />
                                     </td>
 
                                     {canAct && (
@@ -251,7 +242,7 @@ export default function Index({
                         <tfoot>
                             <tr className="border-t border-border bg-muted/30">
                                 <td colSpan={7} className="px-4 py-3 text-end text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t.page_total}</td>
-                                <td className="px-4 py-3 text-end font-bold"><Money value={total_amount} currency={currency} /></td>
+                                <td className="px-4 py-3 text-end font-bold"><Money value={total_amount} /></td>
                                 {canAct && <td />}
                             </tr>
                         </tfoot>

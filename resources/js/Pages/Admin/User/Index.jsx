@@ -7,14 +7,11 @@ import { Button } from '@/Components/ui/Button';
 import { Input } from '@/Components/ui/Input';
 import { Label } from '@/Components/ui/Label';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/Components/ui/DropdownMenu';
+import { Money } from '@/Components/CurrencySymbol';
 
 function StatusPill({ status, t }) {
     const ok = Number(status) === 1;
     return <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${ok ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-rose-100 text-rose-700 border-rose-200'}`}>{ok ? t.status_active : t.status_inactive}</span>;
-}
-
-function Money({ value, currency }) {
-    return <span className="tabular-nums">{currency}{Number(value || 0).toFixed(2)}</span>;
 }
 
 function Avatar({ name, src }) {
@@ -98,7 +95,7 @@ export default function Index({ rows = [], pagination = {}, filters = {}, curren
                                         </td>
                                         <td className="px-4 py-3 text-muted-foreground">{r.hub || '—'}</td>
                                         <td className="px-4 py-3">{r.role || '—'}</td>
-                                        <td className="px-4 py-3 text-end"><Money value={r.salary} currency={currency} /></td>
+                                        <td className="px-4 py-3 text-end"><Money value={r.salary} /></td>
                                         <td className="px-4 py-3"><StatusPill status={r.status} t={t} /></td>
                                         <td className="px-4 py-3 text-end">
                                             <DropdownMenu>

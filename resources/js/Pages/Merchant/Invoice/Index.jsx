@@ -4,16 +4,7 @@ import { Eye, Download, FileText } from 'lucide-react';
 import MerchantLayout from '@/Layouts/MerchantLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import Pagination from '@/Components/merchant/Pagination';
-
-function Money({ value, currency }) {
-    const n = Number(value) || 0;
-    return (
-        <span className="tabular-nums">
-            {n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            <span className="text-xs text-muted-foreground ms-0.5">{currency}</span>
-        </span>
-    );
-}
+import { Money } from '@/Components/CurrencySymbol';
 
 export default function Index({ rows = [], currency = '', pagination = null, t = {} }) {
     return (
@@ -47,9 +38,9 @@ export default function Index({ rows = [], currency = '', pagination = null, t =
                                             <td className="px-4 py-2.5 tabular-nums">{r.serial}</td>
                                             <td className="px-4 py-2.5 font-medium">{r.invoice_id}</td>
                                             <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.invoice_date}</td>
-                                            <td className="px-4 py-2.5 text-end"><Money value={r.cash_collection} currency={currency} /></td>
-                                            <td className="px-4 py-2.5 text-end"><Money value={r.total_charge}    currency={currency} /></td>
-                                            <td className="px-4 py-2.5 text-end font-medium"><Money value={r.current_payable} currency={currency} /></td>
+                                            <td className="px-4 py-2.5 text-end"><Money value={r.cash_collection} /></td>
+                                            <td className="px-4 py-2.5 text-end"><Money value={r.total_charge}    /></td>
+                                            <td className="px-4 py-2.5 text-end font-medium"><Money value={r.current_payable} /></td>
                                             <td className="px-4 py-2.5">
                                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border bg-muted/40 border-border">
                                                     {r.status_label}

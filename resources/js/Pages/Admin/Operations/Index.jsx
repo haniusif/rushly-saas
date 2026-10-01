@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
+import { CurrencySymbol } from '@/Components/CurrencySymbol';
 import { cn } from '@/lib/utils';
 
 // -------------- KPI ---------------
@@ -41,7 +42,7 @@ function fmtNumber(v) {
 
 function fmtMoney(v, currency) {
     const n = Number(v || 0);
-    return <><span className="text-base text-muted-foreground font-medium me-1">{currency}</span>{fmtNumber(Math.round(n))}</>;
+    return <><CurrencySymbol className="text-base text-muted-foreground font-medium me-1" />{fmtNumber(Math.round(n))}</>;
 }
 
 function fmtPercent(v) {
@@ -314,7 +315,7 @@ function TopMerchantsTable({ rows, currency }) {
                                 </span>
                             </td>
                             <td className="px-5 py-2 text-end tabular-nums text-muted-foreground">
-                                <span className="me-1">{currency}</span>{fmtNumber(m.revenue)}
+                                <CurrencySymbol className="me-1" />{fmtNumber(m.revenue)}
                             </td>
                         </tr>
                     ))}

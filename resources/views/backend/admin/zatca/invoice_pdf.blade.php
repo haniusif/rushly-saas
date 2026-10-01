@@ -92,9 +92,9 @@
     </table>
 
     <table class="totals">
-        <tr><td class="label">Subtotal / الصافي</td><td style="text-align:right">{{ number_format($z->subtotal, 2) }} {{ $z->currency }}</td></tr>
-        <tr><td class="label">VAT / الضريبة</td><td style="text-align:right">{{ number_format($z->vat_amount, 2) }} {{ $z->currency }}</td></tr>
-        <tr class="grand"><td>Total / الإجمالي</td><td style="text-align:right">{{ number_format($z->total_inclusive, 2) }} {{ $z->currency }}</td></tr>
+        <tr><td class="label">Subtotal / الصافي</td><td style="text-align:right">{{ number_format($z->subtotal, 2) }} {!! currency_mark_html($z->currency) !!}</td></tr>
+        <tr><td class="label">VAT / الضريبة</td><td style="text-align:right">{{ number_format($z->vat_amount, 2) }} {!! currency_mark_html($z->currency) !!}</td></tr>
+        <tr class="grand"><td>Total / الإجمالي</td><td style="text-align:right">{{ number_format($z->total_inclusive, 2) }} {!! currency_mark_html($z->currency) !!}</td></tr>
     </table>
 
     <div class="qr">

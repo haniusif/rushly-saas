@@ -8,6 +8,7 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { Button } from '@/Components/ui/Button';
 import { Input } from '@/Components/ui/Input';
+import { Money } from '@/Components/CurrencySymbol';
 
 const FALLBACK_HEX = '#6c757d';
 const isHex = (s) => typeof s === 'string' && /^#[0-9a-fA-F]{6}$/.test(s);
@@ -28,16 +29,6 @@ function StatusPill({ label, color }) {
     );
 }
 
-function Money({ value, currency }) {
-    const n = Number(value || 0);
-    return (
-        <span className="tabular-nums">
-            {n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-            <span className="text-muted-foreground text-xs ms-0.5">{currency}</span>
-        </span>
-    );
-}
-
 function Stat({ icon: Icon, label, value, currency, tone = 'default' }) {
     const toneClass = {
         default: 'bg-slate-50 border-slate-200 text-slate-700',
@@ -53,7 +44,7 @@ function Stat({ icon: Icon, label, value, currency, tone = 'default' }) {
                 {Icon && <Icon className="h-3 w-3" />} {label}
             </div>
             <div className="mt-1 text-xl font-bold">
-                {currency != null ? <Money value={value} currency={currency} /> : value}
+                {currency != null ? <Money value={value} /> : value}
             </div>
         </div>
     );
@@ -232,7 +223,7 @@ export default function View({
                                                 <div className="text-xs font-medium">{r.customer_name || '—'}</div>
                                                 {r.customer_phone && <div className="text-[10px] text-muted-foreground font-mono">{r.customer_phone}</div>}
                                             </td>
-                                            <td className="px-3 py-2 text-end font-semibold"><Money value={r.cash_collection} currency={currency} /></td>
+                                            <td className="px-3 py-2 text-end font-semibold"><Money value={r.cash_collection} /></td>
                                             <td className="px-3 py-2"><StatusPill label={r.status_label} color={r.status_color} /></td>
                                             <td className="px-3 py-2 text-end text-[11px] text-muted-foreground font-mono">{r.updated_at}</td>
                                         </tr>

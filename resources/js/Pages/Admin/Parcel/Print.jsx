@@ -4,16 +4,7 @@ import { ArrowLeft, Printer } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { Button } from '@/Components/ui/Button';
-
-function Money({ value, currency }) {
-    const n = Number(value || 0);
-    return (
-        <span className="tabular-nums">
-            {n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            <span className="text-muted-foreground text-xs ms-0.5">{currency}</span>
-        </span>
-    );
-}
+import { Money } from '@/Components/CurrencySymbol';
 
 export default function Print({ parcel = {}, merchant = {}, company = {}, urls = {}, t = {} }) {
     const print = () => window.print();
@@ -121,21 +112,21 @@ export default function Print({ parcel = {}, merchant = {}, company = {}, urls =
                                     <td className="px-3 py-2.5 font-medium">{parcel.category || '—'}</td>
                                     <td className="px-3 py-2.5 text-end tabular-nums">{parcel.weight || '—'}</td>
                                     <td className="px-3 py-2.5 text-end tabular-nums">1</td>
-                                    <td className="px-3 py-2.5 text-end"><Money value={parcel.cash_collection} currency={currency} /></td>
+                                    <td className="px-3 py-2.5 text-end"><Money value={parcel.cash_collection} /></td>
                                 </tr>
                             </tbody>
                             <tfoot>
                                 <tr className="text-sm">
                                     <td colSpan={4} className="px-3 py-2 text-end text-muted-foreground">{t.delivery_amount}</td>
-                                    <td className="px-3 py-2 text-end font-semibold"><Money value={parcel.total_delivery_amount} currency={currency} /></td>
+                                    <td className="px-3 py-2 text-end font-semibold"><Money value={parcel.total_delivery_amount} /></td>
                                 </tr>
                                 <tr className="text-sm">
                                     <td colSpan={4} className="px-3 py-2 text-end text-muted-foreground">{t.cash_collection}</td>
-                                    <td className="px-3 py-2 text-end"><Money value={parcel.cash_collection} currency={currency} /></td>
+                                    <td className="px-3 py-2 text-end"><Money value={parcel.cash_collection} /></td>
                                 </tr>
                                 <tr className="border-t-2 border-border">
                                     <td colSpan={4} className="px-3 py-3 text-end font-bold">{t.current_payable}</td>
-                                    <td className="px-3 py-3 text-end font-bold text-lg"><Money value={parcel.current_payable} currency={currency} /></td>
+                                    <td className="px-3 py-3 text-end font-bold text-lg"><Money value={parcel.current_payable} /></td>
                                 </tr>
                             </tfoot>
                         </table>

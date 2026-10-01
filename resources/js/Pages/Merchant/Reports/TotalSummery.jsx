@@ -4,12 +4,13 @@ import { Filter, Eraser, Calendar, AlertCircle } from 'lucide-react';
 import MerchantLayout from '@/Layouts/MerchantLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { Input } from '@/Components/ui/Input';
+import { CurrencySymbol } from '@/Components/CurrencySymbol';
 
 function money(v, currency, digits = 2) {
     const n = Number(v) || 0;
     return (
         <span className="tabular-nums">
-            {currency} {n.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })}
+            <CurrencySymbol className="me-0.5" />{n.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })}
         </span>
     );
 }

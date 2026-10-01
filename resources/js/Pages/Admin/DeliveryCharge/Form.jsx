@@ -7,6 +7,7 @@ import { Button } from '@/Components/ui/Button';
 import { Input } from '@/Components/ui/Input';
 import { Label } from '@/Components/ui/Label';
 import { Select } from '@/Components/ui/Select';
+import { CurrencySymbol } from '@/Components/CurrencySymbol';
 
 function Field({ label, required, error, prefix, children }) {
     return (
@@ -75,16 +76,16 @@ export default function Form({ mode = 'create', entity = null, lookups = {}, cur
                             <Field label={t.extra_weight_price} required error={form.errors.extra_weight_price}>
                                 <Input type="number" step="0.01" min="0" value={form.data.extra_weight_price} onChange={(e) => form.setData('extra_weight_price', e.target.value)} placeholder={t.extra_weight_price} />
                             </Field>
-                            <Field label={t.same_day} required error={form.errors.same_day} prefix={currency}>
+                            <Field label={t.same_day} required error={form.errors.same_day} prefix={<CurrencySymbol />}>
                                 <Input className="rounded-l-none" type="number" step="0.01" value={form.data.same_day} onChange={(e) => form.setData('same_day', e.target.value)} placeholder={t.placeholder_same_day} />
                             </Field>
-                            <Field label={t.next_day} required error={form.errors.next_day} prefix={currency}>
+                            <Field label={t.next_day} required error={form.errors.next_day} prefix={<CurrencySymbol />}>
                                 <Input className="rounded-l-none" type="number" step="0.01" value={form.data.next_day} onChange={(e) => form.setData('next_day', e.target.value)} placeholder={t.placeholder_next_day} />
                             </Field>
-                            <Field label={t.sub_city} required error={form.errors.sub_city} prefix={currency}>
+                            <Field label={t.sub_city} required error={form.errors.sub_city} prefix={<CurrencySymbol />}>
                                 <Input className="rounded-l-none" type="number" step="0.01" value={form.data.sub_city} onChange={(e) => form.setData('sub_city', e.target.value)} placeholder={t.placeholder_sub_city} />
                             </Field>
-                            <Field label={t.outside_city} required error={form.errors.outside_city} prefix={currency}>
+                            <Field label={t.outside_city} required error={form.errors.outside_city} prefix={<CurrencySymbol />}>
                                 <Input className="rounded-l-none" type="number" step="0.01" value={form.data.outside_city} onChange={(e) => form.setData('outside_city', e.target.value)} placeholder={t.placeholder_outside_city} />
                             </Field>
                             <Field label={t.position} required error={form.errors.position}>

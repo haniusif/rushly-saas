@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/react';
 import MerchantLayout from '@/Layouts/MerchantLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import Pagination from '@/Components/merchant/Pagination';
+import { CurrencySymbol } from '@/Components/CurrencySymbol';
 
 export default function Index({ rows = [], currency = '', pagination = null, t = {} }) {
     return (
@@ -41,7 +42,7 @@ export default function Index({ rows = [], currency = '', pagination = null, t =
                                             </td>
                                             <td className="px-4 py-2.5 font-mono text-xs align-top">{r.transaction_id || <span className="text-muted-foreground">—</span>}</td>
                                             <td className="px-4 py-2.5 text-end tabular-nums font-medium align-top">
-                                                {r.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs text-muted-foreground">{currency}</span>
+                                                {r.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <CurrencySymbol className="text-xs text-muted-foreground" />
                                             </td>
                                         </tr>
                                     ))}

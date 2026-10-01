@@ -4,10 +4,7 @@ import { Zap, ChevronLeft, ChevronRight, Mail, Phone, MapPin } from 'lucide-reac
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { Button } from '@/Components/ui/Button';
-
-function Money({ value, currency }) {
-    return <span className="tabular-nums">{currency ? `${currency} ` : ''}{Number(value || 0).toFixed(2)}</span>;
-}
+import { Money } from '@/Components/CurrencySymbol';
 
 export default function Express({ rows = [], pagination = {}, currency = '', t = {} }) {
     const goPage = (u) => u && router.get(u, {}, { preserveState: true });
@@ -55,7 +52,7 @@ export default function Express({ rows = [], pagination = {}, currency = '', t =
                                         <td className="px-4 py-3">{r.name || '—'}</td>
                                         <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{r.phone || '—'}</td>
                                         <td className="px-4 py-3 text-muted-foreground max-w-xs"><span className="inline-flex items-start gap-1"><MapPin className="h-3 w-3 mt-0.5" /> {r.address || '—'}</span></td>
-                                        <td className="px-4 py-3 text-end"><Money value={r.cod_amount} currency={currency} /></td>
+                                        <td className="px-4 py-3 text-end"><Money value={r.cod_amount} /></td>
                                         <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{r.invoice || '—'}</td>
                                         <td className="px-4 py-3 text-end tabular-nums">{r.weight ?? '—'}</td>
                                         <td className="px-4 py-3">

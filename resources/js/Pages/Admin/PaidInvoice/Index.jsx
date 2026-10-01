@@ -4,6 +4,7 @@ import { Receipt, ChevronLeft, ChevronRight } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { Button } from '@/Components/ui/Button';
+import { Money } from '@/Components/CurrencySymbol';
 
 const STATUS_TINT = {
     0: 'bg-rose-100 text-rose-700 border-rose-200',
@@ -13,10 +14,6 @@ const STATUS_TINT = {
 function StatusPill({ status, label }) {
     return <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${STATUS_TINT[status] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>{label}</span>;
 }
-function Money({ value, currency }) {
-    return <span className="tabular-nums">{currency}{Number(value || 0).toFixed(2)}</span>;
-}
-
 function Table({ data, currency, t }) {
     const { rows = [], pagination = {} } = data || {};
     const showing = (t.showing_results || '').replace(':from', pagination.from ?? 0).replace(':to', pagination.to ?? 0).replace(':total', pagination.total ?? 0);
@@ -52,9 +49,9 @@ function Table({ data, currency, t }) {
                                         </td>
                                         <td className="px-4 py-3 font-mono text-xs">{r.invoice_id}</td>
                                         <td className="px-4 py-3 text-muted-foreground tabular-nums">{r.invoice_date}</td>
-                                        <td className="px-4 py-3 text-end"><Money value={r.cash_collection} currency={currency} /></td>
-                                        <td className="px-4 py-3 text-end"><Money value={r.total_charge} currency={currency} /></td>
-                                        <td className="px-4 py-3 text-end"><Money value={r.current_payable} currency={currency} /></td>
+                                        <td className="px-4 py-3 text-end"><Money value={r.cash_collection} /></td>
+                                        <td className="px-4 py-3 text-end"><Money value={r.total_charge} /></td>
+                                        <td className="px-4 py-3 text-end"><Money value={r.current_payable} /></td>
                                         <td className="px-4 py-3"><StatusPill status={r.status} label={r.status_label} /></td>
                                     </tr>
                                 ))}

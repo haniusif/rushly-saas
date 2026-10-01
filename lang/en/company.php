@@ -13,4 +13,5 @@ return [
     'all_statuses'  => 'All statuses',
     'clear'         => 'Clear',
     'no_results'    => 'No companies match your filters.',
+    'per_page'      => 'Per page',
 ];

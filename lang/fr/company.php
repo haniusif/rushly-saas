@@ -13,4 +13,5 @@ return [
     'all_statuses'  => 'Tous les statuts',
     'clear'         => 'Effacer',
     'no_results'    => 'Aucune entreprise ne correspond aux filtres.',
+    'per_page'      => 'Par page',
 ];

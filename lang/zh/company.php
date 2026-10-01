@@ -13,4 +13,5 @@ return [
     'all_statuses'  => '所有状态',
     'clear'         => '清除',
     'no_results'    => '没有符合筛选条件的公司。',
+    'per_page'      => '每页',
 ];

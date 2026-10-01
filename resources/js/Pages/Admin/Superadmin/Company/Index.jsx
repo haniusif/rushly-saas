@@ -71,7 +71,7 @@ function RowActions({ row, open, setOpenMenu, menuRef, permissions, t, onImperso
  * Props are flattened by CompanyController::index so this component only
  * consumes primitives.
  */
-export default function CompanyIndex({ rows = [], pagination = {}, permissions = {}, urls = {}, t = {}, filters = {}, planOptions = [] }) {
+export default function CompanyIndex({ rows = [], pagination = {}, permissions = {}, urls = {}, t = {}, filters = {}, planOptions = [], perPageOptions = [10, 25, 50, 100] }) {
     const [openMenu, setOpenMenu] = React.useState(null);
     const menuRef = React.useRef(null);
 
@@ -80,10 +80,11 @@ export default function CompanyIndex({ rows = [], pagination = {}, permissions =
     const [q, setQ] = React.useState(filters.q || '');
     const [plan, setPlan] = React.useState(filters.plan ? String(filters.plan) : '');
     const [status, setStatus] = React.useState(filters.status !== '' && filters.status != null ? String(filters.status) : '');
+    const [perPage, setPerPage] = React.useState(filters.per_page ? String(filters.per_page) : '50');
     const searchTimer = React.useRef(null);
 
     const applyFilters = (override = {}) => {
-        const params = { q, plan, status, ...override };
+        const params = { q, plan, status, per_page: perPage, ...override };
         Object.keys(params).forEach((k) => { if (params[k] === '' || params[k] == null) delete params[k]; });
         router.get(urls.index, params, { preserveState: true, preserveScroll: true, replace: true });
     };
@@ -94,9 +95,10 @@ export default function CompanyIndex({ rows = [], pagination = {}, permissions =
     };
     const onPlanChange = (v) => { setPlan(v); applyFilters({ plan: v }); };
     const onStatusChange = (v) => { setStatus(v); applyFilters({ status: v }); };
+    const onPerPageChange = (v) => { setPerPage(v); applyFilters({ per_page: v }); };
     const clearFilters = () => {
         setQ(''); setPlan(''); setStatus('');
-        router.get(urls.index, {}, { preserveState: true, preserveScroll: true, replace: true });
+        router.get(urls.index, { per_page: perPage }, { preserveState: true, preserveScroll: true, replace: true });
     };
     const hasFilters = !!(q || plan || status);
 
@@ -515,12 +517,27 @@ export default function CompanyIndex({ rows = [], pagination = {}, permissions =
                         )
                     )}
 
-                    {/* Pagination */}
-                    {pagination.last_page > 1 && (
+                    {/* Pagination + per-page */}
+                    {rows.length > 0 && (
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-4 border-t border-border">
-                            <p className="text-xs text-muted-foreground m-0">
-                                {pagination.from}–{pagination.to} / {pagination.total}
-                            </p>
+                            <div className="flex items-center gap-3">
+                                <p className="text-xs text-muted-foreground m-0">
+                                    {pagination.from}–{pagination.to} / {pagination.total}
+                                </p>
+                                <label className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                                    {t.per_page}
+                                    <select
+                                        value={perPage}
+                                        onChange={(e) => onPerPageChange(e.target.value)}
+                                        className="h-7 px-2 text-xs rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                    >
+                                        {perPageOptions.map((n) => (
+                                            <option key={n} value={String(n)}>{n}</option>
+                                        ))}
+                                    </select>
+                                </label>
+                            </div>
+                            {pagination.last_page > 1 && (
                             <div className="flex items-center gap-1">
                                 {(pagination.links || []).map((l, i) => (
                                     <a
@@ -539,6 +556,7 @@ export default function CompanyIndex({ rows = [], pagination = {}, permissions =
                                     />
                                 ))}
                             </div>
+                            )}
                         </div>
                     )}
                 </CardContent>

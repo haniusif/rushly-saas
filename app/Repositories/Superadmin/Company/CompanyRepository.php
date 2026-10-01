@@ -78,7 +78,12 @@ class CompanyRepository implements CompanyInterface
             }
         }
 
-        return $query->orderByDesc('id')->paginate(10)->withQueryString();
+        $perPage = (int) ($request ? $request->get('per_page', 50) : 50);
+        if (! in_array($perPage, [10, 25, 50, 100], true)) {
+            $perPage = 50;
+        }
+
+        return $query->orderByDesc('id')->paginate($perPage)->withQueryString();
     }
 
     public function getFind($id)

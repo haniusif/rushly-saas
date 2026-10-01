@@ -125,10 +125,12 @@ class CompanyController extends Controller
                 'index'     => route('company.index'),
             ],
             'filters'     => [
-                'q'      => (string) $request->get('q', ''),
-                'plan'   => $request->get('plan', ''),
-                'status' => $request->get('status', ''),
+                'q'        => (string) $request->get('q', ''),
+                'plan'     => $request->get('plan', ''),
+                'status'   => $request->get('status', ''),
+                'per_page' => (int) $request->get('per_page', 50),
             ],
+            'perPageOptions' => [10, 25, 50, 100],
             'planOptions' => Plan::orderBy('name')->get(['id', 'name'])->map(fn ($p) => [
                 'value' => (string) $p->id,
                 'label' => $p->name,
@@ -166,6 +168,7 @@ class CompanyController extends Controller
                 'inactive'      => __('status.0') ?: 'Inactive',
                 'clear'         => __('company.clear') ?: 'Clear',
                 'no_results'    => __('company.no_results') ?: 'No companies match your filters.',
+                'per_page'      => __('company.per_page') ?: 'Per page',
             ],
         ]);
     }

@@ -10,7 +10,7 @@ class Currency extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'symbol', 'exchange_rate', 'position', 'status','created_at','updated_at'];
+    protected $fillable = ['name', 'symbol', 'symbol_svg', 'exchange_rate', 'position', 'status','created_at','updated_at'];
     public function getMyStatusAttribute()
     {
         if($this->status == Status::ACTIVE){

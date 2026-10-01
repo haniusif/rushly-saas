@@ -8,6 +8,7 @@ import { Input } from '@/Components/ui/Input';
 import { Label } from '@/Components/ui/Label';
 import { Select } from '@/Components/ui/Select';
 import { Textarea } from '@/Components/ui/Textarea';
+import { Money, CurrencySymbol } from '@/Components/CurrencySymbol';
 
 function Field({ label, required, error, hint, children }) {
     return (
@@ -137,7 +138,7 @@ export default function Form({ mode = 'create', entity = null, lookups = {}, cur
                                 </Select>
                                 {selectedAcct && (
                                     <div className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                                        <Wallet className="h-3 w-3" /> {t.balance_label}: <span className="font-mono">{currency}{Number(selectedAcct.balance || 0).toFixed(2)}</span>
+                                        <Wallet className="h-3 w-3" /> {t.balance_label}: <span className="font-mono"><Money value={selectedAcct.balance} /></span>
                                     </div>
                                 )}
                             </Field>
@@ -146,7 +147,7 @@ export default function Form({ mode = 'create', entity = null, lookups = {}, cur
                             </Field>
                             <Field label={t.amount} required error={form.errors.amount}>
                                 <div className="flex items-center">
-                                    <span className="inline-flex h-9 items-center rounded-l-md border border-r-0 border-input bg-muted/40 px-2.5 text-xs font-mono text-muted-foreground">{currency}</span>
+                                    <span className="inline-flex h-9 items-center rounded-l-md border border-r-0 border-input bg-muted/40 px-2.5 text-xs font-mono text-muted-foreground"><CurrencySymbol /></span>
                                     <Input className="rounded-l-none" type="number" step="0.01" value={form.data.amount} onChange={(e) => form.setData('amount', e.target.value)} placeholder={t.placeholder_amount} />
                                 </div>
                                 {overbudget && (

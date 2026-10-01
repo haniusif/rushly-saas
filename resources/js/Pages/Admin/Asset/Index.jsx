@@ -5,10 +5,7 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { Button } from '@/Components/ui/Button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/Components/ui/DropdownMenu';
-
-function Money({ value, currency }) {
-    return <span className="tabular-nums">{currency ? `${currency} ` : ''}{Number(value || 0).toFixed(2)}</span>;
-}
+import { Money } from '@/Components/CurrencySymbol';
 
 export default function Index({ rows = [], pagination = {}, permissions = {}, currency = '', urls = {}, t = {} }) {
     const goPage = (u) => u && router.get(u, {}, { preserveState: true });
@@ -58,7 +55,7 @@ export default function Index({ rows = [], pagination = {}, permissions = {}, cu
                                             <td className="px-4 py-3 text-end tabular-nums">{r.quantity ?? '—'}</td>
                                             <td className="px-4 py-3 text-muted-foreground">{r.warranty || '—'}</td>
                                             <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{r.invoice_no || '—'}</td>
-                                            <td className="px-4 py-3 text-end"><Money value={r.amount} currency={currency} /></td>
+                                            <td className="px-4 py-3 text-end"><Money value={r.amount} /></td>
                                             {(permissions.update || permissions.delete) && (
                                                 <td className="px-4 py-3 text-end">
                                                     <DropdownMenu>

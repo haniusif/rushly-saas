@@ -4,6 +4,7 @@ import { Package, Plus, Edit, Trash2, MoreVertical, ChevronLeft, ChevronRight, I
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { Button } from '@/Components/ui/Button';
+import { Money } from '@/Components/CurrencySymbol';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/Components/ui/DropdownMenu';
 
 function StatusPill({ status, label }) {
@@ -76,7 +77,7 @@ export default function Index({ rows = [], pagination = {}, currency = '', permi
                                         </td>
                                         <td className="px-4 py-3 font-medium">{r.name}</td>
                                         <td className="px-4 py-3"><StatusPill status={r.status} label={r.status_label} /></td>
-                                        <td className="px-4 py-3 text-end tabular-nums">{currency}{r.price.toFixed(2)}</td>
+                                        <td className="px-4 py-3 text-end"><Money value={r.price} /></td>
                                         <td className="px-4 py-3 text-end tabular-nums">{r.position ?? '—'}</td>
                                         {(permissions.update || permissions.delete) && (
                                             <td className="px-4 py-3 text-end">

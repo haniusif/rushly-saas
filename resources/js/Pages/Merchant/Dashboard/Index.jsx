@@ -5,6 +5,7 @@ import {
     Wallet, Hourglass, Database, Home, Layers, History, Calendar, Filter,
 } from 'lucide-react';
 import MerchantLayout from '@/Layouts/MerchantLayout';
+import { CurrencySymbol } from '@/Components/CurrencySymbol';
 
 function fmt(n, digits = 2) {
     const v = Number(n) || 0;
@@ -41,7 +42,7 @@ function AmountRow({ label, value, currency, highlight = false, positive = null 
         <li className={`flex items-center justify-between px-5 py-3 ${highlight ? 'bg-emerald-50/40' : ''}`}>
             <span className="text-sm text-foreground/80">{label}</span>
             <span className={`text-sm font-semibold tabular-nums ${valueClass}`}>
-                {fmt(value)} <span className="text-xs text-muted-foreground font-normal ms-0.5">{currency}</span>
+                {fmt(value)} <CurrencySymbol className="text-xs text-muted-foreground font-normal ms-0.5" />
             </span>
         </li>
     );
@@ -69,7 +70,7 @@ function ReportTile({ icon: Icon, label, value, unit, tone }) {
                     <div className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground line-clamp-1">{label}</div>
                     <div className="text-base font-semibold tabular-nums truncate">
                         {value}
-                        {unit && <span className="text-xs text-muted-foreground font-normal ms-0.5">{unit}</span>}
+                        {unit && <CurrencySymbol className="text-xs text-muted-foreground font-normal ms-0.5" />}
                     </div>
                 </div>
             </div>

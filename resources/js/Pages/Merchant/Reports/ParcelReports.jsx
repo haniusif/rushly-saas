@@ -4,6 +4,7 @@ import { Filter, Eraser, Calendar, Tag, Printer } from 'lucide-react';
 import MerchantLayout from '@/Layouts/MerchantLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { Input } from '@/Components/ui/Input';
+import { CurrencySymbol } from '@/Components/CurrencySymbol';
 
 function fmt(n) {
     const v = Number(n) || 0;
@@ -107,7 +108,7 @@ export default function ParcelReports({ rows = [], totals = {}, currency = '', h
                                             <td className="px-4 py-2.5 tabular-nums">{r.serial}</td>
                                             <td className="px-4 py-2.5">{r.status_label}</td>
                                             <td className="px-4 py-2.5 text-end tabular-nums">{r.count}</td>
-                                            <td className="px-4 py-2.5 text-end tabular-nums">{fmt(r.cash)} <span className="text-xs text-muted-foreground">{currency}</span></td>
+                                            <td className="px-4 py-2.5 text-end tabular-nums">{fmt(r.cash)} <CurrencySymbol className="text-xs text-muted-foreground" /></td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -115,7 +116,7 @@ export default function ParcelReports({ rows = [], totals = {}, currency = '', h
                                     <tr>
                                         <td colSpan="2" className="px-4 py-2.5 font-semibold">{t.total}</td>
                                         <td className="px-4 py-2.5 text-end tabular-nums font-semibold">{totals.count}</td>
-                                        <td className="px-4 py-2.5 text-end tabular-nums font-semibold">{fmt(totals.cash)} <span className="text-xs text-muted-foreground">{currency}</span></td>
+                                        <td className="px-4 py-2.5 text-end tabular-nums font-semibold">{fmt(totals.cash)} <CurrencySymbol className="text-xs text-muted-foreground" /></td>
                                     </tr>
                                 </tfoot>
                             </table>

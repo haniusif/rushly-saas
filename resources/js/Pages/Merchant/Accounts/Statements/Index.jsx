@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/Components/ui/Card';
 import { Input } from '@/Components/ui/Input';
 import { Select } from '@/Components/ui/Select';
 import Pagination from '@/Components/merchant/Pagination';
+import { CurrencySymbol } from '@/Components/CurrencySymbol';
 
 export default function Index({ rows = [], currency = '', filters = {}, lookups = {}, pagination = null, urls = {}, t = {} }) {
     const form = useForm({
@@ -106,7 +107,7 @@ export default function Index({ rows = [], currency = '', filters = {}, lookups 
                                                 }`}>{r.type_label}</span>
                                             </td>
                                             <td className="px-4 py-2.5 text-end tabular-nums font-medium">
-                                                {r.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs text-muted-foreground">{currency}</span>
+                                                {r.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <CurrencySymbol className="text-xs text-muted-foreground" />
                                             </td>
                                         </tr>
                                     ))}

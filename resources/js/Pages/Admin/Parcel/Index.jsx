@@ -16,6 +16,7 @@ import {
 } from '@/Components/ui/DropdownMenu';
 import ShipmentDrawer from '@/Components/parcel/ShipmentDrawer';
 import ChangeStatusModal from '@/Components/parcel/ChangeStatusModal';
+import { Money } from '@/Components/CurrencySymbol';
 import { cn } from '@/lib/utils';
 
 /**
@@ -33,15 +34,6 @@ function withFilters(url, filters) {
     return url + (url.includes('?') ? '&' : '?') + qs;
 }
 
-function Money({ value, currency }) {
-    const n = Number(value || 0);
-    return (
-        <span className="tabular-nums">
-            <span className="text-muted-foreground text-xs me-0.5">{currency}</span>
-            {n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-        </span>
-    );
-}
 
 // Backend (ParcelStatusHelper::color) sends a curated hex per status:
 // e.g. PENDING #6c757d, DELIVERED #16a34a, NDR_CREATED #ef4444, *_CANCEL #475569.
@@ -786,7 +778,7 @@ export default function Index({
                                                 <div className="flex items-baseline justify-between gap-2">
                                                     <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{t.cod}</span>
                                                     <span className="text-sm font-bold tabular-nums">
-                                                        <Money value={r.cash_collection} currency={currency} />
+                                                        <Money value={r.cash_collection} />
                                                     </span>
                                                 </div>
                                                 {/* Finance breakdown (permission-gated) */}
@@ -794,15 +786,15 @@ export default function Index({
                                                     <div className="mt-1.5 pt-1.5 border-t border-border/60 space-y-0.5 text-[11px]">
                                                         <div className="flex items-baseline justify-between gap-2">
                                                             <span className="text-muted-foreground">{t.total_charge}</span>
-                                                            <span className="tabular-nums"><Money value={r.total_delivery_amount} currency={currency} /></span>
+                                                            <span className="tabular-nums"><Money value={r.total_delivery_amount} /></span>
                                                         </div>
                                                         <div className="flex items-baseline justify-between gap-2">
                                                             <span className="text-muted-foreground">{t.vat}</span>
-                                                            <span className="tabular-nums"><Money value={r.vat_amount} currency={currency} /></span>
+                                                            <span className="tabular-nums"><Money value={r.vat_amount} /></span>
                                                         </div>
                                                         <div className="flex items-baseline justify-between gap-2 pt-0.5">
                                                             <span className="font-semibold text-foreground">{t.current_payable}</span>
-                                                            <span className="font-semibold tabular-nums"><Money value={r.current_payable} currency={currency} /></span>
+                                                            <span className="font-semibold tabular-nums"><Money value={r.current_payable} /></span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1145,7 +1137,7 @@ function ParcelCard({
                     <div className="min-w-0">
                         <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t.cod}</div>
                         <div className="text-lg font-bold tabular-nums">
-                            <Money value={r.cash_collection} currency={currency} />
+                            <Money value={r.cash_collection} />
                         </div>
                         <div className="text-[10px] text-muted-foreground">
                             {t.attempts}: <span className="font-medium tabular-nums">{r.attempts ?? 0}</span>

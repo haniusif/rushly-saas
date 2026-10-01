@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/react';
 import MerchantLayout from '@/Layouts/MerchantLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import Pagination from '@/Components/merchant/Pagination';
+import { CurrencySymbol } from '@/Components/CurrencySymbol';
 
 function StatusPill({ active, label }) {
     return (
@@ -48,10 +49,10 @@ export default function DeliveryCharges({ rows = [], currency = '', pagination =
                                             <td className="px-4 py-2.5 tabular-nums">{r.id}</td>
                                             <td className="px-4 py-2.5">{r.category}</td>
                                             <td className="px-4 py-2.5 text-end tabular-nums">{r.weight}</td>
-                                            <td className="px-4 py-2.5 text-end tabular-nums">{currency}{r.same_day}</td>
-                                            <td className="px-4 py-2.5 text-end tabular-nums">{currency}{r.next_day}</td>
-                                            <td className="px-4 py-2.5 text-end tabular-nums">{currency}{r.sub_city}</td>
-                                            <td className="px-4 py-2.5 text-end tabular-nums">{currency}{r.outside_city}</td>
+                                            <td className="px-4 py-2.5 text-end tabular-nums"><CurrencySymbol />{r.same_day}</td>
+                                            <td className="px-4 py-2.5 text-end tabular-nums"><CurrencySymbol />{r.next_day}</td>
+                                            <td className="px-4 py-2.5 text-end tabular-nums"><CurrencySymbol />{r.sub_city}</td>
+                                            <td className="px-4 py-2.5 text-end tabular-nums"><CurrencySymbol />{r.outside_city}</td>
                                             <td className="px-4 py-2.5"><StatusPill active={r.status_active} label={r.status_label} /></td>
                                         </tr>
                                     ))}

@@ -5,15 +5,7 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { cn } from '@/lib/utils';
 import MerchantSubHeader from '@/Components/merchant/MerchantSubHeader';
-
-function Money({ value, currency }) {
-    return (
-        <span className="tabular-nums">
-            <span className="text-muted-foreground text-xs me-0.5">{currency}</span>
-            {Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </span>
-    );
-}
+import { Money } from '@/Components/CurrencySymbol';
 
 export default function Index({ merchant = {}, rows = [], currency = '', permissions = {}, urls = {}, t = {} }) {
     const deleteRow = (r) => {
@@ -63,10 +55,10 @@ export default function Index({ merchant = {}, rows = [], currency = '', permiss
                                         <td className="px-4 py-3 font-medium">{r.category || '—'}</td>
                                         <td className="px-4 py-3 text-end tabular-nums">{r.weight}</td>
                                         <td className="px-4 py-3 text-end tabular-nums">{r.extra_weight}</td>
-                                        <td className="px-4 py-3 text-end"><Money value={r.same_day}     currency={currency} /></td>
-                                        <td className="px-4 py-3 text-end"><Money value={r.next_day}     currency={currency} /></td>
-                                        <td className="px-4 py-3 text-end"><Money value={r.sub_city}     currency={currency} /></td>
-                                        <td className="px-4 py-3 text-end"><Money value={r.outside_city} currency={currency} /></td>
+                                        <td className="px-4 py-3 text-end"><Money value={r.same_day}     /></td>
+                                        <td className="px-4 py-3 text-end"><Money value={r.next_day}     /></td>
+                                        <td className="px-4 py-3 text-end"><Money value={r.sub_city}     /></td>
+                                        <td className="px-4 py-3 text-end"><Money value={r.outside_city} /></td>
                                         <td className="px-4 py-3">
                                             <span className={cn(
                                                 'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium',

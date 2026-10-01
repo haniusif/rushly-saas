@@ -17,6 +17,7 @@ import {
     DropdownMenuSeparator,
 } from '@/Components/ui/DropdownMenu';
 import ShipmentDrawer from '@/Components/parcel/ShipmentDrawer';
+import { Money } from '@/Components/CurrencySymbol';
 import { cn } from '@/lib/utils';
 
 /**
@@ -102,15 +103,6 @@ function ExportMenu({ urls, filters, t }) {
     );
 }
 
-function Money({ value, currency }) {
-    const n = Number(value) || 0;
-    return (
-        <span className="tabular-nums">
-            <span className="text-muted-foreground text-xs me-0.5">{currency}</span>
-            {n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-        </span>
-    );
-}
 
 // Backend (ParcelStatusHelper::color) sends a curated hex per status, the same
 // source the admin list uses — so a given status looks identical on both pages.
@@ -408,15 +400,15 @@ function ParcelCard({ row, currency, t, permissions, onDelete, onTrack }) {
                 <div className="mt-auto space-y-1 border-t border-border pt-2 text-[11px]">
                     <div className="flex items-baseline justify-between gap-2">
                         <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t.cod}</span>
-                        <span className="text-sm font-bold"><Money value={row.amount} currency={currency} /></span>
+                        <span className="text-sm font-bold"><Money value={row.amount} /></span>
                     </div>
                     <div className="flex items-baseline justify-between gap-2">
                         <span className="text-muted-foreground">{t.total_charge}</span>
-                        <span className="tabular-nums"><Money value={row.total_delivery_amount} currency={currency} /></span>
+                        <span className="tabular-nums"><Money value={row.total_delivery_amount} /></span>
                     </div>
                     <div className="flex items-baseline justify-between gap-2">
                         <span className="font-semibold">{t.current_payable}</span>
-                        <span className="font-semibold tabular-nums"><Money value={row.current_payable} currency={currency} /></span>
+                        <span className="font-semibold tabular-nums"><Money value={row.current_payable} /></span>
                     </div>
                     {row.updated_at && (
                         <div className="pt-0.5 text-[10px] text-muted-foreground">
@@ -855,21 +847,21 @@ export default function Index({
                                                     <div className="flex items-baseline justify-between gap-2">
                                                         <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t.cod}</span>
                                                         <span className="text-sm font-bold tabular-nums">
-                                                            <Money value={r.amount} currency={currency} />
+                                                            <Money value={r.amount} />
                                                         </span>
                                                     </div>
                                                     <div className="mt-1.5 space-y-0.5 border-t border-border/60 pt-1.5 text-[11px]">
                                                         <div className="flex items-baseline justify-between gap-2">
                                                             <span className="text-muted-foreground">{t.total_charge}</span>
-                                                            <span className="tabular-nums"><Money value={r.total_delivery_amount} currency={currency} /></span>
+                                                            <span className="tabular-nums"><Money value={r.total_delivery_amount} /></span>
                                                         </div>
                                                         <div className="flex items-baseline justify-between gap-2">
                                                             <span className="text-muted-foreground">{t.vat}</span>
-                                                            <span className="tabular-nums"><Money value={r.vat_amount} currency={currency} /></span>
+                                                            <span className="tabular-nums"><Money value={r.vat_amount} /></span>
                                                         </div>
                                                         <div className="flex items-baseline justify-between gap-2 pt-0.5">
                                                             <span className="font-semibold text-foreground">{t.current_payable}</span>
-                                                            <span className="font-semibold tabular-nums"><Money value={r.current_payable} currency={currency} /></span>
+                                                            <span className="font-semibold tabular-nums"><Money value={r.current_payable} /></span>
                                                         </div>
                                                     </div>
                                                 </div>

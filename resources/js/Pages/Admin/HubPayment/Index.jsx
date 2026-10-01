@@ -11,21 +11,12 @@ import {
     DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from '@/Components/ui/DropdownMenu';
 import { cn } from '@/lib/utils';
+import { Money } from '@/Components/CurrencySymbol';
 
 // ApprovalStatus enum from app/Enums/ApprovalStatus.php
 const STATUS_REJECT    = 1;
 const STATUS_PENDING   = 3;
 const STATUS_PROCESSED = 4;
-
-function Money({ value, currency }) {
-    const n = Number(value || 0);
-    return (
-        <span className="tabular-nums">
-            <span className="text-muted-foreground text-xs me-0.5">{currency}</span>
-            {n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </span>
-    );
-}
 
 function StatusPill({ status, t }) {
     const map = {
@@ -133,7 +124,7 @@ export default function Index({
                                                     : <span className="text-muted-foreground text-xs">—</span>}
                                             </td>
                                             <td className="px-4 py-3 align-top max-w-[300px] truncate" title={r.description}>{r.description || '—'}</td>
-                                            <td className="px-4 py-3 align-top text-end font-semibold"><Money value={r.amount} currency={currency} /></td>
+                                            <td className="px-4 py-3 align-top text-end font-semibold"><Money value={r.amount} /></td>
                                             <td className="px-4 py-3 align-top"><StatusPill status={r.status} t={t} /></td>
                                             <td className="px-4 py-3 align-top text-end pe-4">
                                                 <DropdownMenu>

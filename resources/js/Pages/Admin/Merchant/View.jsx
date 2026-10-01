@@ -10,15 +10,7 @@ import { Card, CardContent } from '@/Components/ui/Card';
 import { Button } from '@/Components/ui/Button';
 import { cn } from '@/lib/utils';
 
-function Money({ value, currency }) {
-    const n = Number(value || 0);
-    return (
-        <span className="tabular-nums">
-            <span className="text-muted-foreground text-xs me-0.5">{currency}</span>
-            {n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </span>
-    );
-}
+import { Money } from '@/Components/CurrencySymbol';
 
 function Initials({ name }) {
     const text = (name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
@@ -128,10 +120,10 @@ export default function View({ merchant = {}, shops = [], currency = '', permiss
                                 <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
                                     <Wallet className="h-4 w-4 text-emerald-600" /> {t.finance || 'Finance'}
                                 </div>
-                                <Row label={t.opening_balance}><Money value={m.opening_balance} currency={currency} /></Row>
-                                <Row label={t.current_balance}><Money value={m.current_balance} currency={currency} /></Row>
+                                <Row label={t.opening_balance}><Money value={m.opening_balance} /></Row>
+                                <Row label={t.current_balance}><Money value={m.current_balance} /></Row>
                                 <Row label={t.computed_balance}>
-                                    <span className="font-semibold"><Money value={m.computed_balance} currency={currency} /></span>
+                                    <span className="font-semibold"><Money value={m.computed_balance} /></span>
                                 </Row>
                                 <Row label={t.vat} value={`${m.vat}%`} />
                                 <Row label={t.cod_charges} value={m.cod_charges} />

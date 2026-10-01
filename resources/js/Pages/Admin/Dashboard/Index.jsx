@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
+import { CurrencySymbol } from '@/Components/CurrencySymbol';
 import { cn } from '@/lib/utils';
 
 function fmtNumber(n) {
@@ -16,7 +17,7 @@ function fmtMoney(n, currency) {
     const v = Number(n || 0);
     return (
         <span className="tabular-nums">
-            <span className="text-muted-foreground text-xs me-0.5">{currency}</span>
+            <CurrencySymbol className="text-muted-foreground text-xs me-0.5" />
             {v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
         </span>
     );

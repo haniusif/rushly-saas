@@ -8,6 +8,7 @@ import {
 import MerchantLayout from '@/Layouts/MerchantLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { cn } from '@/lib/utils';
+import { Money } from '@/Components/CurrencySymbol';
 
 const COLOR_TO_CLASSES = {
     grey:    'bg-slate-100 text-slate-700 border-slate-200',
@@ -29,16 +30,6 @@ const COLOR_DOT = {
     red:     'bg-rose-500',
     teal:    'bg-teal-500',
 };
-
-function Money({ value, currency }) {
-    const n = Number(value || 0);
-    return (
-        <span className="tabular-nums">
-            {n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            <span className="text-muted-foreground text-xs ms-1">{currency}</span>
-        </span>
-    );
-}
 
 function StatusPill({ label, color, className }) {
     return (
@@ -280,13 +271,13 @@ export default function Details({
                             <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
                                 <Wallet className="h-4 w-4 text-emerald-600" /> {t.finance}
                             </div>
-                            <DetailRow label={t.cash_collection}><Money value={parcel.cash_collection} currency={currency} /></DetailRow>
-                            <DetailRow label={t.cod}><Money value={parcel.cod_amount} currency={currency} /></DetailRow>
-                            <DetailRow label={t.price}><Money value={parcel.selling_price} currency={currency} /></DetailRow>
-                            <DetailRow label={t.delivery}><Money value={parcel.total_delivery_amount} currency={currency} /></DetailRow>
-                            <DetailRow label={t.vat}><Money value={parcel.vat_amount} currency={currency} /></DetailRow>
+                            <DetailRow label={t.cash_collection}><Money value={parcel.cash_collection} /></DetailRow>
+                            <DetailRow label={t.cod}><Money value={parcel.cod_amount} /></DetailRow>
+                            <DetailRow label={t.price}><Money value={parcel.selling_price} /></DetailRow>
+                            <DetailRow label={t.delivery}><Money value={parcel.total_delivery_amount} /></DetailRow>
+                            <DetailRow label={t.vat}><Money value={parcel.vat_amount} /></DetailRow>
                             <DetailRow label={t.net_payable}>
-                                <span className="font-bold"><Money value={parcel.current_payable} currency={currency} /></span>
+                                <span className="font-bold"><Money value={parcel.current_payable} /></span>
                             </DetailRow>
                         </CardContent>
                     </Card>

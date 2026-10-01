@@ -1051,6 +1051,25 @@ if (!function_exists('singleUser')) {
             return $scheme.$domain;
         }
     }
+    if (!function_exists('currency_mark_html')) {
+        /**
+         * HTML for a currency mark, resolved from an ISO code (or symbol). When
+         * the matching currencies row has a stored SVG (e.g. the new SAR/AED
+         * symbols) it is emitted as a data-URI <img> — reliable in mPDF — sized
+         * by height; otherwise the unicode symbol/code is returned as text.
+         * Output is safe to print with {!! !!}.
+         */
+        function currency_mark_html($code, $height = 12){
+            $code = (string) $code;
+            if ($code === '') return '';
+            $row = \App\Models\Backend\Currency::where('code', $code)->orWhere('symbol', $code)->first();
+            if ($row && ! empty($row->symbol_svg)) {
+                $b64 = base64_encode($row->symbol_svg);
+                return '<img src="data:image/svg+xml;base64,'.$b64.'" style="height:'.(int)$height.'px;vertical-align:middle" alt="'.e($row->code ?: $code).'">';
+            }
+            return e($row ? ($row->symbol ?: $row->code) : $code);
+        }
+    }
     if (!function_exists('get_host')) {
         function get_host(){
             if(request()->getHost() == '127.0.0.1'): 

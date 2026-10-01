@@ -56,6 +56,10 @@ class HandleInertiaRequests extends Middleware
                 'locale' => app()->getLocale(),
             ],
 
+            // Current tenant currency, shared so any page can render the mark
+            // (SVG when present, e.g. the new SAR/AED symbols) via <CurrencySymbol/>.
+            'currency' => fn () => $this->currencyMeta(),
+
             'flash' => [
                 'success'     => fn () => $request->session()->get('success'),
                 'error'       => fn () => $request->session()->get('error'),
@@ -69,6 +73,29 @@ class HandleInertiaRequests extends Middleware
                 'location' => $request->url(),
             ],
         ];
+    }
+
+    /**
+     * Current tenant currency as { code, symbol, svg }. code is what's stored
+     * on general_settings; symbol/svg come from the matching currencies row so
+     * the UI can render the real mark and fall back to the unicode symbol.
+     */
+    protected function currencyMeta(): array
+    {
+        $code = (string) optional(settings())->currency;
+        $meta = ['code' => $code, 'symbol' => $code, 'svg' => null];
+
+        if ($code !== '') {
+            $row = \App\Models\Backend\Currency::where('code', $code)
+                ->orWhere('symbol', $code)
+                ->first();
+            if ($row) {
+                $meta['symbol'] = (string) $row->symbol;
+                $meta['svg']    = $row->symbol_svg;
+            }
+        }
+
+        return $meta;
     }
 
     protected function brand(): ?array

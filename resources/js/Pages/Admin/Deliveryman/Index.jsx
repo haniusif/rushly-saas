@@ -8,6 +8,7 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { Button } from '@/Components/ui/Button';
 import { Input } from '@/Components/ui/Input';
+import { Money } from '@/Components/CurrencySymbol';
 import {
     DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from '@/Components/ui/DropdownMenu';
@@ -44,16 +45,6 @@ function Initials({ name }) {
         <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary text-xs font-semibold shrink-0">
             {text}
         </div>
-    );
-}
-
-function Money({ value, currency }) {
-    const n = Number(value || 0);
-    return (
-        <span className="tabular-nums">
-            <span className="text-muted-foreground text-xs">{currency}</span>
-            {n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-        </span>
     );
 }
 
@@ -213,11 +204,11 @@ export default function Index({
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3">{r.hub_name || '—'}</td>
-                                            <td className="px-4 py-3 text-end"><Money value={r.delivery_charge} currency={currency} /></td>
-                                            <td className="px-4 py-3 text-end"><Money value={r.pickup_charge}   currency={currency} /></td>
-                                            <td className="px-4 py-3 text-end"><Money value={r.return_charge}   currency={currency} /></td>
-                                            <td className="px-4 py-3 text-end font-medium"><Money value={r.current_balance} currency={currency} /></td>
-                                            <td className="px-4 py-3 text-end"><Money value={r.opening_balance} currency={currency} /></td>
+                                            <td className="px-4 py-3 text-end"><Money value={r.delivery_charge} /></td>
+                                            <td className="px-4 py-3 text-end"><Money value={r.pickup_charge}   /></td>
+                                            <td className="px-4 py-3 text-end"><Money value={r.return_charge}   /></td>
+                                            <td className="px-4 py-3 text-end font-medium"><Money value={r.current_balance} /></td>
+                                            <td className="px-4 py-3 text-end"><Money value={r.opening_balance} /></td>
                                             <td className="px-4 py-3"><StatusPill status={r.status} t={t} /></td>
                                             {(permissions.update || permissions.delete) && (
                                                 <td className="px-4 py-3 text-end">

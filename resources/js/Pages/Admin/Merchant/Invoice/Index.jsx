@@ -6,19 +6,11 @@ import { Card, CardContent } from '@/Components/ui/Card';
 import { Button } from '@/Components/ui/Button';
 import { cn } from '@/lib/utils';
 import MerchantSubHeader from '@/Components/merchant/MerchantSubHeader';
+import { Money } from '@/Components/CurrencySymbol';
 
 const STATUS_UNPAID    = 0;
 const STATUS_PROCESSING = 2;
 const STATUS_PAID      = 3;
-
-function Money({ value, currency }) {
-    return (
-        <span className="tabular-nums">
-            <span className="text-muted-foreground text-xs me-0.5">{currency}</span>
-            {Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </span>
-    );
-}
 
 function StatusPill({ status, t }) {
     const map = {
@@ -75,9 +67,9 @@ export default function Index({ merchant = {}, rows = [], currency = '', permiss
                                         <td className="px-4 py-3 text-muted-foreground">{idx + 1}</td>
                                         <td className="px-4 py-3 font-mono text-xs font-semibold">{r.invoice_id}</td>
                                         <td className="px-4 py-3 text-xs text-muted-foreground">{r.invoice_date || '—'}</td>
-                                        <td className="px-4 py-3 text-end"><Money value={r.cash_collection} currency={currency} /></td>
-                                        <td className="px-4 py-3 text-end"><Money value={r.total_charge}    currency={currency} /></td>
-                                        <td className="px-4 py-3 text-end font-semibold"><Money value={r.current_payable} currency={currency} /></td>
+                                        <td className="px-4 py-3 text-end"><Money value={r.cash_collection} /></td>
+                                        <td className="px-4 py-3 text-end"><Money value={r.total_charge}    /></td>
+                                        <td className="px-4 py-3 text-end font-semibold"><Money value={r.current_payable} /></td>
                                         <td className="px-4 py-3"><StatusPill status={r.status} t={t} /></td>
                                         <td className="px-4 py-3 text-end pe-4">
                                             <div className="inline-flex gap-1 flex-wrap justify-end">

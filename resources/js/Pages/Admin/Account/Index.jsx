@@ -7,10 +7,7 @@ import { Button } from '@/Components/ui/Button';
 import { Input } from '@/Components/ui/Input';
 import { Label } from '@/Components/ui/Label';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/Components/ui/DropdownMenu';
-
-function Money({ value, currency }) {
-    return <span className="tabular-nums">{currency}{Number(value || 0).toFixed(2)}</span>;
-}
+import { Money } from '@/Components/CurrencySymbol';
 
 export default function Index({ rows = [], pagination = {}, filters = {}, currency = '', permissions = {}, urls = {}, t = {} }) {
     const [draft, setDraft] = React.useState({ ...filters });
@@ -76,8 +73,8 @@ export default function Index({ rows = [], pagination = {}, filters = {}, curren
                                         <td className="px-4 py-3 font-medium">{r.account_holder_name || '—'}</td>
                                         <td className="px-4 py-3"><div>{r.bank || '—'}</div><div className="text-[11px] text-muted-foreground">{r.branch_name}</div></td>
                                         <td className="px-4 py-3 font-mono text-xs">{r.account_no || '—'}</td>
-                                        <td className="px-4 py-3 text-end font-medium"><Money value={r.balance} currency={currency} /></td>
-                                        <td className="px-4 py-3 text-end text-muted-foreground"><Money value={r.opening_balance} currency={currency} /></td>
+                                        <td className="px-4 py-3 text-end font-medium"><Money value={r.balance} /></td>
+                                        <td className="px-4 py-3 text-end text-muted-foreground"><Money value={r.opening_balance} /></td>
                                         <td className="px-4 py-3 text-end">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>

@@ -8,6 +8,7 @@ import { Input } from '@/Components/ui/Input';
 import { Select } from '@/Components/ui/Select';
 import { Label } from '@/Components/ui/Label';
 import MerchantSubHeader from '@/Components/merchant/MerchantSubHeader';
+import { CurrencySymbol } from '@/Components/CurrencySymbol';
 
 const RATE_FIELDS = ['same_day', 'next_day', 'sub_city', 'outside_city'];
 
@@ -188,7 +189,7 @@ export default function Form({
                                                 onChange={(e) => form.setData(f, e.target.value)}
                                             />
                                             <span className="pointer-events-none absolute inset-y-0 end-3 flex items-center text-xs text-muted-foreground">
-                                                {currency}
+                                                <CurrencySymbol />
                                             </span>
                                         </div>
                                         {form.errors[f] && <p className="text-xs text-rose-600">{form.errors[f]}</p>}
@@ -208,7 +209,7 @@ export default function Form({
                                             onChange={(e) => form.setData('extra_weight_price', e.target.value)}
                                         />
                                         <span className="pointer-events-none absolute inset-y-0 end-3 flex items-center text-xs text-muted-foreground">
-                                            {currency}
+                                            <CurrencySymbol />
                                         </span>
                                     </div>
                                     {form.errors.extra_weight_price && (

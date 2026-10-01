@@ -13,16 +13,7 @@ import {
     DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from '@/Components/ui/DropdownMenu';
 import { cn } from '@/lib/utils';
-
-function Money({ value, currency }) {
-    const n = Number(value || 0);
-    return (
-        <span className="tabular-nums">
-            <span className="text-muted-foreground text-xs me-0.5">{currency}</span>
-            {n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </span>
-    );
-}
+import { Money } from '@/Components/CurrencySymbol';
 
 function Initials({ name, size }) {
     const t = (name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
@@ -149,7 +140,7 @@ function MerchantCard({ row, currency, permissions, t, onImpersonate, onSendCred
                     </div>
                     <div className="text-end">
                         <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{t.current_balance}</div>
-                        <div className="text-sm font-semibold"><Money value={row.computed_balance} currency={currency} /></div>
+                        <div className="text-sm font-semibold"><Money value={row.computed_balance} /></div>
                     </div>
                 </div>
             </CardContent>
@@ -315,7 +306,7 @@ export default function Index({
                                                     <StatusBadge active={r.wallet_active} on={t.wallet_on} off={t.wallet_off} />
                                                 </div>
                                             </td>
-                                            <td className="px-3 py-3 text-end font-medium"><Money value={r.computed_balance} currency={currency} /></td>
+                                            <td className="px-3 py-3 text-end font-medium"><Money value={r.computed_balance} /></td>
                                             {(permissions.view || permissions.update) && (
                                                 <td className="px-3 py-3 text-end">
                                                     <DropdownMenu>

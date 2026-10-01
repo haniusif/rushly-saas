@@ -145,6 +145,9 @@ class CompanyController extends Controller
                 'confirm_delete'=> __('delete.company') ?: 'Delete this company?',
                 'login_as'      => __('company.login_as') ?: 'Login as company',
                 'impersonate_confirm' => __('company.impersonate_confirm') ?: 'Log in as this company owner? You can return to your admin session afterwards.',
+                'view'          => __('company.view') ?: 'View',
+                'list_view'     => __('company.list_view') ?: 'List view',
+                'card_view'     => __('company.card_view') ?: 'Card view',
             ],
         ]);
     }

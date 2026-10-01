@@ -5,4 +5,7 @@ return [
     'impersonate_confirm'  => '以该公司所有者身份登录？之后您可以返回管理员会话。',
     'no_domain'            => '该公司没有可登录的域名。',
     'impersonate_expired'  => '此登录链接已过期。请重试。',
+    'view'       => '视图',
+    'list_view'  => '列表视图',
+    'card_view'  => '卡片视图',
 ];

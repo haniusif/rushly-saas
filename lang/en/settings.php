@@ -16,6 +16,7 @@ return [
         'currency_deleted'    => 'Currency deleted successfully',
         'parcel_tracking'     => 'Shipment tracking',
         'timezone'                => 'Timezone',
+        'current_currency'        => 'Current currency',
         'timezone_help'           => 'Applies to timestamps, scheduled jobs, and the login OTP clock. Leave empty to inherit the application default.',
         'timezone_default_option' => 'Application default',
         'login_bg'                => 'Login background image',

@@ -79,12 +79,15 @@ class GeneralSettingsController extends Controller
             'theme_fallbacks' => $themeFallback,
             'lookups' => [
                 // Options keyed by ISO code (unique) — symbols are ambiguous.
+                // symbol + svg let the UI render the selected currency's mark.
                 'currencies' => collect($currencies)
                     ->filter(fn ($c) => ! empty($c->code))
                     ->unique('code')
                     ->map(fn ($c) => [
-                        'value' => $c->code,
-                        'label' => trim($c->name . ' ' . $c->symbol . ' (' . $c->code . ')'),
+                        'value'  => $c->code,
+                        'label'  => trim($c->name . ' ' . $c->symbol . ' (' . $c->code . ')'),
+                        'symbol' => (string) $c->symbol,
+                        'svg'    => $c->symbol_svg,
                     ])->values(),
                 'login_layouts' => collect(['split','centered','fullbleed'])->map(fn ($k) => [
                     'value' => $k,
@@ -156,6 +159,7 @@ class GeneralSettingsController extends Controller
                 'address'      => __('levels.address') ?: 'Address',
                 'currency'     => __('levels.currency') ?: 'Currency',
                 'current_currency' => __('settings.current_currency') ?: 'Current currency',
+                'selected_currency' => __('settings.selected_currency') ?: 'Selected currency',
                 'timezone'     => __('settings.timezone') ?: 'Timezone',
                 'timezone_help'=> __('settings.timezone_help') ?: 'Leave empty to use the application default (' . config('app.timezone') . ').',
                 'timezone_default_option' => __('settings.timezone_default_option') ?: 'Application default (' . config('app.timezone') . ')',

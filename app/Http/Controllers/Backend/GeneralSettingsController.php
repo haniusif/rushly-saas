@@ -78,10 +78,14 @@ class GeneralSettingsController extends Controller
             ],
             'theme_fallbacks' => $themeFallback,
             'lookups' => [
-                'currencies' => collect($currencies)->map(fn ($c) => [
-                    'value' => $c->symbol,
-                    'label' => $c->name . ' ' . $c->symbol,
-                ])->values(),
+                // Options keyed by ISO code (unique) — symbols are ambiguous.
+                'currencies' => collect($currencies)
+                    ->filter(fn ($c) => ! empty($c->code))
+                    ->unique('code')
+                    ->map(fn ($c) => [
+                        'value' => $c->code,
+                        'label' => trim($c->name . ' ' . $c->symbol . ' (' . $c->code . ')'),
+                    ])->values(),
                 'login_layouts' => collect(['split','centered','fullbleed'])->map(fn ($k) => [
                     'value' => $k,
                     'label' => __('merchant.login_layout_' . $k) ?: ucfirst($k),

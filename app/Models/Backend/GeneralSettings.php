@@ -122,7 +122,9 @@ class GeneralSettings extends Model
     }
 
     public function excenseRate(){
-        return $this->belongsTo(Currency::class,'currency','symbol');
+        // currency is stored as an ISO code (e.g. AED, SAR). Keyed by code
+        // because symbols are ambiguous (e.g. ﷼ is shared by SAR/IRR/OMR/QAR/YER).
+        return $this->belongsTo(Currency::class,'currency','code');
     }
 
     public function plan(){

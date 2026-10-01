@@ -196,10 +196,13 @@ class CompanyController extends Controller
                 'status'             => $isEdit ? (string) $user->status : (string) \App\Enums\Status::ACTIVE,
             ],
             'lookups' => [
-                'currencies'   => collect($this->currencyRepo->getActive())->map(fn ($c) => [
-                    'value' => $c->symbol,
-                    'label' => $c->name.' '.$c->symbol,
-                ])->values(),
+                'currencies'   => collect($this->currencyRepo->getActive())
+                    ->filter(fn ($c) => ! empty($c->code))
+                    ->unique('code')
+                    ->map(fn ($c) => [
+                        'value' => $c->code,
+                        'label' => trim($c->name.' '.$c->symbol.' ('.$c->code.')'),
+                    ])->values(),
                 'plans'        => collect($this->planRepo->getActive())->map(fn ($p) => [
                     'value' => (string) $p->id,
                     'label' => $p->name,

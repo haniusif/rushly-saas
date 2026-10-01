@@ -1059,12 +1059,23 @@ if (!function_exists('singleUser')) {
          * by height; otherwise the unicode symbol/code is returned as text.
          * Output is safe to print with {!! !!}.
          */
-        function currency_mark_html($code, $height = 12){
+        function currency_mark_html($code, $height = 12, $color = null){
             $code = (string) $code;
             if ($code === '') return '';
             $row = \App\Models\Backend\Currency::where('code', $code)->orWhere('symbol', $code)->first();
             if ($row && ! empty($row->symbol_svg)) {
-                $b64 = base64_encode($row->symbol_svg);
+                $svg = $row->symbol_svg;
+                if ($color) {
+                    // mPDF renders the SVG as an image and can't inherit CSS color,
+                    // so bake the fill in: recolour style-block + attribute fills,
+                    // and add a root fill so no-fill paths inherit it.
+                    $svg = preg_replace('/fill\s*:\s*#?[0-9a-fA-F]{3,8}/', 'fill:'.$color, $svg);
+                    $svg = preg_replace('/fill\s*=\s*"(?!none)[^"]*"/', 'fill="'.$color.'"', $svg);
+                    if (! preg_match('/<svg[^>]*\sfill=/i', $svg)) {
+                        $svg = preg_replace('/<svg\b/i', '<svg fill="'.$color.'"', $svg, 1);
+                    }
+                }
+                $b64 = base64_encode($svg);
                 return '<img src="data:image/svg+xml;base64,'.$b64.'" style="height:'.(int)$height.'px;vertical-align:middle" alt="'.e($row->code ?: $code).'">';
             }
             return e($row ? ($row->symbol ?: $row->code) : $code);

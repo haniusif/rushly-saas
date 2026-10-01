@@ -45,6 +45,40 @@ private function formatUaePhone(?string $raw): ?string
 
 
     /**
+     * Build the driver → customer WhatsApp intro for this parcel.
+     *
+     * Brand, currency and tracking host all come from the tenant instead of
+     * being hardcoded, and the text lives in lang/{locale}/whatsapp.php so it
+     * follows the app locale.
+     */
+    private function whatsappIntro(): string
+    {
+        $settings   = settings();
+        $shipmentId = $this->tracking_id ?? $this->id;
+
+        return __('whatsapp.delivery_intro', [
+            'customer' => $this->customer_name,
+            'brand'    => $settings->name ?? config('app.name'),
+            'shipment' => $shipmentId,
+            'merchant' => optional($this->merchant)->business_name,
+            'link'     => $this->tenantBaseUrl() . '/shipment-location/' . $shipmentId,
+            'amount'   => number_format((float) $this->cash_collection, 2),
+            'currency' => $settings->currency ?? '',
+        ]);
+    }
+
+    /**
+     * Public base URL of the current tenant (its registered domain), falling
+     * back to the host the API was called on.
+     */
+    private function tenantBaseUrl(): string
+    {
+        $domain = optional(optional(tenant())->domains)->first()->domain ?? null;
+
+        return rtrim($domain ? scheme_name($domain) : request()->schemeAndHttpHost(), '/');
+    }
+
+    /**
      * Transform the resource into an array.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -53,23 +87,7 @@ private function formatUaePhone(?string $raw): ?string
     public function toArray($request)
     {
         
-        $shipmentId = $this->tracking_id ?? $this->id;
-        $merchantName = optional($this->merchant)->business_name;
-        $customerName = $this->customer_name;
-        $amountCOD = number_format($this->cash_collection, 2);
-        
-        $link = "https://admin.rushly-logistic.com/shipment-location/{$shipmentId}";
-
-        $wa_msg = "Welcome – {$customerName},\n"
-                . "I am the delivery agent from *RDS Express*, responsible for delivering your shipment No. *{$shipmentId}* from the store *{$merchantName}*.\n\n"
-                . "Your shipment will be delivered *today* to the following address:\n"
-                . "{$link}\n\n"
-                . "Please confirm your address either by sharing your *location* or any other method, and confirm your *availability at the delivery location today*.\n\n"
-                . "*Shipment details:*\n"
-                . "Collection amount:*{$amountCOD} AED*\n\n"
-                . "*RDS Express*\n"
-                . "A safe and reliable logistics partner.";
-                
+        $wa_msg = $this->whatsappIntro();
 
         return [
             "id"                    => $this->id,
@@ -102,7 +120,7 @@ private function formatUaePhone(?string $raw): ?string
             'parcel_date'           => dateFormat($this->created_at) ,
             'parcel_time'           => date('h:i a', strtotime($this->created_at)) ,
             
-            'wa_msg'           => $wa_msg ?? "" ,
+            'wa_msg'           => $wa_msg,
 
             // Geo fields for the merchant + admin app tracking maps.
             // Nullable — merchants aren't required to geocode addresses.

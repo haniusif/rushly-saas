@@ -111,7 +111,7 @@
             </td>
             <td style="text-align:right;">
                 <table class="codbox">
-                    <tr><td class="t">COD/{{ $currency }}</td></tr>
+                    <tr><td class="t">COD/{!! currency_mark_html($currency, 9) !!}</td></tr>
                     <tr><td class="v">{{ $isCod ? number_format($cod, 0) : '0' }}</td></tr>
                 </table>
             </td>
@@ -133,7 +133,7 @@
             </td>
             <td class="facts">
                 Ship Date: {{ $data['date'] ?? '' }}<br>
-                DV:{{ $currency }} {{ number_format((float) ($data['declaredValue'] ?? 0), 0) }}<br>
+                DV:{!! currency_mark_html($currency, 9) !!} {{ number_format((float) ($data['declaredValue'] ?? 0), 0) }}<br>
                 WGT:{{ rtrim(rtrim(number_format((float) ($data['weight'] ?? 0), 2), '0'), '.') }} KG<br>
                 PCs: {{ $data['pieces'] ?? 1 }}<br>
                 <strong>{{ $data['reference_number'] ?: ($data['orderNumber'] ?? '') }}</strong>

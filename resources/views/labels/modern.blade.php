@@ -55,7 +55,7 @@
     </div>
 
     @if ($data['isCod'])
-        <div class="cod">COD · {{ number_format((float) $data['codAmount'], 2) }}</div>
+        <div class="cod">COD · {!! currency_mark_html($data['currency'] ?? '', 10) !!} {{ number_format((float) $data['codAmount'], 2) }}</div>
     @else
         <div class="cc">PRE-PAID</div>
     @endif

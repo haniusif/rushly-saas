@@ -154,7 +154,7 @@
         </tr>
         <tr>
             <td class="bt">Services:</td>
-            <td class="bt">Customs: {{ number_format((float) ($data['declaredValue'] ?? 0), 0) }} {{ $currency }}</td>
+            <td class="bt">Customs: {{ number_format((float) ($data['declaredValue'] ?? 0), 0) }} {!! currency_mark_html($currency, 9) !!}</td>
         </tr>
     </table>
 
@@ -189,7 +189,7 @@
             {{-- right rail: COD + vertical barcode --}}
             <td style="padding:0;">
                 <div class="codttl">COD</div>
-                <div class="codval">{{ $isCod ? number_format($cod, 0) : '0' }} {{ $currency }}</div>
+                <div class="codval">{{ $isCod ? number_format($cod, 0) : '0' }} {!! currency_mark_html($currency, 12) !!}</div>
                 @if ($vbar)
                     <div class="vbar">
                         <img src="data:image/png;base64,{{ $vbar }}"

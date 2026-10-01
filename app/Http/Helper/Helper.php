@@ -1066,14 +1066,14 @@ if (!function_exists('singleUser')) {
             if ($row && ! empty($row->symbol_svg)) {
                 $svg = $row->symbol_svg;
                 if ($color) {
-                    // mPDF renders the SVG as an image and can't inherit CSS color,
-                    // so bake the fill in: recolour style-block + attribute fills,
-                    // and add a root fill so no-fill paths inherit it.
+                    // mPDF renders the SVG as an image and doesn't inherit CSS color
+                    // or a root <svg fill> onto child paths, so bake the fill in:
+                    // recolour style-block fills (e.g. SAR's .cls-1), existing fill
+                    // attributes, and add a fill attr to any <path> that lacks one
+                    // (e.g. the AED paths).
                     $svg = preg_replace('/fill\s*:\s*#?[0-9a-fA-F]{3,8}/', 'fill:'.$color, $svg);
                     $svg = preg_replace('/fill\s*=\s*"(?!none)[^"]*"/', 'fill="'.$color.'"', $svg);
-                    if (! preg_match('/<svg[^>]*\sfill=/i', $svg)) {
-                        $svg = preg_replace('/<svg\b/i', '<svg fill="'.$color.'"', $svg, 1);
-                    }
+                    $svg = preg_replace('/<path\b(?![^>]*\sfill=)/i', '<path fill="'.$color.'"', $svg);
                 }
                 $b64 = base64_encode($svg);
                 return '<img src="data:image/svg+xml;base64,'.$b64.'" style="height:'.(int)$height.'px;vertical-align:middle" alt="'.e($row->code ?: $code).'">';

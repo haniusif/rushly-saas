@@ -388,11 +388,22 @@ class CompanyController extends Controller
     }
 
     /**
-     * Log in as a company's owner user (impersonation). Mirrors the merchant
-     * impersonation flow: capture the super-admin id in the session, switch the
-     * auth user to the company owner, and land on the tenant dashboard — tenant
-     * scoping follows the authenticated user's company_id, so no host change is
-     * needed. Hard-gated to SUPER_ADMIN; returns via company.impersonate.stop.
+     * Start a "login as company" session.
+     *
+     * The super-admin runs on the CENTRAL host, but tenancy is identified by
+     * DOMAIN (InitializeTenancyByDomain) and the tenant dashboard + stop routes
+     * are only registered on the tenant's own subdomain. So we can't just swap
+     * the auth user here — we hand off across hosts:
+     *
+     *   1. (here, central) mint a single-use token in the cache and redirect the
+     *      browser to the owner's tenant subdomain /impersonate/consume/{token}.
+     *   2. (consume, tenant host) validate the token, log the owner in INSIDE
+     *      their tenant context, and land on their real dashboard.
+     *
+     * This method is reached by a native form POST (see Company/Index.jsx), so a
+     * plain cross-host redirect is followed by the browser directly.
+     *
+     * Hard-gated to SUPER_ADMIN.
      *
      * @param int $id  The company-owner User id (the id used on the index rows).
      */
@@ -418,16 +429,27 @@ class CompanyController extends Controller
             return redirect()->back();
         }
 
-        // Don't allow nested impersonation — stop the current one first.
-        if ($request->session()->has('impersonator_id')) {
-            Toastr::error('Already impersonating. Stop the current session first.', __('message.error'));
-            return redirect()->back();
-        }
-
         if ($admin->id === $owner->id) {
             Toastr::error("Can't impersonate yourself.", __('message.error'));
             return redirect()->back();
         }
+
+        // Resolve the owner's tenant subdomain — we have to land them there,
+        // since that's where their tenant context and dashboard live.
+        $domain = optional(optional(optional($owner->tenantDetails)->domains)->first())->domain;
+        if (! $domain) {
+            Toastr::error(__('company.no_domain') ?: 'This company has no domain to log in to.', __('message.error'));
+            return redirect()->back();
+        }
+
+        // Single-use, 60s handoff token. Cache is shared across hosts (same
+        // backend), and Cache::pull on the other side consumes it atomically.
+        $token = \Illuminate\Support\Str::random(64);
+        \Cache::put('impersonate:' . $token, [
+            'owner_id'        => $owner->id,
+            'company_id'      => $owner->company_id,
+            'impersonator_id' => $admin->id,
+        ], now()->addSeconds(60));
 
         // Audit trail — spatie/activitylog, as used by merchant impersonation.
         try {
@@ -435,48 +457,88 @@ class CompanyController extends Controller
                 ->causedBy($admin)
                 ->performedOn($owner)
                 ->withProperties([
-                    'admin_id'     => $admin->id,
-                    'admin_email'  => $admin->email,
-                    'company_id'   => $owner->company_id,
-                    'target_user'  => $owner->email,
-                    'ip'           => $request->ip(),
+                    'admin_id'    => $admin->id,
+                    'admin_email' => $admin->email,
+                    'company_id'  => $owner->company_id,
+                    'target_user' => $owner->email,
+                    'domain'      => $domain,
+                    'ip'          => $request->ip(),
                 ])
                 ->log('Started company impersonation');
         } catch (\Throwable $e) { /* activity log not critical */ }
 
-        $request->session()->put('impersonator_id', $admin->id);
+        $url = rtrim(scheme_name($domain), '/') . '/impersonate/consume/' . $token;
+        return redirect()->away($url);
+    }
+
+    /**
+     * Consume a handoff token on the TENANT subdomain and log the owner in.
+     * Runs inside the tenant route group (InitializeTenancyByDomain), guest-
+     * accessible — logging in is the whole point.
+     */
+    public function consume($token, Request $request)
+    {
+        $data = \Cache::pull('impersonate:' . $token); // atomic single-use
+        if (! $data || empty($data['owner_id'])) {
+            Toastr::error(__('company.impersonate_expired') ?: 'This login link has expired. Please try again.', __('message.error'));
+            return redirect()->route('login');
+        }
+
+        $owner = User::where('id', $data['owner_id'])
+            ->where('user_type', UserType::ADMIN)
+            ->first();
+        if (! $owner) {
+            Toastr::error(__('merchant.error_msg'), __('message.error'));
+            return redirect()->route('login');
+        }
+
+        // The token must be consumed on the owner's OWN tenant subdomain.
+        $tenant = function_exists('tenant') ? tenant() : null;
+        if ($tenant && (string) $tenant->company_id !== (string) $owner->company_id) {
+            abort(403);
+        }
+
+        $request->session()->put('impersonator_id', $data['impersonator_id']);
         \Auth::login($owner);
+
+        try {
+            activity('impersonation')
+                ->causedBy(User::find($data['impersonator_id']))
+                ->performedOn($owner)
+                ->withProperties(['company_id' => $owner->company_id, 'target_user' => $owner->email, 'ip' => $request->ip()])
+                ->log('Entered company impersonation');
+        } catch (\Throwable $e) { /* ignore */ }
 
         return redirect()->route('dashboard.index');
     }
 
     /**
-     * Restore the super-admin session captured by impersonate() and return to
-     * the companies list. Reachable by the impersonated owner because the gate
-     * is "is session.impersonator_id set?", not the role.
+     * End a "login as company" session (runs on the tenant subdomain, reached by
+     * a native form POST from the impersonation banner). Destroys the owner
+     * session here and sends the super-admin back to the central companies page —
+     * their original central session was never touched, so they land logged in.
      */
     public function stopImpersonate(Request $request)
     {
         $adminId = $request->session()->pull('impersonator_id');
-        if (! $adminId) {
-            return redirect()->route('dashboard.index');
+
+        \Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        if ($adminId) {
+            try {
+                activity('impersonation')
+                    ->causedBy(User::find($adminId))
+                    ->withProperties(['admin_id' => $adminId, 'restored_at' => now()->toIso8601String()])
+                    ->log('Stopped company impersonation');
+            } catch (\Throwable $e) { /* ignore */ }
         }
 
-        $admin = User::find($adminId);
-        if (! $admin) {
-            \Auth::logout();
-            return redirect()->route('login');
-        }
-
-        try {
-            activity('impersonation')
-                ->causedBy($admin)
-                ->withProperties(['admin_id' => $admin->id, 'restored_at' => now()->toIso8601String()])
-                ->log('Stopped company impersonation');
-        } catch (\Throwable $e) { /* ignore */ }
-
-        \Auth::login($admin);
-        return redirect()->route('company.index');
+        // Absolute central URL — route('company.index') isn't registered on the
+        // tenant host this runs on.
+        $central = rtrim(config('app.url'), '/') . '/super-admin/company';
+        return redirect()->away($central);
     }
 
 }

@@ -32,7 +32,17 @@ export default function CompanyIndex({ rows = [], pagination = {}, permissions =
 
     const onImpersonate = (row) => {
         if (typeof window !== 'undefined' && !window.confirm(t.impersonate_confirm)) return;
-        router.post(row.urls.impersonate);
+        // Native form POST (not Inertia): impersonate() redirects across hosts to
+        // the tenant subdomain, which the browser must follow directly.
+        const form = document.createElement('form');
+        form.action = row.urls.impersonate;
+        form.method = 'POST';
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const inp = document.createElement('input');
+        inp.type = 'hidden'; inp.name = '_token'; inp.value = csrf;
+        form.appendChild(inp);
+        document.body.appendChild(form);
+        form.submit();
     };
 
     return (

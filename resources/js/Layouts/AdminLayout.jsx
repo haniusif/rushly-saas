@@ -530,7 +530,17 @@ function ImpersonationBanner({ impersonator, user }) {
     if (!impersonator) return null;
     const stop = () => {
         if (typeof window !== 'undefined' && !window.confirm(`Return to ${impersonator.name}'s session?`)) return;
-        router.post(safeRoute('company.impersonate.stop'));
+        // Native form POST (not Inertia): stopImpersonate() redirects back to the
+        // central host, which the browser must follow directly.
+        const form = document.createElement('form');
+        form.action = safeRoute('company.impersonate.stop');
+        form.method = 'POST';
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const inp = document.createElement('input');
+        inp.type = 'hidden'; inp.name = '_token'; inp.value = csrf;
+        form.appendChild(inp);
+        document.body.appendChild(form);
+        form.submit();
     };
     return (
         <div className="sticky top-0 z-50 bg-amber-500 text-amber-950 text-sm">

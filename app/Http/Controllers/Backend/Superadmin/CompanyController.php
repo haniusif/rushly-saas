@@ -16,6 +16,8 @@ use App\Repositories\Superadmin\Plan\PlanInterface;
 use App\Repositories\User\UserInterface;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class CompanyController extends Controller
@@ -442,14 +444,20 @@ class CompanyController extends Controller
             return redirect()->back();
         }
 
-        // Single-use, 60s handoff token. Cache is shared across hosts (same
-        // backend), and Cache::pull on the other side consumes it atomically.
-        $token = \Illuminate\Support\Str::random(64);
-        \Cache::put('impersonate:' . $token, [
-            'owner_id'        => $owner->id,
-            'company_id'      => $owner->company_id,
+        // Single-use, 60s handoff token stored in the shared DB. Cache can't be
+        // used here: the tenancy cache bootstrapper re-scopes (and tags) the
+        // cache per tenant, so a key written on the central host is invisible
+        // on the tenant host. The DB is NOT swapped per tenant (no database
+        // tenancy bootstrapper), so this row is readable from both hosts.
+        $token = Str::random(64);
+        DB::table('impersonation_tokens')->insert([
+            'token'           => $token,
+            'user_id'         => $owner->id,
             'impersonator_id' => $admin->id,
-        ], now()->addSeconds(60));
+            'company_id'      => $owner->company_id,
+            'expires_at'      => now()->addSeconds(60),
+            'created_at'      => now(),
+        ]);
 
         // Audit trail — spatie/activitylog, as used by merchant impersonation.
         try {
@@ -478,13 +486,18 @@ class CompanyController extends Controller
      */
     public function consume($token, Request $request)
     {
-        $data = \Cache::pull('impersonate:' . $token); // atomic single-use
-        if (! $data || empty($data['owner_id'])) {
+        // Single-use: read then immediately delete the row. Also sweep expired
+        // tokens so the table can't grow unbounded.
+        $row = DB::table('impersonation_tokens')->where('token', $token)->first();
+        DB::table('impersonation_tokens')->where('token', $token)->delete();
+        DB::table('impersonation_tokens')->where('expires_at', '<', now())->delete();
+
+        if (! $row || now()->greaterThan($row->expires_at)) {
             Toastr::error(__('company.impersonate_expired') ?: 'This login link has expired. Please try again.', __('message.error'));
             return redirect()->route('login');
         }
 
-        $owner = User::where('id', $data['owner_id'])
+        $owner = User::where('id', $row->user_id)
             ->where('user_type', UserType::ADMIN)
             ->first();
         if (! $owner) {
@@ -498,12 +511,12 @@ class CompanyController extends Controller
             abort(403);
         }
 
-        $request->session()->put('impersonator_id', $data['impersonator_id']);
+        $request->session()->put('impersonator_id', $row->impersonator_id);
         \Auth::login($owner);
 
         try {
             activity('impersonation')
-                ->causedBy(User::find($data['impersonator_id']))
+                ->causedBy(User::find($row->impersonator_id))
                 ->performedOn($owner)
                 ->withProperties(['company_id' => $owner->company_id, 'target_user' => $owner->email, 'ip' => $request->ip()])
                 ->log('Entered company impersonation');

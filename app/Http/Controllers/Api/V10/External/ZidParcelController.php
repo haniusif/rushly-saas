@@ -59,7 +59,6 @@ class ZidParcelController extends Controller
 
         $parcel = Parcel::create([
             'company_id'       => $merchant->company_id,
-            'tracking_id'      => $this->trackingId(),
             'merchant_id'      => $merchant->id,
             'merchant_shop_id' => $request->shop_id,
             'city_id'          => $request->city_id,
@@ -73,6 +72,10 @@ class ZidParcelController extends Controller
             'note'             => isset($meta['zid_order_code']) ? 'Zid order '.$meta['zid_order_code'] : null,
             'status'           => 'pending',
         ]);
+
+        // Tracking id is derived from the parcel id (see TrackingTrait).
+        $parcel->tracking_id = $this->generateTrackingId($parcel->id);
+        $parcel->save();
 
         ZidOrderLink::create([
             'company_id'        => $merchant->company_id,

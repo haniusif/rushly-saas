@@ -61,7 +61,6 @@ class WooCommerceParcelController extends Controller
 
         $parcel = Parcel::create([
             'company_id'       => $merchant->company_id,
-            'tracking_id'      => $this->trackingId(),
             'merchant_id'      => $merchant->id,
             'merchant_shop_id' => $request->shop_id,
             'city_id'          => $request->city_id,
@@ -75,6 +74,10 @@ class WooCommerceParcelController extends Controller
             'note'             => isset($meta['wc_order_number']) ? 'WooCommerce order '.$meta['wc_order_number'] : null,
             'status'           => 'pending',
         ]);
+
+        // Tracking id is derived from the parcel id (see TrackingTrait).
+        $parcel->tracking_id = $this->generateTrackingId($parcel->id);
+        $parcel->save();
 
         WooCommerceOrderLink::create([
             'company_id'   => $merchant->company_id,

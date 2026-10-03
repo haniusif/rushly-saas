@@ -39,7 +39,6 @@ class ParcelCreationService
 
         $parcel = Parcel::create([
             'company_id'       => $merchant->company_id,
-            'tracking_id'      => $this->trackingId(),
             'merchant_id'      => $merchant->id,
             'merchant_shop_id' => $payload['shop_id'],
             'city_id'          => $payload['city_id'],
@@ -53,6 +52,10 @@ class ParcelCreationService
             'note'             => isset($meta['salla_reference']) ? 'Salla order '.$meta['salla_reference'] : null,
             'status'           => 'pending',
         ]);
+
+        // Tracking id is derived from the parcel id (see TrackingTrait).
+        $parcel->tracking_id = $this->generateTrackingId($parcel->id);
+        $parcel->save();
 
         $link = SallaOrderLink::create([
             'company_id'        => $merchant->company_id,

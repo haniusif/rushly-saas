@@ -8,6 +8,7 @@ use App\Enums\DeliveryTime;
 use App\Enums\Status;
 use App\Http\Resources\MerchantParcelExportResource;
 use App\Http\Services\PushNotificationService;
+use App\Traits\TrackingTrait;
 use App\Models\Backend\Deliverycategory;
 use App\Models\Backend\DeliveryCharge;
 use App\Models\Backend\City;
@@ -29,6 +30,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class MerchantParcelRepository implements MerchantParcelInterface {
+
+    use TrackingTrait;
+
 
     protected $walletRepo;
     public function __construct(WalletInterface $walletRepo)
@@ -305,8 +309,10 @@ public function parcel_by_daterange($merchant_id, $from, $to , $paginate = 10)
                 $parcel->liquid_fragile_amount  = $chargeDetails->liquidFragileAmount ?? 0;
             }
           
-            $parcel->tracking_id             = $this->RandomTrackingID();
-            
+            $parcel->save();
+
+            // Tracking id is derived from the parcel id (see TrackingTrait).
+            $parcel->tracking_id             = $this->generateTrackingId($parcel->id);
             $parcel->save();
 
             try {
@@ -472,8 +478,10 @@ public function parcel_by_daterange($merchant_id, $from, $to , $paginate = 10)
                 $parcel->liquid_fragile_amount  = $duplicate_parcel->liquid_fragile_amount;
             }
  
-            $parcel->tracking_id             = $this->RandomTrackingID();
-            
+            $parcel->save();
+
+            // Tracking id is derived from the parcel id (see TrackingTrait).
+            $parcel->tracking_id             = $this->generateTrackingId($parcel->id);
             $parcel->save();
 
             try { 

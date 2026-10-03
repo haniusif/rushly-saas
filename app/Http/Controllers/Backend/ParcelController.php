@@ -1909,10 +1909,44 @@ class ParcelController extends Controller
         $request->validate([
             'file' => 'required',
         ]);
+
+        // Refuse a repeat of the exact same file (a slow import that outlived
+        // the browser, or a double submit, used to re-import every row). The
+        // admin sheet spans merchants, so dedup is company-scoped with a
+        // sentinel merchant_id=0. DB unique(merchant_id,file_hash) is the
+        // race-proof backstop.
+        $companyId = settings()->id ?? null;
+        $hash = @hash_file('sha256', $request->file('file')->getRealPath());
+        if ($hash) {
+            $previous = \App\Models\Backend\ParcelImportRun::where('company_id', $companyId)
+                ->where('file_hash', $hash)
+                ->blocking()
+                ->first();
+            if ($previous) {
+                $when  = optional($previous->created_at)->format('Y-m-d H:i');
+                $count = number_format($previous->imported_count ?: $previous->row_count);
+                return back()->withErrors([
+                    'file' => "This exact file was already imported on {$when} ({$count} shipments). Nothing was imported again.",
+                ]);
+            }
+        }
+
+        $run = \App\Models\Backend\ParcelImportRun::create([
+            'company_id'  => $companyId,
+            'merchant_id' => 0,
+            'file_hash'   => $hash ?: substr(sha1(uniqid('', true)), 0, 64),
+            'file_name'   => $request->file('file')->getClientOriginalName(),
+            'row_count'   => 0,
+            'status'      => \App\Models\Backend\ParcelImportRun::RUNNING,
+        ]);
+
+        $before = \App\Models\Backend\Parcel::withoutGlobalScopes()->where('company_id', $companyId)->count();
+
         try {
             $import = new ParcelImport();
             $import->import($request->file('file'));
         } catch (ValidationException $e) {
+            $run->update(['status' => \App\Models\Backend\ParcelImportRun::FAILED, 'error' => 'row validation']);
             $failures     = $e->failures();
             $importErrors = [];
             foreach ($failures as $failure) {
@@ -1923,7 +1957,18 @@ class ParcelController extends Controller
                 $importErrors[$failure->row()][] = $failure->errors()[0];
             }
             return back()->with('importErrors', $importErrors);
+        } catch (\Throwable $th) {
+            $run->update(['status' => \App\Models\Backend\ParcelImportRun::FAILED, 'error' => mb_substr($th->getMessage(), 0, 250)]);
+            throw $th;
         }
+
+        $after = \App\Models\Backend\Parcel::withoutGlobalScopes()->where('company_id', $companyId)->count();
+        $run->update([
+            'status'         => \App\Models\Backend\ParcelImportRun::COMPLETED,
+            'imported_count' => max(0, $after - $before),
+            'row_count'      => max(0, $after - $before),
+        ]);
+
         Toastr::success(__('parcel.added_msg'),__('message.success'));
         return redirect()->route('parcel.index');
     }

@@ -75,8 +75,77 @@ class PayoutSetupController extends Controller
 
     public function onlinePaymentList()
     {
-        $payments = $this->MOPmodel::orderByDesc('id')->paginate(10);
-        return view('backend.online_payment.online_payment_list', compact('payments'));
+        // Company-scoped (the old Blade query was unscoped); eager-load the
+        // relations the row payload needs so React gets flat, ready fields.
+        $paginator = $this->MOPmodel->companywise()
+            ->with(['Merchant.user', 'account.user'])
+            ->orderByDesc('id')
+            ->paginate(10);
+
+        $rows = collect($paginator->items())->map(function ($p) {
+            $type      = $p->payment_type;
+            $cardType  = $type !== null && $type !== ''
+                ? (trans()->has('PaymentType.'.$type) ? __('PaymentType.'.$type) : (string) $type)
+                : null;
+
+            // "To account" mirrors the gateway branching from the old Blade.
+            $acc        = $p->account;
+            $gateway    = (int) (optional($acc)->gateway);
+            $toAccount  = null;
+            $toAccountNo = null;
+            if ($acc) {
+                if ($gateway === 1) {
+                    $toAccount = trim((optional($acc->user)->name ?? '') . ' (Cash)');
+                } elseif ($gateway === 2) {
+                    $toAccount   = $acc->account_holder_name;
+                    $toAccountNo = trim(($acc->account_no ?? '') . ' ' . ($acc->branch_name ?? ''));
+                } else {
+                    $label = [3 => 'Bkash', 4 => 'Rocket', 5 => 'Nagad'][$gateway] ?? null;
+                    $toAccount   = trim(($label ?? '') . ' ' . ($acc->account_type ?? ''));
+                    $toAccountNo = $acc->mobile;
+                }
+            }
+
+            return [
+                'id'             => $p->id,
+                'card_type'      => $cardType,
+                'merchant_name'  => optional($p->Merchant)->business_name,
+                'merchant_email' => optional(optional($p->Merchant)->user)->email,
+                'to_account'     => $toAccount ?: null,
+                'to_account_no'  => $toAccountNo ?: null,
+                'transaction_id' => $p->transaction_id,
+                'amount'         => (float) ($p->amount ?? 0),
+                'created_at'     => optional($p->created_at)->format('Y-m-d H:i'),
+            ];
+        })->values();
+
+        return Inertia::render('Admin/OnlinePayment/Index', [
+            'rows'       => $rows,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'from'         => $paginator->firstItem(),
+                'to'           => $paginator->lastItem(),
+                'total'        => $paginator->total(),
+                'prev_url'     => $paginator->previousPageUrl(),
+                'next_url'     => $paginator->nextPageUrl(),
+            ],
+            'currency' => settings()->currency,
+            't' => [
+                'title'          => __('menus.payments') ?: 'Payments',
+                'list'           => __('levels.list') ?: 'List',
+                'card_type'      => __('levels.card_type') ?: 'Method',
+                'merchant'       => __('merchant.title') ?: 'Client',
+                'to_account'     => __('levels.to_account') ?: 'To account',
+                'transaction_id' => __('levels.transaction_id') ?: 'Transaction ID',
+                'amount'         => __('levels.amount') ?: 'Amount',
+                'when'           => __('levels.created_at') ?: 'When',
+                'no_rows'        => 'No payments yet.',
+                'prev'           => 'Prev',
+                'next'           => 'Next',
+                'showing_results'=> 'Showing :from – :to of :total',
+            ],
+        ]);
     }
 
     /**

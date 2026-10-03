@@ -501,6 +501,12 @@ class MerchantParcelController extends Controller
                 'packaging'          => __('parcel.packaging') ?: 'Packaging',
                 'parcel_bank'        => __('levels.parcel_bank') ?: 'Save to parcel bank',
                 'select'             => __('menus.select') ?: 'Select',
+                // The searchable dropdowns. Fallbacks are given because these keys are
+                // new and a missing translation must not render the key itself into the
+                // placeholder of a control the merchant has to use.
+                'search_ph'          => __('levels.search') ?: 'Search…',
+                'no_results'         => __('levels.no_data_found') ?: 'No results',
+                'pick_city_first'    => __('parcel.select_city_first') ?: 'Choose a city first',
                 'save'               => __('levels.save') ?: 'Save',
                 'cancel'             => __('levels.cancel') ?: 'Cancel',
                 // Charge summary card
@@ -1267,11 +1273,16 @@ public function m_parcelImport(Request $request)
         return back()->withErrors($errors);
     }
 
-    // 📦 Store data in session for the confirmation step
+    // 📦 Store data in session for the confirmation step.
+    // The file content hash lets the confirm step refuse a repeat of the exact
+    // same upload (a slow import that outlives the browser, or a double-click),
+    // which otherwise imports every shipment in the sheet a second time.
     session([
         'm_import.path'    => $path,
         'm_import.headers' => $headers,
         'm_import.total'   => count($normalizedRows),
+        'm_import.hash'    => hash_file('sha256', Storage::path($path)),
+        'm_import.name'    => $request->file('file')->getClientOriginalName(),
         // 'm_import.rows'  => collect($normalizedRows)->toArray(), // optional
     ]);
 
@@ -1303,20 +1314,66 @@ public function m_parcelImportConfirm(Request $request)
         return back();
     }
 
+    $merchant = Merchant::where('user_id', auth()->id())->first()
+        ?? Merchant::find(optional(optional(auth()->user())->merchant)->id ?? 0);
+    $merchantId = $merchant->id ?? 0;
+
+    // Refuse a repeat of the exact same file: a slow import that outlived the
+    // browser (or a double confirm) used to re-import the whole sheet. Match on
+    // merchant + content hash; a 'running'/'completed' run blocks, 'failed' does
+    // not (the sheet may need correcting and re-importing).
+    $hash = session('m_import.hash') ?: hash_file('sha256', Storage::path($path));
+    $previous = \App\Models\Backend\ParcelImportRun::where('merchant_id', $merchantId)
+        ->where('file_hash', $hash)
+        ->blocking()
+        ->first();
+    if ($previous) {
+        $when  = optional($previous->created_at)->format('Y-m-d H:i');
+        $count = number_format($previous->imported_count ?: $previous->row_count);
+        return back()->withErrors([
+            'file' => \Illuminate\Support\Facades\Lang::has('parcel.import_already_done')
+                ? __('parcel.import_already_done', ['when' => $when, 'count' => $count])
+                : "This exact file was already imported on {$when} ({$count} shipments). Nothing was imported again.",
+        ]);
+    }
+
+    $run = \App\Models\Backend\ParcelImportRun::create([
+        'company_id'  => settings()->id ?? null,
+        'merchant_id' => $merchantId,
+        'file_hash'   => $hash,
+        'file_name'   => session('m_import.name'),
+        'row_count'   => (int) session('m_import.total', 0),
+        'status'      => \App\Models\Backend\ParcelImportRun::RUNNING,
+    ]);
+
      try {
         // نفّذ الاستيراد الفعلي بالاعتماد على كلاس الاستيراد الخاص بك
         // إن كنت تفضّل ParcelImport بدلاً من MParcelImport استبدله هنا:
+        $before = \App\Models\Backend\Parcel::withoutGlobalScopes()
+            ->where('merchant_id', $merchantId)->count();
+
         $import = new MParcelImport();
         $import->import(Storage::path($path));
 
+        $after = \App\Models\Backend\Parcel::withoutGlobalScopes()
+            ->where('merchant_id', $merchantId)->count();
+
+        $run->update([
+            'status'         => \App\Models\Backend\ParcelImportRun::COMPLETED,
+            'imported_count' => max(0, $after - $before),
+        ]);
+
         // تنظيف جلسة المعاينة والملف المؤقت
         Storage::delete($path);
-        session()->forget(['m_import.path', 'm_import.headers', 'm_import.total']);
+        session()->forget(['m_import.path', 'm_import.headers', 'm_import.total', 'm_import.hash', 'm_import.name']);
 
         Toastr::success(__('parcel.added_msg'), __('message.success'));
         return redirect()->route('merchant-panel.parcel.index');
 
     } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+        // Released, not blocking: the sheet needs correcting and the corrected
+        // file must be importable (it hashes differently anyway).
+        $run->update(['status' => \App\Models\Backend\ParcelImportRun::FAILED, 'error' => 'row validation']);
         $failures = $e->failures();
         $importErrors = [];
         foreach ($failures as $failure) {
@@ -1327,7 +1384,7 @@ public function m_parcelImportConfirm(Request $request)
         return back()->with('importErrors', $importErrors);
     } catch (\Throwable $th) {
 
-
+        $run->update(['status' => \App\Models\Backend\ParcelImportRun::FAILED, 'error' => mb_substr($th->getMessage(), 0, 250)]);
         Toastr::error('حدث خطأ أثناء الاستيراد: ' . $th->getMessage(), 'خطأ');
         return back();
     }

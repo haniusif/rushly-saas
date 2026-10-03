@@ -111,6 +111,21 @@ class MParcelImport implements ToModel, WithHeadingRow, SkipsEmptyRows
         // Normalize incoming row keys/values
         $row = $this->normalizeRow($row);
 
+        // Skip rows with no real shipment content. Excel files routinely carry
+        // trailing/blank rows that aren't strictly null (empty strings, stray
+        // formatting), so they slip past SkipsEmptyRows and would otherwise be
+        // turned into empty parcels (no customer, no ref, COD 0).
+        $hasContent = false;
+        foreach (['customer_name', 'customer_phone', 'customer_address', 'reference_number', 'cod', 'customer_city_id', 'city'] as $k) {
+            if (isset($row[$k]) && trim((string) $row[$k]) !== '') {
+                $hasContent = true;
+                break;
+            }
+        }
+        if (!$hasContent) {
+            return null;
+        }
+
         $user = Auth::user();
         $merchantId = $user->merchant->id ?? $user->id;
         $merchant = Merchant::with('user')->find($merchantId);

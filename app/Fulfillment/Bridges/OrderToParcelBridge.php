@@ -79,7 +79,6 @@ class OrderToParcelBridge
         $parcel = Parcel::create([
             'company_id'       => $order->company_id,
             'merchant_id'      => $order->merchant_id,
-            'tracking_id'      => $this->trackingId(),
             'customer_name'    => $order->customer_name,
             'customer_phone'   => $order->customer_phone,
             'customer_address' => $address ?: null,
@@ -96,6 +95,8 @@ class OrderToParcelBridge
         // would touch a widely-used domain model). Assign directly + save
         // so the reverse link is captured.
         $parcel->oms_order_id = $order->id;
+        // Tracking id is derived from the parcel id (see TrackingTrait).
+        $parcel->tracking_id  = $this->generateTrackingId($parcel->id);
         $parcel->save();
 
         return $parcel;

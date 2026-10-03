@@ -28,6 +28,7 @@ const NAV = [
     { group: 'menu_main', items: [
         { tKey: 'menu_dashboard',      icon: LayoutDashboard, route: 'dashboard.index',     match: ['admin/dashboard', 'dashboard'] },
         { tKey: 'menu_performance',    icon: BarChart3,       route: 'performance.index',   match: ['admin/performance'], perm: 'performance_dashboard_read' },
+        { tKey: 'menu_knowledge_base', icon: BookOpen,        route: 'admin.kb.index',      match: ['admin/knowledge-base'], perm: 'knowledge_base_read' },
     ]},
     { group: 'menu_parcels', items: [
         { tKey: 'menu_parcel',      icon: Package,        route: 'parcel.index',       match: ['admin/parcel'], perm: 'parcel_read' },

@@ -2,9 +2,11 @@
 
 Current state of the third-party logistics integrations. As of 2026-05-29:
 
-- **Live** (production-ready code): **DeliveryPanda**, **Zajel**, **Aramex**, **J&T (Jet)**, **Logestechs**.
-- **Logestechs** is now also live end-to-end (createShipment verified against company 496 — returned a real AWB + label URL on 2026-05-29).
-- **Stub only** (config + integrations card, no code): **iMile**.
+- **Live on the legacy pattern** (`app/Services/*Service.php` + `parcels_3pl` table): **DeliveryPanda**, **Zajel**, **Aramex**, **J&T (Jet)**.
+- **Live on the new Shipping module** (`app/Shipping/`): **Logestechs**. As of 2026-06-30, Logestechs uses the proper abstraction — `ShippingProviderInterface`, per-tenant `shipping_connections`, queued `CreateShipmentJob`, generic `shipping:sync-tracking` poller. See [docs/shipping-architecture.md](docs/shipping-architecture.md).
+- **Stub only**: **iMile**.
+
+> **Two patterns coexist on purpose.** The legacy 4 providers stay on the old `Service` pattern for now. New providers (and any rewrite of the existing 4) go through the new module. Moving Aramex / Jet / Zajel / Panda is a separate effort.
 
 > ⚠️ The Panda flow has several known security and multi-tenant issues (see [Known issues](#known-issues)). Zajel, Aramex, and Jet were built fresh and avoid most of them, but inherit the shared `Parcels_3pl` data-model problem (no `company_id`).
 
@@ -46,6 +48,7 @@ Shared model: `app/Models/Backend/Parcels_3pl.php` (stores assignments for all p
 **Console (`app/Console/Kernel.php`):**
 - `aramex:sync-tracking` — every 15 minutes, with `withoutOverlapping()`. Pulls TrackShipments for all non-terminal Aramex AWBs and syncs status into the parcel timeline.
 - `jet:sync-tracking` — every 15 minutes, with `withoutOverlapping()`. Iterates J&T's per-AWB tracking endpoint for non-terminal Jet AWBs.
+- `logestechs:sync-tracking` — every 15 minutes, with `withoutOverlapping()`. Iterates Logestechs' per-AWB `/guests/packages/status` endpoint for non-terminal Logestechs AWBs.
 
 ### Config
 
@@ -327,9 +330,11 @@ Trigger: `php artisan jet:sync-tracking` (or scheduled every 15 min via `Console
      - "akan dikirim ke alamat penerima" → `DELIVERY_MAN_ASSIGN` (out for delivery)
    - anything else → log-only
 
-### Logestechs (scaffold complete, partial-live)
+### Logestechs (live via the new Shipping module)
 
-**Status as of 2026-05-29**: scaffold + service rewritten against the real endpoints (from a reference `LogesTechsController` shared by the operator). `getVillages` is **live-tested** against company 496. `createShipment` schema is **still unknown** — Logestechs's server returns generic `500 "Unknown error"` for any probe payload, so field discovery is blocked until a captured working request arrives.
+> **Status as of 2026-06-30 — production-verified.** Two real shipments created against Logestechs company 496 and cancelled cleanly (AWBs `100480817362` COD 150 SAR and `100480818437` non-COD). Both create + cancel returned HTTP 200. Reachability, credential validation, and label PDF URLs all confirmed live. Logestechs now runs through the generic Shipping module — see [docs/shipping-architecture.md](docs/shipping-architecture.md) for the full architecture; the legacy notes below are kept for history because the old `LogestechsService` + `logestechs_settings` table remain on disk until the cleanup PR.
+
+**Original scoping (2026-05-29)**: scaffold + service rewritten against the real endpoints (from a reference `LogesTechsController` shared by the operator). `getVillages` was live-tested against company 496 before the Postman collection landed.
 
 **Shape**: Logestechs is a logistics platform itself, not a courier. Each shipment Rushly sends carries a `target_company_id` chosen by the admin at assign time — that's the receiving Logestechs account/company on their side. Scoping is **per-shipment**, not per-tenant.
 
@@ -339,17 +344,18 @@ Trigger: `php artisan jet:sync-tracking` (or scheduled every 15 min via `Console
 - **Backend stack**: Java/Spring with Jackson serializer. Their internal product name is "Palship" (leaked via `com.palship.web.common.data.messages.integration.external.ShippingRequestInfoDto` in a Jackson type-mismatch error).
 - **Test company `496`**: configured for Saudi Arabia (`prefix: "SA"`). Regions returned include Bahah, Asir, Eastern Province, Qassim, Riyadh, Jeddah, Makkah, Tabuk.
 
-**Endpoint paths** (from the reference `LogesTechsController`; only `getVillages` is end-to-end confirmed):
+**Endpoint paths** (all end-to-end tested via `LogestechsProvider`):
 
 | Method | Path | Purpose | Tested |
 |--------|------|---------|--------|
-| POST | `/ship/request/by-email` | Create shipment | ❌ schema unknown — returns 500 |
-| GET | `/guests/{companyId}/packages/tracking?barcode=&id=` | Track | not yet |
-| GET | `/guests/packages/status?barcode=&id=` | High-level status | not yet |
-| PUT | `/guests/{companyId}/packages/{shipmentId}/cancel` | Cancel | not yet |
-| POST | `/guests/{companyId}/packages/pdf` | Print AWB(s) (returns PDF binary) | not yet |
-| GET | `/addresses/villages?search=` | Village/area lookup | ✅ live against company 496 |
-| GET | `/guests/companies/info-by-domain?domain=` | Resolve company by domain | not yet |
+| POST | `/ship/request/by-email` | Create shipment | ✅ HTTP 200 against company 496 |
+| GET  | `/guests/{companyId}/packages/tracking?barcode=&id=` | Full tracking history | wired, awaiting a live shipment old enough to have events |
+| GET  | `/guests/packages/status?barcode=&id=` | Latest status only | wired; `shipping:sync-tracking` polls this every 5 min |
+| PUT  | `/guests/{companyId}/packages/{shipmentId}/cancel` | Cancel | ✅ HTTP 200 (cancelled both test shipments) |
+| POST | `/guests/{companyId}/packages/pdf` | Print AWB(s) (returns PDF binary) | wired |
+| GET  | `/addresses/villages?search=` | Village/area lookup | ✅ live against company 496 (10 villages returned) |
+| GET  | `/guests/companies/info-by-domain?domain=` | Resolve company by domain | ✅ used by the "Resolve from domain" button on the connection form |
+| POST | `/auth/customer/login` | Validate email + password | ✅ used inside `testConnection` — hits HTTP 400 with an Arabic `{"error":"…"}` body on bad creds |
 
 **`getVillages` response shape** (live, from company 496):
 ```json
@@ -437,7 +443,48 @@ Controller parses `barcode` as the AWB and `barcodeImage` as the `awb_pdf` label
 
 **Village resolution**: `LogestechsService::resolveVillage($companyId, $query)` calls `/addresses/villages?search=` and returns `{id, englishName, arabicName, cityId, regionId, cityName, regionName, prefix}`. The controller branch passes the parcel's area/city `en_name` as the query and threads the resolved `{cityId, regionId}` into `destinationAddress`. Future work: cache resolutions per local area, or seed a `cities.logestechs_*` mapping column.
 
-**Sync**: still not implemented. Decide poll vs webhook based on what Logestechs surfaces — `getPackageStatus` (`/guests/packages/status?barcode=`) and `trackShipment` (`/guests/{companyId}/packages/tracking?barcode=`) both exist for polling.
+**Sync**: `logestechs:sync-tracking` (every 15 min, `withoutOverlapping()`). `app/Console/Commands/LogestechsSyncTracking.php` iterates `Parcels_3pl` rows where `parcel_3pl_name='logestechs'`, `awb_number` is set, `target_company_id` is set (skipped if null — needed as the `company-id` header), and the linked parcel isn't in a terminal status. Caps at 300 AWBs per run (`--limit=N`).
+
+Per row: calls `LogestechsService::getPackageStatus($targetCompanyId, $awb)`, probes the response for a status field (`status` / `currentStatus` / `state` / `packageStatus` / `shipmentStatus` — first non-empty wins, since the endpoint shape isn't formally documented), refreshes `parcels_3pl.current_status` + `status_datetime`, then maps the status string to `ParcelStatus` via tolerant substring matching:
+
+- `DELIVERED` / `COMPLETED` → `DELIVERED` (routed through `ParcelRepository::parcelDelivered()` if the parcel is in `DELIVERY_MAN_ASSIGN`, so balances + notifications fire)
+- `PARTIAL*` → `PARTIAL_DELIVERED`
+- `CANCEL*` → `CANCELLED` (model `updated` hook auto-logs the timeline event)
+- `RETURN*` + (`MERCHANT` | `SENDER` | `SHIPPER`) → `RETURN_RECEIVED_BY_MERCHANT`; other `RETURN*` → `RETURN_TO_COURIER`
+- `OUT_FOR_DELIVERY` / `WITH_DRIVER` / `ASSIGNED_TO_DELIVERY` → `DELIVERY_MAN_ASSIGN`
+- `PICKED_UP` / `COLLECTED` / `OUT_FOR_PICKUP` → `RECEIVED_BY_PICKUP_MAN`
+- `AT_HUB` / `IN_HUB` / `AT_WAREHOUSE` / `AT_BRANCH` → `RECEIVED_BY_HUB`
+- `IN_TRANSIT` / `EN_ROUTE` / `TRANSFER` → `TRANSFER_TO_HUB`
+- `FAILED` / `RESCHEDULE` / `POSTPONED` → `DELIVERY_RE_SCHEDULE`
+- `PENDING` / `DRAFT` / `CREATED` / `NEW` → `PENDING`
+- anything else → log-only with the raw status string (calibrate `mapStatus()` from `storage/logs/laravel.log` once real responses arrive)
+
+Status-field probing and the status-vocabulary mapping are best-effort — `getPackageStatus` hasn't been observed against a live Logestechs account end-to-end. Once you see the actual response shape and status names, tighten `extractStatus()` and `mapStatus()` in `LogestechsSyncTracking`. Same tenant-scoping caveat as the other 3PL sync jobs (runs unscoped until `parcels_3pl.company_id` is added — issue #3).
+
+**Cancel propagation**: not implemented. `LogestechsService::cancelShipment()` exists but isn't wired into the local cancel flow. Same gap as Zajel / Jet, with the extra wrinkle that Logestechs' cancel endpoint requires the customer `email` + `password` per call — we collect those at assign-time but don't persist them. Options: store encrypted on `parcels_3pl`, or re-prompt the admin on cancel.
+
+> **Superseded as of 2026-06-30.** The settings/sync/cancel notes below describe the *legacy* Logestechs implementation. Logestechs now lives in the new Shipping module (see [docs/shipping-architecture.md](docs/shipping-architecture.md)). The legacy `/admin/integrations/logestechs` route redirects to `/admin/shipping/connections`. The `logestechs:sync-tracking` command was deleted; the generic `shipping:sync-tracking` runs every 5 minutes. Old `LogestechsService` + `logestechs_settings` table + `LogestechsSettingsController` remain on disk for safety and will be removed in a follow-up cleanup PR.
+
+**Provider quirks discovered during first live test (2026-06-30):**
+- **`shipmentType` enum is `"COD"` only.** Postman example showed `"COD"` and my initial guess of `"NORMAL"` for zero-COD shipments was rejected with HTTP 400 `Invalid Parameter 'model.shipmentType' null`. Logestechs distinguishes COD vs non-COD via `pkg.cod` (integer amount), not this enum. `ShipmentRequestMapper::toBody` now always sends `'COD'`; non-COD shipments still validate cleanly because `pkg.cod = 0` is accepted.
+- **`ShipmentDTO::fromParcel` used to touch `$parcel->country`** — no such relationship exists on the Parcel model; threw `RelationNotFoundException`. Fixed by dropping the reference; the `country` field is now null unless a provider explicitly sets it via `ShipmentDTO->extra`.
+- **Bad email/password returns HTTP 400 with an Arabic error body.** The `/auth/customer/login` endpoint doesn't return 401 as one might expect: `{"error":"البريد الالكتروني/اسم المستخدم او كلمة المرور غير صحيحة"}`. `LogestechsProvider::validateLogin` uses `$resp->successful()` (only 2xx = OK), so this is correctly detected as invalid.
+- **Village lookup returns 0 hits for non-Saudi destinations.** Company 496 is Saudi-only; parcels destined for Dubai/Abu Dhabi return empty from `searchVillages`, so `destinationAddress.cityId` ends up null → HTTP 400 `Invalid Parameter 'model.cityId' null`. Not a bug — correct refusal — but worth flagging to operators.
+- **Edit page "Test connection" had a `__keep__` sentinel bug.** The React form couldn't send the stored password (never round-tripped to the client), so it sent the literal string `"__keep__"` to the backend, which forwarded it to Logestechs → HTTP 400. Fix: front-end now sends `connection_id` when editing; `ShippingConnectionsController::test()` hydrates the password from the row when it sees `connection_id` + blank password.
+- **`POST /admin/shipping/connections/test` route was being swallowed by the wildcard `POST /connections/{provider}` store route.** Laravel matches routes in registration order and `{provider}` greedy-matched `"test"` → dispatched to the wrong action → `ShippingProvider not found` for `code = 'test'`. Fix: literal routes registered before the wildcard in both `routes/web.php` and `routes/superadmin.php`.
+
+---
+
+**Legacy config page** (`/admin/integrations/logestechs` — redirected): per-tenant settings live in `logestechs_settings` (one row per `company_id`, migration `2026_06_30_113249_create_logestechs_settings_table.php`). Editable fields:
+- `enabled` — gate the integration on/off
+- `base_url` — overrides `LOGESTECHS_BASE_URL` from .env (production: `https://apisv2.logestechs.com/api`)
+- `integration_source` — overrides `LOGESTECHS_INTEGRATION_SOURCE` (the label sent on every createShipment payload, defaults to `"API"`)
+- `default_target_company_id` — pre-fills the "Logestechs Company ID" input on the bulk-assign screen
+- `default_email` — pre-fills the "Logestechs Account Email" input on the bulk-assign screen
+
+The page also includes a Test connection button that probes `/addresses/villages` against an optional target company id (defaults to the saved default). `LogestechsService` reads the per-tenant row in its constructor (`Settings::forCompany(settings()->id)`) and falls back to `config('services.logestechs.*')` if blank. The Integrations card surfaces "Default company id" / "Default email" extras when defaults are set, plus a "Config source" line (`DB row (per tenant)` vs `.env`). Controller: `app/Http/Controllers/Backend/LogestechsSettingsController.php`. View: `resources/js/Pages/Admin/Integrations/Logestechs/Index.jsx`. Routes are mounted in BOTH `routes/web.php` (tenant context) and `routes/superadmin.php` (central super-admin) under `hasPermission:integrations_read` / `_update`.
+
+No `LOGESTECHS_API_KEY` field is exposed — Logestechs auth is per-shipment via the `company-id` header + per-call email/password, so a global API key is unused. The `LOGESTECHS_API_KEY` env entry is therefore dead. Safe to remove; left in `.env.example` for now so existing installs don't error.
 
 ### iMile (planned — stub only)
 

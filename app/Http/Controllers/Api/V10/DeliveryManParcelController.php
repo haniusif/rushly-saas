@@ -63,8 +63,14 @@ class DeliveryManParcelController extends Controller
                 return $this->responseWithError(__('parcel.not_found'),
                     ['tracking_id' => $trackingId], 404);
             }
-            $userId = auth()->id();
-            if ((int) $parcel->delivery_man_id !== (int) optional($request->user()->deliveryMan)->id) {
+            // A parcel's driver lives on parcel_events, not parcels — there is
+            // no parcels.delivery_man_id column, so reading it here always
+            // yielded null and 403'd every caller. Resolve via the latest
+            // driver-bearing event instead, and require BOTH ids to be real so
+            // an unassigned parcel (0) can't match a driverless user (0).
+            $assignedDriverId = (int) optional($parcel->lastDeliveryMan)->delivery_man_id;
+            $callerDriverId   = (int) optional($request->user()->deliveryMan)->id;
+            if ($assignedDriverId === 0 || $assignedDriverId !== $callerDriverId) {
                 return $this->responseWithError(__('parcel.not_assigned'),
                     ['tracking_id' => $trackingId], 403);
             }

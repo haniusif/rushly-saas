@@ -4,10 +4,7 @@ import { CreditCard, ChevronLeft, ChevronRight } from 'lucide-react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { Button } from '@/Components/ui/Button';
-
-function Money({ value, currency }) {
-    return <span className="tabular-nums">{currency}{Number(value || 0).toFixed(2)}</span>;
-}
+import { Money } from '@/Components/CurrencySymbol';
 
 export default function Index({ rows = [], pagination = {}, currency = '', t = {} }) {
     const goPage = (u) => u && router.get(u, {}, { preserveState: true });
@@ -48,7 +45,7 @@ export default function Index({ rows = [], pagination = {}, currency = '', t = {
                                             <div className="font-mono text-[11px] text-muted-foreground">{r.from_account_no}</div>
                                         </td>
                                         <td className="px-4 py-3 font-mono text-xs">{r.transaction_id || '—'}</td>
-                                        <td className="px-4 py-3 text-end"><Money value={r.amount} currency={currency} /></td>
+                                        <td className="px-4 py-3 text-end"><Money value={r.amount} /></td>
                                         <td className="px-4 py-3 text-muted-foreground tabular-nums">{r.created_at}</td>
                                     </tr>
                                 ))}

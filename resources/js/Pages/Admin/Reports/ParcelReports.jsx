@@ -5,6 +5,7 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { Input } from '@/Components/ui/Input';
 import { Select } from '@/Components/ui/Select';
+import { CurrencySymbol } from '@/Components/CurrencySymbol';
 
 function fmt(n) {
     const v = Number(n) || 0;
@@ -159,7 +160,7 @@ export default function ParcelReports({
                                             <td className="px-4 py-2.5">{r.status_label}</td>
                                             <td className="px-4 py-2.5 text-end tabular-nums">{r.count}</td>
                                             <td className="px-4 py-2.5 text-end tabular-nums">
-                                                {fmt(r.cash)} <span className="text-xs text-muted-foreground">{currency}</span>
+                                                {fmt(r.cash)} <CurrencySymbol className="text-xs text-muted-foreground" />
                                             </td>
                                         </tr>
                                     ))}
@@ -169,7 +170,7 @@ export default function ParcelReports({
                                         <td colSpan="2" className="px-4 py-2.5 font-semibold">{t.total}</td>
                                         <td className="px-4 py-2.5 text-end tabular-nums font-semibold">{totals.count}</td>
                                         <td className="px-4 py-2.5 text-end tabular-nums font-semibold">
-                                            {fmt(totals.cash)} <span className="text-xs text-muted-foreground">{currency}</span>
+                                            {fmt(totals.cash)} <CurrencySymbol className="text-xs text-muted-foreground" />
                                         </td>
                                     </tr>
                                 </tfoot>

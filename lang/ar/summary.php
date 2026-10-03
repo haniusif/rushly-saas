@@ -32,4 +32,18 @@ return [
     'top_deliverymen_col_delivered'  => 'مُسلَّمة',
     'top_deliverymen_col_performance' => 'الأداء',
     'top_deliverymen_empty'          => 'لا يوجد مندوبون بعد.',
+
+    'status_donut_title' => 'توزيع شحنات اليوم',
+    'status_donut_subtitle' => 'حسب الحالة الحالية',
+    'status_donut_empty' => 'لم يتم إنشاء أي شحنة اليوم بعد.',
+    'status_delivered' => 'تم التسليم',
+    'status_ofd' => 'خارج للتوصيل',
+    'status_pending' => 'بانتظار الاستلام',
+    'status_returned' => 'مُرتجع',
+    'status_cancelled' => 'ملغي',
+    'status_other' => 'قيد النقل',
+    'week_ring_title' => 'نسبة النجاح هذا الأسبوع',
+    'week_ring_subtitle' => 'المُسلَّم مقابل المنتهي، آخر ٧ أيام',
+    'week_ring_delivered' => 'تم التسليم',
+    'week_ring_created' => 'تم الإنشاء',
 ];

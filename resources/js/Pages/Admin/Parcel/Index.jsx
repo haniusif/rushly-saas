@@ -16,17 +16,24 @@ import {
 } from '@/Components/ui/DropdownMenu';
 import ShipmentDrawer from '@/Components/parcel/ShipmentDrawer';
 import ChangeStatusModal from '@/Components/parcel/ChangeStatusModal';
+import { Money } from '@/Components/CurrencySymbol';
 import { cn } from '@/lib/utils';
 
-function Money({ value, currency }) {
-    const n = Number(value || 0);
-    return (
-        <span className="tabular-nums">
-            <span className="text-muted-foreground text-xs me-0.5">{currency}</span>
-            {n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-        </span>
-    );
+/**
+ * Append the active filter state to a URL so a download or a navigation
+ * respects what is currently on screen. Empty values are dropped.
+ */
+function withFilters(url, filters) {
+    if (!url) return url;
+    const params = new URLSearchParams();
+    Object.entries(filters || {}).forEach(([k, v]) => {
+        if (v !== '' && v !== null && v !== undefined) params.set(k, String(v));
+    });
+    const qs = params.toString();
+    if (!qs) return url;
+    return url + (url.includes('?') ? '&' : '?') + qs;
 }
+
 
 // Backend (ParcelStatusHelper::color) sends a curated hex per status:
 // e.g. PENDING #6c757d, DELIVERED #16a34a, NDR_CREATED #ef4444, *_CANCEL #475569.
@@ -233,7 +240,9 @@ export default function Index({
     const submitFilter = (e) => {
         e?.preventDefault?.();
         setSubmitting(true);
-        router.get(urls.filter, draft, {
+        // `search` lives in its own state, so it has to be merged in or
+        // applying a filter would discard the operator's search term.
+        router.get(urls.filter, { ...draft, search }, {
             preserveState: true,
             preserveScroll: true,
             replace: true,
@@ -243,10 +252,14 @@ export default function Index({
 
     const submitSearch = (e) => {
         e?.preventDefault?.();
-        router.get(urls.specific_search, { search }, { preserveState: true });
+        // Through parcel.filter, not the standalone search endpoint: that one
+        // ignores every other filter, so searching used to silently discard
+        // the merchant / status / date the operator had set.
+        router.get(urls.filter, { ...draft, search }, { preserveState: true });
     };
 
     const clear = () => {
+        setSearch('');
         setDraft({
             parcel_date: '', parcel_status: '', parcel_merchant_id: '',
             parcel_deliveryman_id: '', parcel_pickupman_id: '', invoice_id: '',
@@ -512,7 +525,7 @@ export default function Index({
                     <a href={urls.parcel_map} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent transition-colors">
                         <Map className="h-4 w-4 me-1" /> {t.map_label}
                     </a>
-                    <a href={urls.export} className="inline-flex h-9 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 px-3 text-sm font-medium hover:bg-sky-100 transition-colors">
+                    <a href={withFilters(urls.export, { ...filters, search })} className="inline-flex h-9 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 px-3 text-sm font-medium hover:bg-sky-100 transition-colors">
                         <Download className="h-4 w-4 me-1" /> {exportLabel}
                     </a>
                     <a href={urls.import} className="inline-flex h-9 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 px-3 text-sm font-medium hover:bg-emerald-100 transition-colors">
@@ -765,7 +778,7 @@ export default function Index({
                                                 <div className="flex items-baseline justify-between gap-2">
                                                     <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{t.cod}</span>
                                                     <span className="text-sm font-bold tabular-nums">
-                                                        <Money value={r.cash_collection} currency={currency} />
+                                                        <Money value={r.cash_collection} />
                                                     </span>
                                                 </div>
                                                 {/* Finance breakdown (permission-gated) */}
@@ -773,15 +786,15 @@ export default function Index({
                                                     <div className="mt-1.5 pt-1.5 border-t border-border/60 space-y-0.5 text-[11px]">
                                                         <div className="flex items-baseline justify-between gap-2">
                                                             <span className="text-muted-foreground">{t.total_charge}</span>
-                                                            <span className="tabular-nums"><Money value={r.total_delivery_amount} currency={currency} /></span>
+                                                            <span className="tabular-nums"><Money value={r.total_delivery_amount} /></span>
                                                         </div>
                                                         <div className="flex items-baseline justify-between gap-2">
                                                             <span className="text-muted-foreground">{t.vat}</span>
-                                                            <span className="tabular-nums"><Money value={r.vat_amount} currency={currency} /></span>
+                                                            <span className="tabular-nums"><Money value={r.vat_amount} /></span>
                                                         </div>
                                                         <div className="flex items-baseline justify-between gap-2 pt-0.5">
                                                             <span className="font-semibold text-foreground">{t.current_payable}</span>
-                                                            <span className="font-semibold tabular-nums"><Money value={r.current_payable} currency={currency} /></span>
+                                                            <span className="font-semibold tabular-nums"><Money value={r.current_payable} /></span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1124,7 +1137,7 @@ function ParcelCard({
                     <div className="min-w-0">
                         <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t.cod}</div>
                         <div className="text-lg font-bold tabular-nums">
-                            <Money value={r.cash_collection} currency={currency} />
+                            <Money value={r.cash_collection} />
                         </div>
                         <div className="text-[10px] text-muted-foreground">
                             {t.attempts}: <span className="font-medium tabular-nums">{r.attempts ?? 0}</span>

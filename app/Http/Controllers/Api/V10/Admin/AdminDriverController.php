@@ -47,10 +47,10 @@ class AdminDriverController extends Controller
         $this->ensureHubMatch($driver, $request->user());
 
         $today = today();
-        $assignedToday = Parcel::where('delivery_man_id', $driver->id)
+        $assignedToday = Parcel::assignedToDriver($driver->id)
             ->whereDate('updated_at', $today)
             ->count();
-        $deliveredToday = Parcel::where('delivery_man_id', $driver->id)
+        $deliveredToday = Parcel::assignedToDriver($driver->id)
             ->where('status', ParcelStatus::DELIVERED)
             ->whereDate('updated_at', $today)
             ->count();

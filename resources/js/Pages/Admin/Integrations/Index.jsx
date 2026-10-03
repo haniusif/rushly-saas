@@ -24,7 +24,26 @@ const BRAND_ICONS = {
 };
 
 // Brands available via the simple-icons CDN (CC0). Verified at build time.
-const SIMPLE_ICONS_SLUGS = new Set(['salla', 'shopify', 'woocommerce', 'odoo', 'jet']);
+// Order of fallback: real logo on disk → /integrations/{key}.svg → simpleicons CDN → Lucide icon.
+const SIMPLE_ICONS_SLUGS = new Set([
+    'salla', 'shopify', 'woocommerce', 'odoo', 'jet',
+    'stripe', 'googlemaps', 'aramex',
+]);
+
+// Brand-key alias map: turn the controller's key into the simple-icons slug
+// when they differ. Returned from brandCdnUrl.
+const SIMPLE_ICONS_ALIAS = {
+    'google-maps':            'googlemaps',
+    'saudi-national-address': null,           // no CDN icon — falls through to Lucide
+    'jt-express':             'jet',
+    'panda':                  null,
+    'zajel':                  null,
+    'qoyod':                  null,
+    'daftra':                 null,
+    'moyasar':                null,
+    'clickpay':               null,
+    'stcpay':                 null,
+};
 
 function iconFor(key, fallback) {
     return BRAND_ICONS[String(key || '').toLowerCase()] || fallback;
@@ -40,6 +59,10 @@ function brandLogoUrl(key) {
 
 function brandCdnUrl(key) {
     const k = String(key || '').toLowerCase();
+    if (k in SIMPLE_ICONS_ALIAS) {
+        const slug = SIMPLE_ICONS_ALIAS[k];
+        return slug && SIMPLE_ICONS_SLUGS.has(slug) ? `https://cdn.simpleicons.org/${slug}` : null;
+    }
     return SIMPLE_ICONS_SLUGS.has(k) ? `https://cdn.simpleicons.org/${k}` : null;
 }
 import AdminLayout from '@/Layouts/AdminLayout';
@@ -190,25 +213,37 @@ function ThreePlCard({ p, t }) {
                     <DLRow label={t.api_base}>
                         {p.base_url ? <MonoVal>{p.base_url}</MonoVal> : <span className="text-muted-foreground">—</span>}
                     </DLRow>
-                    <DLRow label={t.api_key}>
-                        {p.key_set
-                            ? <MonoVal>••••{p.key_tail}</MonoVal>
-                            : <span className="text-destructive">{t.not_set}</span>}
-                    </DLRow>
+                    {p.key_tail !== null && (
+                        <DLRow label={t.api_key}>
+                            {p.key_set
+                                ? <MonoVal>••••{p.key_tail}</MonoVal>
+                                : <span className="text-destructive">{t.not_set}</span>}
+                        </DLRow>
+                    )}
                     <DLRow label={t.parcels_assigned}>
                         <strong className="tabular-nums">{Number(p.parcels || 0).toLocaleString()}</strong>
                     </DLRow>
                     {Object.entries(p.extras || {}).map(([label, value]) =>
                         value ? <DLRow key={label} label={label}><MonoVal>{value}</MonoVal></DLRow> : null
                     )}
-                    <DLRow label={t.config_source}>
-                        <MonoVal>.env / config/services.php</MonoVal>
-                    </DLRow>
+                    {!p.extras?.['Config source'] && (
+                        <DLRow label={t.config_source}>
+                            <MonoVal>.env / config/services.php</MonoVal>
+                        </DLRow>
+                    )}
                 </dl>
 
-                <div className="mt-auto pt-3 border-t border-border flex items-start gap-2 text-[11px] text-muted-foreground">
-                    <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                    <span>{t.three_pl_note}</span>
+                <div className="mt-auto pt-3 border-t border-border flex flex-wrap items-center justify-between gap-2">
+                    {p.settings_url ? (
+                        <a href={p.settings_url} className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+                            {t.configure}
+                        </a>
+                    ) : (
+                        <div className="flex items-start gap-2 text-[11px] text-muted-foreground">
+                            <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                            <span>{t.three_pl_note}</span>
+                        </div>
+                    )}
                 </div>
             </CardContent>
         </Card>
@@ -224,7 +259,7 @@ function PaymentsCard({ p, t }) {
         <Card className="flex flex-col h-full">
             <CardContent className="p-5 flex flex-col h-full">
                 <div className="flex items-center gap-3 mb-4">
-                    <LogoBox name={p.name} brandKey={p.key} Icon={iconFor(p.key, Receipt)} />
+                    <LogoBox src={p.logo_url} name={p.name} brandKey={p.key} Icon={iconFor(p.key, Receipt)} />
                     <div className="flex-1 min-w-0">
                         <h3 className="text-base font-semibold">{p.name}</h3>
                         <p className="text-xs text-muted-foreground">{p.host}</p>
@@ -266,7 +301,7 @@ function AccountingCard({ a, t, fallbackIcon = Calculator }) {
         <Card className="flex flex-col h-full">
             <CardContent className="p-5 flex flex-col h-full">
                 <div className="flex items-center gap-3 mb-4">
-                    <LogoBox name={a.name} brandKey={a.key} Icon={iconFor(a.key, fallbackIcon)} />
+                    <LogoBox src={a.logo_url} name={a.name} brandKey={a.key} Icon={iconFor(a.key, fallbackIcon)} />
                     <div className="flex-1 min-w-0">
                         <h3 className="text-base font-semibold">{a.name}</h3>
                         <p className="text-xs text-muted-foreground">{a.host}</p>

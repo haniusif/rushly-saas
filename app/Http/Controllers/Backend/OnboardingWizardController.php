@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Providers\RouteServiceProvider;
 use App\Models\Backend\Currency;
 use App\Models\Backend\Deliverycategory;
 use App\Models\Backend\GeneralSettings;
@@ -141,7 +142,10 @@ class OnboardingWizardController extends Controller
                 ->where('id', $s->id)
                 ->update(['onboarding_completed_at' => now()]);
         }
-        return redirect('/summary');
+        // Follow HOME rather than hardcoding /summary: that page is gated on
+        // summary_read now, so a tenant finishing onboarding would have been
+        // bounced to the public site by PermissionCheckMiddleware.
+        return redirect(RouteServiceProvider::HOME);
     }
 
     private function safeRoute(string $name, string $fallback): string

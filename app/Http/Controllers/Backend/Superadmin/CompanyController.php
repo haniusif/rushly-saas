@@ -7,6 +7,7 @@ use App\Http\Requests\Company\SignUpRequest;
 use App\Http\Requests\Company\StoreRequest;
 use App\Http\Requests\Company\UpdateRequest;
 use App\Http\Requests\Merchant\OtpRequest;
+use App\Enums\UserType;
 use App\Models\Backend\Superadmin\Plan;
 use App\Models\User;
 use App\Repositories\Currency\CurrencyInterface;
@@ -15,6 +16,8 @@ use App\Repositories\Superadmin\Plan\PlanInterface;
 use App\Repositories\User\UserInterface;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class CompanyController extends Controller
@@ -35,10 +38,11 @@ class CompanyController extends Controller
         $this->planRepo     = $planRepo;
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        // Paginator of company-owner Users (user_type=ADMIN, company_owner=YES).
-        $companies = $this->repo->get();
+        // Paginator of company-owner Users (user_type=ADMIN, company_owner=YES),
+        // filtered by the search box + plan/status filters.
+        $companies = $this->repo->get($request);
 
         // Flatten each row for React consumption. Legacy Blade relied on
         // magic property chains (`$c->company->plan->modules`) that produce
@@ -82,12 +86,16 @@ class CompanyController extends Controller
                 ],
                 'domains'       => $domains,
                 'urls'          => [
-                    'edit'      => route('company.edit', $u->id),
-                    'delete'    => route('company.delete', $u->company_id ?? $u->id),
-                    'subscribe' => route('company.subscription.switch', $u->id),
+                    'edit'        => route('company.edit', $u->id),
+                    'delete'      => route('company.delete', $u->company_id ?? $u->id),
+                    'subscribe'   => route('company.subscription.switch', $u->id),
+                    'impersonate' => route('company.impersonate', $u->id),
                 ],
             ];
         })->values();
+
+        // "Login as company" is super-admin only (no granular permission).
+        $canImpersonate = (int) optional(\Auth::user())->user_type === UserType::SUPER_ADMIN;
 
         return Inertia::render('Admin/Superadmin/Company/Index', [
             'rows'        => $rows,
@@ -105,15 +113,28 @@ class CompanyController extends Controller
                 ])->values(),
             ],
             'permissions' => [
-                'create'    => hasPermission('company_create'),
-                'update'    => hasPermission('company_update'),
-                'delete'    => hasPermission('company_delete'),
-                'subscribe' => hasPermission('company_subscribe'),
+                'create'      => hasPermission('company_create'),
+                'update'      => hasPermission('company_update'),
+                'delete'      => hasPermission('company_delete'),
+                'subscribe'   => hasPermission('company_subscribe'),
+                'impersonate' => $canImpersonate,
             ],
             'urls'        => [
                 'create'    => route('company.create'),
                 'dashboard' => route('dashboard.index'),
+                'index'     => route('company.index'),
             ],
+            'filters'     => [
+                'q'        => (string) $request->get('q', ''),
+                'plan'     => $request->get('plan', ''),
+                'status'   => $request->get('status', ''),
+                'per_page' => (int) $request->get('per_page', 50),
+            ],
+            'perPageOptions' => [10, 25, 50, 100],
+            'planOptions' => Plan::orderBy('name')->get(['id', 'name'])->map(fn ($p) => [
+                'value' => (string) $p->id,
+                'label' => $p->name,
+            ])->values(),
             't'           => [
                 'title'         => __('menus.company') ?: 'Companies',
                 'breadcrumb'    => __('levels.dashboard'),
@@ -135,6 +156,19 @@ class CompanyController extends Controller
                 'expired'       => __('levels.expired'),
                 'no_data'       => __('levels.no_data_found'),
                 'confirm_delete'=> __('delete.company') ?: 'Delete this company?',
+                'login_as'      => __('company.login_as') ?: 'Login as company',
+                'impersonate_confirm' => __('company.impersonate_confirm') ?: 'Log in as this company owner? You can return to your admin session afterwards.',
+                'view'          => __('company.view') ?: 'View',
+                'list_view'     => __('company.list_view') ?: 'List view',
+                'card_view'     => __('company.card_view') ?: 'Card view',
+                'search'        => __('company.search') ?: 'Search companies…',
+                'all_plans'     => __('company.all_plans') ?: 'All plans',
+                'all_statuses'  => __('company.all_statuses') ?: 'All statuses',
+                'active'        => __('status.1') ?: 'Active',
+                'inactive'      => __('status.0') ?: 'Inactive',
+                'clear'         => __('company.clear') ?: 'Clear',
+                'no_results'    => __('company.no_results') ?: 'No companies match your filters.',
+                'per_page'      => __('company.per_page') ?: 'Per page',
             ],
         ]);
     }
@@ -196,10 +230,13 @@ class CompanyController extends Controller
                 'status'             => $isEdit ? (string) $user->status : (string) \App\Enums\Status::ACTIVE,
             ],
             'lookups' => [
-                'currencies'   => collect($this->currencyRepo->getActive())->map(fn ($c) => [
-                    'value' => $c->symbol,
-                    'label' => $c->name.' '.$c->symbol,
-                ])->values(),
+                'currencies'   => collect($this->currencyRepo->getActive())
+                    ->filter(fn ($c) => ! empty($c->code))
+                    ->unique('code')
+                    ->map(fn ($c) => [
+                        'value' => $c->code,
+                        'label' => trim($c->name.' '.$c->symbol.' ('.$c->code.')'),
+                    ])->values(),
                 'plans'        => collect($this->planRepo->getActive())->map(fn ($p) => [
                     'value' => (string) $p->id,
                     'label' => $p->name,
@@ -379,5 +416,169 @@ class CompanyController extends Controller
         }
     }
 
-    
+    /**
+     * Start a "login as company" session.
+     *
+     * The super-admin runs on the CENTRAL host, but tenancy is identified by
+     * DOMAIN (InitializeTenancyByDomain) and the tenant dashboard + stop routes
+     * are only registered on the tenant's own subdomain. So we can't just swap
+     * the auth user here — we hand off across hosts:
+     *
+     *   1. (here, central) mint a single-use token in the cache and redirect the
+     *      browser to the owner's tenant subdomain /impersonate/consume/{token}.
+     *   2. (consume, tenant host) validate the token, log the owner in INSIDE
+     *      their tenant context, and land on their real dashboard.
+     *
+     * This method is reached by a native form POST (see Company/Index.jsx), so a
+     * plain cross-host redirect is followed by the browser directly.
+     *
+     * Hard-gated to SUPER_ADMIN.
+     *
+     * @param int $id  The company-owner User id (the id used on the index rows).
+     */
+    public function impersonate($id, Request $request)
+    {
+        $admin = \Auth::user();
+        if (! $admin) {
+            abort(403);
+        }
+
+        // Super-admin only — no granular permission for this action.
+        if ((int) $admin->user_type !== UserType::SUPER_ADMIN) {
+            abort(403);
+        }
+
+        // Target must be a company-owner admin user.
+        $owner = User::where('id', $id)
+            ->where('user_type', UserType::ADMIN)
+            ->first();
+
+        if (! $owner) {
+            Toastr::error(__('merchant.error_msg'), __('message.error'));
+            return redirect()->back();
+        }
+
+        if ($admin->id === $owner->id) {
+            Toastr::error("Can't impersonate yourself.", __('message.error'));
+            return redirect()->back();
+        }
+
+        // Resolve the owner's tenant subdomain — we have to land them there,
+        // since that's where their tenant context and dashboard live.
+        $domain = optional(optional(optional($owner->tenantDetails)->domains)->first())->domain;
+        if (! $domain) {
+            Toastr::error(__('company.no_domain') ?: 'This company has no domain to log in to.', __('message.error'));
+            return redirect()->back();
+        }
+
+        // Single-use, 60s handoff token stored in the shared DB. Cache can't be
+        // used here: the tenancy cache bootstrapper re-scopes (and tags) the
+        // cache per tenant, so a key written on the central host is invisible
+        // on the tenant host. The DB is NOT swapped per tenant (no database
+        // tenancy bootstrapper), so this row is readable from both hosts.
+        $token = Str::random(64);
+        DB::table('impersonation_tokens')->insert([
+            'token'           => $token,
+            'user_id'         => $owner->id,
+            'impersonator_id' => $admin->id,
+            'company_id'      => $owner->company_id,
+            'expires_at'      => now()->addSeconds(60),
+            'created_at'      => now(),
+        ]);
+
+        // Audit trail — spatie/activitylog, as used by merchant impersonation.
+        try {
+            activity('impersonation')
+                ->causedBy($admin)
+                ->performedOn($owner)
+                ->withProperties([
+                    'admin_id'    => $admin->id,
+                    'admin_email' => $admin->email,
+                    'company_id'  => $owner->company_id,
+                    'target_user' => $owner->email,
+                    'domain'      => $domain,
+                    'ip'          => $request->ip(),
+                ])
+                ->log('Started company impersonation');
+        } catch (\Throwable $e) { /* activity log not critical */ }
+
+        $url = rtrim(scheme_name($domain), '/') . '/impersonate/consume/' . $token;
+        return redirect()->away($url);
+    }
+
+    /**
+     * Consume a handoff token on the TENANT subdomain and log the owner in.
+     * Runs inside the tenant route group (InitializeTenancyByDomain), guest-
+     * accessible — logging in is the whole point.
+     */
+    public function consume($token, Request $request)
+    {
+        // Single-use: read then immediately delete the row. Also sweep expired
+        // tokens so the table can't grow unbounded.
+        $row = DB::table('impersonation_tokens')->where('token', $token)->first();
+        DB::table('impersonation_tokens')->where('token', $token)->delete();
+        DB::table('impersonation_tokens')->where('expires_at', '<', now())->delete();
+
+        if (! $row || now()->greaterThan($row->expires_at)) {
+            Toastr::error(__('company.impersonate_expired') ?: 'This login link has expired. Please try again.', __('message.error'));
+            return redirect()->route('login');
+        }
+
+        $owner = User::where('id', $row->user_id)
+            ->where('user_type', UserType::ADMIN)
+            ->first();
+        if (! $owner) {
+            Toastr::error(__('merchant.error_msg'), __('message.error'));
+            return redirect()->route('login');
+        }
+
+        // The token must be consumed on the owner's OWN tenant subdomain.
+        $tenant = function_exists('tenant') ? tenant() : null;
+        if ($tenant && (string) $tenant->company_id !== (string) $owner->company_id) {
+            abort(403);
+        }
+
+        $request->session()->put('impersonator_id', $row->impersonator_id);
+        \Auth::login($owner);
+
+        try {
+            activity('impersonation')
+                ->causedBy(User::find($row->impersonator_id))
+                ->performedOn($owner)
+                ->withProperties(['company_id' => $owner->company_id, 'target_user' => $owner->email, 'ip' => $request->ip()])
+                ->log('Entered company impersonation');
+        } catch (\Throwable $e) { /* ignore */ }
+
+        return redirect()->route('dashboard.index');
+    }
+
+    /**
+     * End a "login as company" session (runs on the tenant subdomain, reached by
+     * a native form POST from the impersonation banner). Destroys the owner
+     * session here and sends the super-admin back to the central companies page —
+     * their original central session was never touched, so they land logged in.
+     */
+    public function stopImpersonate(Request $request)
+    {
+        $adminId = $request->session()->pull('impersonator_id');
+
+        \Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        if ($adminId) {
+            try {
+                activity('impersonation')
+                    ->causedBy(User::find($adminId))
+                    ->withProperties(['admin_id' => $adminId, 'restored_at' => now()->toIso8601String()])
+                    ->log('Stopped company impersonation');
+            } catch (\Throwable $e) { /* ignore */ }
+        }
+
+        // Absolute central URL — route('company.index') isn't registered on the
+        // tenant host this runs on.
+        $central = rtrim(config('app.url'), '/') . '/super-admin/company';
+        return redirect()->away($central);
+    }
+
 }

@@ -13,7 +13,12 @@ return [
     |
     */
 
-    'failed'            => 'حسابك غير مُفعَّل، يرجى التواصل مع المسؤول!',
+    'failed'            => 'بيانات الاعتماد هذه لا تطابق سجلاتنا.',
+
+    // Shown ONLY when the account really is disabled — see
+    // LoginController::sendFailedLoginResponse(). Every other login
+    // failure (wrong password, wrong tenant) uses 'failed' above.
+    'inactive'            => 'حسابك غير مُفعَّل، يرجى التواصل مع المسؤول!',
     'password'          => 'كلمة المرور المُدخلة غير صحيحة.',
     'throttle'          => 'محاولات تسجيل دخول كثيرة جداً. يرجى المحاولة مرة أخرى بعد :seconds ثانية.',
     'token_refresh'     => 'تم تحديث الرموز',

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Backend;
 
+use App\Enums\DeliveryType;
 use App\Enums\ParcelStatus;
 use App\Enums\Status;
 use App\Enums\UserType;
@@ -122,17 +123,31 @@ class ParcelController extends Controller
      */
     private function renderParcelIndex($paginator, Request $request, $paginate)
     {
-        $deliverymans = $this->deliveryman->all();
+        $deliverymans = $this->deliveryman->selectable();
         $hubs         = $this->hub->all();
         $merchants    = \App\Models\Backend\Merchant::companywise()
             ->where('status', 1)
             ->orderBy('business_name')
             ->get(['id', 'business_name']);
 
+        // The courier column walks lastDeliveryMan -> deliveryMan -> user. Load
+        // that chain for the whole page in one pass; per row it is three
+        // queries, so a 10-row page was issuing thirty on its own.
+        $paginator->getCollection()->load(['lastDeliveryMan.deliveryMan.user']);
+
         $rows = collect($paginator->items())->map(function ($p) {
             $statusId = (int) $p->status;
             $invoice  = $p->admin_parcel_invoice ?? null;
-            $assignedDeliveryman = optional(optional($p->lastParcelEvent)->deliveryMan->user ?? null)->name;
+            // lastDeliveryMan, NOT lastParcelEvent. lastParcelEvent is the
+            // latest event of ANY kind, so as soon as anything happened after
+            // the assignment — a status change, a hub receipt, a delivery
+            // attempt — that newer event became the "last" one, its
+            // delivery_man_id was null, and the courier name silently vanished
+            // from the column. It only ever showed while the assignment was
+            // still the single most recent event, which in practice is almost
+            // never. lastDeliveryMan filters to driver-bearing events, which is
+            // what this column has always meant.
+            $assignedDeliveryman = optional(optional($p->lastDeliveryMan)->deliveryMan->user ?? null)->name;
             return [
                 'id'                    => $p->id,
                 'tracking_id'           => $p->tracking_id,
@@ -474,10 +489,7 @@ class ParcelController extends Controller
                 'name'  => $p->name,
                 'price' => (float) $p->price,
             ])->values(),
-            'delivery_types'   => collect($deliveryTypes)->map(fn ($d) => [
-                'id'   => $d->id,
-                'name' => $d->name ?? $d->key ?? $d->id,
-            ])->values(),
+            'delivery_types'   => $this->deliveryTypeOptions(),
             'settings' => [
                 'currency'              => settings()->currency,
                 'vat_tax'               => (float) (settings()->vat ?? 0),
@@ -591,6 +603,202 @@ class ParcelController extends Controller
             ->with('error', __('parcel.error_msg'));
     }
 
+
+    /**
+     * Delivery-type options for the front-end, keyed by the DeliveryType ENUM.
+     *
+     * repo->deliveryTypes() returns Config ROWS, whose ids (47, 48, 51…) have
+     * nothing to do with the DeliveryType enum (1-4) that ParcelRepository
+     * compares delivery_type_id against. Emitting the config id — which every
+     * parcel form did — meant the repository's COD-tier branch and its
+     * pickup/delivery-date branches never matched, so shipments saved with
+     * cod_charge 0 and both dates null. Translate the config key to the enum
+     * value here so what the form posts is what the repository understands.
+     *
+     * Config rows can repeat a key across tenants (sub_city exists at 47 and
+     * 53), hence the unique().
+     */
+    private function deliveryTypeOptions()
+    {
+        $byKey = [
+            'same_day'     => DeliveryType::SAMEDAY,
+            'next_day'     => DeliveryType::NEXTDAY,
+            'sub_city'     => DeliveryType::SUBCITY,
+            'outside_city' => DeliveryType::OUTSIDECITY,
+        ];
+
+        return collect($this->repo->deliveryTypes())
+            ->map(function ($d) use ($byKey) {
+                $key  = strtolower((string) ($d->key ?? ''));
+                $enum = $byKey[$key] ?? null;
+                if (! $enum) {
+                    return null;
+                }
+                // Same label source the merchant panel uses, so both forms read
+                // "Same Day" rather than the raw config key. Look up on the
+                // ORIGINAL key — lang/*/deliveryType.php keeps the legacy
+                // capitalisation ('outside_City'), which the lowercased key
+                // used for enum matching would miss.
+                foreach ([$d->key ?? '', $key, $enum] as $candidate) {
+                    $label = __('deliveryType.' . $candidate);
+                    if ($label !== 'deliveryType.' . $candidate) {
+                        return ['id' => $enum, 'name' => $label];
+                    }
+                }
+
+                return ['id' => $enum, 'name' => $d->name ?? $key];
+            })
+            ->filter()
+            ->unique('id')
+            ->values();
+    }
+
+    /**
+     * Lookup data for the navbar Quick Shipment modal.
+     *
+     * The modal lives in AdminLayout's Topbar, which renders on every admin
+     * page and therefore has no page props to read merchants/cities from.
+     * Rather than push this onto every Inertia response, the modal fetches it
+     * once, lazily, the first time it is opened.
+     */
+    public function quickCreateLookups()
+    {
+        $merchants = Merchant::companywise()->where('status', Status::ACTIVE)
+            ->with('user')->orderBy('business_name')->get();
+
+        return response()->json([
+            'merchants' => collect($merchants)->map(fn ($m) => [
+                'id'             => $m->id,
+                'name'           => $m->business_name,
+                'vat'            => (float) ($m->vat ?? 0),
+                'cod_charges'    => [
+                    'inside_city'  => (float) (data_get($m, 'cod_charges.inside_city') ?? 0),
+                    'sub_city'     => (float) (data_get($m, 'cod_charges.sub_city') ?? 0),
+                    'outside_city' => (float) (data_get($m, 'cod_charges.outside_city') ?? 0),
+                ],
+                'pickup_phone'   => optional($m->user)->mobile,
+                'pickup_address' => $m->address,
+            ])->values(),
+            'cities' => collect($this->repo->cities())->map(fn ($c) => [
+                'id'   => $c->id,
+                'name' => $c->en_name ?: $c->name,
+            ])->values(),
+            'currency' => settings()->currency,
+        ]);
+    }
+
+    /**
+     * Create a shipment from the navbar Quick Shipment modal.
+     *
+     * Deliberately a separate entry point from store(): the modal collects only
+     * pickup / receiver / COD / notes, while Parcel\StoreRequest additionally
+     * demands category_id and delivery_type_id, and the full Inertia form
+     * computes chargeDetails in the browser. Here both are resolved server-side
+     * — the client never supplies pricing — and the assembled request is handed
+     * to the SAME repository store() the full form uses, so tracking-id
+     * generation, parcel events, wallet debits and hub assignment all behave
+     * identically. Anything the modal omits stays editable afterwards on the
+     * normal edit screen.
+     *
+     * Responds with JSON (not a redirect) because the caller is a fetch() from
+     * a modal that stays open on failure to show the error inline.
+     */
+    public function quickStore(Request $request)
+    {
+        $data = $request->validate([
+            'merchant_id'      => ['required', 'numeric'],
+            'pickup_phone'     => ['required', 'string', 'max:191'],
+            'pickup_address'   => ['required', 'string', 'max:191'],
+            'customer_name'    => ['required', 'string', 'max:191'],
+            'customer_phone'   => ['required', 'string', 'max:191'],
+            'customer_address' => ['required', 'string', 'max:191'],
+            'city_id'          => ['required', 'numeric'],
+            'cash_collection'  => ['nullable', 'numeric', 'min:0'],
+            'note'             => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        // Same subscription / quota gates as store() — a cheaper entry point
+        // must not become a way around the plan limit.
+        $parcelCount = Parcel::companywise()->count();
+        if (! settings()->subscription) {
+            return response()->json([
+                'message' => __('Your workspace has no active subscription. Contact billing.'),
+            ], 422);
+        }
+        if (settings()->subscription->parcel_count <= $parcelCount) {
+            return response()->json([
+                'message' => __('You have reached your parcel limit. Upgrade your package to create more.'),
+            ], 422);
+        }
+
+        $merchant = Merchant::companywise()->find($data['merchant_id']);
+        if (! $merchant) {
+            return response()->json(['message' => __('parcel.error_msg')], 422);
+        }
+
+        $categoryId = optional(collect($this->repo->deliveryCategories())->first())->id;
+
+        // Fastest enabled service, already translated to the DeliveryType enum
+        // by deliveryTypeOptions() — see the note there on why the raw config
+        // id must never reach the repository.
+        $options        = $this->deliveryTypeOptions();
+        $deliveryTypeId = collect([
+            DeliveryType::SAMEDAY, DeliveryType::NEXTDAY,
+            DeliveryType::SUBCITY, DeliveryType::OUTSIDECITY,
+        ])->first(fn ($enum) => $options->contains('id', $enum));
+
+        if (! $categoryId || ! $deliveryTypeId) {
+            return response()->json([
+                'message' => __('Configure at least one delivery category and delivery type before using quick create.'),
+            ], 422);
+        }
+
+        // Pricing, server-side. Mirrors the arithmetic in ParcelForm.jsx, minus
+        // the packaging/fragile extras the modal has no fields for. The COD
+        // tier follows the same delivery-type split the repository uses.
+        $cashCollection = (float) ($data['cash_collection'] ?? 0);
+        $codTier        = match ($deliveryTypeId) {
+            DeliveryType::SUBCITY     => 'sub_city',
+            DeliveryType::OUTSIDECITY => 'outside_city',
+            default                   => 'inside_city',
+        };
+        $codPct         = (float) (data_get($merchant, 'cod_charges.' . $codTier) ?? 0);
+        $codCharge      = $cashCollection * ($codPct / 100);
+        $vatRate        = (float) ($merchant->vat ?? 0);
+        $totalCharge    = $codCharge;
+        $vatAmount      = $totalCharge * ($vatRate / 100);
+        $currentPayable = $cashCollection - $totalCharge - $vatAmount;
+
+        $request->merge([
+            'category_id'      => $categoryId,
+            'delivery_type_id' => $deliveryTypeId,
+            'cash_collection'  => $cashCollection,
+            'vat_tex'          => $vatRate,
+            'chargeDetails'    => json_encode([
+                'totalCashCollection'       => $cashCollection,
+                'codChargeAmount'           => $codCharge,
+                'liquidFragileAmount'       => 0,
+                'packagingAmount'           => 0,
+                'totalDeliveryChargeAmount' => $totalCharge,
+                'vatTex'                    => $vatRate,
+                'VatAmount'                 => $vatAmount,
+                'netPayable'                => $currentPayable,
+                'currentPayable'            => $currentPayable,
+            ]),
+        ]);
+
+        if (! $this->repo->store($request)) {
+            return response()->json(['message' => __('parcel.error_msg')], 422);
+        }
+
+        $parcel = Parcel::companywise()->latest('id')->first();
+
+        return response()->json([
+            'message'     => __('parcel.added_msg'),
+            'parcel_id'   => optional($parcel)->id,
+            'tracking_id' => optional($parcel)->tracking_id,
+        ]);
+    }
 
     public function duplicateStore(StoreRequest $request)
     {
@@ -805,10 +1013,7 @@ class ParcelController extends Controller
                 'name'  => $p->name,
                 'price' => (float) $p->price,
             ])->values(),
-            'delivery_types' => collect($deliveryTypes)->map(fn ($d) => [
-                'id'   => $d->id,
-                'name' => $d->name ?? $d->key ?? $d->id,
-            ])->values(),
+            'delivery_types' => $this->deliveryTypeOptions(),
             'settings' => [
                 'currency'              => settings()->currency,
                 'vat_tax'               => (float) (settings()->vat ?? 0),
@@ -863,7 +1068,7 @@ class ParcelController extends Controller
         return redirect()->back();
        
     }
-        $deliveryman    = $this->deliveryman->all();
+        $deliveryman    = $this->deliveryman->selectable();
         $data = [];
         if($parcel->lastParcel3pl){
           $lastParcel3pl = $parcel->lastParcel3pl;  
@@ -1554,10 +1759,7 @@ class ParcelController extends Controller
                 'name'  => $p->name,
                 'price' => (float) $p->price,
             ])->values(),
-            'delivery_types'   => collect($deliveryTypes)->map(fn ($d) => [
-                'id'   => $d->id,
-                'name' => $d->name ?? $d->key ?? $d->id,
-            ])->values(),
+            'delivery_types'   => $this->deliveryTypeOptions(),
             'settings' => [
                 'currency'              => settings()->currency,
                 'vat_tax'               => (float) (settings()->vat ?? 0),
@@ -1707,10 +1909,44 @@ class ParcelController extends Controller
         $request->validate([
             'file' => 'required',
         ]);
+
+        // Refuse a repeat of the exact same file (a slow import that outlived
+        // the browser, or a double submit, used to re-import every row). The
+        // admin sheet spans merchants, so dedup is company-scoped with a
+        // sentinel merchant_id=0. DB unique(merchant_id,file_hash) is the
+        // race-proof backstop.
+        $companyId = settings()->id ?? null;
+        $hash = @hash_file('sha256', $request->file('file')->getRealPath());
+        if ($hash) {
+            $previous = \App\Models\Backend\ParcelImportRun::where('company_id', $companyId)
+                ->where('file_hash', $hash)
+                ->blocking()
+                ->first();
+            if ($previous) {
+                $when  = optional($previous->created_at)->format('Y-m-d H:i');
+                $count = number_format($previous->imported_count ?: $previous->row_count);
+                return back()->withErrors([
+                    'file' => "This exact file was already imported on {$when} ({$count} shipments). Nothing was imported again.",
+                ]);
+            }
+        }
+
+        $run = \App\Models\Backend\ParcelImportRun::create([
+            'company_id'  => $companyId,
+            'merchant_id' => 0,
+            'file_hash'   => $hash ?: substr(sha1(uniqid('', true)), 0, 64),
+            'file_name'   => $request->file('file')->getClientOriginalName(),
+            'row_count'   => 0,
+            'status'      => \App\Models\Backend\ParcelImportRun::RUNNING,
+        ]);
+
+        $before = \App\Models\Backend\Parcel::withoutGlobalScopes()->where('company_id', $companyId)->count();
+
         try {
             $import = new ParcelImport();
             $import->import($request->file('file'));
         } catch (ValidationException $e) {
+            $run->update(['status' => \App\Models\Backend\ParcelImportRun::FAILED, 'error' => 'row validation']);
             $failures     = $e->failures();
             $importErrors = [];
             foreach ($failures as $failure) {
@@ -1721,7 +1957,18 @@ class ParcelController extends Controller
                 $importErrors[$failure->row()][] = $failure->errors()[0];
             }
             return back()->with('importErrors', $importErrors);
+        } catch (\Throwable $th) {
+            $run->update(['status' => \App\Models\Backend\ParcelImportRun::FAILED, 'error' => mb_substr($th->getMessage(), 0, 250)]);
+            throw $th;
         }
+
+        $after = \App\Models\Backend\Parcel::withoutGlobalScopes()->where('company_id', $companyId)->count();
+        $run->update([
+            'status'         => \App\Models\Backend\ParcelImportRun::COMPLETED,
+            'imported_count' => max(0, $after - $before),
+            'row_count'      => max(0, $after - $before),
+        ]);
+
         Toastr::success(__('parcel.added_msg'),__('message.success'));
         return redirect()->route('parcel.index');
     }
@@ -2892,7 +3139,27 @@ public function printMultipleParcelLabels($parcels)
             $data['description'] = $description;
             $data['orderNumber'] = $order_reference;
             $data['reference_number'] = $reference_number;
-            
+
+            // Carrier-style templates (bold-barcode / high-density) print a
+            // waybill header: weights, piece counts, declared value, station
+            // codes and payment terms. Older layouts ignore these keys, and
+            // every template reads them with a ?? fallback, so adding them
+            // here is additive.
+            $data['weight']         = (float) ($parcel->weight ?? 0);
+            $data['pieces']         = $number_of_boxes;
+            $data['declaredValue']  = (float) ($parcel->selling_price ?? 0);
+            $data['trackingId']     = $parcel->tracking_id ?? (string) $parcel->id;
+            $data['currency']       = optional(settings())->currency ?: 'SAR';
+            // Station codes: the city's short code is the closest thing the
+            // schema has to a carrier origin/destination station.
+            $data['originCode']      = $parcel->city->city_code ?? '-';
+            $data['destinationCode'] = $receiver_city_code;
+            // parcels has no national-address column (it lives on users), so
+            // the label falls back to the merchant owner's when present.
+            $data['shortAddressCode'] = optional(optional($merchant)->user)->short_national_address ?: '-';
+            $data['sender']['city']  = $sender_city;
+            $data['receiver']['area'] = $receiver_neighbourhood;
+
 
             $tpl = $resolver->forParcel($parcel);
             $html = view($tpl->view(), compact('data'))->render();

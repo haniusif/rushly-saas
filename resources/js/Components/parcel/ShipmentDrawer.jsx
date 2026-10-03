@@ -249,15 +249,21 @@ function TimelineEvent({ event, isCreation }) {
     );
 }
 
-export default function ShipmentDrawer({ parcelId, onClose }) {
+/**
+ * `baseUrl` is the tracking-json endpoint WITHOUT the id. It defaults to the
+ * admin one so existing callers are unaffected; the merchant list passes its
+ * own, which resolves the same payload but refuses another merchant's
+ * shipment.
+ */
+export default function ShipmentDrawer({ parcelId, onClose, baseUrl = '/admin/parcel/tracking-json' }) {
     const open = parcelId != null;
     const [data, setData] = React.useState(null);
     const [loading, setLoading] = React.useState(false);
     const [error, setError] = React.useState(null);
     const trackingUrl = React.useMemo(() => {
         if (!open) return null;
-        return `/admin/parcel/tracking-json/${parcelId}`;
-    }, [parcelId, open]);
+        return `${String(baseUrl).replace(/\/$/, '')}/${parcelId}`;
+    }, [parcelId, open, baseUrl]);
 
     React.useEffect(() => {
         if (!open) {

@@ -41,6 +41,14 @@
                         <a class="nav-link {{ request()->is('merchant/invoice*') ? 'active' : '' }}"
                             href="{{ route('merchant.panel.invoice.index') }}">{{ __('Invoice') }}</a>
                     </li>
+                    <li class="nav-item ">
+                        <a class="nav-link {{ request()->is('merchant/zatca/invoices*') ? 'active' : '' }}"
+                            href="{{ route('merchant.panel.zatca.invoices.index') }}">{{ __('zatca.menu_invoices') }}</a>
+                    </li>
+                    <li class="nav-item ">
+                        <a class="nav-link {{ request()->is('merchant/zatca/settings*') ? 'active' : '' }}"
+                            href="{{ route('merchant.panel.zatca.settings.index') }}">{{ __('zatca.menu_settings') }}</a>
+                    </li>
                 </ul>
             </div>
         </li>

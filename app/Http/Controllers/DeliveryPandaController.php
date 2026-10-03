@@ -62,21 +62,35 @@ public function schudule_tracking(Request $request)
                 
  
                 if ($awb) {
+                    // Phase 9.5 — select company_id on the eager-loaded parcel
+                    // so we can do the tenant mismatch check below.
                     $parcel3pl = Parcels_3pl::with(['parcel' => function ($q) {
-                            $q->select('id', 'status');
+                            $q->select('id', 'status', 'company_id');
                         }])
                         ->where('awb_number', $awb)
                         ->first();
-                        
-                        
 
                     if ($parcel3pl) {
                         $parcel_status = $parcel3pl->parcel->status ?? null;
-                        
                         $parcel_id = $parcel3pl->parcel_id;
-                        
-                        
-                         $normalizedStatus = strtoupper(trim($status));
+
+                        // Phase 9.5 — defensive tenant-scope check. Skip if
+                        // parcels_3pl.company_id doesn't match the linked
+                        // parcel's — same pattern as Aramex/Jet syncs.
+                        $parcelCompanyId = $parcel3pl->parcel->company_id ?? null;
+                        if ($parcel3pl->company_id !== null
+                            && $parcelCompanyId !== null
+                            && (int) $parcelCompanyId !== (int) $parcel3pl->company_id) {
+                            \Log::warning('panda.sync: parcels_3pl.company_id mismatch — skipping', [
+                                'row_id'            => $parcel3pl->id,
+                                'parcel_id'         => $parcel_id,
+                                'row_company_id'    => $parcel3pl->company_id,
+                                'parcel_company_id' => $parcelCompanyId,
+                            ]);
+                            continue;
+                        }
+
+                        $normalizedStatus = strtoupper(trim($status));
                          
                         // 🟢 Update tracking info
                         $parcel3pl->update([

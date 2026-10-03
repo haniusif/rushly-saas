@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\ScopedToCompany;
+
 use App\Models\Backend\Account;
 use App\Models\Backend\DeliveryMan;
 use App\Models\Backend\Upload;
@@ -12,7 +14,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class CashReceivedFromDeliveryman extends Model
 {
-    use HasFactory,LogsActivity;
+    use HasFactory,LogsActivity, ScopedToCompany;
 
     protected $fillable = [
         'user_id',

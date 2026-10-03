@@ -10,17 +10,8 @@ import { Card, CardContent } from '@/Components/ui/Card';
 import { Button } from '@/Components/ui/Button';
 import { Input } from '@/Components/ui/Input';
 import { Label } from '@/Components/ui/Label';
+import { Money } from '@/Components/CurrencySymbol';
 import { cn } from '@/lib/utils';
-
-function Money({ value, currency }) {
-    const n = Number(value || 0);
-    return (
-        <span className="tabular-nums">
-            <span className="text-muted-foreground text-xs me-0.5">{currency}</span>
-            {n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </span>
-    );
-}
 
 function Initials({ name }) {
     const text = (name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
@@ -242,7 +233,7 @@ export default function View({
                         <CardContent className="pt-6">
                             <SectionTitle icon={Briefcase}>{t.work}</SectionTitle>
                             <InfoRow icon={Calendar}    label={t.joining_date} value={user.joining_date} />
-                            <InfoRow icon={Wallet}      label={t.salary}       value={<Money value={user.salary} currency={currency} />} />
+                            <InfoRow icon={Wallet}      label={t.salary}       value={<Money value={user.salary} />} />
                             <InfoRow icon={Shield}      label={t.role}         value={user.role} />
                         </CardContent>
                     </Card>

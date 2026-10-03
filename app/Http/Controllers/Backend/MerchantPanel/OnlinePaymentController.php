@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Stripe;
 use Srmklive\PayPal\Services\PayPal as PayPalClient;
 use Srmklive\PayPal\Services\ExpressCheckout;
+use Inertia\Inertia;
 class OnlinePaymentController extends Controller
 {
 
@@ -25,9 +26,76 @@ class OnlinePaymentController extends Controller
         $this->accountRepo = $accountRepo;
     }
     //start stripe payment gateway
-    public function merchantPaymentReceived(){
-        $Payments   = $this->MOPRmodel->where('merchant_id',Auth::user()->merchant->id)->orderByDesc('id')->paginate(10);
-        return view('backend.merchant_panel.online_payment_received.index',compact('Payments'));
+    public function merchantPaymentReceived()
+    {
+        $paginator = $this->MOPRmodel->where('merchant_id', Auth::user()->merchant->id)
+            ->orderByDesc('id')
+            ->paginate(10);
+        $i = (($paginator->currentPage() - 1) * $paginator->perPage()) + 1;
+
+        $gatewayLabels = [
+            1 => 'Cash',
+            2 => 'Bank',
+            3 => 'Bkash',
+            4 => 'Rocket',
+            5 => 'Nagad',
+        ];
+
+        $rows = collect($paginator->items())->map(function ($p) use (&$i, $gatewayLabels) {
+            $a = $p->account;
+            $accountLines = [];
+            if ($a) {
+                $gw = (int) ($a->gateway ?? 0);
+                if ($gw === 1) {
+                    $accountLines[] = (optional($a->user)->name ?? '') . ' (' . ($gatewayLabels[$gw] ?? 'Cash') . ')';
+                } elseif ($gw === 2) {
+                    if ($a->account_holder_name) $accountLines[] = $a->account_holder_name;
+                    if ($a->account_no)          $accountLines[] = $a->account_no;
+                    if ($a->branch_name)         $accountLines[] = $a->branch_name;
+                } elseif ($gw > 0) {
+                    $accountLines[] = $gatewayLabels[$gw] ?? ('Gateway ' . $gw);
+                    if ($a->mobile)       $accountLines[] = $a->mobile;
+                    if ($a->account_type) $accountLines[] = $a->account_type;
+                }
+            }
+            return [
+                'serial'         => $i++,
+                'id'             => $p->id,
+                'card_type'      => __('PaymentType.' . $p->payment_type) ?: (string) $p->payment_type,
+                'account_lines'  => $accountLines,
+                'transaction_id' => $p->transaction_id,
+                'amount'         => (float) ($p->amount ?? 0),
+            ];
+        })->values();
+
+        return Inertia::render('Merchant/PaymentReceived/Index', [
+            'rows'       => $rows,
+            'currency'   => settings()->currency,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+                'from'         => $paginator->firstItem(),
+                'to'           => $paginator->lastItem(),
+                'links'        => $paginator->linkCollection()->map(fn ($l) => [
+                    'url'    => $l['url'],
+                    'label'  => $l['label'],
+                    'active' => (bool) $l['active'],
+                ])->values(),
+            ],
+            't' => [
+                'title'          => __('menus.payment_received') ?: 'Payments received',
+                'list'           => __('levels.list') ?: 'List',
+                'dashboard'      => __('levels.dashboard') ?: 'Dashboard',
+                'id'             => __('levels.id') ?: 'ID',
+                'card_type'      => __('levels.card_type') ?: 'Card type',
+                'from_account'   => __('levels.from_account') ?: 'From account',
+                'transaction_id' => __('levels.transaction_id') ?: 'Transaction ID',
+                'amount'         => __('levels.amount') ?: 'Amount',
+                'empty'          => __('levels.no_data_found') ?: 'No payments received yet.',
+            ],
+        ]);
     }
     //payout list
     public function index(){

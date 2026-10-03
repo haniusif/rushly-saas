@@ -49,6 +49,7 @@ use App\Http\Controllers\Backend\FraudController;
 use App\Http\Controllers\Backend\NdrController;
 use App\Http\Controllers\Backend\AbnormalShipmentController;
 use App\Http\Controllers\Backend\LabelTemplateController;
+use App\Http\Controllers\Backend\MobileAppsController;
 use App\Http\Controllers\Backend\SettingsHubController;
 use App\Http\Controllers\Backend\Zatca\SettingsController as ZatcaSettingsController;
 use App\Http\Controllers\Backend\Zatca\InvoiceController as ZatcaInvoiceController;
@@ -168,7 +169,10 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
     $domain = false;
     if (Config::get('app.app_installed') == 'yes'  && Schema::hasTable('domains')) :
         $domain = in_array(request()->getHost(), Domain::pluck('domain')->toArray());
-        \Log::info(request()->getHost());
+        // NOTE: there was a `\Log::info(request()->getHost())` here. It ran on
+        // EVERY request — 4,213 INFO lines in a single day — burying the
+        // handful of real errors in the log. Removed rather than downgraded:
+        // the host is already on each request and adds nothing on its own.
     endif;
 
     if ($domain) :
@@ -202,6 +206,21 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
             Route::post('/impersonate/stop', [\App\Http\Controllers\Backend\MerchantController::class, 'stopImpersonate'])
                 ->middleware('auth')
                 ->name('merchant.impersonate.stop');
+
+            // Consume a "login as company" handoff token minted on the central
+            // host. Guest-accessible (logging in is the point); the token is
+            // single-use + short-lived and the controller verifies it belongs to
+            // this tenant. Lands the owner on their own dashboard.
+            Route::get('/impersonate/consume/{token}', [\App\Http\Controllers\Backend\Superadmin\CompanyController::class, 'consume'])
+                ->name('company.impersonate.consume');
+
+            // Stop a super-admin "login as company" session. Reachable by whoever
+            // is logged in as long as session.impersonator_id is set (the
+            // impersonated company owner is a plain admin, so it can't be
+            // super-admin gated). Sends them back to the central companies page.
+            Route::post('/company/impersonate/stop', [\App\Http\Controllers\Backend\Superadmin\CompanyController::class, 'stopImpersonate'])
+                ->middleware('auth')
+                ->name('company.impersonate.stop');
 
             // First-run setup wizard. RequireOnboarding middleware redirects
             // Admins here on their first login into a fresh tenant.
@@ -286,12 +305,12 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                 // XSS Protection
                 Route::get('/dashboard',             [DashbordController::class, 'index'])->name('dashboard.index');
                 // Lightweight home for tenant admins — KPIs, 7-day trend, recent shipments.
-                Route::get('/summary',               [\App\Http\Controllers\Backend\SummaryController::class, 'index'])->name('summary.index');
+                Route::get('/summary',               [\App\Http\Controllers\Backend\SummaryController::class, 'index'])->name('summary.index')->middleware('hasPermission:summary_read');
                 // Executive Operations Command Center — expanded KPI grid, health
                 // gauges, 14-day timeline, funnel, alerts, activity feed, quick
                 // actions. Same permission set as /summary since it's the same
                 // audience (tenant admins).
-                Route::get('/operations-dashboard',  [\App\Http\Controllers\Backend\OperationsController::class, 'index'])->name('operations.index');
+                Route::get('/operations-dashboard',  [\App\Http\Controllers\Backend\OperationsController::class, 'index'])->name('operations.index')->middleware('hasPermission:operations_dashboard_read');
 
                 // Onboarding tour engine — JSON endpoints consumed by the React
                 // TourProvider. Session-auth'd, tenant-scoped. Open to any
@@ -299,7 +318,7 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                 Route::get('/tours/for-me',           [\App\Http\Controllers\Api\V10\TourController::class, 'forMe'])->name('tours.for-me');
                 Route::post('/tours/{key}/progress',  [\App\Http\Controllers\Api\V10\TourController::class, 'saveProgress'])->name('tours.progress');
                 Route::post('/tours/{key}/event',     [\App\Http\Controllers\Api\V10\TourController::class, 'logEvent'])->name('tours.event');
-                Route::get('/subscription',          [PlanController::class, 'subscription'])->name('subscription.index');
+                Route::get('/subscription',          [PlanController::class, 'subscription'])->name('subscription.index')->middleware('hasPermission:subscription_read');
 
                 Route::get('/subscription/payment',  [PlanController::class, 'subscriptionPayment'])->name('subscription.payment');
 
@@ -345,8 +364,8 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         // Reading is open to any logged-in admin; only screenshot
                         // upload/delete requires the knowledge_base_update permission.
                         Route::prefix('knowledge-base')->name('admin.kb.')->group(function () {
-                            Route::get('/',                                          [AdminKnowledgeBaseController::class, 'index'])->name('index');
-                            Route::get('{section}',                                  [AdminKnowledgeBaseController::class, 'show'])->name('show');
+                            Route::get('/',                                          [AdminKnowledgeBaseController::class, 'index'])->name('index')->middleware('hasPermission:knowledge_base_read');
+                            Route::get('{section}',                                  [AdminKnowledgeBaseController::class, 'show'])->name('show')->middleware('hasPermission:knowledge_base_read');
                             Route::post('{section}/screenshot/{sub}',                [AdminKnowledgeBaseController::class, 'uploadScreenshot'])->name('screenshot.upload')->middleware('hasPermission:knowledge_base_update');
                             Route::delete('{section}/screenshot/{sub}',              [AdminKnowledgeBaseController::class, 'deleteScreenshot'])->name('screenshot.delete')->middleware('hasPermission:knowledge_base_update');
                         });
@@ -531,7 +550,7 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                             Route::get('/pdf/{invoice_id}',     [MerchantInvoiceController::class, 'InvoicePdf'])->name('pdf')->middleware('hasPermission:invoice_read');
                             Route::get('/csv/{invoice_id}',     [MerchantInvoiceController::class, 'InvoiceCSV'])->name('csv')->middleware('hasPermission:invoice_read');
                         });
-                        Route::get('paid/invoice',               [MerchantInvoiceController::class, 'PaidInvoice'])->name('paid.invoice.index');
+                        Route::get('paid/invoice',               [MerchantInvoiceController::class, 'PaidInvoice'])->name('paid.invoice.index')->middleware('hasPermission:paid_invoice_read');
                         //liquid fragile
                         Route::get('liquid-fragile/index',  [LiquidFragileController::class, 'index'])->name('liquid-fragile.index')->middleware('hasPermission:liquid_fragile_read');
                         Route::get('liquid-fragile/edit',   [LiquidFragileController::class, 'edit'])->name('liquid.fragile.edit')->middleware('hasPermission:liquid_fragile_update');
@@ -562,6 +581,10 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::get('parcel/clone/{id}',                     [ParcelController::class, 'duplicate'])->name('parcel.clone');
                         Route::get('parcel/create',                         [ParcelController::class, 'create'])->name('parcel.create')->middleware('hasPermission:parcel_create');
                         Route::post('parcel/store',                         [ParcelController::class, 'store'])->name('parcel.store')->middleware('hasPermission:parcel_create');
+                        // Navbar Quick Shipment modal (AdminLayout Topbar). Same
+                        // parcel_create permission as the full create screen.
+                        Route::get('parcel/quick-create/lookups',           [ParcelController::class, 'quickCreateLookups'])->name('parcel.quick-create.lookups')->middleware('hasPermission:parcel_create');
+                        Route::post('parcel/quick-store',                   [ParcelController::class, 'quickStore'])->name('parcel.quick-store')->middleware('hasPermission:parcel_create');
                         Route::post('parcel/clone-store',                   [ParcelController::class, 'duplicateStore'])->name('parcel.clone-store');
                         Route::get('parcel/edit/{id}',                      [ParcelController::class, 'edit'])->name('parcel.edit')->middleware('hasPermission:parcel_update');
                         Route::put('parcel/update/{id}',                    [ParcelController::class, 'update'])->name('parcel.update')->middleware('hasPermission:parcel_update');
@@ -784,6 +807,11 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
 
                         // Settings hub — single landing page with cards for every settings module
                         Route::get('settings',                                  [SettingsHubController::class, 'index'])->name('settings.index');
+
+                        // Mobile apps directory — companion role-specific Flutter apps
+                        Route::get('settings/mobile-apps',                      [MobileAppsController::class, 'index'])
+                            ->middleware('hasPermission:mobile_apps_read')
+                            ->name('mobile-apps.index');
 
                         // Shipping label templates (5 carrier-styled layouts + per-merchant override)
                         Route::prefix('settings/label-templates')->name('label-templates.')->middleware('hasPermission:label_template_manage')->group(function () {
@@ -1016,26 +1044,26 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::post('integrations/odoo/vendors/{id}/sync', [\App\Http\Controllers\Backend\OdooSettingsController::class, 'syncVendor'])->name('odoo.vendors.sync')->middleware('hasPermission:integrations_update');
 
                         // Countries / Cities / Areas
-                        Route::get('countries',              [CountryController::class, 'index'])->name('country.index');
-                        Route::get('countries/create',       [CountryController::class, 'create'])->name('country.create');
-                        Route::post('countries/store',       [CountryController::class, 'store'])->name('country.store');
-                        Route::get('countries/edit/{id}',    [CountryController::class, 'edit'])->name('country.edit');
-                        Route::put('countries/update/{id}',  [CountryController::class, 'update'])->name('country.update');
-                        Route::delete('countries/delete/{id}', [CountryController::class, 'destroy'])->name('country.delete');
+                        Route::get('countries',              [CountryController::class, 'index'])->name('country.index')->middleware('hasPermission:country_read');
+                        Route::get('countries/create',       [CountryController::class, 'create'])->name('country.create')->middleware('hasPermission:country_create');
+                        Route::post('countries/store',       [CountryController::class, 'store'])->name('country.store')->middleware('hasPermission:country_create');
+                        Route::get('countries/edit/{id}',    [CountryController::class, 'edit'])->name('country.edit')->middleware('hasPermission:country_update');
+                        Route::put('countries/update/{id}',  [CountryController::class, 'update'])->name('country.update')->middleware('hasPermission:country_update');
+                        Route::delete('countries/delete/{id}', [CountryController::class, 'destroy'])->name('country.delete')->middleware('hasPermission:country_delete');
 
-                        Route::get('cities',              [CityController::class, 'index'])->name('city.index');
-                        Route::get('cities/create',       [CityController::class, 'create'])->name('city.create');
-                        Route::post('cities/store',       [CityController::class, 'store'])->name('city.store');
-                        Route::get('cities/edit/{id}',    [CityController::class, 'edit'])->name('city.edit');
-                        Route::put('cities/update/{id}',  [CityController::class, 'update'])->name('city.update');
-                        Route::delete('cities/delete/{id}', [CityController::class, 'destroy'])->name('city.delete');
+                        Route::get('cities',              [CityController::class, 'index'])->name('city.index')->middleware('hasPermission:city_read');
+                        Route::get('cities/create',       [CityController::class, 'create'])->name('city.create')->middleware('hasPermission:city_create');
+                        Route::post('cities/store',       [CityController::class, 'store'])->name('city.store')->middleware('hasPermission:city_create');
+                        Route::get('cities/edit/{id}',    [CityController::class, 'edit'])->name('city.edit')->middleware('hasPermission:city_update');
+                        Route::put('cities/update/{id}',  [CityController::class, 'update'])->name('city.update')->middleware('hasPermission:city_update');
+                        Route::delete('cities/delete/{id}', [CityController::class, 'destroy'])->name('city.delete')->middleware('hasPermission:city_delete');
 
-                        Route::get('areas',              [AreaController::class, 'index'])->name('area.index');
-                        Route::get('areas/create',       [AreaController::class, 'create'])->name('area.create');
-                        Route::post('areas/store',       [AreaController::class, 'store'])->name('area.store');
-                        Route::get('areas/edit/{id}',    [AreaController::class, 'edit'])->name('area.edit');
-                        Route::put('areas/update/{id}',  [AreaController::class, 'update'])->name('area.update');
-                        Route::delete('areas/delete/{id}', [AreaController::class, 'destroy'])->name('area.delete');
+                        Route::get('areas',              [AreaController::class, 'index'])->name('area.index')->middleware('hasPermission:area_read');
+                        Route::get('areas/create',       [AreaController::class, 'create'])->name('area.create')->middleware('hasPermission:area_create');
+                        Route::post('areas/store',       [AreaController::class, 'store'])->name('area.store')->middleware('hasPermission:area_create');
+                        Route::get('areas/edit/{id}',    [AreaController::class, 'edit'])->name('area.edit')->middleware('hasPermission:area_update');
+                        Route::put('areas/update/{id}',  [AreaController::class, 'update'])->name('area.update')->middleware('hasPermission:area_update');
+                        Route::delete('areas/delete/{id}', [AreaController::class, 'destroy'])->name('area.delete')->middleware('hasPermission:area_delete');
 
                         //currency settings
                         Route::get('currency',                      [CurrencyController::class, 'index'])->name('currency.index')->middleware('hasPermission:currency_read');
@@ -1102,7 +1130,7 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::get('salary/salary-generate/edit/{id}',     [SalaryGenerateController::class, 'edit'])->name('salary.generate.edit')->middleware('hasPermission:salary_generate_update');
                         Route::put('salary/salary-generate/update',        [SalaryGenerateController::class, 'update'])->name('salary.generate.update')->middleware('hasPermission:salary_generate_update');
                         Route::delete('salary/salary-generate/delete/{id}', [SalaryGenerateController::class, 'salaryGenerateDelete'])->name('salary-generate.delete')->middleware('hasPermission:salary_generate_delete');
-                        Route::get('subscribe',                            [SalaryGenerateController::class, 'subscribe'])->name('subscribe.index');
+                        Route::get('subscribe',                            [SalaryGenerateController::class, 'subscribe'])->name('subscribe.index')->middleware('hasPermission:subscribe_read');
                         //pickup request
                         Route::prefix('pickup-request')->name('pickup.request.')->group(function () {
                             Route::get('regular',                      [PickupRequestController::class, 'regular'])->name('regular')->middleware('hasPermission:pickup_request_regular');
@@ -1111,8 +1139,8 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         //parcel search
                         Route::get('parcel/specific/search',                    [ParcelController::class, 'ParcelSearchs'])->name('parcel.specific.search');
                         // GoogleMap settings
-                        Route::get('googlemap-settings/index',        [GoogleMapSettingsController::class, 'index'])->name('googlemap-settings.index');
-                        Route::put('googlemap-settings/update',       [GoogleMapSettingsController::class, 'update'])->name('googlemap-settings.update');
+                        Route::get('googlemap-settings/index',        [GoogleMapSettingsController::class, 'index'])->name('googlemap-settings.index')->middleware('hasPermission:general_settings_read');
+                        Route::put('googlemap-settings/update',       [GoogleMapSettingsController::class, 'update'])->name('googlemap-settings.update')->middleware('hasPermission:general_settings_update');
 
                         // Notification settings
                         Route::get('notification-settings/index',        [NotificationSettingsController::class, 'index'])->name('notification-settings.index')->middleware('hasPermission:notification_settings_read');
@@ -1130,7 +1158,7 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         //Payout
                         Route::prefix('payout')->name('payout.')->group(function () {
                             //stripe payment gateway
-                            Route::get('/',                                     [PayoutController::class, 'index'])->name('index');
+                            Route::get('/',                                     [PayoutController::class, 'index'])->name('index')->middleware('hasPermission:payout_read');
                             Route::get('/merchant/payout',                      [PayoutController::class, 'merchantPayout'])->name('merchant.payout');
                             Route::get('/stripe',                               [PayoutController::class, 'stripe'])->name('merchant.stripe');
                             Route::post('/stripe/post',                         [PayoutController::class, 'stripePost'])->name('merchant.stripe.post');
@@ -1352,8 +1380,25 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::get('parcel/edit/{id}',       [MerchantParcelController::class, 'edit'])->name('merchant-panel.parcel.edit');
                         Route::get('parcel/details/{id}',    [MerchantParcelController::class, 'details'])->name('merchant-panel.parcel.details');
                         Route::get('parcel/logs/{id}',       [MerchantParcelController::class, 'logs'])->name('merchant-panel.parcel.logs');
+
+                        // Label / print / tracking. Each guards ownership then
+                        // delegates to ParcelController so the artefacts stay
+                        // identical to the admin ones.
+                        Route::get('parcel/print-label/{id}',    [MerchantParcelController::class, 'printLabel'])->name('merchant-panel.parcel.print-label');
+                        Route::get('parcel/print/{id}',          [MerchantParcelController::class, 'printWithTracking'])->name('merchant-panel.parcel.print');
+                        Route::get('parcel/tracking-json/{id}',  [MerchantParcelController::class, 'trackingJson'])->name('merchant-panel.parcel.tracking-json');
+                        Route::get('parcel/delivered-info/{id}', [MerchantParcelController::class, 'deliveredInfo'])->name('merchant-panel.parcel.delivered-info');
+
+                        // Priority toggle + bulk operations. All POST, all scoped to
+                        // the signed-in merchant's own shipments inside the controller.
+                        Route::post('parcel/priority/update',    [MerchantParcelController::class, 'priorityUpdate'])->name('merchant-panel.parcel.priority-update');
+                        Route::post('parcel/bulk/print-labels',  [MerchantParcelController::class, 'bulkPrintLabels'])->name('merchant-panel.parcel.bulk-print-labels');
+                        Route::post('parcel/bulk/cancel',        [MerchantParcelController::class, 'bulkCancel'])->name('merchant-panel.parcel.bulk-cancel');
                         Route::put('parcel/update/{id}',     [MerchantParcelController::class, 'update'])->name('merchant-panel.parcel.update');
-                        Route::get('parcel/status-update/{id}/{status_id}',   [MerchantParcelController::class, 'statusUpdate'])->name('merchant-panel.parcel.status-update');
+                        // POST, not GET: a state change behind a GET is triggerable by a
+                        // link, an <img> src or a prefetch, and carries no CSRF token. No UI
+                        // referenced this route, so changing the verb breaks nothing.
+                        Route::post('parcel/status-update/{id}/{status_id}',  [MerchantParcelController::class, 'statusUpdate'])->name('merchant-panel.parcel.status-update');
                         Route::delete('parcel/delete/{id}',     [MerchantParcelController::class, 'destroy'])->name('merchant-panel.parcel.delete');
                         Route::post('parcel/merchant',          [MerchantParcelController::class, 'getMerchant'])->name('merchant-panel.parcel.merchant.get');
                         Route::post('parcel/merchant/shops',    [MerchantParcelController::class, 'merchantShops'])->name('merchant-panel.parcel.merchant.shops');

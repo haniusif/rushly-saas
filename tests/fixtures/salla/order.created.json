@@ -1,0 +1,80 @@
+{
+  "event": "order.created",
+  "merchant": 99999999,
+  "created_at": "2026-07-01T09:12:34+03:00",
+  "data": {
+    "id": 4242001,
+    "reference_id": 1042,
+    "status": {
+      "id": 1,
+      "name": "Under Review",
+      "slug": "under_review",
+      "payment_status": "paid"
+    },
+    "date": {
+      "date": "2026-07-01 09:12:34.000000",
+      "timezone_type": 3,
+      "timezone": "Asia/Riyadh"
+    },
+    "payment_method": "cod",
+    "payment_method_status": "pending",
+    "currency": "SAR",
+    "sub_total": { "amount": 180.00, "currency": "SAR" },
+    "tax":       { "amount":   9.00, "currency": "SAR" },
+    "shipping_cost": { "amount": 15.00, "currency": "SAR" },
+    "discount":  { "amount":   4.00, "currency": "SAR" },
+    "total":     { "amount": 200.00, "currency": "SAR" },
+    "cash_on_delivery": { "amount": 200.00, "currency": "SAR" },
+    "customer": {
+      "id": 88123,
+      "first_name": "Layla",
+      "last_name":  "Al-Harbi",
+      "mobile":     "+966501234567",
+      "email":      "layla@example.com"
+    },
+    "shipping": {
+      "receiver": { "name": "Layla Al-Harbi", "phone": "+966501234567" },
+      "address": {
+        "country":      "Saudi Arabia",
+        "country_code": "SA",
+        "city":         "Riyadh",
+        "district":     "Al Olaya",
+        "street":       "King Fahd Road, Bldg 5",
+        "description":  "Floor 3, Apartment 8",
+        "postal_code":  "12341",
+        "latitude":     24.7136,
+        "longitude":    46.6753
+      }
+    },
+    "items": [
+      {
+        "id": 900001,
+        "product_id": 55501,
+        "variant_id": 66601,
+        "sku": "SKU-A-001",
+        "name": "Traditional Kaftan (Size M)",
+        "quantity": 1,
+        "amounts": {
+          "price":            { "amount": 150.00, "currency": "SAR" },
+          "price_without_tax": { "amount": 142.86, "currency": "SAR" },
+          "total":            { "amount": 150.00, "currency": "SAR" }
+        },
+        "weight": { "value": 0.6, "unit": "kg" },
+        "options": [{ "id": 1, "name": "Size", "value": "M" }]
+      },
+      {
+        "id": 900002,
+        "product_id": 55502,
+        "sku": "SKU-B-002",
+        "name": "Perfume Bottle",
+        "quantity": 2,
+        "amounts": {
+          "price": { "amount": 15.00, "currency": "SAR" },
+          "total": { "amount": 30.00, "currency": "SAR" }
+        }
+      }
+    ],
+    "urls": { "customer": "https://example.salla.sa/order/4242001" },
+    "channel": "store"
+  }
+}

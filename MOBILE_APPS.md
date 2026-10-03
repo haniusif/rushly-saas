@@ -17,6 +17,8 @@ Companion doc to `RUSHLY_APPS_OVERVIEW.md`. That file covers the storefront brid
 
 All eight live as sibling repositories to `rushly-saas/` (e.g. `/var/www/rushly-supervisor-app`, etc.) and ship as `main`-branch repos on GitHub under `haniusif/`.
 
+**In-tenant directory page** — the eight apps are also surfaced inside every tenant admin at **Settings → Mobile Apps** (`/admin/settings/mobile-apps`). See §13 for controller / view / permission wiring.
+
 ---
 
 ## 1. Shared architecture
@@ -396,5 +398,42 @@ Quick pointers back into `rushly-saas` for anyone tracing a mobile call:
 | Sorting | `app/Http/Controllers/Api/V10/Admin/AdminSortingController.php` | `routes/api.php` (v10/admin group) |
 | Fleet | `app/Http/Controllers/Api/V10/Fleet/FleetDriverApiController.php` | `routes/api.php` (v10/admin group) |
 | Scanner | Reuses `AdminSortingController::lookup` + `AdminParcelController::forceStatus` | `routes/api.php` (v10/admin group) |
+
+---
+
+## 13. Settings → Mobile Apps directory page (in-tenant)
+
+A read-only catalog of the eight apps rendered inside every tenant admin so staff can discover which app to install for their role without leaving the platform.
+
+**URL** — `https://<tenant>.<APP_URL>/admin/settings/mobile-apps` (tenant-scoped; the route is registered inside the `if ($domain) :` gate in `routes/web.php:175` so it's invisible to `php artisan route:list` — see the `routes-tenant-domain-gate` memory).
+
+**Discoverability**
+- **Sidebar** — under *Settings* group, right after *Public Tracking API* (`resources/views/backend/partials/sidebar.blade.php:726-731`)
+- **Settings hub** — card in the *Identity & branding* group at `/admin/settings` (`app/Http/Controllers/Backend/SettingsHubController.php:30`)
+
+**Files**
+
+| File | Purpose |
+|---|---|
+| `app/Http/Controllers/Backend/MobileAppsController.php` | Static catalog — returns 8 app rows (key / title / audience / description / icon / gradient / repo) via a private `apps()` method. No DB access. |
+| `resources/views/backend/settings/mobile-apps.blade.php` | Blade page. Uses the new-UI conventions (Tailwind CDN with `tw-` prefix, `@section('maincontent')`, breadcrumb, brand-50 icon badge, `tw-rounded-xl tw-shadow-card` white surface). Responsive 1→2→3→4 column grid of app tiles with per-app inline-styled gradient icon. |
+| `lang/{en,ar}/mobile_apps.php` | Titles, audience labels, descriptions, subtitle, footer note. Bilingual (RTL auto-flips via the master layout). |
+| `database/migrations/2026_07_22_230000_seed_mobile_apps_permission.php` | Idempotent backfill. Inserts the `mobile_apps` row into `permissions` + `super_admin_permissions`, then grants `mobile_apps_read` to any role/user that already has `general_settings_read`, plus always to the `super-admin` role. Mirrors the pattern from `2026_05_24_000004_seed_integrations_permissions.php`. |
+
+**Route registration** — `routes/web.php:790-792`
+
+```php
+Route::get('settings/mobile-apps', [MobileAppsController::class, 'index'])
+    ->middleware('hasPermission:mobile_apps_read')
+    ->name('mobile-apps.index');
+```
+
+**Permission** — `mobile_apps_read`. Registered in both attribute maps of `PermissionSeeder.php` (tenant `attributes` + `super_admin_attributes`) and included in the Admin + User role permission lists in `RoleSeeder.php` / `UserSeeder.php`. Fresh tenants get it via the seeder; existing tenants get it via the backfill migration above.
+
+**UI reference pages** — Redesigned in commit `f88b897` and later; consistent with `resources/views/backend/database-backup/index.blade.php` and `resources/views/backend/super-admin/plan/index.blade.php`. Uses brand palette + `shadow-card` tokens defined in `resources/views/backend/partials/header.blade.php:33-56`.
+
+**Non-goals (intentional)**
+- No per-app download URLs (Play Store / App Store / APK) — there's no `mobile_app_links` config or settings table yet; if you want download buttons, add them either as `config/mobile_apps.php` keys or as a new per-tenant `mobile_app_links` table.
+- No dynamic feature flags per app (e.g. hide Fleet card if `features.fleet` is off) — the catalog is fully static; gate at the controller if you need feature-flagged visibility later.
 
 WMS mobile endpoints (used by the driver + warehouse apps) live in `app/Http/Controllers/Api/V10/Wms/*` and are mounted inside the `/api/v10/wms` group with `auth:sanctum`.

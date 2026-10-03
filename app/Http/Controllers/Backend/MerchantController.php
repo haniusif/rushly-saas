@@ -45,7 +45,11 @@ class MerchantController extends Controller
                 'unique_id'       => optional($m->user)->unique_id,
                 'name'            => optional($m->user)->name,
                 'email'           => optional($m->user)->email,
-                'image'           => optional($m->user)->image,
+                // Business logo first; the user avatar only when one was
+                // actually uploaded (User::image falls back to a placeholder,
+                // which would hide the initials fallback in the UI).
+                'logo'            => $m->logo_url,
+                'image'           => optional($m->user)->upload ? optional($m->user)->image : null,
                 'mobile'          => optional($m->user)->mobile,
                 'business_name'   => $m->business_name,
                 'hub_name'        => optional(optional($m->user)->hub)->name,
@@ -131,6 +135,7 @@ class MerchantController extends Controller
                 'invoice_generate' => __('merchant.index_invoice_generate'),
                 'search'           => __('merchant.index_search_placeholder'),
                 'no_rows'          => __('levels.no_data_found') ?: 'No merchants found',
+                'contact'          => __('merchant.contact_person') ?: 'Contact',
                 'showing_results'  => __('merchant.index_showing_results'),
                 'services_label'   => __('merchant.index_services'),
                 'prev'             => __('merchant.index_prev'),

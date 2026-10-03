@@ -47,9 +47,43 @@ class CompanyRepository implements CompanyInterface
         $this->userRepo             = $userRepo;
         $this->generalSettingRepo   = $generalSettingRepo;
     }
-    public function get()
+    public function get($request = null)
     {
-        return User::where('user_type', UserType::ADMIN)->where('company_owner', BooleanStatus::YES)->orderByDesc('id')->paginate(10);
+        $query = User::where('user_type', UserType::ADMIN)
+            ->where('company_owner', BooleanStatus::YES);
+
+        if ($request) {
+            // Free-text search across the owner (name / email / mobile) and the
+            // company name on the related GeneralSettings row.
+            $search = trim((string) $request->get('q', ''));
+            if ($search !== '') {
+                $query->where(function ($w) use ($search) {
+                    $w->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('mobile', 'like', "%{$search}%")
+                        ->orWhereHas('company', fn ($c) => $c->where('name', 'like', "%{$search}%"));
+                });
+            }
+
+            // Plan filter (GeneralSettings.plan_id).
+            if ($request->filled('plan')) {
+                $planId = $request->get('plan');
+                $query->whereHas('company', fn ($c) => $c->where('plan_id', $planId));
+            }
+
+            // Status filter (User.status: 1 active / 0 inactive).
+            $status = $request->get('status');
+            if ($status !== null && $status !== '') {
+                $query->where('status', (int) $status);
+            }
+        }
+
+        $perPage = (int) ($request ? $request->get('per_page', 50) : 50);
+        if (! in_array($perPage, [10, 25, 50, 100], true)) {
+            $perPage = 50;
+        }
+
+        return $query->orderByDesc('id')->paginate($perPage)->withQueryString();
     }
 
     public function getFind($id)

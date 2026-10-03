@@ -13,8 +13,12 @@ return [
     |
     */
 
-    'failed' => 'आप एक सक्रिय व्यक्ति नहीं हैं, कृपया व्यवस्थापक से संपर्क करें!',
-    // 'failed' => 'These credentials do not match our records.',
+    'failed' => 'ये क्रेडेंशियल हमारे रिकॉर्ड से मेल नहीं खाते।',
+
+    // Shown ONLY when the account really is disabled — see
+    // LoginController::sendFailedLoginResponse(). Every other login
+    // failure (wrong password, wrong tenant) uses 'failed' above.
+    'inactive' => 'आप एक सक्रिय व्यक्ति नहीं हैं, कृपया व्यवस्थापक से संपर्क करें!',
     'password'          => 'दिया गया पासवर्ड गलत है।',
     'throttle'          => 'बहुत अधिक लॉगिन प्रयास। कृपया :सेकंड सेकंड में पुन: प्रयास करें।',
     'token_refresh'     => 'टोकन ताज़ा करें',

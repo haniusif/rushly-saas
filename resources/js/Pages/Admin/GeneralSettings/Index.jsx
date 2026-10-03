@@ -593,8 +593,34 @@ export default function Index({ settings = {}, lookups = {}, theme_fallbacks = {
                                     <Field label={t.currency} required error={form.errors.currency}>
                                         <Select value={form.data.currency} onChange={(e) => form.setData('currency', e.target.value)}>
                                             <option value="">—</option>
+                                            {/* Keep the current value selectable even if it was stored as a
+                                                code (e.g. "AED") and the options are keyed by symbol. */}
+                                            {form.data.currency && !(lookups.currencies || []).some((c) => String(c.value) === String(form.data.currency)) && (
+                                                <option value={form.data.currency}>{settings.currency_label || form.data.currency}</option>
+                                            )}
                                             {(lookups.currencies || []).map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
                                         </Select>
+                                        {(() => {
+                                            const sel = (lookups.currencies || []).find((c) => String(c.value) === String(form.data.currency));
+                                            const label = sel?.label || settings.currency_label || settings.currency;
+                                            if (!label) return null;
+                                            // Make the stored SVG follow the text color (light/dark safe).
+                                            const svg = sel?.svg
+                                                ? sel.svg
+                                                    .replace(/fill\s*:\s*#?[0-9a-z]+/gi, 'fill:currentColor')
+                                                    .replace(/fill\s*=\s*"(?!none)[^"]*"/gi, 'fill="currentColor"')
+                                                : '';
+                                            const symbol = sel?.symbol || settings.currency;
+                                            return (
+                                                <div className="mt-2 flex items-center gap-2 text-sm">
+                                                    <span className="text-xs text-muted-foreground">{t.selected_currency || 'Selected currency'}:</span>
+                                                    {svg
+                                                        ? <span className="inline-flex items-center justify-center w-6 h-6 text-foreground [&_svg]:w-full [&_svg]:h-full" aria-hidden dangerouslySetInnerHTML={{ __html: svg }} />
+                                                        : (symbol ? <span className="text-base leading-none text-foreground">{symbol}</span> : null)}
+                                                    <span className="font-medium text-foreground">{label}</span>
+                                                </div>
+                                            );
+                                        })()}
                                     </Field>
                                     <Field label={t.timezone} hint={t.timezone_help} error={form.errors.timezone}>
                                         <Select value={form.data.timezone} onChange={(e) => form.setData('timezone', e.target.value)}>

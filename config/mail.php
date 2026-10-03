@@ -105,6 +105,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Verified Sender Domains
+    |--------------------------------------------------------------------------
+    |
+    | Domains the mail provider will actually accept as a From address. Tenants
+    | set their own contact address in general_settings, and mailables used to
+    | send AS that address — so any tenant on an unverified domain had every
+    | mail rejected with:
+    |
+    |   550 This API key is not authorized to send emails from <domain>
+    |
+    | Anything outside this list is sent from mail.from.address instead, with
+    | the tenant kept as the display name and Reply-To (see tenantMailFrom()).
+    | The domain of mail.from.address is always trusted; add more here as they
+    | are verified with the provider, comma separated.
+    |
+    */
+
+    'verified_sender_domains' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('MAIL_VERIFIED_SENDER_DOMAINS', ''))
+    ))),
+
+    /*
+    |--------------------------------------------------------------------------
     | Markdown Mail Settings
     |--------------------------------------------------------------------------
     |

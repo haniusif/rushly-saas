@@ -29,9 +29,26 @@ class LogestechsService
 
     public function __construct()
     {
-        $this->baseUrl           = rtrim((string) config('services.logestechs.base_url'), '/');
+        // Per-tenant DB row overrides .env so tenants can self-configure
+        // base_url + integration_source from /admin/integrations/logestechs.
+        // If the tenancy isn't initialized yet (cli boot, central context),
+        // forCompany(null) yields a blank model and we fall back to config().
+        $row = null;
+        try {
+            $companyId = settings()->id ?? null;
+            if ($companyId) {
+                $row = \App\Logestechs\Models\Settings::forCompany((int) $companyId);
+            }
+        } catch (\Throwable $e) {
+            // settings() unavailable (e.g. running in central context) — ignore.
+        }
+
+        $base   = ($row && (string) $row->base_url !== '') ? (string) $row->base_url : (string) config('services.logestechs.base_url');
+        $source = ($row && (string) $row->integration_source !== '') ? (string) $row->integration_source : (string) (config('services.logestechs.integration_source') ?: 'API');
+
+        $this->baseUrl           = rtrim($base, '/');
         $this->timeout           = (int) (config('services.logestechs.timeout') ?: 30);
-        $this->integrationSource = (string) (config('services.logestechs.integration_source') ?: 'API');
+        $this->integrationSource = $source;
     }
 
     public function isConfigured(): bool

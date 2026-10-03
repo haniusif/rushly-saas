@@ -102,6 +102,163 @@ if(!function_exists('hasPermission')){
     }
 }
 
+if(!function_exists('tenantMailFrom')){
+    /**
+     * A From/Reply-To pair the mail provider will actually accept.
+     *
+     * Tenants store their own contact address in general_settings, and the
+     * mailables used to send AS that address. The provider (Resend) only
+     * accepts domains verified against the API key, so every tenant on an
+     * unverified domain had its mail bounced with:
+     *
+     *   550 This API key is not authorized to send emails from <domain>
+     *
+     * which silently broke login OTPs, merchant signup and credential mails.
+     *
+     * The envelope address is therefore only the tenant's when its domain is
+     * verified; otherwise it falls back to the platform sender. Either way the
+     * tenant's NAME stays as the display name and its address becomes Reply-To,
+     * so the mail still reads as coming from the tenant and replies reach them.
+     *
+     * @param  string|null $preferred Address to use when its domain is verified
+     *                                (defaults to the tenant's configured email).
+     * @return array{address:string,name:string,reply_to:?string}
+     */
+    function tenantMailFrom(?string $preferred = null): array {
+        $platform = (string) config('mail.from.address');
+
+        $tenantEmail = null;
+        $tenantName  = null;
+        try {
+            $tenantEmail = optional(settings())->email ?: null;
+            $tenantName  = optional(settings())->name ?: null;
+        } catch (\Throwable $e) {
+            // settings() can throw outside a resolved tenant context.
+        }
+
+        $candidate = $preferred ?: $tenantEmail;
+
+        $domainOf = static function (?string $email): ?string {
+            if (! $email || ! str_contains($email, '@')) return null;
+            return strtolower(trim(substr(strrchr($email, '@'), 1)));
+        };
+
+        $verified = array_map('strtolower', (array) config('mail.verified_sender_domains', []));
+        if ($platformDomain = $domainOf($platform)) {
+            $verified[] = $platformDomain;   // the platform's own domain always works
+        }
+
+        $useCandidate = $candidate
+            && ($d = $domainOf($candidate))
+            && in_array($d, $verified, true);
+
+        return [
+            'address'  => $useCandidate ? $candidate : $platform,
+            'name'     => $tenantName ?: (string) config('mail.from.name'),
+            // No point setting Reply-To to the address we are already sending as.
+            'reply_to' => ($candidate && $candidate !== ($useCandidate ? $candidate : $platform))
+                            ? $candidate
+                            : null,
+        ];
+    }
+}
+
+if(!function_exists('labelLogoPath')){
+    /**
+     * Absolute path to the logo a shipping label should print: the tenant's
+     * uploaded logo, else the platform default, else null.
+     *
+     * A tenant can hold a logo path in general_settings whose FILE is missing
+     * (uploads pruned, restored DB without the uploads dir), so existence is
+     * checked per candidate rather than trusting the DB value.
+     */
+    function labelLogoPath(): ?string {
+        $candidates = [];
+
+        try {
+            $tenantPath = optional(optional(settings())->rxlogo)->original;
+            if (is_string($tenantPath) && $tenantPath !== '') {
+                $candidates[] = $tenantPath;
+            }
+        } catch (\Throwable $e) {
+            // settings() can throw outside a resolved tenant context.
+        }
+
+        $candidates[] = 'images/default/logo.png';
+
+        foreach ($candidates as $candidate) {
+            $abs = public_path($candidate);
+            if (is_file($abs)) {
+                return $abs;
+            }
+        }
+
+        return null;
+    }
+}
+
+if(!function_exists('labelLogoDataUri')){
+    /**
+     * The label logo as a base64 data URI.
+     *
+     * mPDF prints without network access, so the image has to be inlined
+     * rather than referenced by URL. Returns null when no logo is available —
+     * callers render a text header in that case.
+     *
+     * Silent on every failure: a broken logo must never take down a label.
+     */
+    function labelLogoDataUri(): ?string {
+        $abs = labelLogoPath();
+        if (! $abs) {
+            return null;
+        }
+
+        $raw = @file_get_contents($abs);
+        if ($raw === false) {
+            return null;
+        }
+
+        return 'data:' . (@mime_content_type($abs) ?: 'image/png') . ';base64,' . base64_encode($raw);
+    }
+}
+
+if(!function_exists('labelLogoBox')){
+    /**
+     * The label logo scaled to FILL the given box while keeping its aspect
+     * ratio, returned as ['uri' => …, 'w' => px, 'h' => px].
+     *
+     * Templates can't just set width:100%: tenant logos vary from wide
+     * wordmarks to perfect squares (Bosta Express ships a 1254×1254), and a
+     * square scaled to the header's full width would be as tall as it is wide
+     * and push the label onto a second page. Scaling by min() of the two
+     * ratios grows the logo as large as the box allows in whichever dimension
+     * binds first, so it fills the space without distortion or overflow.
+     *
+     * Falls back to the box dimensions if the image can't be measured.
+     */
+    function labelLogoBox(int $maxW, int $maxH): ?array {
+        $uri = labelLogoDataUri();
+        if (! $uri) {
+            return null;
+        }
+
+        $abs  = labelLogoPath();
+        $dims = $abs ? @getimagesize($abs) : null;
+
+        if (! $dims || empty($dims[0]) || empty($dims[1])) {
+            return ['uri' => $uri, 'w' => $maxW, 'h' => $maxH];
+        }
+
+        $scale = min($maxW / $dims[0], $maxH / $dims[1]);
+
+        return [
+            'uri' => $uri,
+            'w'   => max(1, (int) round($dims[0] * $scale)),
+            'h'   => max(1, (int) round($dims[1] * $scale)),
+        ];
+    }
+}
+
 if(!function_exists('settings')){
     function settings(){
         return  GeneralSettings::with('rxlogo','rxfavicon')->where('status',Status::ACTIVE)->where(function($query){
@@ -892,6 +1049,36 @@ if (!function_exists('singleUser')) {
                 $scheme = 'http://';
             endif;
             return $scheme.$domain;
+        }
+    }
+    if (!function_exists('currency_mark_html')) {
+        /**
+         * HTML for a currency mark, resolved from an ISO code (or symbol). When
+         * the matching currencies row has a stored SVG (e.g. the new SAR/AED
+         * symbols) it is emitted as a data-URI <img> — reliable in mPDF — sized
+         * by height; otherwise the unicode symbol/code is returned as text.
+         * Output is safe to print with {!! !!}.
+         */
+        function currency_mark_html($code, $height = 12, $color = null){
+            $code = (string) $code;
+            if ($code === '') return '';
+            $row = \App\Models\Backend\Currency::where('code', $code)->orWhere('symbol', $code)->first();
+            if ($row && ! empty($row->symbol_svg)) {
+                $svg = $row->symbol_svg;
+                if ($color) {
+                    // mPDF renders the SVG as an image and doesn't inherit CSS color
+                    // or a root <svg fill> onto child paths, so bake the fill in:
+                    // recolour style-block fills (e.g. SAR's .cls-1), existing fill
+                    // attributes, and add a fill attr to any <path> that lacks one
+                    // (e.g. the AED paths).
+                    $svg = preg_replace('/fill\s*:\s*#?[0-9a-fA-F]{3,8}/', 'fill:'.$color, $svg);
+                    $svg = preg_replace('/fill\s*=\s*"(?!none)[^"]*"/', 'fill="'.$color.'"', $svg);
+                    $svg = preg_replace('/<path\b(?![^>]*\sfill=)/i', '<path fill="'.$color.'"', $svg);
+                }
+                $b64 = base64_encode($svg);
+                return '<img src="data:image/svg+xml;base64,'.$b64.'" style="height:'.(int)$height.'px;vertical-align:middle" alt="'.e($row->code ?: $code).'">';
+            }
+            return e($row ? ($row->symbol ?: $row->code) : $code);
         }
     }
     if (!function_exists('get_host')) {

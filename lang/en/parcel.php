@@ -199,7 +199,64 @@ return array (
   'parcel_count' => 'Shipment Count',
   'days_count' => 'Days count',
   'start_date' => 'Start Date',
-  'expired_date' => 'Expired Date'
- 
+  'expired_date' => 'Expired Date',
+  'parcel_date'         => 'Date',
+  'select_deliveryman'  => 'Select courier',
+  'select_hub'          => 'Select hub',
+  'bulk_action'         => 'Bulk action',
 
+  // Merchant panel labels
+  'customer'            => 'Customer',
+  'logs'                => 'Logs',
+
+  // Details page
+  'sender_info'         => 'Sender',
+  'timeline'            => 'Timeline',
+  'finance'             => 'Finance',
+  'attempts'            => 'Delivery attempts',
+  'priority_high'       => 'High',
+
+  // Import wizard
+  'import_with_preview' => 'Import shipments',
+  'preview_title'       => 'Preview before confirming',
+  'confirm_import'      => 'Confirm import',
+  'total_rows'          => 'Total rows',
+  'showing_first'       => 'Showing first',
+  'rows_only'           => 'rows',
+  'expected_columns'    => 'Expected column order',
+  'validation_errors'   => 'Validation errors',
+  'row_number'          => 'Row',
+
+
+  'chip_total' => 'Total',
+  'chip_pending' => 'Pending',
+  'chip_assigned' => 'Assigned',
+  'chip_picked_up' => 'Picked up',
+  'chip_ofd' => 'OFD',
+  'chip_delivered' => 'Delivered',
+  'chip_returned' => 'Returned',
+  'chip_cancelled' => 'Cancelled',
+  'chip_failed' => 'Failed',
+
+    'area' => 'Area',
+    'city' => 'City',
+    'paid_invoice' => 'Paid invoices',
+    'not_found' => 'Shipment not found.',
+    'not_assigned' => 'This shipment is not assigned to you.',
+    'no_data_to_preview' => 'No data to preview.',
+    'delivery_re_schedule_cancel' => 'Delivery reschedule cancelled successfully.',
+    'pickup_reschedule_canceled' => 'Pickup reschedule cancelled successfully.',
+  'status_change_not_allowed' => 'You can only cancel a shipment while it is still Pending. After pickup, please raise a Support request.',
+    'cod' => 'COD',
+    'courier_name' => 'Courier',
+    'pod' => 'POD',
+    'print_label' => 'Print label',
+    'total_charge' => 'Total charge',
+    'track' => 'Track shipment',
+    'bulk_cancelled' => ':count shipment(s) cancelled.',
+    'bulk_cancel_skipped' => ':count skipped — only Pending shipments can be cancelled.',
+    'bulk_print_labels' => 'Print labels',
+    'bulk_cancel' => 'Cancel selected',
+    'selected' => 'selected',
+    'change_status' => 'Change',
 );

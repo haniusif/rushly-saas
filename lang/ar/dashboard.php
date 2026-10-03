@@ -72,6 +72,9 @@ return [
     //salary
     'parcel_reports'               => 'تقارير الشحنات',
     'all_reports'                  => 'كل التقارير',
+    'parcels_chart'                => 'الشحنات — آخر ٨ أيام',
+    'parcels_breakdown'            => 'الشحنات حسب الحالة',
+    'series_total'                 => 'الإجمالي',
     'current_balance'              => 'الرصيد الحالي',
     'opening_balance'              => 'الرصيد الافتتاحي',
     'vat'                          => 'ضريبة القيمة المضافة',
@@ -122,4 +125,16 @@ return [
     'status_out_for_delivery'      => 'خارج للتسليم',
     'status_delivered'             => 'مُسلَّمة',
     'status_partial'               => 'جزئي',
+
+    // لوحة التاجر والتقارير
+    'active_shipments_amount'   => 'مبلغ الشحنات النشطة',
+    'accounts'                  => 'الحسابات',
+    'bank_balance'              => 'رصيد البنك',
+    'bank_opening_balance'      => 'الرصيد البنكي الافتتاحي',
+    'parcels_profit'            => 'أرباح الشحنات',
+    'parcels_sales'             => 'مبيعات الشحنات',
+    'payable_amount'            => 'المبلغ المستحق',
+    'payments'                  => 'المدفوعات',
+    'pending_amount'            => 'المبلغ المعلق',
+    'total_delivery_charge_vat' => 'إجمالي ضريبة رسوم التوصيل',
 ];

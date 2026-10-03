@@ -2,6 +2,8 @@
 
 namespace App\Models\Backend;
 
+use App\Models\Concerns\ScopedToCompany;
+
 use App\Enums\Status;
 use App\Models\MerchantPayment;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,7 +13,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Payment extends Model
 {
-    use HasFactory,LogsActivity;
+    use HasFactory,LogsActivity, ScopedToCompany;
 
 
     protected $fillable = [

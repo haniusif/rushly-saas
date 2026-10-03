@@ -254,7 +254,7 @@ class ReportsController extends Controller
     public function MerchantHubDeliverymanReports(Request $request){
         $hubs        = $this->hub->all();
         $merchants   = $this->merchant->all();
-        $deliverymans = $this->deliveryman->all();
+        $deliverymans = $this->deliveryman->selectable();
         return view('backend.reports.merchant_hub_delivery_reports',compact('request','hubs','merchants','deliverymans'));
     }
 
@@ -333,7 +333,7 @@ class ReportsController extends Controller
             $parcelsTotal['totalCashReceivedDeliveryman']            = $totalCashReceivedDeliveryman->sum('amount');
             $parcelsTotal['totalHubIncome']                         += $this->repo->totalHubIncome($request)->sum('amount');
             $merchants       = $this->merchant->all();
-            $deliverymans    = $this->deliveryman->all();
+            $deliverymans    = $this->deliveryman->selectable();
             return view('backend.reports.merchant_hub_delivery_reports',compact('request','merchant','parcelsStatus','parcelProfit','parcelsTotal','merchantTotalPayment','parcels','hubs','merchants','deliverymans'));
             //merchant reports
 
@@ -341,7 +341,7 @@ class ReportsController extends Controller
             $totalParcels  = $this->repo->deliverymanreportParcels($request);
             $hubs          = $this->hub->all();
             $merchants     = $this->merchant->all();
-            $deliverymans  = $this->deliveryman->all();
+            $deliverymans  = $this->deliveryman->selectable();
             $parcelsTotal  =[];
             $parcelProfit  =[];
 
@@ -391,7 +391,7 @@ class ReportsController extends Controller
         $MHDreports   = $this->repo->MHDreports($request);
         $hubs         = $this->hub->all();
         $merchants    = $this->merchant->all();
-        $deliverymans = $this->deliveryman->all();
+        $deliverymans = $this->deliveryman->selectable();
         return view('backend.reports.merchant_hub_delivery_reports',compact('request','MHDreports','hubs','merchants','deliverymans'));
 
     }

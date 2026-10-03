@@ -13,8 +13,12 @@ return [
     |
     */
 
-    'failed' => 'Vous n\'êtes pas une personne active, veuillez contacter l\'administrateur !',
-    // 'failed' => 'These credentials do not match our records.',
+    'failed' => 'Ces identifiants ne correspondent pas à nos enregistrements.',
+
+    // Shown ONLY when the account really is disabled — see
+    // LoginController::sendFailedLoginResponse(). Every other login
+    // failure (wrong password, wrong tenant) uses 'failed' above.
+    'inactive' => 'Vous n\'êtes pas une personne active, veuillez contacter l\'administrateur !',
     'password'          => 'Le mot de passe fourni est incorrect.',
     'throttle'          => 'Trop de tentatives de connexion. Veuillez réessayer dans :seconds secondes.',
     'token_refresh'     => 'Actualisation des jetons',

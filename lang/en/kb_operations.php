@@ -27,7 +27,7 @@ return [
                 ['label' => 'On leave',       'tone' => 'info'],
                 ['label' => 'Contract ended', 'tone' => 'bad'],
             ],
-            'cross_links' => 'TMS for real-time tracking; Hubs for assignment; Merchants for delivery assignment via the parcel system. Cash-received settlements and the salary module link in here too.',
+            'cross_links' => 'TMS for real-time tracking; Hubs for assignment; Merchants for delivery assignment via the shipment system. Cash-received settlements and the salary module link in here too.',
             'notes'       => 'Subscription-limited by delivery_man_count. 30-day contract-expiry warnings. Direct-manager scope is company admins / incharges / hub users. Freelancers require IBAN, outsourced require a supplier company, company couriers require an employee number. All couriers support geolocation (lat/lng). Activity log tracks balance changes.',
         ],
 
@@ -48,26 +48,26 @@ return [
                 ['label' => 'Online',  'tone' => 'ok'],
                 ['label' => 'Offline', 'tone' => 'bad'],
             ],
-            'cross_links' => 'Couriers (the roster being tracked), Hubs (hub locations on the map), Parcels (statuses feeding the metrics). Google Maps API powers the geo view.',
+            'cross_links' => 'Couriers (the roster being tracked), Hubs (hub locations on the map), Shipments (statuses feeding the metrics). Google Maps API powers the geo view.',
             'notes'       => 'Requires a Google Maps API key. Online/offline is determined by presence of delivery_lat/delivery_long (not null = online). Shipment assignment comes from ParcelEvent.delivery_man_id. "OFD" = Out For Delivery (ParcelStatus::DELIVERY_MAN_ASSIGN). HTML view is print-friendly.',
         ],
 
         'hubs' => [
             'icon'    => 'Building2',
             'label'   => 'Hubs',
-            'purpose' => 'Centralised warehouse / branch directory with geo-coordinates for the logistics hub network. Tracks hub contact, location, operational status, and parcel flow through facilities.',
+            'purpose' => 'Centralised warehouse / branch directory with geo-coordinates for the logistics hub network. Tracks hub contact, location, operational status, and shipment flow through facilities.',
             'pages' => [
                 ['path' => 'Index',  'desc' => 'Filterable list (name/phone). Columns: name, phone, address, status toggle. Actions: create, edit, view, delete.'],
                 ['path' => 'Create', 'desc' => 'Name, phone, address (Google Places autocomplete), map picker for lat/lng, status (Active/Inactive).'],
                 ['path' => 'Edit',   'desc' => 'Same form, pre-filled; map updates as coordinates change.'],
-                ['path' => 'View',   'desc' => 'Hub detail with parcel breakdown by status; cash-collection sums for delivered / partial-delivered / in-transit; paginated parcel list.'],
+                ['path' => 'View',   'desc' => 'Hub detail with shipment breakdown by status; cash-collection sums for delivered / partial-delivered / in-transit; paginated shipment list.'],
             ],
             'fields' => ['name', 'phone', 'address', 'hub_lat', 'hub_long', 'status', 'current_balance', 'company_id'],
             'status_flow' => [
                 ['label' => 'Active',   'tone' => 'ok'],
                 ['label' => 'Inactive', 'tone' => 'bad'],
             ],
-            'cross_links' => 'Couriers (assigned hub_id), Merchants (delivery-charge tiers per hub), Hub Incharges (management personnel), Hub Payments (settlement). Parcels are filterable by pickup origin hub.',
+            'cross_links' => 'Couriers (assigned hub_id), Merchants (delivery-charge tiers per hub), Hub Incharges (management personnel), Hub Payments (settlement). Shipments are filterable by pickup origin hub.',
             'notes'       => 'Quick-store endpoint allows inline hub creation with a JSON response. Multi-tenant scoped by company_id. The view page aggregates cash_collection by status. Geolocation is required for the map display.',
         ],
 
@@ -96,16 +96,16 @@ return [
                 ['label' => 'Wallet active', 'tone' => 'info'],
                 ['label' => 'Wallet off',    'tone' => 'warn'],
             ],
-            'cross_links' => 'Delivery Charges (per-merchant rate config), Shops (merchant pickup points), Payments (settlement), Parcels (created by the merchant). Public KYC apply form at /merchant/apply requires no auth.',
-            'notes'       => 'Multi-tenant scoped by company_id. wallet_use_activation toggles prepaid mode. services = 3 tiers (Last-mile / Fulfillment / Storage). cod_charges stored as JSON keyed by geography (inside_city / sub_city / outside_city). computed_balance is derived from parcel settlements; wallet_balance is tracked separately for prepaid merchants. Impersonate sets session.impersonator_id.',
+            'cross_links' => 'Delivery Charges (per-merchant rate config), Shops (merchant pickup points), Payments (settlement), Shipments (created by the merchant). Public KYC apply form at /merchant/apply requires no auth.',
+            'notes'       => 'Multi-tenant scoped by company_id. wallet_use_activation toggles prepaid mode. services = 3 tiers (Last-mile / Fulfillment / Storage). cod_charges stored as JSON keyed by geography (inside_city / sub_city / outside_city). computed_balance is derived from shipment settlements; wallet_balance is tracked separately for prepaid merchants. Impersonate sets session.impersonator_id.',
         ],
 
         'pickup-request' => [
             'icon'    => 'Inbox',
             'label'   => 'Pickup Request',
-            'purpose' => 'Admin view of merchant-initiated pickup requests for outbound shipment collection. Split into regular (bulk) and express (individual parcels) request types.',
+            'purpose' => 'Admin view of merchant-initiated pickup requests for outbound shipment collection. Split into regular (bulk) and express (individual shipments) request types.',
             'pages' => [
-                ['path' => 'Regular', 'desc' => 'Bulk pickup requests from merchants: merchant info (name/email/phone/avatar), pickup address, estimated parcel quantity, notes.'],
+                ['path' => 'Regular', 'desc' => 'Bulk pickup requests from merchants: merchant info (name/email/phone/avatar), pickup address, estimated shipment quantity, notes.'],
                 ['path' => 'Express', 'desc' => 'Individual express shipments: merchant info, recipient name/phone, COD amount, invoice number, weight, exchange flag, notes.'],
             ],
             'fields' => [
@@ -114,7 +114,7 @@ return [
                 'weight', 'exchange', 'note', 'request_type',
             ],
             'cross_links' => 'Merchants (request originator), Couriers (assigned for pickup execution). Creation flow lives in the merchant panel; admin sees the queue here.',
-            'notes'       => 'Read-only on the admin side (no edit/delete — that lives in the merchant panel). request_type enum distinguishes regular (parcel_quantity) from express (individual parcel detail). exchange flag (0/1) indicates whether the merchant can swap in a replacement parcel.',
+            'notes'       => 'Read-only on the admin side (no edit/delete — that lives in the merchant panel). request_type enum distinguishes regular (parcel_quantity) from express (individual shipment detail). exchange flag (0/1) indicates whether the merchant can swap in a replacement parcel.',
         ],
 
     ],

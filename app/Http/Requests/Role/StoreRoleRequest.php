@@ -24,7 +24,16 @@ class StoreRoleRequest extends FormRequest
     public function rules()
     {
         return [
-            'name'   => ['required','string','unique:roles','max:60'],
+            // Uniqueness is per TENANT, not global. Roles are owned by a
+            // company_id, and every tenant now carries the same standard set
+            // (Finance, Dispatcher, …), so a bare unique:roles would reject a
+            // tenant creating a role name another tenant already uses.
+            'name'   => [
+                'required', 'string', 'max:60',
+                \Illuminate\Validation\Rule::unique('roles')->where(
+                    fn ($q) => $q->where('company_id', optional(settings())->id)
+                ),
+            ],
             'status' => ['required','numeric'],
         ];
     }

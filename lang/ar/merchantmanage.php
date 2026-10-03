@@ -30,5 +30,7 @@ return [
     'current_balance'                 => 'الرصيد الحالي',
     'payment_withdrawal'              => 'سحب الدفعات',
     'merchant_payment_withdrawal'     => 'سحب دفعات التاجر',
-    'merchant_details'                => 'بيانات التاجر'
+    'merchant_details'                => 'بيانات التاجر',
+    'shipment_ids' => 'أرقام الشحنات',
+    'total_cod' => 'إجمالي الدفع عند الاستلام',
 ];

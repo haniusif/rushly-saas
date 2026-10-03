@@ -21,6 +21,27 @@ class DeliveryManRepository implements DeliveryManInterface {
     public function all(){
         return DeliveryMan::whereHas('user')->where('company_id',settings()->id)->with('uploadLicense','user','hub')->orderByDesc('id')->paginate(10);
     }
+
+    /**
+     * Every deliveryman for the tenant, unpaginated, ordered by name.
+     *
+     * all() paginates to 10 because it backs the deliveryman LIST page. Ten
+     * call sites were reusing it to fill selectors — parcel filter and assign,
+     * NDR, abnormal shipments, bulk action and four reports — so each of those
+     * showed only the 10 newest drivers and silently hid the rest. A tenant
+     * with 19 drivers could not assign 9 of them.
+     *
+     * Ordered by name rather than id desc: this feeds a list a human picks
+     * from, where alphabetical beats newest-first.
+     */
+    public function selectable(){
+        return DeliveryMan::whereHas('user')
+            ->where('company_id', settings()->id)
+            ->with('user', 'hub')
+            ->get()
+            ->sortBy(fn ($d) => strtolower((string) optional($d->user)->name))
+            ->values();
+    }
     
     
     

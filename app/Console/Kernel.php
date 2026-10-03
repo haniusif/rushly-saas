@@ -26,6 +26,15 @@ class Kernel extends ConsoleKernel
         $schedule->command('wms:auto-fulfillment')->everyFifteenMinutes();
         $schedule->command('aramex:sync-tracking')->everyFifteenMinutes()->withoutOverlapping();
         $schedule->command('jet:sync-tracking')->everyFifteenMinutes()->withoutOverlapping();
+        // Generic shipping sync — Logestechs (and future providers via the new module).
+        // The old logestechs:sync-tracking command is removed; this replaces it.
+        $schedule->command('shipping:sync-tracking')->everyFiveMinutes()->withoutOverlapping();
+
+        // Phase 8 — daily log retention. Off-hours to avoid contending
+        // with peak WMS + tracking-sync activity. withoutOverlapping guards
+        // against long-running batches doubling up.
+        $schedule->command('commerce:prune-logs')->dailyAt('03:00')->withoutOverlapping();
+        $schedule->command('shipping:prune-logs')->dailyAt('03:15')->withoutOverlapping();
     }
 
     /**

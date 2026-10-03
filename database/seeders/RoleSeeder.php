@@ -256,6 +256,8 @@ class RoleSeeder extends Seeder
                     'integrations_read',
                     'integrations_update',
 
+                    'mobile_apps_read',
+
                     'notification_settings_read',
                     'notification_settings_update',
 
@@ -412,6 +414,8 @@ class RoleSeeder extends Seeder
                     'general_settings_read',
 
                     'integrations_read',
+
+                    'mobile_apps_read',
 
                     'notification_settings_read',
 

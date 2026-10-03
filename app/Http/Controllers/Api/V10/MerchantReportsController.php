@@ -6,6 +6,7 @@ use App\Enums\ParcelStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Backend\DeliveryMan;
 use App\Models\Backend\Parcel;
+use App\Models\Backend\ParcelEvent;
 use App\Traits\ApiReturnFormatTrait;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -47,23 +48,32 @@ class MerchantReportsController extends Controller
 
         // By driver (Parcel has no deliveryMan relation, so look them up in
         // a second query keyed by delivery_man_id → user.name).
-        $driverAgg = Parcel::query()
+        // Driver assignment lives on parcel_events, not parcels, so aggregate
+        // through the latest driver-bearing event per parcel. Driving this off
+        // ParcelEvent keeps the company_id global scope applied; columns are
+        // qualified because both tables carry hub_id/company_id.
+        $driverAgg = ParcelEvent::query()
+            ->join('parcels', 'parcels.id', '=', 'parcel_events.parcel_id')
             ->select(
-                'delivery_man_id',
+                'parcel_events.delivery_man_id',
                 DB::raw('COUNT(*) as parcels'),
                 DB::raw(sprintf(
-                    'SUM(CASE WHEN status IN (%s) THEN 1 ELSE 0 END) as delivered',
+                    'SUM(CASE WHEN parcels.status IN (%s) THEN 1 ELSE 0 END) as delivered',
                     implode(',', $delivered)
                 )),
                 DB::raw(sprintf(
-                    'COALESCE(SUM(CASE WHEN status IN (%s) THEN cash_collection ELSE 0 END),0) as cod',
+                    'COALESCE(SUM(CASE WHEN parcels.status IN (%s) THEN parcels.cash_collection ELSE 0 END),0) as cod',
                     implode(',', $delivered)
                 ))
             )
-            ->where('merchant_id', $merchantId)
-            ->whereBetween('created_at', [$from, $to])
-            ->whereNotNull('delivery_man_id')
-            ->groupBy('delivery_man_id')
+            ->where('parcels.merchant_id', $merchantId)
+            ->whereBetween('parcels.created_at', [$from, $to])
+            ->whereRaw('parcel_events.id = (
+                select max(pe2.id) from parcel_events pe2
+                 where pe2.parcel_id = parcel_events.parcel_id
+                   and pe2.delivery_man_id is not null
+            )')
+            ->groupBy('parcel_events.delivery_man_id')
             ->orderByDesc('parcels')
             ->limit(50)
             ->get();

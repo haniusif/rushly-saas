@@ -1,7 +1,7 @@
 <?php
 namespace App\Repositories\Superadmin\Company;
 interface CompanyInterface {
-    public function get(); 
+    public function get($request = null);
     public function getFind($id);
     public function store($request);
     public function update($id,$request);

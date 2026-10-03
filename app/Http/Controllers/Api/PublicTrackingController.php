@@ -41,7 +41,8 @@ class PublicTrackingController extends Controller
             ], 404);
         }
 
-        $events = ParcelEvent::query()
+        $events = ParcelEvent::withoutGlobalScopes()
+            ->where('company_id', $key->company_id)
             ->where('parcel_id', $parcel->id)
             ->orderBy('created_at', 'asc')
             ->get(['parcel_status', 'note', 'created_at'])

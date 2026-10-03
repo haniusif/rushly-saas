@@ -8,16 +8,8 @@ import {
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent } from '@/Components/ui/Card';
 import { Button } from '@/Components/ui/Button';
+import { Money } from '@/Components/CurrencySymbol';
 import { cn } from '@/lib/utils';
-
-function Money({ value, currency }) {
-    return (
-        <span className="tabular-nums">
-            <span className="text-muted-foreground text-xs me-0.5">{currency}</span>
-            {Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </span>
-    );
-}
 
 function Initials({ name, image }) {
     if (image) {
@@ -158,7 +150,7 @@ export default function View({ user = {}, currency = '', permissions = {}, urls 
                                 <InfoRow icon={Briefcase} label={t.designation} value={user.designation} />
                                 <InfoRow icon={Shield}    label={t.role}        value={user.role} />
                                 <InfoRow icon={Calendar}  label={t.joining_date} value={user.joining_date} />
-                                <InfoRow icon={DollarSign} label={t.salary}     value={<Money value={user.salary} currency={currency} />} />
+                                <InfoRow icon={DollarSign} label={t.salary}     value={<Money value={user.salary} />} />
                             </div>
                         </CardContent>
                     </Card>

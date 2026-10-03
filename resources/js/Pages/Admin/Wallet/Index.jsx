@@ -8,6 +8,7 @@ import { Input } from '@/Components/ui/Input';
 import { Label } from '@/Components/ui/Label';
 import { Select } from '@/Components/ui/Select';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/Components/ui/DropdownMenu';
+import { CurrencySymbol } from '@/Components/CurrencySymbol';
 
 const STATUS_TINT = {
     1: 'bg-amber-100 text-amber-700 border-amber-200',
@@ -20,7 +21,7 @@ function StatusPill({ status, label }) {
 function Money({ value, currency, type }) {
     const cls = type === 1 ? 'text-emerald-700' : type === 2 ? 'text-rose-700' : '';
     const sign = type === 1 ? '+' : type === 2 ? '−' : '';
-    return <span className={`font-medium tabular-nums ${cls}`}>{sign} {currency}{Number(value || 0).toFixed(2)}</span>;
+    return <span className={`font-medium tabular-nums ${cls}`}>{sign} <CurrencySymbol />{Number(value || 0).toFixed(2)}</span>;
 }
 
 function SummaryCard({ label, value, sub, valueClass = '' }) {
@@ -226,8 +227,8 @@ export default function Index({
             </Card>
 
             <div className="grid gap-4 md:grid-cols-4 mb-5">
-                <SummaryCard label={t.total_recharge} value={`${currency}${Number(summary.total_recharge || 0).toFixed(2)}`} valueClass="text-emerald-700" />
-                <SummaryCard label={t.total_deductions} value={`${currency}${Number(summary.total_deductions || 0).toFixed(2)}`} valueClass="text-rose-700" />
+                <SummaryCard label={t.total_recharge} value={<><CurrencySymbol />{Number(summary.total_recharge || 0).toFixed(2)}</>} valueClass="text-emerald-700" />
+                <SummaryCard label={t.total_deductions} value={<><CurrencySymbol />{Number(summary.total_deductions || 0).toFixed(2)}</>} valueClass="text-rose-700" />
                 <Card>
                     <CardContent className="p-4">
                         <div className="grid grid-cols-3 gap-3">

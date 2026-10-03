@@ -13,7 +13,12 @@ return [
     |
     */
 
-    'failed' => '¡No eres una persona activa, por favor contacta a Admin!',
+    'failed' => 'Estas credenciales no coinciden con nuestros registros.',
+
+    // Shown ONLY when the account really is disabled — see
+    // LoginController::sendFailedLoginResponse(). Every other login
+    // failure (wrong password, wrong tenant) uses 'failed' above.
+    'inactive' => '¡No eres una persona activa, por favor contacta a Admin!',
     // 'failed' => 'estas credenciales no coinciden con nuestros registros',
     'password'          => 'La contraseña proporcionada es incorrecta.',
     'throttle'          => 'Demasiados intentos de inicio de sesión. Vuelva a intentarlo en :segundos segundos.',

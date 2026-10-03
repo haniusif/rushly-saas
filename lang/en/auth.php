@@ -13,8 +13,12 @@ return [
     |
     */
 
-    'failed' => 'Your account is currently inactive. Please contact the administrator to activate it.',
-    // 'failed' => 'These credentials do not match our records.',
+    'failed' => 'These credentials do not match our records.',
+
+    // Shown ONLY when the account really is disabled — see
+    // LoginController::sendFailedLoginResponse(). Every other login
+    // failure (wrong password, wrong tenant) uses 'failed' above.
+    'inactive' => 'Your account is currently inactive. Please contact the administrator to activate it.',
     'password'          => 'The provided password is incorrect.',
     'throttle'          => 'Too many login attempts. Please try again in :seconds seconds.',
     'token_refresh'     => 'Tokens Refresh',

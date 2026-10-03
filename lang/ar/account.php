@@ -30,5 +30,6 @@ return array (
   'opening_balance_reverse'  => 'عكس الرصيد الافتتاحي',
   'added_msg'                => 'تمت إضافة الحساب بنجاح.',
   'not_enough_balance'       => 'الرصيد غير كافٍ.',
-  'subscribe'                => 'اشترك'
+  'subscribe'                => 'اشترك',
+    'update_account' => 'تعذر تحديث الحساب.',
 );

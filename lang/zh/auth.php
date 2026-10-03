@@ -13,7 +13,12 @@ return [
     |
     */
 
-    'failed' => '您不是活跃人士，请联系管理员！',
+    'failed' => '这些凭据与我们的记录不匹配。',
+
+    // Shown ONLY when the account really is disabled — see
+    // LoginController::sendFailedLoginResponse(). Every other login
+    // failure (wrong password, wrong tenant) uses 'failed' above.
+    'inactive' => '您不是活跃人士，请联系管理员！',
     // 'failed' => '这些凭据与我们的记录不符',
     'password'          => '提供的密码不正确。',
     'throttle'          => '登录尝试次数过多。请在 :seconds 秒后重试。',

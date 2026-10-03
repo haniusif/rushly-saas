@@ -551,7 +551,9 @@
     @endif
     
       <span class="badge bg-info">
-  {{ optional($parcel->lastParcelEvent)->deliveryMan->user->name ?? '—' }}
+  {{-- lastDeliveryMan, not lastParcelEvent: the latter is the newest event of
+       any kind, so any event after the assignment blanked this out. --}}
+  {{ optional($parcel->lastDeliveryMan)->deliveryMan->user->name ?? '—' }}
 </span>
 
     

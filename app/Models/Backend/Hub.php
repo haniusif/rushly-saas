@@ -2,6 +2,8 @@
 
 namespace App\Models\Backend;
 
+use App\Models\Concerns\ScopedToCompany;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -9,8 +11,18 @@ use Spatie\Activitylog\LogOptions;
 
 class Hub extends Model
 {
-    use HasFactory, LogsActivity;
-    protected $fillable = ['name','phone','address'];
+    use HasFactory, LogsActivity, ScopedToCompany;
+    protected $fillable = ['name','phone','address','city_id'];
+
+    /**
+     * The hub's city. This is the structured origin locality a carrier
+     * integration needs — before it existed, providers had to guess it from
+     * the hub's free-text name.
+     */
+    public function city()
+    {
+        return $this->belongsTo(City::class, 'city_id');
+    }
 
     // Get all row. Descending order using scope.
     public function scopeOrderByDesc($query, $data)
@@ -25,7 +37,7 @@ class Hub extends Model
     {
         return LogOptions::defaults()
         ->useLogName('Hub')
-        ->logOnly(['name', 'phone', 'address'])
+        ->logOnly(['name', 'phone', 'address', 'city_id'])
         ->setDescriptionForEvent(fn(string $eventName) => "{$eventName}");
     }
 

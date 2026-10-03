@@ -24,6 +24,18 @@ class GeneralSettingsController extends Controller
         $s          = $this->repo->all();
         $currencies = $this->currency->getActive();
 
+        // Resolve a friendly label for the currently-stored currency. The value
+        // may be a symbol (e.g. "﷼") or an ISO code (e.g. "AED") depending on
+        // when/how it was set, so match on either.
+        $currencyValue = (string) $s->currency;
+        $currentCurrency = $currencyValue === '' ? null
+            : \App\Models\Backend\Currency::where('symbol', $currencyValue)
+                ->orWhere('code', $currencyValue)
+                ->first();
+        $currencyLabel = $currentCurrency
+            ? trim($currentCurrency->name . ' ' . $currentCurrency->symbol . ($currentCurrency->code ? ' (' . $currentCurrency->code . ')' : ''))
+            : $currencyValue;
+
         $themeFallback = [
             'sidebar_color'      => '#0f172a',
             'sidebar_text_color' => '#f1f5f9',
@@ -41,6 +53,7 @@ class GeneralSettingsController extends Controller
                 'email'               => (string) $s->email,
                 'address'             => (string) $s->address,
                 'currency'            => (string) $s->currency,
+                'currency_label'      => $currencyLabel,
                 'par_track_prefix'    => strtoupper((string) $s->par_track_prefix),
                 'invoice_prefix'      => strtoupper((string) $s->invoice_prefix),
                 'primary_color'       => (string) ($s->primary_color ?? '#000000'),
@@ -65,10 +78,17 @@ class GeneralSettingsController extends Controller
             ],
             'theme_fallbacks' => $themeFallback,
             'lookups' => [
-                'currencies' => collect($currencies)->map(fn ($c) => [
-                    'value' => $c->symbol,
-                    'label' => $c->name . ' ' . $c->symbol,
-                ])->values(),
+                // Options keyed by ISO code (unique) — symbols are ambiguous.
+                // symbol + svg let the UI render the selected currency's mark.
+                'currencies' => collect($currencies)
+                    ->filter(fn ($c) => ! empty($c->code))
+                    ->unique('code')
+                    ->map(fn ($c) => [
+                        'value'  => $c->code,
+                        'label'  => trim($c->name . ' ' . $c->symbol . ' (' . $c->code . ')'),
+                        'symbol' => (string) $c->symbol,
+                        'svg'    => $c->symbol_svg,
+                    ])->values(),
                 'login_layouts' => collect(['split','centered','fullbleed'])->map(fn ($k) => [
                     'value' => $k,
                     'label' => __('merchant.login_layout_' . $k) ?: ucfirst($k),
@@ -138,6 +158,8 @@ class GeneralSettingsController extends Controller
                 'email'        => __('levels.email') ?: 'Email',
                 'address'      => __('levels.address') ?: 'Address',
                 'currency'     => __('levels.currency') ?: 'Currency',
+                'current_currency' => __('settings.current_currency') ?: 'Current currency',
+                'selected_currency' => __('settings.selected_currency') ?: 'Selected currency',
                 'timezone'     => __('settings.timezone') ?: 'Timezone',
                 'timezone_help'=> __('settings.timezone_help') ?: 'Leave empty to use the application default (' . config('app.timezone') . ').',
                 'timezone_default_option' => __('settings.timezone_default_option') ?: 'Application default (' . config('app.timezone') . ')',

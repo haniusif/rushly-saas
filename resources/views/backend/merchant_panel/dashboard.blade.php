@@ -1,406 +1,233 @@
-<!-- wrapper  -->
-
 @extends('backend.partials.master')
 @section('title')
     {{ __('merchant.dashboard') }}
 @endsection
 @section('maincontent')
-@php 
-$currency = settings()->currency;
-@endphp
-    <div class="container-fluid dashboard-content ">
-        <!-- pageheader  -->
-        <div class="row">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12">
-                <div class="page-header">
-                    <div class="page-breadcrumb">
-                        <nav aria-label="breadcrumb">
-                            <ol class="breadcrumb">
-                                <li class="breadcrumb-item"><a href="{{ url('/') }}"
-                                        class="breadcrumb-link">{{ __('merchant.dashboard') }}</a></li>
-                                <li class="breadcrumb-item active" aria-current="page">
-                                    {{ __('merchant.merchant_dashboard') }}</li>
-                            </ol>
-                        </nav>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- end pageheader  -->
+    @php
+        $currency      = settings()->currency;
+        $rlMerchant    = optional(Auth::user())->merchant;
+        $rlServices    = $rlMerchant ? $rlMerchant->activeServices() : [];
 
-        @php
-            $rlMerchant = optional(Auth::user())->merchant;
-            $rlServices = $rlMerchant ? $rlMerchant->activeServices() : [];
-        @endphp
-        @if(!empty($rlServices))
-        {{-- Read-only service badges. Admin controls them on /admin/merchant/{id}/edit. --}}
-        <div class="row mb-3">
-            <div class="col-12">
-                <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
-                    <span class="text-muted small mr-2">{{ __('merchant.services') }}:</span>
-                    @foreach($rlServices as $rlSvc)
-                        @php
-                            $rlIcon = ['last_mile' => 'ti-truck-delivery', 'fulfillment' => 'ti-package', 'storage' => 'ti-building-warehouse'][$rlSvc] ?? 'ti-check';
-                            $rlClass = ['last_mile' => 'badge-info', 'fulfillment' => 'badge-success', 'storage' => 'badge-warning'][$rlSvc] ?? 'badge-secondary';
-                        @endphp
-                        <span class="badge {{ $rlClass }}" style="padding:7px 12px;font-size:12px;">
-                            <i class="ti {{ $rlIcon }} mr-1"></i>{{ __('merchant.service_' . $rlSvc) }}
+        // Null-safe values for the financial cards (older merchant rows can
+        // have null on some of these columns).
+        $fmt           = fn ($n) => number_format((float) ($n ?? 0), 2);
+        $netProfit     = ((float) ($t_cash_collection ?? 0)) - ((float) ($t_selling_price ?? 0));
+        $totalProfit   = ((float) ($t_sale ?? 0)) - ((float) ($t_delivery_fee ?? 0)) - ((float) ($ts_vat ?? 0));
+        $inTransit     = max(0, (int) $t_parcel - ((int) $t_delivered + (int) $t_return));
+
+        $computedBal   = (float) (optional($rlMerchant)->computed_balance ?? 0);
+        $openingBal    = (float) (optional($rlMerchant)->opening_balance ?? 0);
+        $merchantVat   = (float) (optional($rlMerchant)->vat ?? 0);
+
+        $serviceMeta = [
+            'last_mile'   => ['icon' => 'ti-truck-delivery',   'tint' => 'tw-bg-sky-50 tw-text-sky-700 tw-border-sky-200'],
+            'fulfillment' => ['icon' => 'ti-package',          'tint' => 'tw-bg-emerald-50 tw-text-emerald-700 tw-border-emerald-200'],
+            'storage'    => ['icon' => 'ti-building-warehouse', 'tint' => 'tw-bg-amber-50 tw-text-amber-700 tw-border-amber-200'],
+        ];
+    @endphp
+
+    <div class="container-fluid dashboard-content">
+        <div class="tw-px-1 tw-pt-4 sm:tw-px-2">
+
+            {{-- Breadcrumb --}}
+            <nav class="tw-flex tw-items-center tw-gap-2 tw-text-xs tw-text-gray-500 tw-mb-4">
+                <a href="{{ url('/') }}" class="hover:tw-text-brand-600 tw-no-underline">{{ __('merchant.dashboard') }}</a>
+                <i class="fa fa-angle-right tw-text-[10px] tw-text-gray-400 tw-rtl-flip"></i>
+                <span class="tw-text-gray-700 tw-font-medium">{{ __('merchant.merchant_dashboard') }}</span>
+            </nav>
+
+            {{-- Header + filter --}}
+            <div class="tw-flex tw-flex-col sm:tw-flex-row sm:tw-items-end sm:tw-justify-between tw-gap-3 tw-mb-5">
+                <div>
+                    <h1 class="tw-text-2xl tw-font-semibold tw-text-gray-900 tw-mb-1">{{ __('merchant.merchant_dashboard') }}</h1>
+                    <p class="tw-text-sm tw-text-gray-500 tw-m-0">{{ __('merchant.dashboard') }}</p>
+                </div>
+                <form action="{{ route('merchant-panel.dashboard.filter') }}" method="POST" class="tw-flex tw-items-center tw-gap-2">
+                    @csrf
+                    <div class="tw-relative">
+                        <i class="fa fa-calendar tw-absolute tw-top-1/2 tw-left-3 -tw-translate-y-1/2 tw-text-gray-400 tw-text-sm"></i>
+                        <input type="text" autocomplete="off" id="date" name="date"
+                               class="date_range_picker tw-input tw-h-10 tw-pl-9 tw-pr-3 tw-text-sm tw-bg-white tw-border tw-border-gray-200 tw-rounded-lg tw-w-56"
+                               value="{{ isset($request->date) ? $request->date : old('date') }}"
+                               placeholder="{{ __('merchantPlaceholder.date') }}">
+                    </div>
+                    <button type="submit"
+                            class="tw-inline-flex tw-items-center tw-gap-2 tw-h-10 tw-px-4 tw-text-sm tw-font-medium tw-text-white tw-bg-brand-600 hover:tw-bg-brand-700 tw-rounded-lg">
+                        <i class="fa fa-filter tw-text-xs"></i>
+                        {{ __('levels.filter') }}
+                    </button>
+                </form>
+            </div>
+
+            {{-- Services badges --}}
+            @if (!empty($rlServices))
+                <div class="tw-mb-5 tw-flex tw-items-center tw-flex-wrap tw-gap-2">
+                    <span class="tw-text-xs tw-uppercase tw-tracking-wider tw-font-medium tw-text-gray-500 tw-mr-1">{{ __('merchant.services') }}</span>
+                    @foreach ($rlServices as $rlSvc)
+                        @php $meta = $serviceMeta[$rlSvc] ?? ['icon' => 'ti-check', 'tint' => 'tw-bg-gray-50 tw-text-gray-700 tw-border-gray-200']; @endphp
+                        <span class="tw-inline-flex tw-items-center tw-gap-1.5 tw-px-2.5 tw-py-1 tw-text-xs tw-font-medium tw-rounded-full tw-border {{ $meta['tint'] }}">
+                            <i class="ti {{ $meta['icon'] }}"></i>
+                            {{ __('merchant.service_' . $rlSvc) }}
                         </span>
                     @endforeach
                 </div>
-            </div>
-        </div>
-        @endif
+            @endif
 
-        <div class="ecommerce-widget merchant-dashboard-filter">
-            <div class="row p-0 mb-3">
-                <div class="col-12 col-md-6">
-                    <p class="h3 d-inline">{{ __('merchant.merchant_dashboard') }}</p>
-                </div>
-                <div class="col-12 col-md-6 text-right  pt-2 pt-sm-0">
-                    <form action="{{ route('merchant-panel.dashboard.filter') }}" method="POST"
-                        class="d-flex justify-content-end">
-                        @csrf
-                        <input type="text" autocomplete="off" id="date" name="date"
-                            class="input py-1 w200 date_range_picker w-50 form-control group-input "
-                            value="{{ isset($request->date) ? $request->date : old('date') }}"
-                            placeholder="{{ __('merchantPlaceholder.date') }}">
-                        <button type="submit" class="btn btn-sm btn-primary group-btn"
-                            style="margin-left: -5px!important"><i class="fa fa-search"></i>
-                            {{ __('levels.filter') }}</button>
-                    </form>
-                </div>
-            </div>
-
-
-            {{-- parcel info --}}
-            <div class="row merchant-panel header-summery">
-                <div class="col-sm-6  col-lg-6 col-xl-3">
-                    <a href="{{ route('merchant-panel.parcel.index') }}" class="d-block">
-                        <div class="card border-3 border-top border-top-primary">
-                            <div class="card-body">
-                                <div class="d-flex ">
-                                    <label class="icon p-10px"><i class="fa fa-box-open text-primary"></i></label>
-                                    <div class="pl-2 w-100">
-                                        <h5 class="m-0 text-primary">{{ __('dashboard.total_parcel') }}</h5>
-                                        <h1 class="mb-1 m-0 text-primary">{{ $t_parcel }}</h1>
-                                    </div>
-                                </div>
+            {{-- Parcel KPI tiles --}}
+            <div class="tw-grid tw-gap-3 tw-grid-cols-2 lg:tw-grid-cols-4 tw-mb-5">
+                @php
+                    $parcelKpis = [
+                        ['url' => route('merchant-panel.parcel.index'), 'icon' => 'fa-box-open',     'label' => __('dashboard.total_parcel'),    'value' => (int) $t_parcel,   'tint' => 'tw-bg-brand-50 tw-text-brand-600'],
+                        ['url' => route('merchant-panel.parcel.filter', ['parcel_status' => \App\Enums\ParcelStatus::DELIVERED]), 'icon' => 'fa-shipping-fast', 'label' => __('dashboard.total_deliverd_'), 'value' => (int) $t_delivered, 'tint' => 'tw-bg-emerald-50 tw-text-emerald-600'],
+                        ['url' => route('merchant-panel.parcel.filter', ['parcel_status' => \App\Enums\ParcelStatus::RETURN_RECEIVED_BY_MERCHANT]), 'icon' => 'fa-undo', 'label' => __('dashboard.total_return'), 'value' => (int) $t_return, 'tint' => 'tw-bg-amber-50 tw-text-amber-600'],
+                        ['url' => route('merchant-panel.parcel.index'), 'icon' => 'fa-dolly',        'label' => __('dashboard.total_transit'),   'value' => $inTransit,         'tint' => 'tw-bg-indigo-50 tw-text-indigo-600'],
+                    ];
+                @endphp
+                @foreach ($parcelKpis as $k)
+                    <a href="{{ $k['url'] }}"
+                       class="tw-group tw-block tw-no-underline tw-bg-white tw-border tw-border-gray-100 tw-rounded-xl tw-p-5 tw-shadow-card hover:tw-shadow-card-hover hover:-tw-translate-y-0.5 tw-transition-all">
+                        <div class="tw-flex tw-items-center tw-gap-4">
+                            <span class="tw-shrink-0 tw-w-12 tw-h-12 tw-rounded-xl tw-flex tw-items-center tw-justify-center {{ $k['tint'] }}">
+                                <i class="fa {{ $k['icon'] }} tw-text-xl"></i>
+                            </span>
+                            <div class="tw-min-w-0">
+                                <div class="tw-text-xs tw-uppercase tw-tracking-wider tw-font-medium tw-text-gray-500 tw-mb-1">{{ $k['label'] }}</div>
+                                <div class="tw-text-2xl tw-font-semibold tw-text-gray-900 tw-tabular-nums">{{ number_format($k['value']) }}</div>
                             </div>
                         </div>
                     </a>
+                @endforeach
+            </div>
+
+            {{-- Three grouped financial lists --}}
+            <div class="tw-grid tw-grid-cols-1 lg:tw-grid-cols-3 tw-gap-3 tw-mb-5">
+
+                {{-- Active shipments amounts --}}
+                <div class="tw-bg-white tw-border tw-border-gray-100 tw-rounded-xl tw-shadow-card tw-overflow-hidden">
+                    <div class="tw-px-5 tw-py-3 tw-border-b tw-border-gray-100">
+                        <h3 class="tw-text-sm tw-font-semibold tw-text-gray-900 tw-m-0">{{ __('Active Shipments Amount') }}</h3>
+                    </div>
+                    <ul class="tw-divide-y tw-divide-gray-100 tw-m-0 tw-list-none tw-p-0">
+                        <li class="tw-flex tw-items-center tw-justify-between tw-px-5 tw-py-3">
+                            <span class="tw-text-sm tw-text-gray-700">{{ __('Active Shipments Amount') }}</span>
+                            <span class="tw-text-sm tw-font-semibold tw-text-gray-900 tw-tabular-nums">{{ $fmt($t_cash_collection) }} {{ $currency }}</span>
+                        </li>
+                        <li class="tw-flex tw-items-center tw-justify-between tw-px-5 tw-py-3">
+                            <span class="tw-text-sm tw-text-gray-700">{{ __('dashboard.total_selling_price') }}</span>
+                            <span class="tw-text-sm tw-font-semibold tw-text-gray-900 tw-tabular-nums">{{ $fmt($t_selling_price) }} {{ $currency }}</span>
+                        </li>
+                        <li class="tw-flex tw-items-center tw-justify-between tw-px-5 tw-py-3 tw-bg-emerald-50/40">
+                            <span class="tw-text-sm tw-font-medium tw-text-gray-800">{{ __('dashboard.net_profit_ammount') }}</span>
+                            <span class="tw-text-sm tw-font-semibold tw-tabular-nums {{ $netProfit >= 0 ? 'tw-text-emerald-700' : 'tw-text-rose-600' }}">
+                                {{ $fmt($netProfit) }} {{ $currency }}
+                            </span>
+                        </li>
+                    </ul>
                 </div>
-                <div class="col-sm-6 col-lg-6  col-xl-3">
-                    <a href="{{ route('merchant-panel.parcel.filter', ['parcel_status' => \App\Enums\ParcelStatus::DELIVERED]) }}"
-                        class="d-block">
-                        <div class="card border-3 border-top border-top-primary">
-                            <div class="card-body">
-                                <div class="d-flex">
-                                    <label class="icon  p-10px"><i class="fa fa-shipping-fast text-primary"></i></label>
-                                    <div class="pl-2 w-100">
-                                        <h5 class=" m-0 text-primary">{{ __('dashboard.total_deliverd_') }}</h5>
-                                        <h1 class="mb-1 m-0 text-primary">{{ $t_delivered }}</h1>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
+
+                {{-- Liquid / packaging / VAT --}}
+                <div class="tw-bg-white tw-border tw-border-gray-100 tw-rounded-xl tw-shadow-card tw-overflow-hidden">
+                    <div class="tw-px-5 tw-py-3 tw-border-b tw-border-gray-100">
+                        <h3 class="tw-text-sm tw-font-semibold tw-text-gray-900 tw-m-0">{{ __('dashboard.total_liquid_fragile_amount') }}</h3>
+                    </div>
+                    <ul class="tw-divide-y tw-divide-gray-100 tw-m-0 tw-list-none tw-p-0">
+                        <li class="tw-flex tw-items-center tw-justify-between tw-px-5 tw-py-3">
+                            <span class="tw-text-sm tw-text-gray-700">{{ __('dashboard.total_liquid_fragile_amount') }}</span>
+                            <span class="tw-text-sm tw-font-semibold tw-text-gray-900 tw-tabular-nums">{{ $fmt($t_liquid_fragile) }} {{ $currency }}</span>
+                        </li>
+                        <li class="tw-flex tw-items-center tw-justify-between tw-px-5 tw-py-3">
+                            <span class="tw-text-sm tw-text-gray-700">{{ __('dashboard.total_packaging_amount') }}</span>
+                            <span class="tw-text-sm tw-font-semibold tw-text-gray-900 tw-tabular-nums">{{ $fmt($t_packaging) }} {{ $currency }}</span>
+                        </li>
+                        <li class="tw-flex tw-items-center tw-justify-between tw-px-5 tw-py-3">
+                            <span class="tw-text-sm tw-text-gray-700">{{ __('dashboard.total_vat_amount') }}</span>
+                            <span class="tw-text-sm tw-font-semibold tw-text-gray-900 tw-tabular-nums">{{ $fmt($t_vat_amount) }} {{ $currency }}</span>
+                        </li>
+                    </ul>
                 </div>
-                <div class=" col-sm-6 col-lg-6 col-xl-3">
-                    <a href="{{ route('merchant-panel.parcel.filter', ['parcel_status' => \App\Enums\ParcelStatus::RETURN_RECEIVED_BY_MERCHANT]) }}"
-                        class="d-block">
-                        <div class="card border-3 border-top border-top-primary">
-                            <div class="card-body">
-                                <div class="d-flex ">
-                                    <label class="icon  p-10px"><i class="fa fa-dna text-primary"></i></label>
-                                    <div class="pl-2 w-100">
-                                        <h5 class=" m-0 text-primary">{{ __('dashboard.total_return') }}</h5>
-                                        <h1 class="mb-1 m-0 text-primary">{{ $t_return }}</h1>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class=" col-sm-6 col-lg-6  col-xl-3">
-                    <a href="{{ route('merchant-panel.parcel.index') }}" class="d-block">
-                        <div class="card border-3 border-top border-top-primary">
-                            <div class="card-body">
-                                <div class="d-flex ">
-                                    <label class="icon  p-10px"><i class="fa fa-dolly text-primary"></i></label>
-                                    <div class="pl-2 w-100">
-                                        <h5 class=" m-0 text-primary">{{ __('dashboard.total_transit') }}</h5>
-                                        <h1 class="mb-1 m-0 text-primary">{{ $t_parcel - ($t_delivered + $t_return) }}</h1>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
+
+                {{-- Delivery / COD / total --}}
+                <div class="tw-bg-white tw-border tw-border-gray-100 tw-rounded-xl tw-shadow-card tw-overflow-hidden">
+                    <div class="tw-px-5 tw-py-3 tw-border-b tw-border-gray-100">
+                        <h3 class="tw-text-sm tw-font-semibold tw-text-gray-900 tw-m-0">{{ __('dashboard.total_total_delivery_amount') }}</h3>
+                    </div>
+                    <ul class="tw-divide-y tw-divide-gray-100 tw-m-0 tw-list-none tw-p-0">
+                        <li class="tw-flex tw-items-center tw-justify-between tw-px-5 tw-py-3">
+                            <span class="tw-text-sm tw-text-gray-700">{{ __('dashboard.total_delivery_charge') }}</span>
+                            <span class="tw-text-sm tw-font-semibold tw-text-gray-900 tw-tabular-nums">{{ $fmt($t_delivery_charge) }} {{ $currency }}</span>
+                        </li>
+                        <li class="tw-flex tw-items-center tw-justify-between tw-px-5 tw-py-3">
+                            <span class="tw-text-sm tw-text-gray-700">{{ __('dashboard.total_cod_amount') }}</span>
+                            <span class="tw-text-sm tw-font-semibold tw-text-gray-900 tw-tabular-nums">{{ $fmt($t_cod_amount) }} {{ $currency }}</span>
+                        </li>
+                        <li class="tw-flex tw-items-center tw-justify-between tw-px-5 tw-py-3">
+                            <span class="tw-text-sm tw-text-gray-700">{{ __('dashboard.total_total_delivery_amount') }}</span>
+                            <span class="tw-text-sm tw-font-semibold tw-text-gray-900 tw-tabular-nums">{{ $fmt($t_delivery_amount) }} {{ $currency }}</span>
+                        </li>
+                    </ul>
                 </div>
             </div>
 
-
-            {{-- parcel details --}}
-            <div class="row">
-                <div class="col-12">
-                    <div class="row py-3  ">
-                        <div class="col-md-4">
-                            <ul class="list-group mt-2 ">
-                                <li class="list-group-item profile-list-group-item">
-                                    <span class="float-left font-weight-bold">{{ __('Active Shipments Amount') }}
-                                    </span>
-                                    <span class="float-right">  {{ $t_cash_collection }} {{ $currency }}</span>
-                                </li>
-                                <li class="list-group-item profile-list-group-item">
-                                    <span
-                                        class="float-left font-weight-bold">{{ __('dashboard.total_selling_price') }}</span>
-                                    <span class="float-right"> {{ $t_selling_price }} {{ $currency }}</span>
-                                </li>
-                                <li class="list-group-item profile-list-group-item">
-                                    <span class="float-left font-weight-bold">
-                                        {{ __('dashboard.net_profit_ammount') }}</span>
-                                    <span class="float-right">
-                                        {{ $t_cash_collection - $t_selling_price }} {{ $currency }}</span>
-                                </li>
-                            </ul>
-                        </div>
-                        <div class="col-md-4">
-                            <ul class="list-group mt-2 ">
-                                <li class="list-group-item profile-list-group-item">
-                                    <span
-                                        class="float-left font-weight-bold">{{ __('dashboard.total_liquid_fragile_amount') }}</span>
-                                    <span class="float-right">{{ $t_liquid_fragile }} {{ $currency }}</span>
-                                </li>
-                                <li class="list-group-item profile-list-group-item">
-                                    <span
-                                        class="float-left font-weight-bold">{{ __('dashboard.total_packaging_amount') }}</span>
-                                    <span class="float-right">{{ $t_packaging }} {{ $currency }}</span>
-                                </li>
-                                <li class="list-group-item profile-list-group-item">
-                                    <span class="float-left font-weight-bold">{{ __('dashboard.total_vat_amount') }}</span>
-                                    <span class="float-right">{{ $t_vat_amount }} {{ $currency }}</span>
-                                </li>
-                            </ul>
-                        </div>
-
-                        <div class=" col-md-4 p-b-2 border-dark">
-                            <ul class="list-group mt-2 ">
-                                <li class="list-group-item profile-list-group-item">
-                                    <span
-                                        class="float-left font-weight-bold">{{ __('dashboard.total_delivery_charge') }}</span>
-                                    <span class="float-right">{{ $t_delivery_charge }} {{ $currency }}</span>
-                                </li>
-                                <li class="list-group-item profile-list-group-item">
-                                    <span
-                                        class="float-left font-weight-bold">{{ __('dashboard.total_cod_amount') }}</span>
-                                    <span class="float-right">{{ $t_cod_amount }} {{ $currency }}</span>
-                                </li>
-
-                                <li class="list-group-item profile-list-group-item">
-                                    <span
-                                        class="float-left font-weight-bold">{{ __('dashboard.total_total_delivery_amount') }}</span>
-                                    <span class="float-right">{{ $t_delivery_amount }} {{ $currency }}</span>
-                                </li>
-                            </ul>
-                        </div>
+            {{-- Charts --}}
+            <div class="tw-grid tw-grid-cols-1 lg:tw-grid-cols-2 tw-gap-3 tw-mb-5">
+                <div class="tw-bg-white tw-border tw-border-gray-100 tw-rounded-xl tw-shadow-card">
+                    <div class="tw-px-5 tw-py-3 tw-border-b tw-border-gray-100">
+                        <h3 class="tw-text-sm tw-font-semibold tw-text-gray-900 tw-m-0">{{ __('dashboard.parcels_chart') ?: 'Parcels — last 8 days' }}</h3>
+                    </div>
+                    <div class="tw-p-4">
+                        <div class="apexcharts" id="apexparcels"></div>
+                    </div>
+                </div>
+                <div class="tw-bg-white tw-border tw-border-gray-100 tw-rounded-xl tw-shadow-card">
+                    <div class="tw-px-5 tw-py-3 tw-border-b tw-border-gray-100">
+                        <h3 class="tw-text-sm tw-font-semibold tw-text-gray-900 tw-m-0">{{ __('dashboard.parcels_breakdown') ?: 'Parcels by status' }}</h3>
+                    </div>
+                    <div class="tw-p-4">
+                        <div class="apexcharts" id="apexparcelspiechart" style="padding-bottom:120px"></div>
                     </div>
                 </div>
             </div>
 
-
-            <div class="row">
-                <div class="col-lg-6  ">
-                    <div class="card">
-                        <div class="card-body" width="100%" height="200px">
-                            <div class="apexcharts" id="apexparcels"></div>
+            {{-- All reports --}}
+            <h2 class="tw-text-base tw-font-semibold tw-text-gray-800 tw-mb-3">{{ __('dashboard.all_reports') }}</h2>
+            @php
+                $reports = [
+                    ['icon' => 'fa-hand-holding-usd', 'label' => __('dashboard.total_sales_amount'),        'value' => $fmt($t_sale),         'unit' => $currency, 'tint' => 'tw-bg-emerald-50 tw-text-emerald-600'],
+                    ['icon' => 'fa-hands-helping',   'label' => __('dashboard.total_delivery_fees_paid'),  'value' => $fmt($t_delivery_fee), 'unit' => $currency, 'tint' => 'tw-bg-amber-50 tw-text-amber-600'],
+                    ['icon' => 'fa-percent',         'label' => __('levels.total_vat'),                    'value' => $fmt($ts_vat),         'unit' => $currency, 'tint' => 'tw-bg-purple-50 tw-text-purple-600'],
+                    ['icon' => 'fa-coins',           'label' => __('dashboard.net_profit_ammount'),        'value' => $fmt($totalProfit),    'unit' => $currency, 'tint' => $totalProfit >= 0 ? 'tw-bg-emerald-50 tw-text-emerald-600' : 'tw-bg-rose-50 tw-text-rose-600', 'highlight' => $totalProfit < 0],
+                    ['icon' => 'fa-credit-card',     'label' => __('dashboard.current_balance'),           'value' => $fmt($computedBal),    'unit' => $currency, 'tint' => 'tw-bg-brand-50 tw-text-brand-600'],
+                    ['icon' => 'fa-donate',          'label' => __('dashboard.opening_balance'),           'value' => $fmt($openingBal),     'unit' => $currency, 'tint' => 'tw-bg-sky-50 tw-text-sky-600'],
+                    ['icon' => 'fa-percent',         'label' => __('dashboard.vat'),                       'value' => $fmt($merchantVat),    'unit' => $currency, 'tint' => 'tw-bg-purple-50 tw-text-purple-600'],
+                    ['icon' => 'fa-hourglass-half',  'label' => __('dashboard.payment_processing'),        'value' => $fmt($t_balance_proc), 'unit' => $currency, 'tint' => 'tw-bg-amber-50 tw-text-amber-600'],
+                    ['icon' => 'fa-database',        'label' => __('dashboard.paid_amount'),               'value' => $fmt($t_balance_paid), 'unit' => $currency, 'tint' => 'tw-bg-emerald-50 tw-text-emerald-600'],
+                    ['icon' => 'fa-home',            'label' => __('dashboard.total_shop'),                'value' => number_format((int) $t_shop),         'unit' => '',        'tint' => 'tw-bg-indigo-50 tw-text-indigo-600'],
+                    ['icon' => 'fa-boxes',           'label' => __('dashboard.total_parcel_bank_items'),   'value' => number_format((int) $t_parcel_bank),  'unit' => '',        'tint' => 'tw-bg-brand-50 tw-text-brand-600'],
+                    ['icon' => 'fa-history',         'label' => __('dashboard.total_payment_request'),     'value' => number_format((int) $t_request),      'unit' => '',        'tint' => 'tw-bg-sky-50 tw-text-sky-600'],
+                ];
+            @endphp
+            <div class="tw-grid tw-grid-cols-2 md:tw-grid-cols-3 lg:tw-grid-cols-4 tw-gap-3">
+                @foreach ($reports as $r)
+                    <div class="tw-bg-white tw-border tw-border-gray-100 tw-rounded-xl tw-shadow-card tw-p-4 hover:tw-shadow-card-hover tw-transition-shadow">
+                        <div class="tw-flex tw-items-center tw-gap-3">
+                            <span class="tw-shrink-0 tw-w-10 tw-h-10 tw-rounded-lg tw-flex tw-items-center tw-justify-center {{ $r['tint'] }}">
+                                <i class="fa {{ $r['icon'] }} tw-text-lg"></i>
+                            </span>
+                            <div class="tw-min-w-0">
+                                <div class="tw-text-[11px] tw-uppercase tw-tracking-wider tw-font-medium tw-text-gray-500 tw-line-clamp-1">{{ $r['label'] }}</div>
+                                <div class="tw-text-base tw-font-semibold tw-text-gray-900 tw-tabular-nums tw-truncate">
+                                    {{ $r['value'] }}
+                                    @if ($r['unit'])
+                                        <span class="tw-text-xs tw-text-gray-500 tw-font-normal tw-ml-0.5">{{ $r['unit'] }}</span>
+                                    @endif
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="col-lg-6  ">
-                    <div class="card">
-                        <div class="card-body" width="100%" height="200px">
-                            <div class="apexcharts" id="apexparcelspiechart" style="padding-bottom:120px"></div>
-                        </div>
-                    </div>
-                </div>
+                @endforeach
             </div>
-
-            <p class="h3">{{ __('dashboard.all_reports') }}</p>
-            {{-- Accounts info --}}
-            <div class="row merchant-panel header-summery all-reports">
-                <div class="col-12 col-sm-6 col-md-4 col-lg-4 col-xl-3">
-                    <div class="card">
-                        <div class="card-body p-3 text-right">
-                            <div class="d-flex justify-content-between">
-                                <p class="h3"><i class="fa fa-hand-holding-usd text-primary"></i></p>
-                                <div>
-                                    <h5 class=" text-primary m-0">{{ __('dashboard.total_sales_amount') }} </h5>
-                                    <p class="h3  text-primary">{{ number_format($t_sale, 2) }} {{ $currency }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-4 col-xl-3">
-                    <div class="card">
-                        <div class="card-body p-3 text-right">
-                            <div class="d-flex justify-content-between">
-                                <p class="h3"><i class="fa fa-hands-helping  text-primary"></i></p>
-                                <div>
-                                    <h5 class=" text-primary m-0">{{ __('dashboard.total_delivery_fees_paid') }}</h5>
-                                    <p class="h3  text-primary">
-                                        {{ number_format($t_delivery_fee, 2) }} {{ $currency }}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-4 col-xl-3">
-                    <div class="card">
-                        <div class="card-body p-3 text-right">
-                            <div class="d-flex justify-content-between">
-                                <p class="h3"><i class="fa fa-dna text-primary"></i></p>
-                                <div>
-                                    <h5 class=" text-primary m-0">{{ __('levels.total_vat') }}</h5>
-                                    <p class="h3 text-primary">{{ number_format($ts_vat, 2) }} {{ $currency }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-4 col-xl-3">
-                    <div class="card">
-                        <div class="card-body p-3 text-right">
-                            <div class="d-flex justify-content-between">
-                                <p class="h3"><i class="fa fa-hockey-puck  text-primary"></i></p>
-                                <div>
-                                    <h5 class=" text-primary m-0">{{ __('dashboard.net_profit_ammount') }}</h5>
-                                    <p class="h3  text-primary">
-                                        {{ number_format($t_sale - $t_delivery_fee - $ts_vat, 2) }} {{ $currency }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-4 col-xl-3">
-                    <div class="card">
-                        <div class="card-body p-3 text-right">
-                            <div class="d-flex justify-content-between">
-                                <p class="h3"><i class="fa fa-credit-card text-primary"></i></p>
-                                <div>
-                                    <h5 class=" text-primary m-0">{{ __('dashboard.current_balance') }}</h5>
-                                    <p class="h3 text-primary">
-                                        {{ number_format($merchant->computed_balance, 2) }} {{ $currency }}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-4 col-xl-3">
-                    <div class="card">
-                        <div class="card-body p-3 text-right">
-                            <div class="d-flex justify-content-between">
-                                <p class="h3"><i class="fa fa-donate text-primary"></i></p>
-                                <div>
-                                    <h5 class=" text-primary m-0">{{ __('dashboard.opening_balance') }}</h5>
-                                    <p class="h3 text-primary">
-                                        {{ number_format($merchant->opening_balance, 2) }} {{ $currency }}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-4 col-xl-3">
-                    <div class="card">
-                        <div class="card-body p-3 text-right">
-                            <div class="d-flex justify-content-between">
-                                <p class="h3"><i class="fa fa-dna text-primary"></i></p>
-                                <div>
-                                    <h5 class=" text-primary m-0 text-left">{{ __('dashboard.vat') }}</h5>
-                                    <p class="h3 text-primary">{{ $merchant->vat }} {{ $currency }}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-4 col-xl-3">
-                    <div class="card">
-                        <div class="card-body p-3 text-right">
-                            <div class="d-flex justify-content-between">
-                                <p class="h3"><i class="fa fa-hourglass-half text-primary"></i></p>
-                                <div>
-                                    <h5 class=" text-primary m-0">{{ __('dashboard.payment_processing') }}</h5>
-                                    <p class="h3 text-primary">{{ $t_balance_proc }} {{ $currency }}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-4 col-xl-3">
-                    <div class="card">
-                        <div class="card-body p-3 text-right">
-                            <div class="d-flex justify-content-between">
-                                <p class="h3"><i class="fa fa-database text-primary"></i></p>
-                                <div>
-                                    <h5 class=" text-primary m-0">{{ __('dashboard.paid_amount') }}</h5>
-                                    <p class="h3 text-primary"> {{ $t_balance_paid }} {{ $currency }}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Other info --}}
-                <div class="col-12 col-sm-6 col-md-4 col-lg-4 col-xl-3">
-                    <div class="card">
-                        <div class="card-body p-3 text-right">
-                            <div class="d-flex justify-content-between">
-                                <p class="h3"><i class="fa fa-home text-primary"></i></p>
-                                <div>
-                                    <h5 class=" text-primary m-0">{{ __('dashboard.total_shop') }}</h5>
-                                    <p class="h3 text-primary">{{ $t_shop }}</p>
-
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-4 col-xl-3">
-                    <div class="card">
-                        <div class="card-body p-3 text-right">
-                            <div class="d-flex justify-content-between">
-                                <p class="h3"><i class="fa fa-boxes text-primary"></i></p>
-                                <div>
-                                    <h5 class=" text-primary m-0">{{ __('dashboard.total_parcel_bank_items') }}</h5>
-                                    <p class="h3 text-primary">{{ $t_parcel_bank }}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-4 col-xl-3">
-                    <div class="card">
-                        <div class="card-body p-3 text-right">
-                            <div class="d-flex justify-content-between">
-                                <p class="h3"><i class="fa fa-history text-primary"></i></p>
-                                <div>
-                                    <h5 class=" text-primary m-0">{{ __('dashboard.total_payment_request') }}</h5>
-                                    <p class="h3 text-primary">{{ $t_request }} </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-
         </div>
     </div>
-    <!-- end wrapper  -->
 @endsection()
 
 @push('styles')
@@ -410,6 +237,5 @@ $currency = settings()->currency;
     <script type="text/javascript" src="{{ static_asset('backend/js/charts/apexcharts.js') }}"></script>
     @include('backend.merchant_panel.dashboard-chart')
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
-    <script type="text/javascript" src="{{ static_asset('backend/js/date-range-picker/date-range-picker-custom.js') }}">
-    </script>
+    <script type="text/javascript" src="{{ static_asset('backend/js/date-range-picker/date-range-picker-custom.js') }}"></script>
 @endpush

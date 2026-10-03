@@ -7,10 +7,7 @@ import { Button } from '@/Components/ui/Button';
 import { Input } from '@/Components/ui/Input';
 import { Label } from '@/Components/ui/Label';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/Components/ui/DropdownMenu';
-
-function Money({ value, currency }) {
-    return <span className="tabular-nums font-medium">{currency}{Number(value || 0).toFixed(2)}</span>;
-}
+import { Money } from '@/Components/CurrencySymbol';
 
 function csrfToken() {
     if (typeof document === 'undefined') return '';
@@ -152,7 +149,7 @@ export default function Index({ rows = [], pagination = {}, filters = {}, curren
                                         <td className="px-4 py-3 font-mono text-xs">{r.month || '—'}</td>
                                         <td className="px-4 py-3 text-muted-foreground tabular-nums">{r.date || '—'}</td>
                                         <td className="px-4 py-3 text-muted-foreground max-w-xs">{r.note || '—'}</td>
-                                        <td className="px-4 py-3 text-end"><Money value={r.amount} currency={currency} /></td>
+                                        <td className="px-4 py-3 text-end"><Money value={r.amount} /></td>
                                         {(permissions.update || permissions.delete) && (
                                             <td className="px-4 py-3 text-end">
                                                 <DropdownMenu>

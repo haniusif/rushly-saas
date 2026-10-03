@@ -6,7 +6,7 @@ A field guide to the codebase. Lists what lives where, what it does, and how the
 
 ## 1. What This App Is
 
-**Rushly** is a multi-tenant **logistics / courier management SaaS**, built on Laravel 10. It is sold as an installable platform for delivery/logistics companies. A single deployment hosts:
+**Rushly** is a multi-tenant **logistics / courier management SaaS**, built on Laravel 12. It is sold as an installable platform for delivery/logistics companies. A single deployment hosts:
 
 - A **central domain** (the SaaS marketing site + super-admin) where logistics companies sign up
 - **Tenant subdomains** (one per customer company) running the actual operational app — admins, hub managers, merchants, delivery men all log into their own subdomain
@@ -19,8 +19,8 @@ Each tenant runs the full courier workflow: parcels, hubs, delivery men, merchan
 
 | Layer | Choice |
 |---|---|
-| Framework | Laravel 10 (`^10.10`) |
-| PHP | `^8.1` (this codebase **does not run on 8.4** — old vendor deps trigger fatal deprecations; use PHP 8.3) |
+| Framework | Laravel 12 |
+| PHP | 8.4 (production is `/usr/bin/php` → 8.4.22) |
 | DB | MySQL (`mysqli` + `pdo` extensions required) |
 | Multi-tenancy | `stancl/tenancy` v3.7 (shared DB, per-tenant cache/filesystem) |
 | Frontend | Blade views with pre-compiled `public/css` + `public/js` (no `@vite` / `mix()` references — Vite config exists but is unused) |
@@ -98,13 +98,27 @@ app/
 │       ├── Merchantpanel/   # Merchant-scoped models (Invoice, PaymentAccount)
 │       ├── Payroll/         # SalaryGenerate
 │       └── Superadmin/      # Plan
-├── Providers/               # App, Tenancy, Route, Auth, View, Event, Broadcast
+├── Providers/               # App, Tenancy, Route, Auth, View, Event, Broadcast, IntegrationConfig, Zatca
 ├── Repositories/            # ~48 repos behind interfaces, bound in AppServiceProvider
-├── Services/                # DeliveryPandaService (3PL integration)
+├── Services/                # Legacy per-3PL services (DeliveryPanda, Aramex, Jet, Zajel), SmsService
 ├── Support/                 # ParcelStatusHelper (status state machine)
-└── Traits/                  # ApiReturnFormatTrait, PaymentTrait (bKash), TrackingTrait
+├── Traits/                  # ApiReturnFormatTrait, PaymentTrait (bKash), TrackingTrait
+│
+├── Shipping/                # ▲ Module — generic courier abstraction, see docs/shipping-architecture.md
+├── Commerce/                # ▲ Module — generic storefront abstraction, see COMMERCE.md
+├── Oms/                     # ▲ Module — canonical orders, see OMS.md
+├── Fulfillment/             # ▲ Module — routing + strategies, see FULFILLMENT.md
+├── Wms/                     # ▲ Module — WMS observers → StockChanged event
+├── Salla/                   # Storefront bridge (INTEGRATIONS.md §4)
+├── Qoyod/, Daftra/, Odoo/   # Per-tenant accounting sync (ACCOUNTING.md)
+├── Zatca/                   # Saudi e-invoicing Phase 1 generator
+└── Logestechs/              # LEGACY — settings model, superseded by Shipping module (see 3PL.md)
+```
 
-config/                      # Standard Laravel + tenancy.php
+**Modular sub-namespace pattern.** Every ▲ module uses the same folder shape: `Contracts/` + `DTOs/` + `Providers/` (or `Strategies/`) + `Services/` + `Models/` + `Events/` + `Listeners/` + `Repositories/` + `Exceptions/` + a `<Module>ServiceProvider.php` that binds the factory + logger + repos. Growth is predictable — a fifth module (e.g. `Payments/`) would follow the exact same shape. Business logic never imports a concrete provider or strategy; it goes through the module's factory + interface. Complete architectural walkthrough for the earliest-established module: [`docs/shipping-architecture.md`](docs/shipping-architecture.md).
+
+```
+config/                      # Standard Laravel + tenancy.php + shipping.php + commerce.php + fulfillment.php
 database/migrations/         # 96 migrations → ~116 tables
 database/seeders/tours/      # System onboarding tour definitions (JSON, seeder-driven)
 public/                      # Pre-compiled css/js + uploads + installer assets
@@ -605,7 +619,7 @@ PATH="/opt/homebrew/opt/php@8.3/bin:$PATH" php artisan cache:clear
 
 ### Pitfalls
 
-- **PHP 8.4 is fatal.** Old vendor packages emit deprecations that Laravel's `HandleExceptions` upgrades to ErrorException. Use 8.3.
+- **PHP 8.4 is now the runtime.** The vendor deprecation issues that made 8.3 the previous default have been resolved.
 - **`imagick` warning** is printed to stdout by the global Homebrew PHP config — strip it (e.g. `php -d extension= ...` or filter output) when capturing PHP output into shell variables.
 - **HTTP on `*.test` returns 403** for `valet secure`'d sites — use `https://`.
 - **Login redirects to `admin.rushly-logistic.com`** in code where the host is hardcoded — re-targeting to `admin.rushly.test` (or any local equivalent) requires patching the redirect site (look in `LoginController` / `Backend/Superadmin/CompanyController`).

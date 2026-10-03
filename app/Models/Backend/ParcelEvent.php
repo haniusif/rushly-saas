@@ -2,6 +2,7 @@
 
 namespace App\Models\Backend;
 
+use App\Models\Concerns\ScopedToCompany;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +12,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class ParcelEvent extends Model
 {
-    use HasFactory;
+    use HasFactory, ScopedToCompany;
 
     protected $casts = [
         'delivered_images' => 'array',
@@ -52,8 +53,6 @@ class ParcelEvent extends Model
 
     /**
      * Boot hooks:
-     *   - tenant global scope: every query auto-filters by company_id when a
-     *     tenant context is active. Mirrors the Parcel model's `tenant` scope.
      *   - creating hook: populates company_id from the parent parcel (or the
      *     current tenant as a fallback) so existing callers that build events
      *     via `new ParcelEvent()` keep working without touching them.
@@ -61,14 +60,6 @@ class ParcelEvent extends Model
      */
     protected static function booted(): void
     {
-        static::addGlobalScope('tenant', function ($query) {
-            if (!function_exists('tenant') || !tenant() || !tenant()->company_id) {
-                return;
-            }
-            $table = $query->getModel()->getTable();
-            $query->where($table . '.company_id', (int) tenant()->company_id);
-        });
-
         static::creating(function (ParcelEvent $event) {
             if ($event->company_id) {
                 return;

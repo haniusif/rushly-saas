@@ -26,4 +26,9 @@ return [
     'returned_to_merchant_expense'                              => 'Shipment Returned To ClientExpense',
     'returned_to_merchant_income_cancel'                        => 'Shipment Returned To ClientCancel Income',
     'returned_to_merchant_expense_cancel'                       => 'Shipment Returned To ClientCancel Expense',
+
+    'return_to_merchant_deliveryman_statement' => 'Shipment Return To Client - Deliveryman Income',
+    'return_to_merchant__deliveryman_statement' => 'Shipment Return To Client - Deliveryman Expense',
+    'return_received_by_merchant_statment' => 'Return Received By Client Expense',
+    'return_received_by_statement' => 'Return Received By Client Income',
 ];

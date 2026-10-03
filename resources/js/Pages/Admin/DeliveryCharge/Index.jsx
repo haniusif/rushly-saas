@@ -8,6 +8,7 @@ import { Input } from '@/Components/ui/Input';
 import { Label } from '@/Components/ui/Label';
 import { Select } from '@/Components/ui/Select';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/Components/ui/DropdownMenu';
+import { Money } from '@/Components/CurrencySymbol';
 
 function StatusPill({ status, label }) {
     const ok = Number(status) === 1;
@@ -16,10 +17,6 @@ function StatusPill({ status, label }) {
             {label}
         </span>
     );
-}
-
-function Money({ value, currency }) {
-    return <span className="tabular-nums">{currency}{Number(value || 0).toFixed(2)}</span>;
 }
 
 export default function Index({ rows = [], pagination = {}, filters = {}, lookups = {}, currency = '', permissions = {}, urls = {}, t = {} }) {
@@ -97,10 +94,10 @@ export default function Index({ rows = [], pagination = {}, filters = {}, lookup
                                         <td className="px-4 py-3 text-end tabular-nums">{r.extra_weight_price}</td>
                                         <td className="px-4 py-3 text-end tabular-nums">{r.position ?? '—'}</td>
                                         <td className="px-4 py-3"><StatusPill status={r.status} label={r.status_label} /></td>
-                                        <td className="px-4 py-3 text-end"><Money value={r.same_day} currency={currency} /></td>
-                                        <td className="px-4 py-3 text-end"><Money value={r.next_day} currency={currency} /></td>
-                                        <td className="px-4 py-3 text-end"><Money value={r.sub_city} currency={currency} /></td>
-                                        <td className="px-4 py-3 text-end"><Money value={r.outside_city} currency={currency} /></td>
+                                        <td className="px-4 py-3 text-end"><Money value={r.same_day} /></td>
+                                        <td className="px-4 py-3 text-end"><Money value={r.next_day} /></td>
+                                        <td className="px-4 py-3 text-end"><Money value={r.sub_city} /></td>
+                                        <td className="px-4 py-3 text-end"><Money value={r.outside_city} /></td>
                                         {(permissions.update || permissions.delete) && (
                                             <td className="px-4 py-3 text-end">
                                                 <DropdownMenu>

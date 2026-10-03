@@ -186,17 +186,52 @@ public function tms(Request $request)
         'hub_long' => (float) $h->hub_long,
     ]);
 
-    return view('backend.tms.map', compact(
-        'deliverymen',
-        'locations',
-        'with_shipments',
-        'without_shipments',
-        'onlineCount',
-        'offlineCount',
-        'totalCount',
-        'hubs',
-        'grouped','stats'
-    ));
+    return \Inertia\Inertia::render('Admin/Tms/Index', [
+        'date'    => $date instanceof \Carbon\Carbon ? $date->format('Y-m-d') : (string) $date,
+        'stats'   => $stats,
+        'grouped' => $grouped->map(fn ($items, $name) => [
+            'name'  => $name,
+            'count' => count($items),
+        ])->values(),
+        'locations'        => $locations,
+        'with_shipments'   => $with_shipments,
+        'without_shipments'=> $without_shipments,
+        'hubs'             => $hubs,
+        'counters' => [
+            'online'  => (int) $onlineCount,
+            'offline' => (int) $offlineCount,
+            'total'   => (int) $totalCount,
+        ],
+        'urls' => [
+            'index'           => route('tms'),
+            'runsheet_bulk'   => route('tms.runsheet.bulk'),
+            'driver_runsheet' => route('tms.runsheet', ['driver_id' => 0]),
+            'dashboard'       => route('dashboard.index'),
+        ],
+        'google_maps_key' => googleMapSettingKey(),
+        't' => [
+            'title'             => 'TMS',
+            'filter'            => __('levels.filter') ?: 'Filter',
+            'date'              => 'Date',
+            'with_shipments'    => 'Drivers with shipments',
+            'without_shipments' => 'Drivers without shipments',
+            'shipment_status'   => 'Shipment status',
+            'online'            => 'Online',
+            'offline'           => 'Offline',
+            'total'             => 'Total',
+            'shipments'         => 'shipments',
+            'pending'           => 'Pending',
+            'delivered'         => 'Delivered',
+            'print_runsheet'    => 'Print runsheet',
+            'print_bulk'        => 'Print runsheet (bulk)',
+            'select_all'        => 'Select all',
+            'selected'          => ':n selected',
+            'no_drivers'        => 'No drivers.',
+            'no_map_key'        => 'Google Maps API key is not configured. Set it in Settings → Google Maps.',
+            'fullscreen'        => 'Fullscreen',
+            'exit_fullscreen'   => 'Exit fullscreen',
+        ],
+    ]);
 }
 
 

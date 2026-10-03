@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/Components/ui/Card';
 import { Button } from '@/Components/ui/Button';
 import { Input } from '@/Components/ui/Input';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/Components/ui/DropdownMenu';
+import { Money, CurrencySymbol } from '@/Components/CurrencySymbol';
 import { cn } from '@/lib/utils';
 
 function csrfToken() {
@@ -96,7 +97,7 @@ export default function Index({ mode = 'view', charge = 0, active: initialActive
                                         <td className="px-4 py-3 font-medium">{t.name_value}</td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center">
-                                                <span className="inline-flex h-9 items-center rounded-l-md border border-r-0 border-input bg-muted/40 px-2.5 text-xs font-mono text-muted-foreground">{currency}</span>
+                                                <span className="inline-flex h-9 items-center rounded-l-md border border-r-0 border-input bg-muted/40 px-2.5 text-xs font-mono text-muted-foreground"><CurrencySymbol /></span>
                                                 <Input className="rounded-l-none" type="number" step="0.01" value={form.data.charge} onChange={(e) => form.setData('charge', e.target.value)} autoFocus />
                                             </div>
                                             {form.errors.charge && <p className="text-xs text-destructive mt-1">{form.errors.charge}</p>}
@@ -126,7 +127,7 @@ export default function Index({ mode = 'view', charge = 0, active: initialActive
                                             <ToggleSwitch active={active} disabled={busy} onClick={toggle} />
                                         </td>
                                     )}
-                                    <td className="px-4 py-3 tabular-nums">{currency}{Number(charge || 0).toFixed(2)}</td>
+                                    <td className="px-4 py-3 tabular-nums"><Money value={charge} /></td>
                                     {permissions.update && (
                                         <td className="px-4 py-3 text-end">
                                             <DropdownMenu>

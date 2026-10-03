@@ -2,15 +2,19 @@
 
 namespace App\Http\Controllers\Backend\Wms;
 
+use App\Http\Controllers\Backend\Wms\Concerns\RendersInertiaIndex;
 use App\Http\Controllers\Controller;
 use App\Repositories\Hub\HubInterface;
 use App\Repositories\Wms\WmsCycleCountRepositoryInterface;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class WmsCycleCountController extends Controller
 {
+    use RendersInertiaIndex;
+
     public function __construct(
         protected WmsCycleCountRepositoryInterface $repo,
         protected HubInterface $hubRepo
@@ -18,16 +22,72 @@ class WmsCycleCountController extends Controller
 
     public function index(Request $request)
     {
-        $counts = $this->repo->all($request);
-        $hubs   = $this->hubRepo->all();
-        return view('backend.wms.cycle_counts.index', compact('counts', 'hubs'));
+        $paginator = $this->repo->all($request);
+        $hubs      = $this->hubRepo->all();
+
+        $rows = collect($paginator->items())->map(fn ($c) => [
+            'id'           => $c->id,
+            'count_number' => $c->count_number,
+            'hub'          => optional($c->hub)->name,
+            'scope'        => $c->scope,
+            'zone'         => $c->zone,
+            'assigned_to'  => optional($c->assignedTo)->name,
+            'status'       => $c->status,
+            'status_label' => ucwords(str_replace('_', ' ', $c->status)),
+            'started_at'   => optional($c->started_at)->diffForHumans(),
+            'completed_at' => optional($c->completed_at)->diffForHumans(),
+            'url'          => route('wms.cycle-counts.show', $c->id),
+        ])->values();
+
+        return Inertia::render('Admin/Wms/CycleCounts/Index', [
+            'rows'        => $rows,
+            'pagination'  => $this->paginateMeta($paginator),
+            'lookups'     => [
+                'hubs' => $this->lookupRows($hubs, fn ($h) => ['id' => $h->id, 'name' => $h->name]),
+            ],
+            'permissions' => ['create' => hasPermission('wms_manage')],
+            'urls' => [
+                'index'  => route('wms.cycle-counts.index'),
+                'create' => route('wms.cycle-counts.create'),
+            ],
+            't' => $this->indexLabels([
+                'title' => 'Cycle counts', 'count_number' => 'Count #', 'hub' => 'Hub',
+                'scope' => 'Scope', 'assigned' => 'Assigned', 'started' => 'Started', 'completed' => 'Completed',
+            ]),
+        ]);
     }
 
     public function create()
     {
         $hubs = $this->hubRepo->all();
         $next = $this->repo->nextCountNumber();
-        return view('backend.wms.cycle_counts.create', compact('hubs', 'next'));
+
+        return Inertia::render('Admin/Wms/CycleCounts/Create', [
+            'lookups' => [
+                'hubs'   => $this->lookupRows($hubs, fn ($h) => ['id' => $h->id, 'name' => $h->name]),
+                'scopes' => [
+                    ['value' => 'zone',  'label' => 'Single zone',  'hint' => 'Count one zone within the hub'],
+                    ['value' => 'aisle', 'label' => 'Single aisle', 'hint' => 'Count one aisle within the hub'],
+                    ['value' => 'full',  'label' => 'Full hub',     'hint' => 'Count every location in the hub'],
+                ],
+            ],
+            'next_number' => $next,
+            'urls' => [
+                'submit' => route('wms.cycle-counts.store'),
+                'cancel' => route('wms.cycle-counts.index'),
+            ],
+            't' => [
+                'title'        => 'New cycle count',
+                'title_index'  => 'Cycle counts',
+                'count_number' => 'Count #',
+                'hub'          => 'Hub',
+                'scope'        => 'Scope',
+                'zone'         => 'Zone',
+                'zone_hint'    => 'Required when scope is "Single zone"',
+                'cancel'       => __('levels.cancel') ?: 'Cancel',
+                'save'         => 'Create count',
+            ],
+        ]);
     }
 
     public function store(Request $request)

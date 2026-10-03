@@ -2,13 +2,15 @@
 
 namespace App\Models\backend;
 
+use App\Models\Concerns\ScopedToCompany;
+
 use App\Models\Backend\Parcel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class MerchantStatement extends Model
 {
-    use HasFactory;
+    use HasFactory, ScopedToCompany;
     public function parcel(){
         return $this->belongsTo(Parcel::class,'parcel_id','id');
     }

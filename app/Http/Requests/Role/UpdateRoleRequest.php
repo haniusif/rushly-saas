@@ -27,7 +27,14 @@ class UpdateRoleRequest extends FormRequest
 
 
         return [
-            'name'   => 'required|string|max:60|unique:roles,name,'.Request::input('id'),
+            // Per-tenant uniqueness, ignoring the row being edited — see the
+            // note in StoreRoleRequest on why a global unique:roles is wrong.
+            'name'   => [
+                'required', 'string', 'max:60',
+                \Illuminate\Validation\Rule::unique('roles')
+                    ->ignore(Request::input('id'))
+                    ->where(fn ($q) => $q->where('company_id', optional(settings())->id)),
+            ],
             'status' => ['required','numeric'],
         ];
     }

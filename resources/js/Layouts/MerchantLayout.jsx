@@ -312,7 +312,25 @@ function Topbar({ onSidebarOpen, user, brand, theme }) {
                             onClick={(e) => {
                                 e.preventDefault();
                                 if (typeof window !== 'undefined' && !window.confirm(t('logout_confirm'))) return;
-                                router.post(safeRoute('logout'));
+                                // Build a real form POST so Laravel's logout
+                                // gets a proper CSRF token and we land on the
+                                // login page via a normal browser navigation
+                                // (Inertia's router.post can't follow the
+                                // non-Inertia redirect that Auth::logout fires
+                                // — LoginController::loggedOut() returns a
+                                // plain 302 to the Blade login screen, which
+                                // Inertia rejects as an invalid response).
+                                const form = document.createElement('form');
+                                form.action = safeRoute('logout');
+                                form.method = 'POST';
+                                const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                                const inp = document.createElement('input');
+                                inp.type = 'hidden';
+                                inp.name = '_token';
+                                inp.value = csrf;
+                                form.appendChild(inp);
+                                document.body.appendChild(form);
+                                form.submit();
                             }}
                             className="text-destructive focus:text-destructive"
                         >

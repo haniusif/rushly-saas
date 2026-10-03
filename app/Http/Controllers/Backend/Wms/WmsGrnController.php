@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Backend\Wms;
 
 use App\Enums\Wms\GrnStatus;
+use App\Http\Controllers\Backend\Wms\Concerns\RendersInertiaIndex;
+use App\Http\Controllers\Backend\Wms\Concerns\ScopesWmsMerchants;
 use App\Http\Controllers\Controller;
 use App\Models\Backend\Wms\WmsLocation;
 use App\Models\Backend\Wms\WmsProduct;
@@ -12,9 +14,12 @@ use App\Repositories\Wms\WmsGrnRepositoryInterface;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class WmsGrnController extends Controller
 {
+    use RendersInertiaIndex, ScopesWmsMerchants;
+
     public function __construct(
         protected WmsGrnRepositoryInterface $repo,
         protected MerchantInterface $merchantRepo,
@@ -23,15 +28,52 @@ class WmsGrnController extends Controller
 
     public function index(Request $request)
     {
-        $grns      = $this->repo->all($request);
+        $paginator = $this->repo->all($request);
         $merchants = $this->merchantRepo->all();
         $hubs      = $this->hubRepo->all();
-        return view('backend.wms.grn.index', compact('grns', 'merchants', 'hubs'));
+
+        $rows = collect($paginator->items())->map(fn ($g) => [
+            'id'           => $g->id,
+            'grn_number'   => $g->grn_number,
+            'merchant'     => optional($g->merchant)->business_name,
+            'hub'          => optional($g->hub)->name,
+            'received_by'  => optional($g->receivedBy)->name,
+            'items_count'  => (int) ($g->items_count ?? $g->items?->count() ?? 0),
+            'status'       => $g->status,
+            'status_label' => ucwords(str_replace('_', ' ', $g->status)),
+            'created_at'   => optional($g->created_at)->diffForHumans(),
+            'url'          => route('wms.grn.show', $g->id),
+        ])->values();
+
+        return Inertia::render('Admin/Wms/Grn/Index', [
+            'rows'        => $rows,
+            'pagination'  => $this->paginateMeta($paginator),
+            'filters'     => [
+                'status'      => $request->input('status', ''),
+                'merchant_id' => $request->input('merchant_id', ''),
+                'hub_id'      => $request->input('hub_id', ''),
+            ],
+            'lookups'     => [
+                'statuses' => ['draft', 'in_progress', 'completed', 'discrepancy'],
+                'merchants'=> $this->lookupRows($merchants, fn ($m) => ['id' => $m->id, 'name' => $m->business_name]),
+                'hubs'     => $this->lookupRows($hubs, fn ($h) => ['id' => $h->id, 'name' => $h->name]),
+            ],
+            'permissions' => ['create' => hasPermission('wms_manage')],
+            'urls' => [
+                'index'  => route('wms.grn.index'),
+                'create' => route('wms.grn.create'),
+            ],
+            't' => $this->indexLabels([
+                'title' => 'Receiving (GRN)', 'grn_number' => 'GRN #',
+                'merchant' => 'Merchant', 'hub' => 'Hub',
+                'received_by' => 'Received by', 'items' => 'Items', 'created' => 'Created',
+            ]),
+        ]);
     }
 
     public function create(Request $request)
     {
-        $merchants = $this->merchantRepo->all();
+        $merchants = $this->wmsMerchants();
         $hubs      = $this->hubRepo->all();
 
         // Pre-build flat arrays for the row-template JS to avoid embedding closures in Blade.
@@ -55,14 +97,58 @@ class WmsGrnController extends Controller
             ->values()->all();
 
         $nextNumber = $this->repo->nextGrnNumber();
-        return view('backend.wms.grn.create', compact('merchants', 'hubs', 'productOptions', 'locationOptions', 'nextNumber'));
+
+        return Inertia::render('Admin/Wms/Grn/Create', [
+            'lookups' => [
+                'merchants' => $this->lookupRows($merchants, fn ($m) => ['id' => $m->id, 'name' => $m->business_name]),
+                'hubs'      => $this->lookupRows($hubs,      fn ($h) => ['id' => $h->id, 'name' => $h->name]),
+                'products'  => $productOptions,
+                'locations' => $locationOptions,
+            ],
+            'next_number' => $nextNumber,
+            'urls' => [
+                'submit' => route('wms.grn.store'),
+                'cancel' => route('wms.grn.index'),
+            ],
+            't' => [
+                'title'        => 'New GRN',
+                'title_index'  => 'Receiving (GRN)',
+                'grn_number'   => 'GRN number',
+                'merchant'     => 'Merchant',
+                'merchant_hint'=> 'Only merchants with the fulfillment or storage service are listed.',
+                'hub'          => 'Hub',
+                'reference'    => 'Reference number',
+                'reference_hint' => 'Supplier invoice / PO number (optional)',
+                'notes'        => 'Notes',
+                'items'        => 'Items',
+                'add_item'     => 'Add item',
+                'product'      => 'Product',
+                'location'     => 'Location',
+                'expected_qty' => 'Expected',
+                'received_qty' => 'Received',
+                'batch'        => 'Batch',
+                'expiry'       => 'Expiry',
+                'condition'    => 'Condition',
+                'good'         => 'Good',
+                'damaged'      => 'Damaged',
+                'expired'      => 'Expired',
+                'item_notes'   => 'Notes',
+                'remove'       => 'Remove',
+                'cancel'       => __('levels.cancel') ?: 'Cancel',
+                'save'         => 'Save GRN (draft)',
+                'no_items'     => 'Click "Add item" to start. At least one item is required.',
+                'optional'     => 'optional',
+                'select_merchant_first' => 'Select merchant first',
+                'select_hub_first'      => 'Select hub first',
+            ],
+        ]);
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
             'hub_id'           => ['required', 'integer', 'exists:hubs,id'],
-            'merchant_id'      => ['required', 'integer', 'exists:merchants,id'],
+            'merchant_id'      => ['required', 'integer', 'exists:merchants,id', $this->merchantHasWmsService()],
             'reference_number' => ['nullable', 'string', 'max:191'],
             'notes'            => ['nullable', 'string'],
             'items'                       => ['required', 'array', 'min:1'],
@@ -96,7 +182,86 @@ class WmsGrnController extends Controller
             Toastr::error(__('GRN not found.'));
             return redirect()->route('wms.grn.index');
         }
-        return view('backend.wms.grn.show', compact('grn'));
+        $items = collect($grn->items ?? [])->map(function ($it) {
+            $expected = (int) $it->expected_qty;
+            $received = (int) $it->received_qty;
+            return [
+                'id'              => $it->id,
+                'sku'             => optional($it->product)->sku,
+                'product'         => optional($it->product)->name,
+                'location'        => optional($it->location)->code,
+                'expected_qty'    => $expected,
+                'received_qty'    => $received,
+                'diff'            => $received - $expected,
+                'mismatch'        => $expected !== $received,
+                'batch_number'    => $it->batch_number,
+                'expiry_date'     => optional($it->expiry_date)->format('Y-m-d'),
+                'condition'       => $it->condition,
+                'condition_label' => ucfirst((string) $it->condition),
+            ];
+        })->values();
+
+        return Inertia::render('Admin/Wms/Grn/Show', [
+            'grn' => [
+                'id'               => $grn->id,
+                'grn_number'       => $grn->grn_number,
+                'status'           => $grn->status,
+                'status_label'     => ucwords(str_replace('_', ' ', $grn->status)),
+                'merchant'         => optional($grn->merchant)->business_name,
+                'hub'              => optional($grn->hub)->name,
+                'reference_number' => $grn->reference_number,
+                'received_by'      => optional($grn->receivedBy)->name,
+                'received_at'      => optional($grn->received_at)->toDateTimeString(),
+                'created_at'       => optional($grn->created_at)->toDateTimeString(),
+                'notes'            => $grn->notes,
+                'has_discrepancy'  => $grn->hasDiscrepancy(),
+            ],
+            'items'  => $items,
+            'totals' => [
+                'lines'    => $items->count(),
+                'expected' => $items->sum('expected_qty'),
+                'received' => $items->sum('received_qty'),
+            ],
+            'permissions' => ['manage' => hasPermission('wms_manage')],
+            'urls' => [
+                'index'    => route('wms.grn.index'),
+                'complete' => route('wms.grn.complete', $grn->id),
+                'destroy'  => route('wms.grn.destroy', $grn->id),
+            ],
+            't' => [
+                'title'             => __('Goods receipt') ?: 'Goods receipt',
+                'list'              => __('Receiving') ?: 'Receiving',
+                'back_to_list'      => __('Back to receiving') ?: 'Back to receiving',
+                'print'             => __('Print') ?: 'Print',
+                'complete'          => __('Complete GRN') ?: 'Complete GRN',
+                'complete_confirm'  => __('Complete this GRN? Stock will be credited and discrepancies flagged.'),
+                'delete'            => __('levels.delete') ?: 'Delete',
+                'delete_confirm'    => __('Delete this draft?'),
+                'merchant'          => __('Merchant') ?: 'Merchant',
+                'hub'               => __('Hub') ?: 'Hub',
+                'reference'         => __('Reference') ?: 'Reference',
+                'received_by'       => __('Received By') ?: 'Received by',
+                'received_at'       => __('Received At') ?: 'Received at',
+                'created_at'        => __('levels.created_at') ?: 'Created',
+                'notes'             => __('Notes') ?: 'Notes',
+                'discrepancy_title' => __('Discrepancy detected') ?: 'Discrepancy detected',
+                'discrepancy_body'  => __('One or more lines received a different quantity than expected. Highlighted rows below.'),
+                'open_title'        => __('Receiving in progress') ?: 'Receiving in progress',
+                'open_body'         => __('Stock is credited only when you press Complete. Damaged and expired lines are never credited.'),
+                'lines'             => __('Lines') ?: 'Lines',
+                'expected'          => __('Expected') ?: 'Expected',
+                'received'          => __('Received') ?: 'Received',
+                'variance'          => __('Variance') ?: 'Variance',
+                'line_items'        => __('Line items') ?: 'Line items',
+                'condition_hint'    => __('Rows in red differ from the expected quantity.'),
+                'product'           => __('Product') ?: 'Product',
+                'location'          => __('Location') ?: 'Location',
+                'batch'             => __('Batch') ?: 'Batch',
+                'expiry'            => __('Expiry') ?: 'Expiry',
+                'condition'         => __('Condition') ?: 'Condition',
+                'no_items'          => __('No items.') ?: 'No items.',
+            ],
+        ]);
     }
 
     public function edit(int $id)

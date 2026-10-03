@@ -185,6 +185,10 @@ return [
         'delivery_category' => 'The Category has already been taken.',
         'user_assigned' => 'The User already assigned.',
         'user_exists' => 'The User already exists.',
+            'same_day' => 'نفس اليوم',
+        'next_day' => 'اليوم التالي',
+        'sub_city' => 'ضواحي المدينة',
+        'outside_city' => 'خارج المدينة',
     ],
 
 ];

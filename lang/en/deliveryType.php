@@ -10,5 +10,8 @@ return [
     'same_day'                 => 'Same Day',
     'next_day'                 => 'Next Day',
     'sub_city'                 =>  'Sub City',
-    'outside_City'             =>  'Outside City'
+    'outside_City'             =>  'Outside City',
+    'delivery_type' => 'Delivery type',
+    'create_delivery_type' => 'Create delivery type',
+    'edit_delivery_type' => 'Edit delivery type',
 ];

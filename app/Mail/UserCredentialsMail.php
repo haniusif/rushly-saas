@@ -40,10 +40,16 @@ class UserCredentialsMail extends Mailable
 
     public function build()
     {
-        $from  = settings()?->email ?: config('mail.from.address');
-        $brand = settings()?->name ?: config('app.name');
+        // Provider-authorized sender; tenant kept as display name + Reply-To.
+        $sender = tenantMailFrom();
+        $brand  = settings()?->name ?: config('app.name');
 
-        return $this->from($from)
+        $mail = $this->from($sender['address'], $sender['name']);
+        if ($sender['reply_to']) {
+            $mail->replyTo($sender['reply_to'], $sender['name']);
+        }
+
+        return $mail
             ->subject($this->password
                 ? __('Your new password for :brand', ['brand' => $brand])
                 : __('Sign in to :brand', ['brand' => $brand]))

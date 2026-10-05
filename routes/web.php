@@ -112,6 +112,7 @@ use App\Http\Controllers\Backend\MerchantPanel\AccountTransactionController;
 use App\Http\Controllers\Backend\MerchantPanel\PaymentRequestController;
 use App\Http\Controllers\Backend\MerchantPanel\ShopsController;
 use App\Http\Controllers\Backend\MerchantPanel\ApiKeyController;
+use App\Http\Controllers\Backend\MerchantPanel\WebhookController;
 use App\Http\Controllers\Backend\MerchantPanel\NewsOfferController as MerchantNewsOfferController;
 use App\Http\Controllers\Backend\MerchantPanel\SupportController as MerchantPanelSupportController;
 use App\Http\Controllers\Backend\MerchantPanel\FraudController as MerchantPanelFraudController;
@@ -1368,6 +1369,14 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::get('api-keys/index',           [ApiKeyController::class, 'index'])->name('merchant-panel.api-keys.index');
                         Route::post('api-keys/store',          [ApiKeyController::class, 'store'])->name('merchant-panel.api-keys.store');
                         Route::post('api-keys/revoke/{uuid}',  [ApiKeyController::class, 'revoke'])->name('merchant-panel.api-keys.revoke');
+
+                        // Webhooks (self-service webhook endpoints; stored in the rushly-api façade)
+                        Route::get('webhooks/index',                   [WebhookController::class, 'index'])->name('merchant-panel.webhooks.index');
+                        Route::post('webhooks/store',                  [WebhookController::class, 'store'])->name('merchant-panel.webhooks.store');
+                        Route::post('webhooks/update/{uuid}',          [WebhookController::class, 'update'])->name('merchant-panel.webhooks.update');
+                        Route::post('webhooks/rotate-secret/{uuid}',   [WebhookController::class, 'rotateSecret'])->name('merchant-panel.webhooks.rotate-secret');
+                        Route::delete('webhooks/delete/{uuid}',        [WebhookController::class, 'destroy'])->name('merchant-panel.webhooks.destroy');
+                        Route::get('webhooks/deliveries/{uuid}',       [WebhookController::class, 'deliveries'])->name('merchant-panel.webhooks.deliveries');
 
 
                         Route::get('parcel/get-areas', [MerchantParcelController::class, 'getAreasByCity'])->name('merchant-panel.parcel.getAreas');

@@ -7,6 +7,7 @@ use App\Models\Backend\Parcel;
 use App\Models\Backend\Wms\WmsStock;
 use App\Observers\ParcelInstrumentationObserver;
 use App\Observers\ParcelSallaObserver;
+use App\Observers\ParcelWebhookObserver;
 use App\Observers\ParcelWooCommerceObserver;
 use App\Observers\ParcelZidObserver;
 use App\Fulfillment\Listeners\RouteToFulfillmentListener;
@@ -68,6 +69,7 @@ class EventServiceProvider extends ServiceProvider
         Parcel::observe(ParcelSallaObserver::class);
         Parcel::observe(ParcelZidObserver::class);
         Parcel::observe(ParcelWooCommerceObserver::class);
+        Parcel::observe(ParcelWebhookObserver::class);
 
         // Performance Dashboard Phase 4 instrumentation:
         // auto-stamp expected_delivery_at + distance_m on parcel create.

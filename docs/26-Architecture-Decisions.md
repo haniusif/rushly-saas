@@ -338,3 +338,22 @@ Code + config verified:
 - `app/Http/Controllers/Auth/LoginController.php` and Commerce/OMS/Fulfillment controllers (feature-flag `abort_unless` guards)
 - `app/Qoyod/`, `app/Daftra/`, `app/Odoo/` (Services / Observers / Jobs / Models)
 - `routes/web.php` (tenant middleware group), `routes/api.php`
+
+---
+
+## ADR — Public Merchant API as a separate façade app  [Documented]
+
+**Decision.** Expose the external Merchant/Partner API from a standalone app
+(`rushly-api`), not from `rushly-saas` directly. `rushly-saas` stays the SSOT and
+gains only a guarded internal service API (`/api/internal/v1/merchant/*`).
+
+**Why.** Keeps a stable, versioned public contract decoupled from the internal
+v10 surface; avoids exposing the weak shared `apiKey` (a hardcoded global
+constant) or internal integer statuses/ids; lets auth, scopes, idempotency,
+rate limiting and status mapping evolve independently of core business logic.
+
+**Consequences.** One extra network hop; the façade owns no business logic;
+internal endpoints must explicitly scope by validated company+merchant because
+`settings()` fails open to company 1 without an authenticated user. Status-
+writeback observers (Salla/Zid/Woo) were made non-fatal so a writeback failure
+never breaks a status change. See [31-Merchant-API.md](31-Merchant-API.md).

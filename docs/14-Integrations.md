@@ -564,3 +564,15 @@ Key files and directories actually opened for this document:
 - `app/Console/Kernel.php`, `routes/api.php`, `routes/web.php`, `routes/superadmin.php`
 - `composer.json`
 - `rushly-salla/README.md`, `rushly-salla/config/salla.php`, `rushly-salla/.env.example`
+
+---
+
+## Merchant / Partner API façade (rushly-api)
+
+Outbound-facing integration surface: the **`rushly-api`** app exposes a stable,
+versioned public API (`api.rushly.tech/v1`) for external merchants/ERPs/partners
+to create and track shipments, without exposing the internal v10 API or the
+shared `apiKey`. It authenticates (`rly_live_*`/`rly_test_*` keys), maps the 41
+internal `ParcelStatus` values to 11 public codes, and calls this repo's new
+`/api/internal/v1/merchant/*` endpoints with a dedicated service token.
+Full detail: [31-Merchant-API.md](31-Merchant-API.md).

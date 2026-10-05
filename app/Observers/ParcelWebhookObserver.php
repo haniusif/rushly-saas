@@ -13,6 +13,26 @@ use Illuminate\Support\Facades\Log;
  */
 class ParcelWebhookObserver
 {
+    public function created(Parcel $parcel): void
+    {
+        $parcelId   = (int) $parcel->id;
+        $merchantId = (int) $parcel->merchant_id;
+        $companyId  = (int) $parcel->company_id;
+        $reference  = $parcel->reference_number;
+
+        // tracking_id is assigned on a follow-up save; re-resolve after response.
+        try {
+            dispatch(function () use ($parcelId, $merchantId, $companyId, $reference) {
+                $p = Parcel::withoutGlobalScopes()->find($parcelId);
+                if ($p && $p->tracking_id) {
+                    app(WebhookNotifier::class)->notify($parcelId, $merchantId, $companyId, $p->tracking_id, $reference, 0, (int) $p->status);
+                }
+            })->afterResponse();
+        } catch (\Throwable $e) {
+            Log::warning('webhook.observer.created_failed', ['parcel' => $parcelId, 'error' => $e->getMessage()]);
+        }
+    }
+
     public function updated(Parcel $parcel): void
     {
         if (! $parcel->wasChanged('status')) {

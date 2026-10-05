@@ -4,7 +4,7 @@ import {
     LayoutDashboard, Package, Wallet, FileText, MessageCircle, Store,
     Banknote, Settings, BarChart3, Receipt, Menu, X, Sun, Moon,
     LogOut, ChevronDown, Bell, Search, Globe, Check, User,
-    BookOpen,
+    BookOpen, KeyRound,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/Components/ui/Button';
@@ -39,6 +39,7 @@ const NAV = [
     { group: 'nav_settings', items: [
         { tKey: 'nav_cod_charges',      icon: Settings, route: 'merchant.cod-charges.index',      match: ['merchant/settings/cod-charges'] },
         { tKey: 'nav_delivery_charges', icon: Settings, route: 'merchant.delivery-charges.index', match: ['merchant/settings/delivery-charges'] },
+        { tKey: 'nav_api_keys',         icon: KeyRound, route: 'merchant-panel.api-keys.index',   match: ['merchant/api-keys'] },
     ]},
 ];
 

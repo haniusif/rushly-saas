@@ -111,6 +111,7 @@ use App\Http\Controllers\Backend\MerchantPanel\PaymentAccountController;
 use App\Http\Controllers\Backend\MerchantPanel\AccountTransactionController;
 use App\Http\Controllers\Backend\MerchantPanel\PaymentRequestController;
 use App\Http\Controllers\Backend\MerchantPanel\ShopsController;
+use App\Http\Controllers\Backend\MerchantPanel\ApiKeyController;
 use App\Http\Controllers\Backend\MerchantPanel\NewsOfferController as MerchantNewsOfferController;
 use App\Http\Controllers\Backend\MerchantPanel\SupportController as MerchantPanelSupportController;
 use App\Http\Controllers\Backend\MerchantPanel\FraudController as MerchantPanelFraudController;
@@ -1362,8 +1363,13 @@ Route::middleware(['XSS', 'IsInstalled'])->group(function () {
                         Route::get('shops/edit/{id}',        [ShopsController::class, 'edit'])->name('merchant-panel.shops.edit');
                         Route::put('shops/update/{id}',      [ShopsController::class, 'update'])->name('merchant-panel.shops.update');
                         Route::delete('shops/delete/{id}',   [ShopsController::class, 'delete'])->name('merchant-panel.shops.delete');
-                        
-                        
+
+                        // API Keys (self-service Rushly Merchant API keys; stored in the rushly-api façade)
+                        Route::get('api-keys/index',           [ApiKeyController::class, 'index'])->name('merchant-panel.api-keys.index');
+                        Route::post('api-keys/store',          [ApiKeyController::class, 'store'])->name('merchant-panel.api-keys.store');
+                        Route::post('api-keys/revoke/{uuid}',  [ApiKeyController::class, 'revoke'])->name('merchant-panel.api-keys.revoke');
+
+
                         Route::get('parcel/get-areas', [MerchantParcelController::class, 'getAreasByCity'])->name('merchant-panel.parcel.getAreas');
                         // WMS product picker (only meaningful when the merchant has fulfillment service)
                         Route::get('parcel/my-products', [MerchantParcelController::class, 'myProducts'])->name('merchant-panel.parcel.myProducts');

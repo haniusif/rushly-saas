@@ -389,3 +389,14 @@ theme prefixes the team already uses in subjects (`summary:`, `bulk-action:`, `a
 
 **Non-authoritative / corrected:** `README.md` "Laravel 12 / PHP 8.4" — corrected to
 **Laravel 10 / PHP 8.1+** per `composer.json` (see [26-ADR-007](26-Architecture-Decisions.md#adr-007--inertiajs--react-for-new-ui-migrating-off-blade)).
+
+---
+
+## Added — Merchant API (v1) façade
+
+New sibling app **`rushly-api`** (`api.rushly.tech/v1`) exposing a public,
+versioned shipment API (create/list/get/cancel/tracking/history), backed by new
+internal endpoints in `rushly-saas` (`/api/internal/v1/merchant/*`, guarded by
+`VerifyInternalServiceToken`). Parcel status-writeback observers
+(Salla/Zid/WooCommerce) wrapped so a writeback failure no longer breaks a parcel
+status change. See [31-Merchant-API.md](31-Merchant-API.md).

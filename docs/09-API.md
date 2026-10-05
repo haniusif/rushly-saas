@@ -760,3 +760,25 @@ Files and directories actually opened for this document:
 _Verified against code on 2026-07-27. `rushly-saas` is the single source of truth; where
 `INTEGRATIONS.md` path prefixes disagreed with `routes/api.php`, the code was taken as
 authoritative and flagged as **⚠️ Doc vs Code**._
+
+---
+
+## Merchant API façade (v1) — internal endpoints
+
+The public Merchant/Partner API is served by the sibling **`rushly-api`** app at
+`api.rushly.tech/v1` (see [31-Merchant-API.md](31-Merchant-API.md)). It calls a
+new **internal, service-to-service** route group added to `routes/api.php`:
+
+```
+POST   /api/internal/v1/merchant/shipments
+GET    /api/internal/v1/merchant/shipments
+GET    /api/internal/v1/merchant/shipments/{tracking_number}
+POST   /api/internal/v1/merchant/shipments/{tracking_number}/cancel
+GET    /api/internal/v1/merchant/shipments/{tracking_number}/tracking
+GET    /api/internal/v1/merchant/shipments/{tracking_number}/history
+```
+
+Guarded by `VerifyInternalServiceToken` (strong env token via `hash_equals`, NOT
+the shared `apiKey`). `company_id`/`merchant_id` arrive in the payload and are
+validated + explicitly scoped by `App\Services\InternalApi\MerchantShipmentService`
+(never the fail-open `settings()`). Not a public surface; only `rushly-api` calls it.

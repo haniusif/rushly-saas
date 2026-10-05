@@ -126,6 +126,24 @@ Route::prefix('v10/external/woocommerce')->middleware(['CheckApiKey'])->group(fu
     Route::post('/parcel', [WooCommerceParcelController::class, 'store']);
 });
 
+/*
+ * Internal service-to-service Merchant API — consumed ONLY by the rushly-api
+ * façade (api.rushly.tech). Guarded by a strong env-backed service token, NOT
+ * the shared apiKey. company_id/merchant_id arrive in the payload and are
+ * validated + explicitly scoped by the controller/service.
+ */
+Route::prefix('internal/v1/merchant')
+    ->middleware([\App\Http\Middleware\VerifyInternalServiceToken::class])
+    ->group(function () {
+        $c = \App\Http\Controllers\Api\Internal\V1\MerchantShipmentController::class;
+        Route::get('shipments', [$c, 'index']);
+        Route::post('shipments', [$c, 'store']);
+        Route::get('shipments/{tracking_number}', [$c, 'show'])->where('tracking_number', '[A-Za-z0-9\-]+');
+        Route::post('shipments/{tracking_number}/cancel', [$c, 'cancel'])->where('tracking_number', '[A-Za-z0-9\-]+');
+        Route::get('shipments/{tracking_number}/tracking', [$c, 'tracking'])->where('tracking_number', '[A-Za-z0-9\-]+');
+        Route::get('shipments/{tracking_number}/history', [$c, 'history'])->where('tracking_number', '[A-Za-z0-9\-]+');
+    });
+
 // Phase 3 — generic commerce webhook ingest. One endpoint per provider;
 // the controller delegates to WebhookIngestService which handles HMAC
 // verification (per-connection secret), idempotency, persistence, and

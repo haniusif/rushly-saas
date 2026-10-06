@@ -92,33 +92,11 @@ public function check(Request $request)
         ]);
     }
 
-    // Remove prefixes like "Tracking ID(s):"
-    $clean = preg_replace('/\bTracking\s*ID(?:s)?\b\s*:?\s*/iu', '', $raw);
-
-    // Extract tracking IDs (RL followed by optional hyphens/underscores then
-    // digits) and numeric parcel IDs. NAVIX and most tenants prefix with
-    // hyphens (e.g. RL-831416028686); older tenants use plain RL831416028686.
-    // The hyphen was quietly rejected by the previous regex.
-    preg_match_all('/^RL[-_]?\d{6,}$/im', $clean, $m1);
-    $trackingIds = $m1[0] ?? [];
-
-    preg_match_all('/(?<![A-Z-])\b\d+\b(?![A-Z-])/i', $clean, $m2);
-    $numericIds = $m2[0] ?? [];
-
-    // Also split tokens by newline/commas/spaces and re-collect
-    $tokens = preg_split('/[\r\n,;|\s]+/u', $clean);
-    foreach ($tokens as $t) {
-        $t = trim($t);
-        if ($t === '') continue;
-        if (preg_match('/^RL[-_]?\d{6,}$/i', $t)) {
-            $trackingIds[] = $t;
-        } elseif (preg_match('/^\d+$/', $t)) {
-            $numericIds[] = $t;
-        }
-    }
-
-    $trackingIds = array_values(array_unique($trackingIds));
-    $numericIds  = array_values(array_unique($numericIds));
+    // Parse ids with the shared, prefix-agnostic parser (same as apply()), so
+    // any brand prefix (RL-, RDS-, …) is recognised — not only RL. check()
+    // previously duplicated an RL-only parser, so the preview silently found
+    // nothing for other-prefixed shipments even once splitIds() was fixed.
+    [$trackingIds, $numericIds] = $this->splitIds($raw);
 
     if (empty($trackingIds) && empty($numericIds)) {
         return response()->json([
@@ -744,17 +722,17 @@ public function change_status($parcels, Request $request)
         $tracking = [];
         $numeric  = [];
 
-        // Match RL[-_]?digits so hyphenated tenants (RL-831416028686) work
-        // alongside legacy hyphenless ones (RL831416028686).
-        preg_match_all('/RL[-_]?\d{6,}/i', $clean, $m1);
-        if (!empty($m1[0])) $tracking = array_merge($tracking, $m1[0]);
-
+        // Classify each token prefix-agnostically: a bare-numeric token is a DB
+        // id; anything else is a tracking_id, whatever the brand prefix
+        // (RL-831416028686, RDS-10000013394, …). Previously only the RL prefix
+        // was recognised, so shipments with any other prefix were silently
+        // dropped and bulk actions reported "No matching shipments found."
         foreach ($tokens as $t) {
             if ($t === '') continue;
-            if (preg_match('/^RL[-_]?\d{6,}$/i', $t)) {
+            if (preg_match('/^\d+$/', $t)) {
+                $numeric[] = (int) $t;
+            } else {
                 $tracking[] = $t;
-            } elseif (preg_match('/^\d+$/', $t)) {
-                $numeric[] = (int)$t;
             }
         }
 

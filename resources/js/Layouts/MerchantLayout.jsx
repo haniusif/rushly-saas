@@ -4,7 +4,7 @@ import {
     LayoutDashboard, Package, Wallet, FileText, MessageCircle, Store,
     Banknote, Settings, BarChart3, Receipt, Menu, X, Sun, Moon,
     LogOut, ChevronDown, Bell, Search, Globe, Check, User,
-    BookOpen, KeyRound,
+    BookOpen, KeyRound, Webhook,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/Components/ui/Button';
@@ -40,6 +40,7 @@ const NAV = [
         { tKey: 'nav_cod_charges',      icon: Settings, route: 'merchant.cod-charges.index',      match: ['merchant/settings/cod-charges'] },
         { tKey: 'nav_delivery_charges', icon: Settings, route: 'merchant.delivery-charges.index', match: ['merchant/settings/delivery-charges'] },
         { tKey: 'nav_api_keys',         icon: KeyRound, route: 'merchant-panel.api-keys.index',   match: ['merchant/api-keys'] },
+        { tKey: 'nav_webhooks',         icon: Webhook,  route: 'merchant-panel.webhooks.index',   match: ['merchant/webhooks'] },
     ]},
 ];
 
